@@ -52,15 +52,27 @@ export interface PublicProduct {
   sectionName: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  subcategoryId: string | null;
   /** Booleano de propósito — quantidade exata não é pública. */
   inStock: boolean;
 }
 
+/** Card de navegação da vitrine (seção, categoria ou subcategoria). */
+export interface PublicTaxonomyCard {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  cardWidth: number | null;
+  cardHeight: number | null;
+}
+
 /** Seção/categoria da loja, para os filtros públicos. */
 export interface PublicTaxonomy {
-  sections: { id: string; name: string }[];
-  categories: { id: string; sectionId: string; name: string }[];
+  sections: PublicTaxonomyCard[];
+  categories: (PublicTaxonomyCard & { sectionId: string })[];
+  subcategories: (PublicTaxonomyCard & { categoryId: string })[];
 }
+
 
 
 /** Espelha 1:1 as colunas de `public_store_benefits`. */
