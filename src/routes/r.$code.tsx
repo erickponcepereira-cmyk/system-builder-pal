@@ -7,18 +7,15 @@ import { gravarAtribuicao } from "@/lib/atribuicao";
 import { z } from "zod";
 
 /**
- * `/r/{code}` deixou de ser um funil de mão única para o cadastro.
+ * `/r/{code}` é o mecanismo de ATRIBUIÇÃO (quem indicou). O DESTINO
+ * depende da intenção do link:
  *
- * Ele continua sendo o mecanismo de ATRIBUIÇÃO (quem indicou), mas o
- * DESTINO agora depende da intenção do link:
- *
+ *   /r/CODE              -> cadastro (link de indicação clássico)
+ *   /r/CODE?to=cadastro  -> cadastro
+ *   /r/CODE?to=loja      -> loja pública vinculada ao indicador
  *   /r/CODE?p={id}       -> abre o produto
- *   /r/CODE?to=cadastro  -> vai direto ao cadastro
- *   /r/CODE              -> abre a loja pública
- *
- * Links antigos não quebram: os que já circulam por aí têm `?p=` ou nada,
- * e nos dois casos passam a cair em conteúdo em vez de um formulário.
  */
+
 export const Route = createFileRoute("/r/$code")({
   validateSearch: (search: Record<string, unknown>) =>
     z
