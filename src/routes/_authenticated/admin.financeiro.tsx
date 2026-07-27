@@ -454,6 +454,8 @@ function AdminFinanceiro() {
                   {bucketOpen.kind === "referrals" && (
                     <Link
                       to="/admin/fitcoin-wallet"
+                      search={{} as never}
+
                       onClick={() => setBucketOpen(null)}
                       className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 font-bold text-primary hover:bg-primary/20"
                     >

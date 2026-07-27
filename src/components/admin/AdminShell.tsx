@@ -58,7 +58,10 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/assessment-deletions", label: "Exclusões de Avaliações", icon: AlertTriangle, perm: "assessment_deletions" },
   { to: "/admin/evaluation-links", label: "Vinculações de Avaliação", icon: AlertTriangle, perm: "assessment_deletions" },
   { to: "/admin/push-notifications", label: "Push Notifications", icon: Bell, perm: "settings" },
+  { to: "/admin/email-releases", label: "Liberar E-mail", icon: UserCheck, perm: "users" },
+  { to: "/admin/referral-links", label: "Links de Indicação", icon: Search, perm: "users" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
+
 ];
 
 export function AdminShell() {

@@ -24,6 +24,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LojaRouteImport } from './routes/loja'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CompleteSignupRouteImport } from './routes/complete-signup'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -35,6 +36,7 @@ import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-ch
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-checkin.$eventId'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated/student'
 import { Route as AuthenticatedProfessionalRouteImport } from './routes/_authenticated/professional'
 import { Route as AuthenticatedPortalSelectorRouteImport } from './routes/_authenticated/portal-selector'
@@ -83,6 +85,7 @@ import { Route as AuthenticatedAdminStoreReportsRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminStoreRouteImport } from './routes/_authenticated/admin.store'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
+import { Route as AuthenticatedAdminReferralLinksRouteImport } from './routes/_authenticated/admin.referral-links'
 import { Route as AuthenticatedAdminPushNotificationsRouteImport } from './routes/_authenticated/admin.push-notifications'
 import { Route as AuthenticatedAdminProfessorWalletRouteImport } from './routes/_authenticated/admin.professor-wallet'
 import { Route as AuthenticatedAdminProfessionalsRouteImport } from './routes/_authenticated/admin.professionals'
@@ -112,6 +115,7 @@ import { Route as AuthenticatedAdminFitcoinWalletRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminFinancialSummaryRouteImport } from './routes/_authenticated/admin.financial-summary'
 import { Route as AuthenticatedAdminFinanceiroRouteImport } from './routes/_authenticated/admin.financeiro'
 import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/_authenticated/admin.evaluation-links'
+import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
 import { Route as AuthenticatedAdminCoachesRouteImport } from './routes/_authenticated/admin.coaches'
 import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_authenticated/admin.coach-releases'
@@ -211,6 +215,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompleteSignupRoute = CompleteSignupRouteImport.update({
+  id: '/complete-signup',
+  path: '/complete-signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BecomePartnerRoute = BecomePartnerRouteImport.update({
   id: '/become-partner',
   path: '/become-partner',
@@ -263,6 +272,11 @@ const FitmindCheckinEventIdRoute = FitmindCheckinEventIdRouteImport.update({
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   id: '/checkin/$studentId',
   path: '/checkin/$studentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStudentRoute = AuthenticatedStudentRouteImport.update({
@@ -545,6 +559,12 @@ const AuthenticatedAdminReportsRoute =
     path: '/reports',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminReferralLinksRoute =
+  AuthenticatedAdminReferralLinksRouteImport.update({
+    id: '/referral-links',
+    path: '/referral-links',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPushNotificationsRoute =
   AuthenticatedAdminPushNotificationsRouteImport.update({
     id: '/push-notifications',
@@ -719,6 +739,12 @@ const AuthenticatedAdminEvaluationLinksRoute =
     path: '/evaluation-links',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEmailReleasesRoute =
+  AuthenticatedAdminEmailReleasesRouteImport.update({
+    id: '/email-releases',
+    path: '/email-releases',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminDigitalProductsRoute =
   AuthenticatedAdminDigitalProductsRouteImport.update({
     id: '/digital-products',
@@ -855,6 +881,7 @@ const AuthenticatedAdminCoachesInactivityRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
+  '/complete-signup': typeof CompleteSignupRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -879,6 +906,7 @@ export interface FileRoutesByFullPath {
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -900,6 +928,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -929,6 +958,7 @@ export interface FileRoutesByFullPath {
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
+  '/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
@@ -982,6 +1012,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
+  '/complete-signup': typeof CompleteSignupRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -1004,6 +1035,7 @@ export interface FileRoutesByTo {
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1025,6 +1057,7 @@ export interface FileRoutesByTo {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1054,6 +1087,7 @@ export interface FileRoutesByTo {
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
+  '/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
@@ -1109,6 +1143,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
+  '/complete-signup': typeof CompleteSignupRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -1133,6 +1168,7 @@ export interface FileRoutesById {
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1154,6 +1190,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/_authenticated/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/_authenticated/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/_authenticated/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1183,6 +1220,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/_authenticated/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/_authenticated/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
+  '/_authenticated/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/store': typeof AuthenticatedAdminStoreRoute
@@ -1238,6 +1276,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/become-partner'
+    | '/complete-signup'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1262,6 +1301,7 @@ export interface FileRouteTypes {
     | '/portal-selector'
     | '/professional'
     | '/student'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1283,6 +1323,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/email-releases'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1312,6 +1353,7 @@ export interface FileRouteTypes {
     | '/admin/professionals'
     | '/admin/professor-wallet'
     | '/admin/push-notifications'
+    | '/admin/referral-links'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -1365,6 +1407,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/become-partner'
+    | '/complete-signup'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1387,6 +1430,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/portal-selector'
     | '/professional'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1408,6 +1452,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/email-releases'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1437,6 +1482,7 @@ export interface FileRouteTypes {
     | '/admin/professionals'
     | '/admin/professor-wallet'
     | '/admin/push-notifications'
+    | '/admin/referral-links'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -1491,6 +1537,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/become-partner'
+    | '/complete-signup'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1515,6 +1562,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portal-selector'
     | '/_authenticated/professional'
     | '/_authenticated/student'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1536,6 +1584,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/coach-releases'
     | '/_authenticated/admin/coaches'
     | '/_authenticated/admin/digital-products'
+    | '/_authenticated/admin/email-releases'
     | '/_authenticated/admin/evaluation-links'
     | '/_authenticated/admin/financeiro'
     | '/_authenticated/admin/financial-summary'
@@ -1565,6 +1614,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/professionals'
     | '/_authenticated/admin/professor-wallet'
     | '/_authenticated/admin/push-notifications'
+    | '/_authenticated/admin/referral-links'
     | '/_authenticated/admin/reports'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/store'
@@ -1620,6 +1670,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
+  CompleteSignupRoute: typeof CompleteSignupRoute
   LoginRoute: typeof LoginRoute
   LojaRoute: typeof LojaRoute
   McpRoute: typeof McpRoute
@@ -1637,6 +1688,7 @@ export interface RootRouteChildren {
   TermosProfissionalRoute: typeof TermosProfissionalRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1763,6 +1815,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/complete-signup': {
+      id: '/complete-signup'
+      path: '/complete-signup'
+      fullPath: '/complete-signup'
+      preLoaderRoute: typeof CompleteSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/become-partner': {
       id: '/become-partner'
       path: '/become-partner'
@@ -1838,6 +1897,13 @@ declare module '@tanstack/react-router' {
       path: '/checkin/$studentId'
       fullPath: '/checkin/$studentId'
       preLoaderRoute: typeof CheckinStudentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/student': {
@@ -2176,6 +2242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/referral-links': {
+      id: '/_authenticated/admin/referral-links'
+      path: '/referral-links'
+      fullPath: '/admin/referral-links'
+      preLoaderRoute: typeof AuthenticatedAdminReferralLinksRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/push-notifications': {
       id: '/_authenticated/admin/push-notifications'
       path: '/push-notifications'
@@ -2379,6 +2452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEvaluationLinksRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/email-releases': {
+      id: '/_authenticated/admin/email-releases'
+      path: '/email-releases'
+      fullPath: '/admin/email-releases'
+      preLoaderRoute: typeof AuthenticatedAdminEmailReleasesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/digital-products': {
       id: '/_authenticated/admin/digital-products'
       path: '/digital-products'
@@ -2570,6 +2650,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCoachReleasesRoute: typeof AuthenticatedAdminCoachReleasesRoute
   AuthenticatedAdminCoachesRoute: typeof AuthenticatedAdminCoachesRouteWithChildren
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
+  AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
   AuthenticatedAdminFinanceiroRoute: typeof AuthenticatedAdminFinanceiroRoute
   AuthenticatedAdminFinancialSummaryRoute: typeof AuthenticatedAdminFinancialSummaryRoute
@@ -2599,6 +2680,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminProfessionalsRoute: typeof AuthenticatedAdminProfessionalsRoute
   AuthenticatedAdminProfessorWalletRoute: typeof AuthenticatedAdminProfessorWalletRoute
   AuthenticatedAdminPushNotificationsRoute: typeof AuthenticatedAdminPushNotificationsRoute
+  AuthenticatedAdminReferralLinksRoute: typeof AuthenticatedAdminReferralLinksRoute
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminStoreRoute: typeof AuthenticatedAdminStoreRoute
@@ -2626,6 +2708,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCoachesRoute: AuthenticatedAdminCoachesRouteWithChildren,
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
+  AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
   AuthenticatedAdminEvaluationLinksRoute:
     AuthenticatedAdminEvaluationLinksRoute,
   AuthenticatedAdminFinanceiroRoute: AuthenticatedAdminFinanceiroRoute,
@@ -2668,6 +2751,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminProfessorWalletRoute,
   AuthenticatedAdminPushNotificationsRoute:
     AuthenticatedAdminPushNotificationsRoute,
+  AuthenticatedAdminReferralLinksRoute: AuthenticatedAdminReferralLinksRoute,
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminStoreRoute: AuthenticatedAdminStoreRoute,
@@ -2837,6 +2921,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
+  CompleteSignupRoute: CompleteSignupRoute,
   LoginRoute: LoginRoute,
   LojaRoute: LojaRoute,
   McpRoute: McpRoute,
@@ -2855,6 +2940,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,
