@@ -130,31 +130,41 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { finalizeRegistration } = await import("./registration.server");
+    const { finalizeRegistration, ensureStudentForProfile } = await import("./registration.server");
 
     const userId = context.userId;
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
     const email = (authUser?.user?.email || "").trim().toLowerCase();
     if (!email) throw new Error("Conta Google sem e-mail. Não foi possível concluir o cadastro.");
 
-    // Blindagem: se já existe profile (por user_id ou e-mail), não cria outro.
+    // Blindagem: se já existe profile (por user_id ou e-mail), não cria outro —
+    // apenas completa os dados e garante a linha de aluno.
     const { data: existing } = await supabaseAdmin
       .from("profiles")
-      .select("id, user_id")
+      .select("id, user_id, role")
       .or(`user_id.eq.${userId},email.eq.${email}`)
       .limit(1)
       .maybeSingle();
 
     if (existing) {
-      if (!existing.user_id) {
-        await supabaseAdmin.from("profiles").update({ user_id: userId }).eq("id", existing.id);
-      }
       await supabaseAdmin
         .from("profiles")
-        .update({ phone: data.phone, gender: data.gender, birthdate: data.birthdate })
+        .update({
+          user_id: existing.user_id || userId,
+          name: data.name,
+          email,
+          phone: data.phone,
+          gender: data.gender,
+          birthdate: data.birthdate,
+        })
         .eq("id", existing.id);
+
+      if (!existing.role || existing.role === "student") {
+        await ensureStudentForProfile(existing.id as string, data.coachId, data.partnerId ?? null);
+      }
       return { ok: true, alreadyExisted: true };
     }
+
 
     await finalizeRegistration({
       userId,
