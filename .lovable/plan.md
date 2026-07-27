@@ -1,26 +1,30 @@
-## Problema
+## Causa confirmada
 
-No painel do aluno (`student.freebies.tsx`) existe o bloco **"Minhas reservas"** (`StudentFreebieReservations`), que lista as reservas de benefícios gratuitos e libera o QR Code quando chega o horário do slot.
+Consultei o banco: os três produtos citados **têm agenda cadastrada**, mas estão com a flag de agendamento desligada:
 
-Na aba **Benefícios** do coach (`src/components/coach/tabs/BenefitsTab.tsx`) esse bloco nunca foi incluído: o coach consegue abrir o modal de agendamento e reservar, mas depois não existe nenhum lugar no painel dele que mostre a reserva nem o QR Code — por isso "não aparece em lugar nenhum".
+| Parceiro | Janelas cadastradas | Flag `uses_scheduling` |
+|---|---|---|
+| Academia Move (2 produtos) | 10 / 5 | ligada |
+| Estação Funcional | 3 | ligada |
+| Iron Cross | 12 | **desligada** |
+| Welington Bezerra (2 produtos) | 10 / 3 | **desligada** |
+| Extremus Life Fitness | 17 | **desligada** |
 
-## O que será feito
+O aluno/coach decide entre "reservar horário" e "QR na hora" por essa flag — por isso os três geram QR direto.
 
-1. **Listar reservas na aba Benefícios do coach**
-   - Renderizar `StudentFreebieReservations` logo acima da lista de benefícios (mesma posição que no aluno), com `refreshKey` atualizado após cada reserva feita pelo modal de agendamento.
-   - O componente já busca por `profile_id` do usuário logado, então funciona igual para coach, sem lógica nova.
+Por que ela desligou: no formulário de produto do parceiro (`partner.tsx`), o botão **Salvar** envia o objeto inteiro do estado local, incluindo `uses_scheduling` com o valor antigo (`false`) carregado quando o modal abriu. O editor de agenda (bloco separado, salvo com seu próprio botão) liga a flag no banco via gatilho; se o parceiro salvar a agenda e **depois** clicar em "Salvar" no produto, o update sobrescreve a flag de volta para `false`. Academia Move e Estação Funcional simplesmente não fizeram esse último clique.
 
-2. **Estados e QR idênticos ao aluno**
-   - "Aguardando horário" (com opção de cancelar), "QR disponível" ao entrar no slot, "Usado", "Expirado" e "Cancelado".
-   - QR abre em modal e atualiza automaticamente quando o parceiro faz a leitura.
+## Correção
 
-3. **Alinhar o critério de agendamento**
-   - A aba do coach decide "agendar × resgatar direto" apenas pela existência de horários cadastrados; o aluno usa a flag `uses_scheduling` do produto. Passarei a buscar e usar `uses_scheduling` também no coach, para que produtos com agenda sempre abram o fluxo de reserva com QR.
+1. **Dados** — migração que recalcula `uses_scheduling` para todos os `partner_products`: ligada quando existir pelo menos uma janela ativa em `partner_product_schedules`, desligada quando não existir. Isso conserta Iron Cross, Welington Bezerra e Extremus imediatamente.
 
-4. **Verificação**
-   - Conferir que as reservas criadas por um coach aparecem no scanner do parceiro (`PartnerFreebieScanner`) e nos relatórios, já que a reserva é a mesma tabela `partner_freebie_reservations`.
+2. **Blindagem no banco** — gatilho `BEFORE INSERT/UPDATE` em `partner_products` que força `uses_scheduling` a refletir a existência de janelas, ignorando o valor enviado pelo cliente. Assim nenhum salvamento futuro (de qualquer tela) consegue desligar a flag de um produto que tem agenda.
+
+3. **Frontend** — remover `uses_scheduling` do payload de update/insert em `src/routes/_authenticated/partner.tsx` (a flag passa a ser derivada da agenda, nunca digitada) e recarregar o produto em edição após salvar a agenda, para o estado local não ficar desatualizado.
+
+4. **Verificação** — reconsultar os produtos após a migração e confirmar que os cinco benefícios com agenda ficam com a flag ligada, e que os produtos sem janelas (ex.: CF6800, Dr. Pé, Spazzio) continuam com QR direto.
 
 ## Detalhes técnicos
 
-- Arquivo principal: `src/components/coach/tabs/BenefitsTab.tsx` (reuso do componente existente, sem duplicação de código).
-- Sem mudanças de banco previstas: as políticas de leitura de `partner_freebie_reservations` são por `profile_id`. Caso a verificação mostre que o coach não enxerga a própria reserva, adiciono a política correspondente numa migração.
+- Já existem os gatilhos `trg_sync_uses_scheduling_*` em `partner_product_schedules` e a função `set_partner_product_schedules` que atualiza a flag — o problema é só a sobrescrita vinda do update do produto, então o novo gatilho em `partner_products` fecha a única brecha restante.
+- Nenhuma mudança em `reserve_partner_freebie`, no scanner do parceiro ou nos relatórios: o fluxo de reserva/QR já funciona quando a flag está correta.

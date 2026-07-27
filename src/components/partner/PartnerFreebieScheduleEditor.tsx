@@ -19,9 +19,10 @@ interface Props {
   productId: string;
   weeklyLimit: number | null;
   onChangeWeeklyLimit: (n: number) => void;
+  onSaved?: (hasSchedules: boolean) => void;
 }
 
-export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeWeeklyLimit }: Props) {
+export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeWeeklyLimit, onSaved }: Props) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,7 +61,8 @@ export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeW
     } as never);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Agenda salva.");
+    onSaved?.(slots.length > 0);
+    toast.success(slots.length > 0 ? "Agenda salva. Este benefício agora exige reserva de dia e horário." : "Agenda salva.");
   };
 
   if (loading) {
