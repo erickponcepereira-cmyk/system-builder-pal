@@ -92,9 +92,66 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    // ------------------------------------------------------------------
+    // Links de e-mail (confirmação de cadastro e redefinição de senha).
+    // Depois da troca de domínio para fitmindclub.com.br, o Supabase passa a
+    // entregar o token na RAIZ do site (hash `#access_token=...&type=recovery`
+    // ou query `?code=...`). Sem este handler o usuário caía na home e o link
+    // "não funcionava". Aqui interceptamos, criamos a sessão e mandamos para
+    // a tela certa.
+    // ------------------------------------------------------------------
+    void (async () => {
+      try {
+        const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+        const hashParams = new URLSearchParams(hash);
+        const query = new URLSearchParams(window.location.search);
+
+        const errorDesc = hashParams.get("error_description") || query.get("error_description");
+        if (errorDesc) {
+          window.history.replaceState({}, "", window.location.pathname);
+          const expired = /expired|invalid/i.test(errorDesc);
+          const { toast } = await import("sonner");
+          toast.error(
+            expired
+              ? "O link expirou ou já foi utilizado. Solicite um novo e-mail."
+              : "Não foi possível validar o link do e-mail.",
+          );
+          return;
+        }
+
+        const type = hashParams.get("type") || query.get("type");
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const code = query.get("code");
+
+        if (!accessToken && !code) return;
+
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        } else if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) return;
+        }
+
+        // Limpa o token da URL antes de navegar.
+        window.history.replaceState({}, "", window.location.pathname);
+
+        const path = window.location.pathname;
+        if (type === "recovery") {
+          if (path !== "/reset-password") window.location.replace("/reset-password");
+          return;
+        }
+        // signup / invite / magiclink / email_change
+        if (path === "/" || path === "/login") window.location.replace("/portal-selector");
+      } catch {
+        /* ignora: fluxo normal segue */
+      }
+    })();
+
     // Registra o service worker mínimo (produção fora de preview) para viabilizar
     // instalação como app (WebAPK) no Chrome Android.
     registerAppServiceWorker();
+
 
     // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
     import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
