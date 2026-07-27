@@ -8,6 +8,7 @@ import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
+import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 
 type PartnerFreeProduct = {
   id: string;
