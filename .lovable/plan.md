@@ -1,35 +1,26 @@
-## O erro que aparece
+## Problema
 
-Não é sobre senha fraca. A mensagem `new row violates row-level security policy for table "entity_share_codes"` acontece **depois** que a empresa é salva: um trigger tenta gerar automaticamente o código de compartilhamento do parceiro (`entity_share_codes`) e a política RLS dessa tabela bloqueia a inserção.
+No painel do aluno (`student.freebies.tsx`) existe o bloco **"Minhas reservas"** (`StudentFreebieReservations`), que lista as reservas de benefícios gratuitos e libera o QR Code quando chega o horário do slot.
 
-**Causa raiz:** o trigger `ensure_partner_share_code` (e o equivalente para coach) roda como o usuário logado, e a política exige `partners.profile_id = auth.uid()`. Só que `partners.profile_id` guarda o `profiles.id`, não o `auth.users.id`. Então o WITH CHECK nunca passa e todo cadastro de parceiro que dispara o trigger quebra. Foi por isso que só a Karla travou agora — o fluxo "Já sou parceiro" cai direto na inserção via cliente e ativa o trigger.
+Na aba **Benefícios** do coach (`src/components/coach/tabs/BenefitsTab.tsx`) esse bloco nunca foi incluído: o coach consegue abrir o modal de agendamento e reservar, mas depois não existe nenhum lugar no painel dele que mostre a reserva nem o QR Code — por isso "não aparece em lugar nenhum".
 
-## Correção
+## O que será feito
 
-1. Migration nova:
-   - Marcar `public.ensure_partner_share_code()` e `public.ensure_coach_share_code()` como `SECURITY DEFINER` com `SET search_path = public` (elas já usam `ON CONFLICT DO NOTHING`, então continuam idempotentes e seguras).
-   - Rodar um backfill para gerar códigos que faltaram por causa do bug (`INSERT ... SELECT` nas duas tabelas com `ON CONFLICT DO NOTHING`).
-2. Melhoria de UX no formulário do parceiro (`PartnerRegistration.tsx`) e do profissional (`ProfessionalRegistration.tsx`):
-   - Traduzir mensagens comuns em `translateAuthError` / erros de RLS para português amigável ("Não foi possível concluir o cadastro. Tente novamente ou fale com o suporte.").
-   - Especificamente para senha fraca (`Password should be at least`, `weak_password`, `password is too short`), mostrar embaixo do campo de senha uma mensagem em português: "Senha muito fraca. Use pelo menos 8 caracteres com letras e números."
-   - Já existe `PasswordStrengthMeter`; adicionar o `formError` também abaixo do campo quando for erro de senha, para a pessoa ver onde corrigir.
+1. **Listar reservas na aba Benefícios do coach**
+   - Renderizar `StudentFreebieReservations` logo acima da lista de benefícios (mesma posição que no aluno), com `refreshKey` atualizado após cada reserva feita pelo modal de agendamento.
+   - O componente já busca por `profile_id` do usuário logado, então funciona igual para coach, sem lógica nova.
+
+2. **Estados e QR idênticos ao aluno**
+   - "Aguardando horário" (com opção de cancelar), "QR disponível" ao entrar no slot, "Usado", "Expirado" e "Cancelado".
+   - QR abre em modal e atualiza automaticamente quando o parceiro faz a leitura.
+
+3. **Alinhar o critério de agendamento**
+   - A aba do coach decide "agendar × resgatar direto" apenas pela existência de horários cadastrados; o aluno usa a flag `uses_scheduling` do produto. Passarei a buscar e usar `uses_scheduling` também no coach, para que produtos com agenda sempre abram o fluxo de reserva com QR.
+
+4. **Verificação**
+   - Conferir que as reservas criadas por um coach aparecem no scanner do parceiro (`PartnerFreebieScanner`) e nos relatórios, já que a reserva é a mesma tabela `partner_freebie_reservations`.
 
 ## Detalhes técnicos
 
-- SQL principal:
-  ```sql
-  CREATE OR REPLACE FUNCTION public.ensure_partner_share_code() RETURNS trigger
-  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
-  CREATE OR REPLACE FUNCTION public.ensure_coach_share_code() RETURNS trigger
-  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
-  ```
-- Backfill:
-  ```sql
-  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
-    SELECT 'partner', id, public.generate_entity_share_code() FROM public.partners
-    ON CONFLICT DO NOTHING;
-  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
-    SELECT 'professional', id, public.generate_entity_share_code() FROM public.coaches
-    ON CONFLICT DO NOTHING;
-  ```
-- Frontend: adicionar detector de erro de senha em `translateAuthError` e exibir `passwordError` inline no campo (Partner e Professional). Nenhuma outra tela é afetada.
+- Arquivo principal: `src/components/coach/tabs/BenefitsTab.tsx` (reuso do componente existente, sem duplicação de código).
+- Sem mudanças de banco previstas: as políticas de leitura de `partner_freebie_reservations` são por `profile_id`. Caso a verificação mostre que o coach não enxerga a própria reserva, adiciono a política correspondente numa migração.
