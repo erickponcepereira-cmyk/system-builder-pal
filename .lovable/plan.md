@@ -1,59 +1,43 @@
-## Escopo
+## O que está errado (verificado no banco)
 
-Quatro entregas independentes no admin/auth, sem quebrar fluxos existentes.
+**1. Disponível não desconta o que já foi sacado**
 
----
+Consultei as carteiras: em **todas** elas `available_balance` está exatamente igual a `total_earned`, ignorando saques pagos e valores bloqueados:
 
-### 1. Admin: liberar aluno manualmente (confirmar e-mail)
+| Pessoa | Disponível | Bloqueado | Ganho | Sacado |
+|---|---|---|---|---|
+| Nathan Utuari | 643,01 | 72,01 | 643,01 | 602,51 |
+| Ana Flávia Lucas | 186,59 | 67,68 | 186,59 | 155,56 |
+| Jorge Ramos | 135,54 | 63,57 | 135,54 | 59,00 |
 
-Já existe `admin_network--confirmAuthEmailByProfileId` server function que usa `auth.admin.updateUserById({ email_confirm: true })`. Falta expor no UI.
+A função oficial de recálculo (`recalc_wallets_for_owner`) faz a conta certa (desconta saques pagos, reservas e comissões de rede ainda travadas). O problema é outra função antiga, **`release_due_commissions_cron`**, que roda periodicamente e sobrescreve a carteira de todo mundo com um `UPDATE` bruto:
 
-- Em `admin.students.tsx` adicionar botão **"Confirmar e‑mail manualmente"** em cada linha/modal do aluno, chamando essa função.
-- Toast de sucesso/erro. Só habilitado se `email_confirmed_at` estiver nulo (ler via server fn nova `getAuthEmailStatus`).
-- Mesmo botão em `admin.coaches.tsx`, `admin.partners.tsx`, `admin.professionals.tsx` (o gate é o mesmo problema).
+```
+available_balance = soma das comissões "available"
+pending_balance   = soma das comissões "pending"
+total_earned      = ...
+```
 
----
+Ou seja: ela zera o efeito de qualquer saque e ignora bloqueio de rede/carência. Por isso o Nathan sacou R$ 602,51 e o disponível voltou ao valor cheio.
 
-### 2. Corrigir Reset de Senha / Confirmar E-mail após troca de domínio
+**2. Coluna "Bloqueado" sempre R$ 0,00 na lista**
 
-**Causa provável:** o Supabase Auth **Site URL** ficou apontando para `fitmindclub.lovable.app` (ou lovable.app antigo). Como e-mails de reset/confirm usam Site URL + `redirectTo`, e `redirectTo` só é honrado se estiver na allow‑list, os links quebram no domínio novo `fitmindclub.com.br`.
+Em `src/lib/admin-payouts.functions.ts` (listagem de pagamentos), a consulta da tabela `wallets` seleciona apenas `profile_id, available_balance, total_withdrawn` — sem `pending_balance` nem `total_earned`. A linha que calcula `blocked` lê um campo que nunca veio, resultando em 0. Ao abrir o detalhe da pessoa, outra consulta busca os dados de novo, e aí o valor aparece.
 
-- Adicionar `https://fitmindclub.com.br` e `https://www.fitmindclub.com.br` à allow‑list de Redirect URLs no Supabase (via Lovable Cloud → Users → Auth Settings — não é ajustável por migration/código do lado do app).
-- No código: garantir que `emailRedirectTo` e `redirectTo` em `createAuthUser.ts`, `CheckEmailNotice.tsx` e `login.tsx` continuem usando `window.location.origin` (já usam) — isso está OK, o problema é a allow‑list.
-- Documentar/instruir o usuário a fazer o ajuste. Pergunta: você quer que eu tente configurar isso via `supabase--configure_auth` ou você mesmo ajusta em Cloud → Users → Auth Settings?
+## Correções
 
----
+**A. Parar a sobrescrita das carteiras (migração)**
 
-### 3. Cadastro / Login com Google (com deduplicação)
+Reescrever `release_due_commissions_cron` para apenas liberar comissões vencidas (`pending → available`) e, em seguida, chamar `recalc_wallets_for_owner` para cada beneficiário afetado — sem nenhum `UPDATE` direto em `wallets`. Assim existe uma única fonte de verdade para os saldos.
 
-- Ativar provider Google gerenciado (`supabase--configure_social_auth` com `providers: ["google"]`, mantendo email).
-- Instalar/reusar `@lovable.dev/cloud-auth-js` (`lovable.auth.signInWithOAuth`).
-- Botão "Continuar com Google" em `login.tsx` e nas telas de registro (`StudentRegistration`, `CoachRegistration`, `PartnerRegistration`, `ProfessionalRegistration`).
-- Redirect: `${window.location.origin}/onboarding` (rota nova/reaproveitada) que decide:
-  - **Se e‑mail do Google já existe em `profiles`** → apenas loga (vincula identidade Google à conta existente automaticamente pelo Supabase, mesmo e-mail = mesmo usuário).
-  - **Se é aluno novo** → tela `onboarding.tsx` (já existe) exige **telefone, sexo e data de nascimento** antes de criar `profiles`/`students`.
-  - Para novos coach/partner/profissional via Google → redireciona para as respectivas telas de registro pré‑preenchidas com nome/email do Google, exigindo os demais dados/pagamento normalmente.
-- Deduplicação extra: usar `checkEmailAvailable` antes de criar profile; se existir profile com mesmo email sem `user_id`, fazer merge (setar `user_id`). Trigger idempotente.
+**B. Reconciliar todas as carteiras agora**
 
----
+Rodar, na mesma migração, o recálculo para todos os perfis (mesma varredura usada em `admin_reconcile_all_wallets`), corrigindo Nathan, Ana Flávia, Jorge e os demais: o disponível passa a ser `liberado − sacado − reservado`, e o sacado permanece registrado.
 
-### 4. Admin: aba "Links de Indicação"
+**C. Corrigir a coluna "Bloqueado" na lista**
 
-Nova rota `admin.referral-links.tsx` + entrada no `AdminShell.tsx`.
+Em `src/lib/admin-payouts.functions.ts`, incluir `pending_balance` e `total_earned` no `select` da tabela `wallets`, para que Bloqueado e Total ganho apareçam já na listagem, iguais ao que o detalhe mostra.
 
-- Lista unificada de todos referral codes (`coaches.referral_code`, `partners.referral_code`, `students.referral_code`), com colunas: Nome, Papel, Código, Link completo (`/r/CODE`), botão Copiar.
-- Filtros: busca por nome/código, filtro por papel.
-- Server fn `listAllReferralLinks` (admin‑only) em novo `src/lib/admin-referral-links.functions.ts`.
+## Verificação
 
----
-
-## Detalhes técnicos
-
-- Google OAuth: usar `lovable.auth.signInWithOAuth("google", { redirect_uri: ${origin}/onboarding })`. Deduplicação via mesmo e-mail no Supabase é nativa (mesmo user_id).
-- Onboarding aluno pós‑Google: validar `phone` (BR), `sex` (masculino/feminino/outro), `birth_date` (idade ≥ 14). Bloquear entrada no painel até preencher.
-- Nenhuma alteração em regras financeiras, carteiras, RLS de tabelas existentes.
-
-## Perguntas antes de executar
-
-1. **Reset de senha (item 2):** posso rodar `supabase--configure_auth` para tentar ajustar, ou você prefere ajustar manualmente em Cloud → Users → Auth Settings → Redirect URLs adicionando `fitmindclub.com.br` e `www.fitmindclub.com.br`?
-2. **Google login (item 3):** disponibilizar em **todas** as telas de registro (aluno/coach/parceiro/profissional) ou **só aluno + login geral**?
+Depois da migração, conferir por consulta que não sobra nenhuma carteira com `available_balance > total_earned − pending_balance − total_withdrawn` (hoje há 6), e revisar a tela de Pagamentos: Nathan deve mostrar disponível reduzido, sacado R$ 602,51 e bloqueado R$ 72,01.
