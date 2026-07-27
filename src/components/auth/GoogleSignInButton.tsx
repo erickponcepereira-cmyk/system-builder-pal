@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
+import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 
 /** Ícone oficial do Google (SVG inline, cores da marca). */
 function GoogleIcon({ className }: { className?: string }) {
@@ -36,7 +37,7 @@ export function GoogleSignInButton({
         sessionStorage.setItem("fitmind:auth-next", nextPath);
       }
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth/callback`,
+        redirect_uri: getAuthRedirectUrl("/auth/callback"),
       });
 
       if (result.error) {

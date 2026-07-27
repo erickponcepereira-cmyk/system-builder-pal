@@ -18,10 +18,11 @@ export const Route = createFileRoute("/")({
         content:
           "Plataforma de gestão, produtividade e integração com Google Agenda para sincronização de compromissos e eventos.",
       },
-      { property: "og:url", content: "https://fitmindclub.lovable.app/" },
+      { property: "og:url", content: "https://www.fitmindclub.com.br/" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
-    links: [{ rel: "canonical", href: "https://fitmindclub.lovable.app/" }],
+    links: [{ rel: "canonical", href: "https://www.fitmindclub.com.br/" }],
   }),
   component: Index,
 });
@@ -200,13 +201,13 @@ function Index() {
           }}
         >
           <a
-            href="https://fitmindclub.lovable.app/privacidade"
+            href="https://www.fitmindclub.com.br/privacidade"
             style={{ color: "#FF4230", textDecoration: "underline" }}
           >
             Política de Privacidade
           </a>
           <a
-            href="https://fitmindclub.lovable.app/termos"
+            href="https://www.fitmindclub.com.br/termos"
             style={{ color: "#FF4230", textDecoration: "underline" }}
           >
             Termos de Uso
@@ -233,14 +234,14 @@ function Index() {
           }}
         >
           <a
-            href="https://fitmindclub.lovable.app/privacidade"
+            href="https://www.fitmindclub.com.br/privacidade"
             style={{ color: "#FFFFFF", textDecoration: "none" }}
           >
             Política de Privacidade
           </a>
           <span style={{ opacity: 0.4 }}>|</span>
           <a
-            href="https://fitmindclub.lovable.app/termos"
+            href="https://www.fitmindclub.com.br/termos"
             style={{ color: "#FFFFFF", textDecoration: "none" }}
           >
             Termos de Uso
