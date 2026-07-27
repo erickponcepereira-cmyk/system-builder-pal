@@ -77,11 +77,24 @@ function AdminReferralLinks() {
     }
   };
 
+  const storeLink = (r: ReferralLinkRow) => `${origin}${r.path}?to=loja`;
+
+  const copyStore = async (r: ReferralLinkRow) => {
+    try {
+      await navigator.clipboard.writeText(storeLink(r));
+      setCopied(`${r.code}:loja`);
+      toast.success("Link da loja copiado");
+      setTimeout(() => setCopied((c) => (c === `${r.code}:loja` ? null : c)), 1800);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   const exportCsv = () => {
-    const header = "Nome;Papel;Codigo;Link;Email;Telefone";
+    const header = "Nome;Papel;Codigo;Link cadastro;Link loja;Email;Telefone";
     const body = filtered
       .map((r) =>
-        [r.name, KIND_LABEL[r.kind], r.code, fullLink(r), r.email || "", r.phone || ""]
+        [r.name, KIND_LABEL[r.kind], r.code, fullLink(r), storeLink(r), r.email || "", r.phone || ""]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(";"),
       )
@@ -177,13 +190,22 @@ function AdminReferralLinks() {
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => copy(r)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
-                      >
-                        {copied === r.code ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                        {copied === r.code ? "Copiado" : "Copiar link"}
-                      </button>
+                      <div className="inline-flex flex-col items-end gap-1.5 sm:flex-row">
+                        <button
+                          onClick={() => copy(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
+                        >
+                          {copied === r.code ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied === r.code ? "Copiado" : "Cadastro"}
+                        </button>
+                        <button
+                          onClick={() => copyStore(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/80 hover:bg-white/20"
+                        >
+                          {copied === `${r.code}:loja` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied === `${r.code}:loja` ? "Copiado" : "Loja"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
