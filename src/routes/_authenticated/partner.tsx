@@ -337,6 +337,20 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
     } else { copyReferral(); }
   };
 
+  const storeLink = referralLink ? `${referralLink}?to=loja` : "";
+  const copyStore = () => {
+    if (!storeLink) return;
+    navigator.clipboard.writeText(storeLink);
+    toast.success("Link da loja copiado!");
+  };
+  const shareStore = async () => {
+    if (!storeLink) return;
+    const text = `Conheça a loja do FitMind Club:`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "FitMind Club", text, url: storeLink }); } catch { /* ignore */ }
+    } else { copyStore(); }
+  };
+
   const coachWhatsMsg = uplineCoach ? `Oi ${uplineCoach.name.split(" ")[0]}, eu quero além de parceiro ser coach FitMind e vender mais!` : "";
 
   return (
@@ -392,6 +406,14 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
           <div className="mt-2 flex gap-2">
             <button onClick={copyReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20"><Copy className="h-3.5 w-3.5" /> Copiar</button>
             <button onClick={shareReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90"><Share2 className="h-3.5 w-3.5" /> Compartilhar</button>
+          </div>
+
+          <h3 className="mt-4 text-sm font-bold text-white">Link da loja</h3>
+          <p className="text-[11px] text-white/50 mb-2">Leva direto para a loja pública, mantendo a indicação vinculada a você.</p>
+          <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{`${referralLink}?to=loja`}</div>
+          <div className="mt-2 flex gap-2">
+            <button onClick={copyStore} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20"><Copy className="h-3.5 w-3.5" /> Copiar</button>
+            <button onClick={shareStore} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90"><Share2 className="h-3.5 w-3.5" /> Compartilhar</button>
           </div>
         </div>
       )}

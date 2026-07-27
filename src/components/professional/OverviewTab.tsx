@@ -126,6 +126,23 @@ export function OverviewTab({ coachId, coachName }: Props) {
     copyReferral();
   };
 
+  const storeLink = fullReferral ? `${fullReferral}?to=loja` : "";
+
+  const copyStore = () => {
+    if (!storeLink) return;
+    navigator.clipboard.writeText(storeLink);
+    toast.success("Link da loja copiado!");
+  };
+
+  const shareStore = async () => {
+    if (!storeLink) return;
+    const shareData = { title: "FitMind Club", text: "Conheça a loja do FitMind Club:", url: storeLink };
+    if (typeof navigator !== "undefined" && (navigator as Navigator).share) {
+      try { await (navigator as Navigator).share(shareData); return; } catch { /* fallback */ }
+    }
+    copyStore();
+  };
+
   const teamWaLink = stats.uplineCoachPhone
     ? `https://wa.me/${onlyDigits(stats.uplineCoachPhone)}?text=${encodeURIComponent(
         `Olá ${stats.uplineCoachName || ""}! Sou ${coachName} e gostaria de saber mais sobre como montar minha equipe de profissionais.`,
@@ -180,6 +197,24 @@ export function OverviewTab({ coachId, coachName }: Props) {
           <p className="text-xs text-white/50">Link de indicação ainda não disponível.</p>
         )}
         <p className="mt-2 text-[11px] text-white/40">Indique novos alunos e ganhe comissões na rede.</p>
+
+        {fullReferral && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <h3 className="mb-2 text-sm font-bold text-white">Link da loja</h3>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1 truncate rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 font-mono">{`${fullReferral}?to=loja`}</div>
+              <div className="flex gap-2">
+                <button onClick={copyStore} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 flex items-center justify-center gap-1">
+                  <Copy className="h-3 w-3" /> Copiar
+                </button>
+                <button onClick={shareStore} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 flex items-center justify-center gap-1">
+                  <Share2 className="h-3 w-3" /> Compartilhar
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-white/40">Abre a loja pública com sua indicação vinculada.</p>
+          </div>
+        )}
       </div>
 
       {/* WhatsApp group */}
