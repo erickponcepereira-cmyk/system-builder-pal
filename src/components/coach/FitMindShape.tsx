@@ -524,7 +524,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       if (!onLoadFullAssessments) return c;
       try {
         const full = await onLoadFullAssessments(c.id);
-        return { ...c, assessments: full.length ? full : c.assessments };
+        // Sempre substitui — não faz fallback para os stubs zerados montados
+        // pela lista, para evitar cards "0 kg · IMC 0" quando a consulta real
+        // não retorna avaliações para o client_id passado.
+        return { ...c, assessments: full };
       } catch {
         return c;
       }
