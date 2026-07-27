@@ -560,7 +560,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             partner_address: bookingProduct.partners?.address ?? null,
           }}
           onClose={() => setBookingProduct(null)}
-          onReserved={() => { setBookingProduct(null); toast.success("Reserva criada! Veja em Minhas reservas no portal do aluno."); }}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
         />
       )}
     </>
