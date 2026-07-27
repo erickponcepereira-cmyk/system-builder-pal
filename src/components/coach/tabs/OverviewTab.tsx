@@ -177,7 +177,43 @@ export function OverviewTab({
             <Copy className="h-3.5 w-3.5 text-primary-foreground" />
           </button>
         </div>
+
+        {referralLink && (
+          <>
+            <p className="mt-3 text-[11px] uppercase tracking-wider text-primary-foreground/80 font-bold">
+              Link da sua loja
+            </p>
+            <div className="mt-1 flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2.5">
+              <span className="flex-1 text-xs text-primary-foreground truncate font-mono">
+                {`${referralLink}?to=loja`}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  const url = `${referralLink}?to=loja`;
+                  const shareData = { title: "FitMind Club", text: "Conheça a loja do FitMind Club:", url };
+                  if (typeof navigator !== "undefined" && (navigator as Navigator).share) {
+                    try { await (navigator as Navigator).share(shareData); return; } catch { /* fallback */ }
+                  }
+                  navigator.clipboard.writeText(url);
+                }}
+                aria-label="Compartilhar link da loja"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/20 hover:bg-primary-foreground/30"
+              >
+                <Share2 className="h-3.5 w-3.5 text-primary-foreground" />
+              </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(`${referralLink}?to=loja`)}
+                aria-label="Copiar link da loja"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/20 hover:bg-primary-foreground/30"
+              >
+                <Copy className="h-3.5 w-3.5 text-primary-foreground" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
+
 
       <div className="mb-6">
         <RewardsPanel />
