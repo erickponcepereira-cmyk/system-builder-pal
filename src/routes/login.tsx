@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
 import { useBranding } from "@/components/theme-provider";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 
 
 export const Route = createFileRoute("/login")({
@@ -145,7 +146,7 @@ function LoginPage() {
     setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAuthRedirectUrl("/reset-password"),
       });
       if (error) throw error;
       setResetSent(true);

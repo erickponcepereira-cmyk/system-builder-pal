@@ -30,19 +30,59 @@ function ResetPasswordPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    // O Supabase processa o link de recovery automaticamente e cria uma sessão temporária.
-    // Aguardamos um onAuthStateChange "PASSWORD_RECOVERY" ou verificamos a sessão.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    let active = true;
+
+    async function hydrateRecoverySession() {
+      try {
+        const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+        const hashParams = new URLSearchParams(hash);
+        const query = new URLSearchParams(window.location.search);
+        const errorDescription = hashParams.get("error_description") || query.get("error_description");
+
+        if (errorDescription) {
+          window.history.replaceState({}, "", "/reset-password");
+          throw new Error(errorDescription);
+        }
+
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const code = query.get("code");
+
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          if (error) throw error;
+          window.history.replaceState({}, "", "/reset-password");
+        } else if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          window.history.replaceState({}, "", "/reset-password");
+        }
+
+        const { data } = await supabase.auth.getSession();
+        if (active && data.session) setReady(true);
+      } catch (err) {
+        const friendly = translateAuthError(err);
+        if (active) setFormError(friendly);
+        toast.error(friendly);
+      }
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        setReady(true);
+        return;
+      }
+      if (session) {
         setReady(true);
       }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
+    void hydrateRecoverySession();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,9 +148,12 @@ function ResetPasswordPage() {
           </div>
 
           {!ready ? (
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs text-white/60">
-              Validando o link de redefinição. Se nada acontecer em alguns segundos,
-              o link pode ter expirado — solicite um novo na tela de login.
+            <div className={`rounded-xl border px-3 py-3 text-xs ${
+              formError
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-white/10 bg-white/5 text-white/60"
+            }`}>
+              {formError || "Validando o link de redefinição. Se nada acontecer em alguns segundos, o link pode ter expirado — solicite um novo na tela de login."}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

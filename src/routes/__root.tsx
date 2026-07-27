@@ -123,6 +123,11 @@ function RootComponent() {
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
         const code = query.get("code");
+        const path = window.location.pathname;
+
+        // A tela de redefinição precisa tratar o código diretamente para evitar
+        // corrida entre dois handlers tentando consumir o mesmo link.
+        if (path === "/reset-password") return;
 
         if (!accessToken && !code) return;
 
@@ -136,7 +141,6 @@ function RootComponent() {
         // Limpa o token da URL antes de navegar.
         window.history.replaceState({}, "", window.location.pathname);
 
-        const path = window.location.pathname;
         if (type === "recovery") {
           if (path !== "/reset-password") window.location.replace("/reset-password");
           return;

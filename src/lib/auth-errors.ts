@@ -15,6 +15,8 @@ export function translateAuthError(raw: unknown): string {
     return "Já existe uma conta com este e-mail. Faça login para continuar.";
   if (msg.includes("password should be at least") || msg.includes("password is too short") || msg.includes("too short"))
     return "A senha é muito curta. Use no mínimo 8 caracteres, com 1 maiúscula e 1 número.";
+  if (msg.includes("new password should be different") || msg.includes("same as the old password"))
+    return "A nova senha precisa ser diferente da senha atual.";
   if (
     msg.includes("pwned") ||
     msg.includes("has been leaked") ||
@@ -41,6 +43,15 @@ export function translateAuthError(raw: unknown): string {
     return "Falha de conexão. Verifique sua internet e tente novamente.";
   if (msg.includes("captcha"))
     return "Verificação de segurança falhou. Recarregue a página e tente novamente.";
+  if (
+    msg.includes("otp expired") ||
+    msg.includes("token has expired") ||
+    msg.includes("invalid token") ||
+    msg.includes("invalid or expired") ||
+    msg.includes("auth code") ||
+    msg.includes("code verifier")
+  )
+    return "O link expirou ou já foi utilizado. Solicite um novo link de redefinição.";
   if (msg.includes("signup") && msg.includes("disabled"))
     return "Cadastros estão temporariamente desabilitados. Tente mais tarde.";
 

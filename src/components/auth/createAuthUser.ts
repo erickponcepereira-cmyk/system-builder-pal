@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { bootstrapTestSignup, isTestEmailClient } from "@/lib/test-accounts.functions";
+import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 
 export async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student" | "partner", extraMeta: Record<string, unknown> = {}) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -18,7 +19,7 @@ export async function createAuthUser(email: string, password: string, name: stri
     password,
     options: {
       data: { name: name.trim(), role, ...extraMeta },
-      emailRedirectTo: `${window.location.origin}/login`,
+      emailRedirectTo: getAuthRedirectUrl("/login"),
     },
   });
 
