@@ -8,6 +8,7 @@ import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
+import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 
 type PartnerFreeProduct = {
   id: string;
@@ -22,6 +23,7 @@ type PartnerFreeProduct = {
   benefit_start_time: string | null;
   benefit_end_time: string | null;
   weekly_limit_per_student: number | null;
+  uses_scheduling: boolean | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
   partner_id: string;
@@ -71,6 +73,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null; locationName: string | null; locationUrl: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
+  const [reservationsRefresh, setReservationsRefresh] = useState(0);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -105,7 +108,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,weekly_limit_per_student,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -274,6 +277,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             );
           })()}
 
+          <div className="mb-5">
+            <StudentFreebieReservations refreshKey={reservationsRefresh} />
+          </div>
+
+
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
             {(() => {
               const list = partnerFreebies.filter((p) =>
@@ -289,7 +297,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                   {list.map((p) => {
                     const isDiscount = p.redemption_mode === "discount";
                     const scheduleLines = formatSchedules(schedulesByProduct[p.id] || []);
-                    const isScheduled = scheduleLines.length > 0;
+                    const isScheduled = !!p.uses_scheduling || scheduleLines.length > 0;
                     return (
                       <div
                         key={p.id}
@@ -552,7 +560,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             partner_address: bookingProduct.partners?.address ?? null,
           }}
           onClose={() => setBookingProduct(null)}
-          onReserved={() => { setBookingProduct(null); toast.success("Reserva criada! Veja em Minhas reservas no portal do aluno."); }}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
         />
       )}
     </>

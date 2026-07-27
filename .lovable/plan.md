@@ -1,35 +1,53 @@
-## O erro que aparece
+## Diagnóstico (confirmado no banco)
 
-Não é sobre senha fraca. A mensagem `new row violates row-level security policy for table "entity_share_codes"` acontece **depois** que a empresa é salva: um trigger tenta gerar automaticamente o código de compartilhamento do parceiro (`entity_share_codes`) e a política RLS dessa tabela bloqueia a inserção.
+A aluna **Bianca Leandro Sousa Silva** (student_id `cecfaa78…`) tem **3 registros duplicados** em `coach_evaluation_clients`:
 
-**Causa raiz:** o trigger `ensure_partner_share_code` (e o equivalente para coach) roda como o usuário logado, e a política exige `partners.profile_id = auth.uid()`. Só que `partners.profile_id` guarda o `profiles.id`, não o `auth.users.id`. Então o WITH CHECK nunca passa e todo cadastro de parceiro que dispara o trigger quebra. Foi por isso que só a Karla travou agora — o fluxo "Já sou parceiro" cai direto na inserção via cliente e ativa o trigger.
+| client_id | coach_id | criado em |
+|---|---|---|
+| `5fedc74b…` (nome minúsculo) | coach 0dc01639 (titular) | 06/07 |
+| `d881866c…` | coach 0dc01639 (titular) | 25/07 |
+| `fbd608fd…` | coach 20580821 (**master coach — o usuário**) | 27/07 (agora) |
+
+As **3 avaliações reais** (incluindo a de 25/07 vinculada ao desafio com peso 67,4 kg / IMC 26,7 / gordura 42,7%) foram gravadas apenas em `client_id = 5fedc74b…`.
+
+O que a `EvaluateTab` faz hoje:
+1. Lista clientes usando `coach_evaluation_client_summaries` e faz um **dedup por `student_id`**, mostrando "3 avaliações" agregadas — mas mantém só **um** `client_id` (o "prev") na entrada consolidada.
+2. Quando o card é aberto, `loadFullAssessmentsForClient(clientId)` busca em `coach_body_assessments` **filtrando por esse único `client_id`**. No caso do master coach, o client_id vencedor é o dele (`fbd608fd…`), que tem **0 avaliações reais**.
+3. A lista da UI cai nos **stubs zerados** montados pelo próprio código (linhas 238-248: `weight: 0, bmi: 0, bodyFat: 0…`), gerando exatamente o card "25 de jul. de 26 (atual) — 0 kg · 0 % gord. · IMC 0".
+
+Ou seja: os dados **não foram perdidos** — estão salvos em `5fedc74b…` com o desafio corretamente vinculado. O bug é de leitura: histórico é buscado por um `client_id` só, quando na verdade existem N cadastros duplicados do mesmo aluno.
 
 ## Correção
 
-1. Migration nova:
-   - Marcar `public.ensure_partner_share_code()` e `public.ensure_coach_share_code()` como `SECURITY DEFINER` com `SET search_path = public` (elas já usam `ON CONFLICT DO NOTHING`, então continuam idempotentes e seguras).
-   - Rodar um backfill para gerar códigos que faltaram por causa do bug (`INSERT ... SELECT` nas duas tabelas com `ON CONFLICT DO NOTHING`).
-2. Melhoria de UX no formulário do parceiro (`PartnerRegistration.tsx`) e do profissional (`ProfessionalRegistration.tsx`):
-   - Traduzir mensagens comuns em `translateAuthError` / erros de RLS para português amigável ("Não foi possível concluir o cadastro. Tente novamente ou fale com o suporte.").
-   - Especificamente para senha fraca (`Password should be at least`, `weak_password`, `password is too short`), mostrar embaixo do campo de senha uma mensagem em português: "Senha muito fraca. Use pelo menos 8 caracteres com letras e números."
-   - Já existe `PasswordStrengthMeter`; adicionar o `formError` também abaixo do campo quando for erro de senha, para a pessoa ver onde corrigir.
+### 1. Backfill de dados (migração SQL)
+Consolidar `coach_evaluation_clients` duplicados por `student_id`:
+- Para cada `student_id` com mais de uma linha, escolher o registro mais antigo como **canônico**.
+- `UPDATE coach_body_assessments SET client_id = <canônico>` em todas as avaliações apontando para as duplicatas.
+- Migrar dependências equivalentes (fotos, protocolos etc. que também referenciam `coach_evaluation_clients.id`).
+- `DELETE` das linhas duplicadas de `coach_evaluation_clients`.
+- Reprocessar Bianca especificamente para validar (deve sobrar apenas `5fedc74b…` com 3 avaliações).
+
+### 2. Prevenção (trigger + índice)
+- Índice único parcial: `UNIQUE (student_id) WHERE student_id IS NOT NULL` em `coach_evaluation_clients`. Um único cadastro por aluno vinculado, independentemente do coach que abriu a ficha.
+- Ajustar `ensure_coach_evaluation_client_for_student` (função existente) para **reaproveitar** o cadastro existente do aluno em vez de criar um novo por coach.
+
+### 3. Frontend — `EvaluateTab.tsx`
+- Trocar `loadFullAssessmentsForClient(clientId)` para buscar avaliações por `student_id` quando o cliente estiver vinculado (`studentId`), caindo em `client_id` só para casos "self / sem aluno".
+- Após o backfill, o dedup atual continua correto (fica só um `client_id` por aluno) mas essa mudança garante que master coaches e coaches secundários vejam o histórico completo mesmo em cenários novos.
+- Remover a substituição por stubs zerados no render de detalhe: se `assessments` está vazio após o fetch real, mostrar "Sem avaliações registradas" em vez de um card `0 kg · IMC 0`.
 
 ## Detalhes técnicos
 
-- SQL principal:
-  ```sql
-  CREATE OR REPLACE FUNCTION public.ensure_partner_share_code() RETURNS trigger
-  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
-  CREATE OR REPLACE FUNCTION public.ensure_coach_share_code() RETURNS trigger
-  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
-  ```
-- Backfill:
-  ```sql
-  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
-    SELECT 'partner', id, public.generate_entity_share_code() FROM public.partners
-    ON CONFLICT DO NOTHING;
-  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
-    SELECT 'professional', id, public.generate_entity_share_code() FROM public.coaches
-    ON CONFLICT DO NOTHING;
-  ```
-- Frontend: adicionar detector de erro de senha em `translateAuthError` e exibir `passwordError` inline no campo (Partner e Professional). Nenhuma outra tela é afetada.
+Tabelas envolvidas: `coach_evaluation_clients`, `coach_body_assessments` (FK `client_id`), possivelmente `student_protocols` / `evolution_photos` (verificar FKs antes do delete).
+
+Arquivos frontend a editar:
+- `src/components/coach/tabs/EvaluateTab.tsx` (`loadFullAssessmentsForClient`, remoção de stubs de valor zero na visualização de detalhe).
+- Nenhuma mudança em `AssessmentComparison.tsx` — ele consome o array retornado.
+
+Ordem de aplicação: (1) migração de backfill + índice/trigger → aprovar; (2) ajustes no frontend após regeneração dos tipos.
+
+## Resultado esperado
+
+- Bianca (e demais alunos com duplicatas) passam a mostrar **as 3 avaliações reais** com peso/IMC/gordura corretos, incluindo o vínculo com o desafio.
+- Novos acessos por master coach ou troca de coach titular **não** criam mais fichas paralelas — histórico único por aluno.
+- Cards zerados "0 kg · IMC 0" desaparecem.

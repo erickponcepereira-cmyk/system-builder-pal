@@ -538,8 +538,10 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     }
 
     const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
+    // uses_scheduling é derivado da agenda (dias/horários) no banco — nunca enviar do cliente
+    const { uses_scheduling: _ignoredUsesScheduling, ...editingWithoutSchedulingFlag } = editing;
     const payload = {
-      ...editing,
+      ...editingWithoutSchedulingFlag,
       ...extra,
       partner_id: partner.id,
       status: (editing.status as string | undefined) || "pending",
@@ -930,6 +932,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   productId={editing.id}
                   weeklyLimit={editing.weekly_limit_per_student ?? 1}
                   onChangeWeeklyLimit={(n) => setEditing({ ...editing, weekly_limit_per_student: n })}
+                  onSaved={(hasSchedules) => setEditing((prev) => (prev ? { ...prev, uses_scheduling: hasSchedules } : prev))}
                 />
               )}
               {editing.kind === "free" && editing.redemption_mode === "free" && !editing.id && (
