@@ -1,53 +1,59 @@
-## Diagnóstico (confirmado no banco)
+## Escopo
 
-A aluna **Bianca Leandro Sousa Silva** (student_id `cecfaa78…`) tem **3 registros duplicados** em `coach_evaluation_clients`:
+Quatro entregas independentes no admin/auth, sem quebrar fluxos existentes.
 
-| client_id | coach_id | criado em |
-|---|---|---|
-| `5fedc74b…` (nome minúsculo) | coach 0dc01639 (titular) | 06/07 |
-| `d881866c…` | coach 0dc01639 (titular) | 25/07 |
-| `fbd608fd…` | coach 20580821 (**master coach — o usuário**) | 27/07 (agora) |
+---
 
-As **3 avaliações reais** (incluindo a de 25/07 vinculada ao desafio com peso 67,4 kg / IMC 26,7 / gordura 42,7%) foram gravadas apenas em `client_id = 5fedc74b…`.
+### 1. Admin: liberar aluno manualmente (confirmar e-mail)
 
-O que a `EvaluateTab` faz hoje:
-1. Lista clientes usando `coach_evaluation_client_summaries` e faz um **dedup por `student_id`**, mostrando "3 avaliações" agregadas — mas mantém só **um** `client_id` (o "prev") na entrada consolidada.
-2. Quando o card é aberto, `loadFullAssessmentsForClient(clientId)` busca em `coach_body_assessments` **filtrando por esse único `client_id`**. No caso do master coach, o client_id vencedor é o dele (`fbd608fd…`), que tem **0 avaliações reais**.
-3. A lista da UI cai nos **stubs zerados** montados pelo próprio código (linhas 238-248: `weight: 0, bmi: 0, bodyFat: 0…`), gerando exatamente o card "25 de jul. de 26 (atual) — 0 kg · 0 % gord. · IMC 0".
+Já existe `admin_network--confirmAuthEmailByProfileId` server function que usa `auth.admin.updateUserById({ email_confirm: true })`. Falta expor no UI.
 
-Ou seja: os dados **não foram perdidos** — estão salvos em `5fedc74b…` com o desafio corretamente vinculado. O bug é de leitura: histórico é buscado por um `client_id` só, quando na verdade existem N cadastros duplicados do mesmo aluno.
+- Em `admin.students.tsx` adicionar botão **"Confirmar e‑mail manualmente"** em cada linha/modal do aluno, chamando essa função.
+- Toast de sucesso/erro. Só habilitado se `email_confirmed_at` estiver nulo (ler via server fn nova `getAuthEmailStatus`).
+- Mesmo botão em `admin.coaches.tsx`, `admin.partners.tsx`, `admin.professionals.tsx` (o gate é o mesmo problema).
 
-## Correção
+---
 
-### 1. Backfill de dados (migração SQL)
-Consolidar `coach_evaluation_clients` duplicados por `student_id`:
-- Para cada `student_id` com mais de uma linha, escolher o registro mais antigo como **canônico**.
-- `UPDATE coach_body_assessments SET client_id = <canônico>` em todas as avaliações apontando para as duplicatas.
-- Migrar dependências equivalentes (fotos, protocolos etc. que também referenciam `coach_evaluation_clients.id`).
-- `DELETE` das linhas duplicadas de `coach_evaluation_clients`.
-- Reprocessar Bianca especificamente para validar (deve sobrar apenas `5fedc74b…` com 3 avaliações).
+### 2. Corrigir Reset de Senha / Confirmar E-mail após troca de domínio
 
-### 2. Prevenção (trigger + índice)
-- Índice único parcial: `UNIQUE (student_id) WHERE student_id IS NOT NULL` em `coach_evaluation_clients`. Um único cadastro por aluno vinculado, independentemente do coach que abriu a ficha.
-- Ajustar `ensure_coach_evaluation_client_for_student` (função existente) para **reaproveitar** o cadastro existente do aluno em vez de criar um novo por coach.
+**Causa provável:** o Supabase Auth **Site URL** ficou apontando para `fitmindclub.lovable.app` (ou lovable.app antigo). Como e-mails de reset/confirm usam Site URL + `redirectTo`, e `redirectTo` só é honrado se estiver na allow‑list, os links quebram no domínio novo `fitmindclub.com.br`.
 
-### 3. Frontend — `EvaluateTab.tsx`
-- Trocar `loadFullAssessmentsForClient(clientId)` para buscar avaliações por `student_id` quando o cliente estiver vinculado (`studentId`), caindo em `client_id` só para casos "self / sem aluno".
-- Após o backfill, o dedup atual continua correto (fica só um `client_id` por aluno) mas essa mudança garante que master coaches e coaches secundários vejam o histórico completo mesmo em cenários novos.
-- Remover a substituição por stubs zerados no render de detalhe: se `assessments` está vazio após o fetch real, mostrar "Sem avaliações registradas" em vez de um card `0 kg · IMC 0`.
+- Adicionar `https://fitmindclub.com.br` e `https://www.fitmindclub.com.br` à allow‑list de Redirect URLs no Supabase (via Lovable Cloud → Users → Auth Settings — não é ajustável por migration/código do lado do app).
+- No código: garantir que `emailRedirectTo` e `redirectTo` em `createAuthUser.ts`, `CheckEmailNotice.tsx` e `login.tsx` continuem usando `window.location.origin` (já usam) — isso está OK, o problema é a allow‑list.
+- Documentar/instruir o usuário a fazer o ajuste. Pergunta: você quer que eu tente configurar isso via `supabase--configure_auth` ou você mesmo ajusta em Cloud → Users → Auth Settings?
+
+---
+
+### 3. Cadastro / Login com Google (com deduplicação)
+
+- Ativar provider Google gerenciado (`supabase--configure_social_auth` com `providers: ["google"]`, mantendo email).
+- Instalar/reusar `@lovable.dev/cloud-auth-js` (`lovable.auth.signInWithOAuth`).
+- Botão "Continuar com Google" em `login.tsx` e nas telas de registro (`StudentRegistration`, `CoachRegistration`, `PartnerRegistration`, `ProfessionalRegistration`).
+- Redirect: `${window.location.origin}/onboarding` (rota nova/reaproveitada) que decide:
+  - **Se e‑mail do Google já existe em `profiles`** → apenas loga (vincula identidade Google à conta existente automaticamente pelo Supabase, mesmo e-mail = mesmo usuário).
+  - **Se é aluno novo** → tela `onboarding.tsx` (já existe) exige **telefone, sexo e data de nascimento** antes de criar `profiles`/`students`.
+  - Para novos coach/partner/profissional via Google → redireciona para as respectivas telas de registro pré‑preenchidas com nome/email do Google, exigindo os demais dados/pagamento normalmente.
+- Deduplicação extra: usar `checkEmailAvailable` antes de criar profile; se existir profile com mesmo email sem `user_id`, fazer merge (setar `user_id`). Trigger idempotente.
+
+---
+
+### 4. Admin: aba "Links de Indicação"
+
+Nova rota `admin.referral-links.tsx` + entrada no `AdminShell.tsx`.
+
+- Lista unificada de todos referral codes (`coaches.referral_code`, `partners.referral_code`, `students.referral_code`), com colunas: Nome, Papel, Código, Link completo (`/r/CODE`), botão Copiar.
+- Filtros: busca por nome/código, filtro por papel.
+- Server fn `listAllReferralLinks` (admin‑only) em novo `src/lib/admin-referral-links.functions.ts`.
+
+---
 
 ## Detalhes técnicos
 
-Tabelas envolvidas: `coach_evaluation_clients`, `coach_body_assessments` (FK `client_id`), possivelmente `student_protocols` / `evolution_photos` (verificar FKs antes do delete).
+- Google OAuth: usar `lovable.auth.signInWithOAuth("google", { redirect_uri: ${origin}/onboarding })`. Deduplicação via mesmo e-mail no Supabase é nativa (mesmo user_id).
+- Onboarding aluno pós‑Google: validar `phone` (BR), `sex` (masculino/feminino/outro), `birth_date` (idade ≥ 14). Bloquear entrada no painel até preencher.
+- Nenhuma alteração em regras financeiras, carteiras, RLS de tabelas existentes.
 
-Arquivos frontend a editar:
-- `src/components/coach/tabs/EvaluateTab.tsx` (`loadFullAssessmentsForClient`, remoção de stubs de valor zero na visualização de detalhe).
-- Nenhuma mudança em `AssessmentComparison.tsx` — ele consome o array retornado.
+## Perguntas antes de executar
 
-Ordem de aplicação: (1) migração de backfill + índice/trigger → aprovar; (2) ajustes no frontend após regeneração dos tipos.
-
-## Resultado esperado
-
-- Bianca (e demais alunos com duplicatas) passam a mostrar **as 3 avaliações reais** com peso/IMC/gordura corretos, incluindo o vínculo com o desafio.
-- Novos acessos por master coach ou troca de coach titular **não** criam mais fichas paralelas — histórico único por aluno.
-- Cards zerados "0 kg · IMC 0" desaparecem.
+1. **Reset de senha (item 2):** posso rodar `supabase--configure_auth` para tentar ajustar, ou você prefere ajustar manualmente em Cloud → Users → Auth Settings → Redirect URLs adicionando `fitmindclub.com.br` e `www.fitmindclub.com.br`?
+2. **Google login (item 3):** disponibilizar em **todas** as telas de registro (aluno/coach/parceiro/profissional) ou **só aluno + login geral**?
