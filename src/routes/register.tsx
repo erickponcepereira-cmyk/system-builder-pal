@@ -114,9 +114,23 @@ function RegisterPage() {
           </button>
         </div>
 
+        <div className="mt-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">ou cadastre-se como aluno com</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <div className="mt-4">
+          <GoogleSignInButton label="Cadastrar com Google" />
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+            Se você já tem conta com este e-mail, ela será vinculada — sem cadastro duplicado.
+          </p>
+        </div>
+
         <div className="mt-6">
           <InstallAppButton />
         </div>
+
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Já tem conta?{" "}
