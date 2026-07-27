@@ -174,12 +174,13 @@ function ReferralLandingPage() {
               Você foi convidado por <span className="font-semibold text-white">{sponsorName}</span>.
             </p>
             <p className="mt-4 text-xs text-white/40">
-              {destinoPedido === "cadastro"
-                ? "Levando você ao cadastro..."
-                : productId
-                  ? "Abrindo o produto..."
-                  : "Abrindo a loja..."}
+              {productId
+                ? "Abrindo o produto..."
+                : destinoPedido === "loja"
+                  ? "Abrindo a loja..."
+                  : "Levando você ao cadastro..."}
             </p>
+
             <Loader2 className="mx-auto mt-3 h-4 w-4 animate-spin text-white/40" />
           </>
         )}
