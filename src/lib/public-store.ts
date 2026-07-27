@@ -26,12 +26,17 @@ export type PublicProductKind =
   | "digital"
   | "store"
   | "item"
-  | "partner";
+  | "partner"
+  | "professional";
+
+/** Origem da vitrine — controla as abas da loja pública. */
+export type PublicProductSource = "fitmind" | "partner" | "professional";
 
 /** Espelha 1:1 as colunas de `public_store_catalog`. */
 export interface PublicProduct {
   id: string;
   kind: PublicProductKind;
+  source: PublicProductSource;
   title: string;
   subtitle: string | null;
   /** Truncado no servidor (~180 chars). Descrição completa exige conta. */
@@ -45,9 +50,18 @@ export interface PublicProduct {
   imageUrl: string | null;
   sectionId: string | null;
   sectionName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
   /** Booleano de propósito — quantidade exata não é pública. */
   inStock: boolean;
 }
+
+/** Seção/categoria da loja, para os filtros públicos. */
+export interface PublicTaxonomy {
+  sections: { id: string; name: string }[];
+  categories: { id: string; sectionId: string; name: string }[];
+}
+
 
 /** Espelha 1:1 as colunas de `public_store_benefits`. */
 export interface PublicBenefit {
@@ -109,8 +123,13 @@ export function readReferralContext(): PublicStoreContext {
 /** Colunas de vitrine. Conferidas contra types.ts — nenhuma é de custo. */
 const COLUNAS_VITRINE =
   "id,name,subtitle,short_description,price,original_price,is_price_range," +
-  "min_price,max_price,badge_label,image_url,section_id,stock,kind," +
+  "min_price,max_price,badge_label,image_url,section_id,category_id,stock,kind," +
   "is_featured,sort_order";
+
+/** Parceiro/profissional têm um subconjunto menor — sem faixa de preço. */
+const COLUNAS_VITRINE_TERCEIROS =
+  "id,name,description,price,original_price,image_url,section_id,category_id," +
+  "stock,sort_order";
 
 const KINDS_VALIDOS: PublicProductKind[] = [
   "challenge",
@@ -118,6 +137,7 @@ const KINDS_VALIDOS: PublicProductKind[] = [
   "store",
   "item",
   "partner",
+  "professional",
 ];
 
 function normalizarKind(v: unknown): PublicProductKind {
@@ -138,15 +158,36 @@ function numeroOuNulo(v: unknown): number | null {
 
 type Linha = Record<string, unknown>;
 
-function mapearProduto(r: Linha, nomesSecao: Map<string, string>): PublicProduct {
+/** Nomes de seção e categoria, resolvidos de uma vez para toda a vitrine. */
+interface Taxonomia {
+  secoes: Map<string, string>;
+  categorias: Map<string, { name: string; sectionId: string }>;
+}
+
+const TAXONOMIA_VAZIA: Taxonomia = { secoes: new Map(), categorias: new Map() };
+
+function mapearProduto(
+  r: Linha,
+  tax: Taxonomia,
+  source: PublicProductSource = "fitmind",
+): PublicProduct {
   const secaoId = typeof r.section_id === "string" ? r.section_id : null;
+  const categoriaId = typeof r.category_id === "string" ? r.category_id : null;
+  const categoria = categoriaId ? tax.categorias.get(categoriaId) : undefined;
   const estoque = numeroOuNulo(r.stock);
+  const kind =
+    source === "partner"
+      ? "partner"
+      : source === "professional"
+        ? "professional"
+        : normalizarKind(r.kind);
   return {
     id: String(r.id),
-    kind: normalizarKind(r.kind),
+    kind,
+    source,
     title: typeof r.name === "string" ? r.name : "Sem nome",
     subtitle: typeof r.subtitle === "string" ? r.subtitle : null,
-    shortDescription: truncar(r.short_description),
+    shortDescription: truncar(r.short_description ?? r.description),
     price: numeroOuNulo(r.price) ?? 0,
     originalPrice: numeroOuNulo(r.original_price),
     isPriceRange: r.is_price_range === true,
@@ -154,47 +195,72 @@ function mapearProduto(r: Linha, nomesSecao: Map<string, string>): PublicProduct
     maxPrice: numeroOuNulo(r.max_price),
     badgeLabel: typeof r.badge_label === "string" ? r.badge_label : null,
     imageUrl: typeof r.image_url === "string" ? r.image_url : null,
-    sectionId: secaoId,
-    sectionName: secaoId ? (nomesSecao.get(secaoId) ?? null) : null,
+    sectionId: secaoId ?? categoria?.sectionId ?? null,
+    sectionName: (() => {
+      const id = secaoId ?? categoria?.sectionId ?? null;
+      return id ? (tax.secoes.get(id) ?? null) : null;
+    })(),
+    categoryId: categoriaId,
+    categoryName: categoria?.name ?? null,
     // quantidade exata não é pública — só o booleano de propósito
     inStock: estoque === null ? true : estoque > 0,
   };
 }
 
-async function nomesDeSecao(): Promise<Map<string, string>> {
-  const mapa = new Map<string, string>();
-  const { data } = await supabase
-    .from("store_sections")
-    .select("id,name")
-    .eq("is_active", true);
-  for (const r of (data ?? []) as Linha[]) {
+async function carregarTaxonomia(): Promise<Taxonomia> {
+  const [secoes, categorias] = await Promise.all([
+    supabase.from("store_sections").select("id,name").eq("is_active", true),
+    supabase
+      .from("store_categories")
+      .select("id,name,section_id")
+      .eq("is_active", true),
+  ]);
+
+  const tax: Taxonomia = { secoes: new Map(), categorias: new Map() };
+  for (const r of ((secoes.data ?? []) as unknown as Linha[])) {
     if (typeof r.id === "string" && typeof r.name === "string") {
-      mapa.set(r.id, r.name);
+      tax.secoes.set(r.id, r.name);
     }
   }
-  return mapa;
+  for (const r of ((categorias.data ?? []) as unknown as Linha[])) {
+    if (typeof r.id === "string" && typeof r.name === "string") {
+      tax.categorias.set(r.id, {
+        name: r.name,
+        sectionId: typeof r.section_id === "string" ? r.section_id : "",
+      });
+    }
+  }
+  return tax;
+}
+
+/** Seções e categorias ativas, para os chips de filtro da loja pública. */
+export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
+  const tax = await carregarTaxonomia();
+  return {
+    sections: [...tax.secoes.entries()].map(([id, name]) => ({ id, name })),
+    categories: [...tax.categorias.entries()].map(([id, c]) => ({
+      id,
+      name: c.name,
+      sectionId: c.sectionId,
+    })),
+  };
 }
 
 /**
  * Vitrine de produtos, sem sessão.
  *
- * Caminho preferido: RPC `catalogo_publico()`, SECURITY DEFINER, que devolve
- * só colunas de vitrine. Enquanto ela não existe, cai para leitura direta
- * das MESMAS colunas — nunca `select("*")`. Ou seja: mesmo com `products`
- * ainda aberto para anon (situação de 26/07), esta tela não puxa custo.
+ * Três fontes: catálogo FitMind (`products`), produtos de parceiros
+ * aprovados e produtos de profissionais aprovados e ativos. Cada consulta
+ * pede colunas explícitas — nunca `select("*")` — e cada uma degrada em
+ * silêncio para a loja nunca ficar em branco por causa de uma fonte só.
  */
 export async function fetchPublicCatalog(
   referralCode: string | null,
 ): Promise<PublicProduct[]> {
   void referralCode; // ordenação por coach/parceiro entra junto com a RPC
-  const secoes = await nomesDeSecao();
+  const tax = await carregarTaxonomia().catch(() => TAXONOMIA_VAZIA);
 
-  const viaRpc = await supabase.rpc("catalogo_publico" as never);
-  if (!viaRpc.error && Array.isArray(viaRpc.data)) {
-    return (viaRpc.data as Linha[]).map((r) => mapearProduto(r, secoes));
-  }
-
-  const [legado, novo] = await Promise.all([
+  const [legado, novo, parceiro, profissional] = await Promise.all([
     supabase
       .from("products")
       .select(COLUNAS_VITRINE)
@@ -207,14 +273,29 @@ export async function fetchPublicCatalog(
       .not("kind", "is", null)
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
+    supabase
+      .from("partner_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("status", "approved")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("professional_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("status", "approved")
+      .eq("is_active_by_professional", true)
+      .order("sort_order", { ascending: true }),
   ]);
 
-  const linhas = [
-    ...((legado.data ?? []) as unknown as Linha[]),
-    ...((novo.data ?? []) as unknown as Linha[]),
+  const linhas = (r: { data: unknown }) => (r.data ?? []) as unknown as Linha[];
+
+  return [
+    ...linhas(legado).map((r) => mapearProduto(r, tax, "fitmind")),
+    ...linhas(novo).map((r) => mapearProduto(r, tax, "fitmind")),
+    ...linhas(parceiro).map((r) => mapearProduto(r, tax, "partner")),
+    ...linhas(profissional).map((r) => mapearProduto(r, tax, "professional")),
   ];
-  return linhas.map((r) => mapearProduto(r, secoes));
 }
+
 
 /**
  * Um produto só, para o permalink `/produto/{id}`.
@@ -237,18 +318,49 @@ export async function fetchPublicProduct(
     .eq("id", id)
     .limit(1);
 
-  if (error) return null;
-  const linha = ((data ?? []) as unknown as Linha[])[0];
-  if (!linha) return null;
+  const linha = error ? undefined : ((data ?? []) as unknown as Linha[])[0];
 
-  const ativo =
-    linha.kind === null || linha.kind === undefined
-      ? linha.status === "active"
-      : linha.is_active === true;
-  if (!ativo) return null;
+  if (linha) {
+    const ativo =
+      linha.kind === null || linha.kind === undefined
+        ? linha.status === "active"
+        : linha.is_active === true;
+    if (!ativo) return null;
+    return mapearProduto(linha, await carregarTaxonomia(), "fitmind");
+  }
 
-  return mapearProduto(linha, await nomesDeSecao());
+  // Permalinks de parceiro e profissional usam a mesma rota `/produto/{id}`.
+  const [parceiro, profissional] = await Promise.all([
+    supabase
+      .from("partner_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("id", id)
+      .eq("status", "approved")
+      .limit(1),
+    supabase
+      .from("professional_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("id", id)
+      .eq("status", "approved")
+      .eq("is_active_by_professional", true)
+      .limit(1),
+  ]);
+
+  const doParceiro = ((parceiro.data ?? []) as unknown as Linha[])[0];
+  if (doParceiro) {
+    return mapearProduto(doParceiro, await carregarTaxonomia(), "partner");
+  }
+  const doProfissional = ((profissional.data ?? []) as unknown as Linha[])[0];
+  if (doProfissional) {
+    return mapearProduto(
+      doProfissional,
+      await carregarTaxonomia(),
+      "professional",
+    );
+  }
+  return null;
 }
+
 
 /**
  * Benefícios de parceiro, sem sessão.
