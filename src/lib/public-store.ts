@@ -170,13 +170,18 @@ function numeroOuNulo(v: unknown): number | null {
 
 type Linha = Record<string, unknown>;
 
-/** Nomes de seção e categoria, resolvidos de uma vez para toda a vitrine. */
+/** Taxonomia resolvida de uma vez para toda a vitrine. */
 interface Taxonomia {
-  secoes: Map<string, string>;
-  categorias: Map<string, { name: string; sectionId: string }>;
+  secoes: Map<string, PublicTaxonomyCard>;
+  categorias: Map<string, PublicTaxonomyCard & { sectionId: string }>;
+  subcategorias: Map<string, PublicTaxonomyCard & { categoryId: string }>;
 }
 
-const TAXONOMIA_VAZIA: Taxonomia = { secoes: new Map(), categorias: new Map() };
+const TAXONOMIA_VAZIA: Taxonomia = {
+  secoes: new Map(),
+  categorias: new Map(),
+  subcategorias: new Map(),
+};
 
 function mapearProduto(
   r: Linha,
@@ -210,53 +215,85 @@ function mapearProduto(
     sectionId: secaoId ?? categoria?.sectionId ?? null,
     sectionName: (() => {
       const id = secaoId ?? categoria?.sectionId ?? null;
-      return id ? (tax.secoes.get(id) ?? null) : null;
+      return id ? (tax.secoes.get(id)?.name ?? null) : null;
     })(),
     categoryId: categoriaId,
     categoryName: categoria?.name ?? null,
+    subcategoryId: typeof r.subcategory_id === "string" ? r.subcategory_id : null,
     // quantidade exata não é pública — só o booleano de propósito
     inStock: estoque === null ? true : estoque > 0,
   };
 }
 
+/** Só colunas de vitrine — imagem e dimensão do card, nada mais. */
+const COLUNAS_CARD = "id,name,image_url,card_width,card_height";
+
+function cardDe(r: Linha): PublicTaxonomyCard {
+  return {
+    id: String(r.id),
+    name: typeof r.name === "string" ? r.name : "",
+    imageUrl: typeof r.image_url === "string" ? r.image_url : null,
+    cardWidth: numeroOuNulo(r.card_width),
+    cardHeight: numeroOuNulo(r.card_height),
+  };
+}
+
 async function carregarTaxonomia(): Promise<Taxonomia> {
-  const [secoes, categorias] = await Promise.all([
-    supabase.from("store_sections").select("id,name").eq("is_active", true),
+  const [secoes, categorias, subcategorias] = await Promise.all([
+    supabase
+      .from("store_sections")
+      .select(COLUNAS_CARD)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
     supabase
       .from("store_categories")
-      .select("id,name,section_id")
-      .eq("is_active", true),
+      .select(`${COLUNAS_CARD},section_id`)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("store_subcategories")
+      .select(`${COLUNAS_CARD},category_id`)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
   ]);
 
-  const tax: Taxonomia = { secoes: new Map(), categorias: new Map() };
+  const tax: Taxonomia = {
+    secoes: new Map(),
+    categorias: new Map(),
+    subcategorias: new Map(),
+  };
   for (const r of ((secoes.data ?? []) as unknown as Linha[])) {
-    if (typeof r.id === "string" && typeof r.name === "string") {
-      tax.secoes.set(r.id, r.name);
-    }
+    if (typeof r.id === "string") tax.secoes.set(r.id, cardDe(r));
   }
   for (const r of ((categorias.data ?? []) as unknown as Linha[])) {
-    if (typeof r.id === "string" && typeof r.name === "string") {
+    if (typeof r.id === "string") {
       tax.categorias.set(r.id, {
-        name: r.name,
+        ...cardDe(r),
         sectionId: typeof r.section_id === "string" ? r.section_id : "",
+      });
+    }
+  }
+  for (const r of ((subcategorias.data ?? []) as unknown as Linha[])) {
+    if (typeof r.id === "string") {
+      tax.subcategorias.set(r.id, {
+        ...cardDe(r),
+        categoryId: typeof r.category_id === "string" ? r.category_id : "",
       });
     }
   }
   return tax;
 }
 
-/** Seções e categorias ativas, para os chips de filtro da loja pública. */
+/** Seções, categorias e subcategorias ativas, para a navegação pública. */
 export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
   const tax = await carregarTaxonomia();
   return {
-    sections: [...tax.secoes.entries()].map(([id, name]) => ({ id, name })),
-    categories: [...tax.categorias.entries()].map(([id, c]) => ({
-      id,
-      name: c.name,
-      sectionId: c.sectionId,
-    })),
+    sections: [...tax.secoes.values()],
+    categories: [...tax.categorias.values()],
+    subcategories: [...tax.subcategorias.values()],
   };
 }
+
 
 /**
  * Vitrine de produtos, sem sessão.
