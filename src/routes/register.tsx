@@ -7,6 +7,8 @@ import { StudentRegistration } from "@/components/auth/StudentRegistration";
 import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+
 
 type SearchParams = { role?: string };
 
