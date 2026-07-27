@@ -932,6 +932,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   productId={editing.id}
                   weeklyLimit={editing.weekly_limit_per_student ?? 1}
                   onChangeWeeklyLimit={(n) => setEditing({ ...editing, weekly_limit_per_student: n })}
+                  onSaved={(hasSchedules) => setEditing((prev) => (prev ? { ...prev, uses_scheduling: hasSchedules } : prev))}
                 />
               )}
               {editing.kind === "free" && editing.redemption_mode === "free" && !editing.id && (
