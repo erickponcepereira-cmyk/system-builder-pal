@@ -4,6 +4,7 @@ import { Check, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 
 // ============================================================
 // CHECK EMAIL NOTICE — exibido após cadastro, antes da confirmação
@@ -19,7 +20,7 @@ export function CheckEmailNotice({ email }: { email: string }) {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: `${window.location.origin}/login` },
+        options: { emailRedirectTo: getAuthRedirectUrl("/login") },
       });
       if (error) throw error;
       toast.success("E-mail de confirmação reenviado!");
