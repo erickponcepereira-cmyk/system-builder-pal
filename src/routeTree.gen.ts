@@ -22,12 +22,14 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as LojaRouteImport } from './routes/loja'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ResultadoTokenRouteImport } from './routes/resultado.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as ProdutoIdRouteImport } from './routes/produto.$id'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -199,6 +201,11 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LojaRoute = LojaRouteImport.update({
+  id: '/loja',
+  path: '/loja',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -226,6 +233,11 @@ const ResultadoTokenRoute = ResultadoTokenRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProdutoIdRoute = ProdutoIdRouteImport.update({
+  id: '/produto/$id',
+  path: '/produto/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PayOrderNumberRoute = PayOrderNumberRouteImport.update({
@@ -844,6 +856,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -871,6 +884,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -969,6 +983,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -994,6 +1009,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1094,6 +1110,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -1121,6 +1138,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
+  '/produto/$id': typeof ProdutoIdRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1221,6 +1239,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/login'
+    | '/loja'
     | '/mcp'
     | '/onboarding'
     | '/pending-approval'
@@ -1248,6 +1267,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
+    | '/produto/$id'
     | '/r/$code'
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
@@ -1346,6 +1366,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/login'
+    | '/loja'
     | '/mcp'
     | '/onboarding'
     | '/pending-approval'
@@ -1371,6 +1392,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
+    | '/produto/$id'
     | '/r/$code'
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
@@ -1470,6 +1492,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/become-partner'
     | '/login'
+    | '/loja'
     | '/mcp'
     | '/onboarding'
     | '/pending-approval'
@@ -1497,6 +1520,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
+    | '/produto/$id'
     | '/r/$code'
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
@@ -1597,6 +1621,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
   LoginRoute: typeof LoginRoute
+  LojaRoute: typeof LojaRoute
   McpRoute: typeof McpRoute
   OnboardingRoute: typeof OnboardingRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
@@ -1617,6 +1642,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PartnerCheckinPartnerIdRoute: typeof PartnerCheckinPartnerIdRoute
   PayOrderNumberRoute: typeof PayOrderNumberRoute
+  ProdutoIdRoute: typeof ProdutoIdRoute
   RCodeRoute: typeof RCodeRoute
   ResultadoTokenRoute: typeof ResultadoTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1723,6 +1749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/loja': {
+      id: '/loja'
+      path: '/loja'
+      fullPath: '/loja'
+      preLoaderRoute: typeof LojaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -1763,6 +1796,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/produto/$id': {
+      id: '/produto/$id'
+      path: '/produto/$id'
+      fullPath: '/produto/$id'
+      preLoaderRoute: typeof ProdutoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pay/$orderNumber': {
@@ -2798,6 +2838,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
   LoginRoute: LoginRoute,
+  LojaRoute: LojaRoute,
   McpRoute: McpRoute,
   OnboardingRoute: OnboardingRoute,
   PendingApprovalRoute: PendingApprovalRoute,
@@ -2819,6 +2860,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PartnerCheckinPartnerIdRoute: PartnerCheckinPartnerIdRoute,
   PayOrderNumberRoute: PayOrderNumberRoute,
+  ProdutoIdRoute: ProdutoIdRoute,
   RCodeRoute: RCodeRoute,
   ResultadoTokenRoute: ResultadoTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

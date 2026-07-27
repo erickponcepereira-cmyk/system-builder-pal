@@ -138,12 +138,21 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
 
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
 
-  const copyReferralLink = async (productSourceId: string) => {
+  const copyReferralLink = async (productSourceId: string, kind?: ProductKind) => {
     if (!myReferralCode) {
       toast.error("Seu código de indicação ainda não está disponível.");
       return;
     }
-    const url = `${window.location.origin}/r/${myReferralCode}?p=${productSourceId}`;
+    // `challenge` e `item` vivem na tabela `products`, que é a única com
+    // permalink público hoje (`/produto/{id}`, com Open Graph — o link
+    // ganha preview no WhatsApp). Os outros tipos continuam passando por
+    // `/r/{code}?p=`, que agora resolve o destino em vez de despejar no
+    // cadastro. Quando partner/professional ganharem página própria,
+    // basta incluí-los aqui.
+    const temPermalink = kind === "challenge" || kind === "item";
+    const url = temPermalink
+      ? `${window.location.origin}/produto/${productSourceId}?ref=${myReferralCode}`
+      : `${window.location.origin}/r/${myReferralCode}?p=${productSourceId}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Indicação FitMind Club", url });
@@ -1360,7 +1369,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                 {myReferralCode && (!coachMode ? indicableProductIds.has(item.sourceId) : true) && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
+                    onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId, item.kind); }}
                     title="Copiar link de indicação"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
                   >

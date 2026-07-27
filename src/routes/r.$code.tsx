@@ -3,11 +3,30 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { gravarAtribuicao } from "@/lib/atribuicao";
 import { z } from "zod";
 
+/**
+ * `/r/{code}` deixou de ser um funil de mão única para o cadastro.
+ *
+ * Ele continua sendo o mecanismo de ATRIBUIÇÃO (quem indicou), mas o
+ * DESTINO agora depende da intenção do link:
+ *
+ *   /r/CODE?p={id}       -> abre o produto
+ *   /r/CODE?to=cadastro  -> vai direto ao cadastro
+ *   /r/CODE              -> abre a loja pública
+ *
+ * Links antigos não quebram: os que já circulam por aí têm `?p=` ou nada,
+ * e nos dois casos passam a cair em conteúdo em vez de um formulário.
+ */
 export const Route = createFileRoute("/r/$code")({
   validateSearch: (search: Record<string, unknown>) =>
-    z.object({ p: z.string().optional() }).parse(search),
+    z
+      .object({
+        p: z.string().optional(),
+        to: z.enum(["cadastro", "loja"]).optional(),
+      })
+      .parse(search),
   head: () => ({
     meta: [
       { title: "Convite — FitMind Club" },
@@ -19,7 +38,7 @@ export const Route = createFileRoute("/r/$code")({
 
 function ReferralLandingPage() {
   const { code } = Route.useParams();
-  const { p: productId } = Route.useSearch();
+  const { p: productId, to: destinoPedido } = Route.useSearch();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "valid" | "invalid">("loading");
   const [sponsorName, setSponsorName] = useState<string>("");
@@ -54,6 +73,14 @@ function ReferralLandingPage() {
           productId: productId || null,
         })
       );
+      // Atribuição durável: localStorage + primeiro toque. Sobrevive ao
+      // redirect do OAuth do Google, que o sessionStorage acima não garante.
+      gravarAtribuicao({
+        codigo: code,
+        coachId: row.coach_id,
+        coachNome: row.sponsor_name,
+        parceiroId: row.partner_id,
+      });
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         sessionStorage.setItem("fitmind_pending_product", productId);
@@ -100,12 +127,25 @@ function ReferralLandingPage() {
         }
       }
       setTimeout(() => {
+        // aluno já logado: segue para a loja logada, como antes
         if (nextAction === "store") {
           navigate({ to: "/student/store" });
           return;
         }
-        navigate({ to: "/register" });
-      }, 1200);
+        // intenção explícita de cadastro
+        if (destinoPedido === "cadastro") {
+          navigate({ to: "/register" });
+          return;
+        }
+        // link de produto. Hoje só `products` tem permalink público;
+        // partner/professional caem na loja até ganharem página própria.
+        if (productId && productKind === "challenge") {
+          navigate({ to: "/produto/$id", params: { id: productId } });
+          return;
+        }
+        // padrão: loja pública, não formulário
+        navigate({ to: "/loja" });
+      }, 900);
 
 
 
@@ -113,7 +153,7 @@ function ReferralLandingPage() {
     return () => {
       cancelled = true;
     };
-  }, [code, productId, navigate]);
+  }, [code, productId, destinoPedido, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "#0A0A0A" }}>
@@ -133,7 +173,11 @@ function ReferralLandingPage() {
               Você foi convidado por <span className="font-semibold text-white">{sponsorName}</span>.
             </p>
             <p className="mt-4 text-xs text-white/40">
-              {productId ? "Redirecionando para o produto..." : "Redirecionando para o cadastro..."}
+              {destinoPedido === "cadastro"
+                ? "Levando você ao cadastro..."
+                : productId
+                  ? "Abrindo o produto..."
+                  : "Abrindo a loja..."}
             </p>
             <Loader2 className="mx-auto mt-3 h-4 w-4 animate-spin text-white/40" />
           </>
@@ -145,10 +189,10 @@ function ReferralLandingPage() {
               Este link de indicação não foi reconhecido ou expirou.
             </p>
             <button
-              onClick={() => navigate({ to: "/register" })}
+              onClick={() => navigate({ to: "/loja" })}
               className="mt-5 w-full rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             >
-              Continuar sem indicação
+              Ver a loja mesmo assim
             </button>
           </>
         )}
