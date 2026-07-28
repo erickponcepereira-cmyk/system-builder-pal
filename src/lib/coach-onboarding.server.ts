@@ -91,7 +91,13 @@ export async function handlePaidStoreOrderForActivation(orderId: string) {
     .maybeSingle();
   if (coach) {
     const c = coach as { id: string; onboarding_stage?: string; activation_paid_at?: string | null };
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      activation_paid_at?: string;
+      activation_order_id?: string;
+      activation_source?: string;
+      onboarding_stage?: string;
+    } = {};
+
     // A anuidade deve ser registrada SEMPRE que o pedido de ativação for pago,
     // independentemente da etapa do onboarding (profissional/parceiro/coach).
     if (!c.activation_paid_at) {
