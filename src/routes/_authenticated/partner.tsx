@@ -279,11 +279,27 @@ function PartnerPanel() {
 
   const abaAtiva: Tab = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "overview");
 
+  // Membro de equipe (gerente/recepção) não passa pelos gates de anuidade/mensalidade:
+  // pagamento e aprovação são responsabilidade do dono da unidade.
+  const ehDonoDeAlguma = unidades.some((u) => u.papel === "owner");
 
+  if (!ehDonoDeAlguma && tabs.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center" style={{ backgroundColor: "#0A0A0A" }}>
+        <div className="max-w-sm space-y-2">
+          <ShieldCheck className="mx-auto h-8 w-8 text-primary" />
+          <p className="text-white font-bold">Sem permissões nesta unidade</p>
+          <p className="text-sm text-white/50">
+            Você faz parte da equipe de {unidadeAtiva?.fantasyName || "uma unidade"}, mas ainda não tem nenhuma aba liberada.
+            Peça ao dono para liberar seus acessos em Membros.
+          </p>
+          <button onClick={() => switchTo("/student")} className="mt-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-white">Ir para o painel de aluno</button>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <PartnerOnboardingGate>
-    <SubscriptionGuard walletSource="partner">
+  const conteudo = (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header
         className="border-b border-white/5 px-4 py-3 flex items-center justify-between"
@@ -417,7 +433,13 @@ function PartnerPanel() {
       </nav>
 
     </div>
-    </SubscriptionGuard>
+  );
+
+  if (!ehDonoDeAlguma) return conteudo;
+
+  return (
+    <PartnerOnboardingGate>
+      <SubscriptionGuard walletSource="partner">{conteudo}</SubscriptionGuard>
     </PartnerOnboardingGate>
   );
 }

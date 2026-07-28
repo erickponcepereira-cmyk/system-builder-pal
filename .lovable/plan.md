@@ -1,49 +1,30 @@
-## Situação verificada agora
+## Diagnóstico (verificado no banco e no código)
 
-- O perfil `gibadelmondes@hotmail.com` existe (Gilberto Delmondes, papel `partner`) e já tem **1 unidade**: "Mutação Fit", status `approved`.
-- **Bloqueio encontrado:** a tabela `partners` tem a restrição única `partners_profile_id_key` em `profile_id`. Ou seja, hoje **é impossível** o mesmo perfil ter 3 academias — a segunda inserção falha no banco. A Entrega 1 criou toda a camada de permissões e o seletor, mas o cadastro de unidades adicionais ainda não é possível.
-- Não existe tela para criar uma segunda unidade: o cadastro de parceiro é 1 por perfil.
+- O Erick **foi vinculado com sucesso**: existe a linha em `partner_members` (unidade do Gilberto, papel `staff`, permissões `overview.ver, agenda.ver, timeline.editar, scanner.usar, profile.editar, store.ver`). Ou seja, o convite e o salvamento das permissões funcionam.
+- O que falta é o **caminho de entrada**: nada no app leva o Erick ao painel da unidade.
+  - `RoleSwitcher.tsx` só oferece o painel "Parceiro" quando existe linha em `partners` com `profile_id` do usuário. O Erick é membro, não dono, então a opção nunca aparece (ele fica só como Aluno).
+  - Mesmo forçando `/partner`, o `PartnerOnboardingGate` (que checa se o perfil é dono de um cadastro de parceiro) e o `SubscriptionGuard` bloqueariam o membro pedindo pagamento/aprovação de parceiro — regras que valem para o dono, não para a recepção.
+- Do lado do dono, a aba **Membros** hoje lista só a unidade ativa e não mostra quem é a pessoa na plataforma (aluno, coach etc.), o que dá a sensação de "não sei quem está na minha equipe".
 
-Resposta direta à sua pergunta: **não**, você não precisa criar 3 perfis (3 logins). O modelo escolhido é 1 login = várias unidades. Mas para isso funcionar faltam duas coisas: remover a restrição do banco e criar o botão "Nova unidade".
+## Entrega desta correção
 
-## O que vou implementar
+### 1. Membro da equipe consegue entrar na unidade
+- `RoleSwitcher`: além de `partners`, considerar vínculo em `partner_members` (via a RPC de unidades já existente). Se a pessoa é membro de alguma unidade, a opção **Parceiro** aparece no seletor de painel (que já existe no painel do aluno).
+- `partner.tsx`: carregar as unidades **antes** dos gates. Se o usuário não é dono de nenhuma unidade (papel `manager`/`staff`), pular `PartnerOnboardingGate` e `SubscriptionGuard` — mensalidade/anuidade e aprovação são responsabilidade do dono. As abas continuam filtradas pelas permissões dele.
+- Se o membro não tiver nenhuma permissão marcada, mostrar tela explicativa ("peça acesso ao dono da unidade") em vez de tela vazia.
+- Ao adicionar um membro, criar uma **notificação** no perfil dele ("Você foi adicionado à equipe de {unidade}"), para que algo aconteça visivelmente no perfil do convidado.
 
-### 1. Migration
-- Remover `partners_profile_id_key` e criar índice **não único** em `partners(profile_id)`. A coluna continua existindo (nada é removido).
-- Ajustar o que assume 1 parceiro por perfil no banco (auditar funções que usam `WHERE profile_id = ... LIMIT 1`, principalmente `current_partner_id`, já revisada na Entrega 1).
-- Garantir que criar uma unidade nova gere automaticamente a linha `owner` em `partner_members`, a carteira da unidade e o `referral_code` da unidade (trigger).
-
-### 2. Botão "Nova unidade" no painel do parceiro
-- No seletor de unidades já existente no topo do `partner.tsx`, item final "+ Nova unidade".
-- Modal com nome fantasia, documento, cidade/estado, endereço, WhatsApp, foto — os mesmos campos do cadastro atual.
-- A unidade nasce com status `pending` e aparece na aba de liberação do admin, igual a qualquer parceiro.
-- Só quem é `owner` de alguma unidade vê o botão.
-
-### 3. Admin
-- Na tela de liberação de parceiros, mostrar o dono (perfil) ao lado do nome da unidade, para você não confundir 3 linhas do mesmo dono.
-
-## Passo a passo que você vai seguir depois (tutorial)
-
-**A) Criar as outras 2 academias**
-1. Entrar com `gibadelmondes@hotmail.com` → painel **Parceiro**.
-2. No topo, abrir o seletor de unidade → **+ Nova unidade** → preencher "Academia 2" → salvar. Repetir para a terceira.
-3. Entrar como admin → **Cloud/Admin → Parceiros → liberar** as duas novas (ou usar "Isentar/Liberar" como já faz hoje).
-4. Voltar ao painel do Gilberto: o seletor no topo mostra as 3, e trocar de unidade troca produtos, carteira, gratuitos e pedidos daquela academia.
-
-**B) Criar a recepção de uma academia**
-1. A recepcionista cria uma conta normal no app (ou já tem uma) — basta ter e-mail cadastrado.
-2. Gilberto seleciona a academia dela no topo → aba **Membros** → **Convidar por e-mail** → informa o e-mail dela → papel `staff`.
-3. Nas caixinhas de permissão marca só o que ela pode: por exemplo *Ver visão geral* e *Usar leitor de QR*. Deixa produtos e carteira desmarcados.
-4. Ela entra com o login dela: vê só aquela academia e só as 2 abas. O bloqueio é no banco, não só na tela — tentativa de editar produto pela API volta erro de permissão.
-
-**C) Como fica a rede (MLM)**
-- As 3 academias **não** são 3 cadastros abaixo dele na árvore. São 3 unidades ao lado, penduradas no mesmo perfil.
-- A rede/upline continua sendo a do perfil do Gilberto: toda venda das 3 sobe pela mesma árvore, com o mesmo upline nível 1/2/3 dele.
-- A carteira e os relatórios são **separados por unidade**, então você consegue ver quanto cada academia vendeu, mas a comissão de rede é consolidada no perfil dele.
-- Se um dia você quiser que cada academia tenha upline própria (nós distintos na árvore), aí sim seriam 3 perfis — e o painel único deixa de existir. Não é o que está implementado.
+### 2. Dono enxerga e controla a equipe
+- Aba **Membros** passa a mostrar, por pessoa: nome, e-mail, papel na unidade (Dono/Gerente/Equipe), **perfil na plataforma** (Aluno / Coach / Profissional / Parceiro / Admin) e data de entrada.
+- Alternador **"Só esta unidade" / "Todas as minhas unidades"**, com as pessoas agrupadas por unidade — o dono vê a equipe inteira das 3 academias em um lugar.
+- Permissões: as caixas continuam por aba, agora com rótulo "Abas liberadas", contador (ex.: 6 de 15), botões **Marcar todas** / **Limpar** e confirmação visual de salvo (hoje salva sem feedback claro).
+- Alterar permissão ou papel reflete imediatamente nas abas que o membro vê no próximo carregamento do painel dele.
 
 ## Detalhes técnicos
 
-- Arquivos afetados: nova migration em `supabase/migrations/`, `src/routes/_authenticated/partner.tsx` (item "+ Nova unidade" no seletor), novo `src/components/partner/NovaUnidadeDialog.tsx`, e a tela de aprovação em admin.
-- Toda policy nova sai com `TO authenticated` explícito; nenhuma consulta com `select("*")`.
-- Validação com `npx vite build` (o typecheck não cobre `src/routes`).
+- Sem migração nova: `partner_members`, `partner_pode`, `minhas_unidades_parceiro` e as políticas de RLS já existem e estão corretas (`select` via `current_partner_ids()`, `update`/`delete` via `partner_pode(partner_id,'members.gerenciar')`).
+- A leitura de nome/e-mail/role dos membros continua pela tabela `profiles` restrita aos ids já visíveis pela política atual; nenhuma policy nova, nenhum dado exposto a mais.
+- A notificação de convite é criada no server function `addPartnerMemberByEmail`, que já roda com privilégio e valida permissão do chamador.
+- Arquivos alterados: `src/components/RoleSwitcher.tsx`, `src/routes/_authenticated/partner.tsx`, `src/components/partner/PartnerMembersPanel.tsx`, `src/lib/partner-members.functions.ts` (+ leitura da equipe por unidade).
+
+Depois disso, paro para você testar com o Erick antes de iniciar a Entrega 2.
