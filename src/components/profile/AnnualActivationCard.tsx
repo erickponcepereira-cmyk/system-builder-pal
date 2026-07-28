@@ -205,11 +205,16 @@ function AnnualPaymentBlock({
         description={productName}
         defaultPayer={{ email: payer.email, name: payer.name }}
         initialMethod="pix"
-        onApproved={() => {
+        onApproved={async () => {
           toast.success("Anuidade paga com sucesso!");
+          // Se o webhook do MP demorar ou falhar, o card ficaria preso em
+          // "não ativa". Damos alguns segundos e recarregamos novamente.
           onPaid();
+          setTimeout(onPaid, 4000);
+          setTimeout(onPaid, 12000);
         }}
       />
     </div>
   );
 }
+

@@ -22,6 +22,8 @@ import {
   adminReconcileAllWallets,
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
+import { reconcileApprovedPendingPayments, reconcileAnnualActivations } from "@/lib/admin-reconcile.functions";
+
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 import { TestModeCard, TestModeBanner } from "@/components/admin/TestModeBanner";
 import {
@@ -903,9 +905,12 @@ function RecipientsTable({ title, rows, kind, onPay }: {
 function ReconcileButton({ onDone }: { onDone: () => void }) {
   const callReconcile = useServerFn(reconcileMpPayment);
   const fetchPending = useServerFn(listPendingMpPayments);
+  const runBulk = useServerFn(reconcileApprovedPendingPayments);
+  const runAnnual = useServerFn(reconcileAnnualActivations);
   const [open, setOpen] = useState(false);
   const [mpId, setMpId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyBulk, setBusyBulk] = useState(false);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchPending>> | null>(null);
 
   const loadPending = () => fetchPending().then(setPending).catch(() => setPending([]));
@@ -924,6 +929,31 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
       setBusy(false);
     }
   };
+
+  const runAll = async () => {
+    setBusyBulk(true);
+    try {
+      const r = await runBulk();
+      const a = await runAnnual();
+      if (r.candidates === 0 && a.fixed === 0) {
+        toast.success("Nada a reprocessar — tudo em dia.");
+      } else {
+        toast.success(
+          `${r.processed} pedido(s) reprocessado(s), ${r.failed} falha(s) • ${a.fixed} anuidade(s) revisada(s)`,
+        );
+        if (r.failed > 0) {
+          r.details.filter((d) => !d.ok).slice(0, 3).forEach((d) => toast.error(`${d.sourceKind}: ${d.message}`));
+        }
+      }
+      onDone();
+      loadPending();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reprocessar");
+    } finally {
+      setBusyBulk(false);
+    }
+  };
+
 
   return (
     <>
@@ -958,7 +988,22 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reconciliar"}
               </button>
             </div>
+            <div className="mb-5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3">
+              <p className="mb-2 text-xs text-emerald-200/80">
+                Reprocessa automaticamente todo pagamento já <b>aprovado</b> no Mercado Pago cujo pedido/fatura
+                continua pendente, e revalida as anuidades pagas que não constaram no cadastro.
+              </p>
+              <button
+                onClick={runAll}
+                disabled={busyBulk}
+                className="inline-flex items-center gap-2 rounded-md bg-emerald-500 px-4 py-2 text-xs font-bold text-black disabled:opacity-50"
+              >
+                {busyBulk ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Reprocessar aprovados pendentes
+              </button>
+            </div>
             <h3 className="mb-2 text-xs uppercase tracking-wider text-white/40">Pendentes há mais de 5 min</h3>
+
             {pending === null ? (
               <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
             ) : pending.length === 0 ? (

@@ -86,19 +86,34 @@ export async function handlePaidStoreOrderForActivation(orderId: string) {
 
   const { data: coach } = await supabaseAdmin
     .from("coaches")
-    .select("id, onboarding_stage")
+    .select("id, onboarding_stage, activation_paid_at")
     .eq("profile_id", profileId)
     .maybeSingle();
-  if (coach && (coach as { onboarding_stage?: string }).onboarding_stage === "awaiting_payment") {
-    await supabaseAdmin
-      .from("coaches")
-      .update({
-        onboarding_stage: "awaiting_quiz_result",
-        activation_paid_at: new Date().toISOString(),
-        activation_order_id: orderId,
-      })
-      .eq("id", (coach as { id: string }).id);
+  if (coach) {
+    const c = coach as { id: string; onboarding_stage?: string; activation_paid_at?: string | null };
+    const patch: {
+      activation_paid_at?: string;
+      activation_order_id?: string;
+      activation_source?: string;
+      onboarding_stage?: string;
+    } = {};
+
+    // A anuidade deve ser registrada SEMPRE que o pedido de ativação for pago,
+    // independentemente da etapa do onboarding (profissional/parceiro/coach).
+    if (!c.activation_paid_at) {
+      patch.activation_paid_at = new Date().toISOString();
+      patch.activation_order_id = orderId;
+      patch.activation_source = "purchased";
+    }
+    // A etapa só avança quando o gate estava efetivamente esperando pagamento.
+    if (c.onboarding_stage === "awaiting_payment") {
+      patch.onboarding_stage = "awaiting_quiz_result";
+    }
+    if (Object.keys(patch).length > 0) {
+      await supabaseAdmin.from("coaches").update(patch).eq("id", c.id);
+    }
   }
+
 
   // Também marca a ativação anual do parceiro (se existir) — a anuidade é única para ambos os papéis.
   const { data: partner } = await supabaseAdmin
