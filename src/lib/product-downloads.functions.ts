@@ -6,6 +6,7 @@ export type ProductDownloadRow = {
   id: string;
   product_id: string | null;
   partner_product_id: string | null;
+  professional_product_id?: string | null;
   product_name: string | null;
   name: string;
   mime_type: string | null;
@@ -34,6 +35,7 @@ export const listMyProductDownloads = createServerFn({ method: "POST" })
 
     const purchasedProductIds = new Set<string>();
     const purchasedPartnerProductIds = new Set<string>();
+    const purchasedProfessionalProductIds = new Set<string>();
 
     if (!isAdmin) {
       const { data: student } = await supabaseAdmin
@@ -57,12 +59,15 @@ export const listMyProductDownloads = createServerFn({ method: "POST" })
           .eq("status", "paid"),
         (supabaseAdmin as any)
           .from("partner_product_orders")
-          .select("partner_product_id, status")
+          .select("partner_product_id, professional_product_id, status")
           .eq("student_id", studentId)
           .eq("status", "paid"),
       ]);
       ((txs as any[]) || []).forEach((t) => t.product_id && purchasedProductIds.add(t.product_id));
-      ((ppo as any[]) || []).forEach((r) => r.partner_product_id && purchasedPartnerProductIds.add(r.partner_product_id));
+      ((ppo as any[]) || []).forEach((r) => {
+        if (r.partner_product_id) purchasedPartnerProductIds.add(r.partner_product_id);
+        if (r.professional_product_id) purchasedProfessionalProductIds.add(r.professional_product_id);
+      });
       const orderIds = ((orders as any[]) || []).map((o) => o.id);
       if (orderIds.length) {
         const { data: items } = await supabaseAdmin
@@ -74,7 +79,11 @@ export const listMyProductDownloads = createServerFn({ method: "POST" })
           if (pid) purchasedProductIds.add(pid);
         });
       }
-      if (purchasedProductIds.size === 0 && purchasedPartnerProductIds.size === 0) return [];
+      if (
+        purchasedProductIds.size === 0 &&
+        purchasedPartnerProductIds.size === 0 &&
+        purchasedProfessionalProductIds.size === 0
+      ) return [];
     }
 
     // Buscar downloads normais + de partner_products
@@ -122,6 +131,28 @@ export const listMyProductDownloads = createServerFn({ method: "POST" })
       }));
     }
 
+    // Professional products
+    {
+      let q = (supabaseAdmin as any)
+        .from("product_downloads")
+        .select("id, product_id, partner_product_id, professional_product_id, name, mime_type, size_bytes, sort_order, professional_products!product_downloads_professional_product_id_fkey(name)")
+        .not("professional_product_id", "is", null)
+        .order("sort_order", { ascending: true });
+      if (!isAdmin) q = q.in("professional_product_id", Array.from(purchasedProfessionalProductIds));
+      const { data } = await q;
+      ((data as any[]) || []).forEach((r) => results.push({
+        id: r.id,
+        product_id: r.product_id,
+        partner_product_id: r.partner_product_id,
+        professional_product_id: r.professional_product_id,
+        product_name: r.professional_products?.name ?? null,
+        name: r.name,
+        mime_type: r.mime_type,
+        size_bytes: r.size_bytes,
+        sort_order: r.sort_order,
+      }));
+    }
+
     return results;
   });
 
@@ -137,7 +168,7 @@ export const getProductDownloadSignedUrl = createServerFn({ method: "POST" })
 
     const { data: dl } = await (supabaseAdmin as any)
       .from("product_downloads")
-      .select("id, product_id, partner_product_id, name, file_path")
+      .select("id, product_id, partner_product_id, professional_product_id, name, file_path")
       .eq("id", data.downloadId)
       .maybeSingle();
     if (!dl) throw new Error("Arquivo não encontrado");
@@ -164,6 +195,16 @@ export const getProductDownloadSignedUrl = createServerFn({ method: "POST" })
         if (pp?.partners?.profile_id === (profile as any).id) ok = true;
       }
 
+      // Se for arquivo de professional_product, o profissional dono pode baixar
+      if (!ok && dl.professional_product_id) {
+        const { data: pr } = await (supabaseAdmin as any)
+          .from("professional_products")
+          .select("coach_id, coaches!inner(profile_id)")
+          .eq("id", dl.professional_product_id)
+          .maybeSingle();
+        if (pr?.coaches?.profile_id === (profile as any).id) ok = true;
+      }
+
       if (!ok) {
         const { data: student } = await supabaseAdmin
           .from("students")
@@ -180,6 +221,15 @@ export const getProductDownloadSignedUrl = createServerFn({ method: "POST" })
             .eq("student_id", studentId)
             .eq("status", "paid")
             .eq("partner_product_id", dl.partner_product_id)
+            .limit(1);
+          ok = ((rows as any[]) || []).length > 0;
+        } else if (dl.professional_product_id) {
+          const { data: rows } = await (supabaseAdmin as any)
+            .from("partner_product_orders")
+            .select("id")
+            .eq("student_id", studentId)
+            .eq("status", "paid")
+            .eq("professional_product_id", dl.professional_product_id)
             .limit(1);
           ok = ((rows as any[]) || []).length > 0;
         } else if (dl.product_id) {
@@ -268,6 +318,37 @@ export const listPartnerProductDownloads = createServerFn({ method: "POST" })
       .from("product_downloads")
       .select("id, product_id, partner_product_id, name, mime_type, size_bytes, sort_order")
       .eq("partner_product_id", data.partnerProductId)
+      .order("sort_order");
+    return ((rows as any[]) || []).map((r) => ({ ...r, product_name: null }));
+  });
+
+
+// ---------------------------------------------------------------------------
+// Profissional: lista arquivos de um professional_product que ele possui.
+// ---------------------------------------------------------------------------
+export const listProfessionalProductDownloads = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: unknown) => d as { professionalProductId: string })
+  .handler(async ({ data, context }): Promise<ProductDownloadRow[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id, role").eq("user_id", context.userId).maybeSingle();
+    if (!profile) throw new Error("Perfil não encontrado");
+
+    const isAdmin = (profile as any).role === "admin";
+    if (!isAdmin) {
+      const { data: pp } = await (supabaseAdmin as any)
+        .from("professional_products")
+        .select("coach_id, coaches!inner(profile_id)")
+        .eq("id", data.professionalProductId)
+        .maybeSingle();
+      if (pp?.coaches?.profile_id !== (profile as any).id) throw new Error("Sem permissão");
+    }
+
+    const { data: rows } = await (supabaseAdmin as any)
+      .from("product_downloads")
+      .select("id, product_id, partner_product_id, professional_product_id, name, mime_type, size_bytes, sort_order")
+      .eq("professional_product_id", data.professionalProductId)
       .order("sort_order");
     return ((rows as any[]) || []).map((r) => ({ ...r, product_name: null }));
   });

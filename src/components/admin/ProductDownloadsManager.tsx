@@ -5,17 +5,19 @@ import { FileText, Loader2, Trash2, Upload } from "lucide-react";
 import {
   listProductDownloadsForAdmin,
   listPartnerProductDownloads,
+  listProfessionalProductDownloads,
   type ProductDownloadRow,
 } from "@/lib/product-downloads.functions";
 
 interface Props {
   productId?: string;
   partnerProductId?: string;
+  professionalProductId?: string;
 }
 
 const MAX_MB = 200;
 
-export function ProductDownloadsManager({ productId, partnerProductId }: Props) {
+export function ProductDownloadsManager({ productId, partnerProductId, professionalProductId }: Props) {
   const [rows, setRows] = useState<ProductDownloadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -24,16 +26,20 @@ export function ProductDownloadsManager({ productId, partnerProductId }: Props) 
 
   const listAdmin = useServerFn(listProductDownloadsForAdmin);
   const listPartner = useServerFn(listPartnerProductDownloads);
+  const listProfessional = useServerFn(listProfessionalProductDownloads);
 
   const isPartner = !!partnerProductId;
-  const targetId = (partnerProductId || productId) as string;
+  const isProfessional = !!professionalProductId;
+  const targetId = (partnerProductId || professionalProductId || productId) as string;
 
   const load = async () => {
     setLoading(true);
     try {
       const list = isPartner
         ? await listPartner({ data: { partnerProductId: partnerProductId! } })
-        : await listAdmin({ data: { productId: productId! } });
+        : isProfessional
+          ? await listProfessional({ data: { professionalProductId: professionalProductId! } })
+          : await listAdmin({ data: { productId: productId! } });
       setRows(list);
     } finally { setLoading(false); }
   };
@@ -53,7 +59,9 @@ export function ProductDownloadsManager({ productId, partnerProductId }: Props) 
         const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
         const path = isPartner
           ? `pp/${partnerProductId}/${crypto.randomUUID()}.${ext}`
-          : `${productId}/${crypto.randomUUID()}.${ext}`;
+          : isProfessional
+            ? `prof/${professionalProductId}/${crypto.randomUUID()}.${ext}`
+            : `${productId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("product-downloads")
           .upload(path, file, { upsert: false, contentType: file.type || undefined });
@@ -66,6 +74,7 @@ export function ProductDownloadsManager({ productId, partnerProductId }: Props) 
           sort_order: rows.length + i,
         };
         if (isPartner) payload.partner_product_id = partnerProductId;
+        else if (isProfessional) payload.professional_product_id = professionalProductId;
         else payload.product_id = productId;
         const { error: insErr } = await supabase.from("product_downloads").insert(payload as never);
         if (insErr) throw insErr;

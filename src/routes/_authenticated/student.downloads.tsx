@@ -22,7 +22,7 @@ function StudentDownloadsPage() {
 
   const rows = data || [];
   const grouped = rows.reduce<Record<string, typeof rows>>((acc, r) => {
-    const key = r.product_id || r.partner_product_id || r.id;
+    const key = r.product_id || r.partner_product_id || r.professional_product_id || r.id;
     (acc[key] = acc[key] || []).push(r);
     return acc;
   }, {});
