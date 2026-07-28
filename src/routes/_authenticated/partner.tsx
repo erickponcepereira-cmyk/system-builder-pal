@@ -215,6 +215,26 @@ function PartnerPanel() {
   const hasActiveFree = products.some(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner);
   const pendingCount = products.filter(p => p.status === "pending").length;
 
+  const PERMISSAO_DA_ABA: Record<Tab, Permissao> = {
+    overview: "overview.ver",
+    products: "products.editar",
+    scanner: "scanner.usar",
+    timeline: "timeline.editar",
+    qrcode: "overview.ver",
+    freebies: "freebies.editar",
+    store: "store.ver",
+    network: "network.ver",
+    wallet: "wallet.ver",
+    subscription: "subscription.ver",
+    annual: "subscription.ver",
+    reports: "reports.ver",
+    fitmind_calendar: "agenda.ver",
+    collaborators: "members.gerenciar",
+    collab: "collab.ver",
+    profile: "profile.editar",
+    members: "members.gerenciar",
+  };
+
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
@@ -237,8 +257,12 @@ function PartnerPanel() {
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
+    { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
-  ];
+  ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
+
+  const abaAtiva: Tab = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "overview");
+
 
 
   return (
