@@ -1,44 +1,51 @@
-## Diagnóstico confirmado
+## Diagnóstico (confirmado no banco)
 
-O pagamento da anuidade da Tammylis foi aprovado no gateway e registrado localmente como `approved`, mas o pedido `FM-04DDBC24` continuou `pending` e o cadastro não avançou.
+Os dois produtos do Helton usam **a mesma agenda** (mesmo `coach_id`), e a RPC `list_professional_available_slots` já bloqueia horários já agendados em qualquer produto (`professional_appointments` filtra por `professional_coach_id`, não por produto). Ou seja, a regra "agendou em um, bloqueia no outro" **já funciona**.
 
-Causa encontrada: o processamento do pedido chama a função financeira de venda (`process_paid_transaction`) e ela está quebrando em `column ctc.product_id does not exist`. Esse erro interrompe a etapa que marca o pedido como pago e, por consequência, não registra `activation_paid_at` no coach/parceiro. Por isso a tela continua pedindo mensalidade/liberação mesmo depois da anuidade paga.
+O motivo de um produto mostrar horários e o outro não é a duração:
 
-Também encontrei uma fatura mensal criada para essa pessoa no mesmo dia, ainda pendente. A correção deve garantir que a anuidade seja processada como anuidade, sem exigir pagamento de mensalidade naquele momento.
+- **Avaliação (R$ 129,99)** → `default_duration_minutes = 30`
+- **Consulta (R$ 285,00)** → `default_duration_minutes = 60`
+- **Acompanhamento (R$ 789,90)** → `default_duration_minutes = 60`
 
-## Plano de correção
+A agenda do Helton está cadastrada como **6 janelas separadas de 30 min** (14:00–14:30, 14:30–15:00, … 16:30–17:00). A RPC itera janela por janela e sai do loop assim que `slot_end > end_time` da janela. Para 60 min, nenhum slot cabe em uma janela de 30 min → "não tem horários disponíveis nos próximos 90 dias", mesmo havendo 3h corridas livres.
 
-1. **Corrigir a função financeira quebrada**
-   - Atualizar `process_paid_transaction` para buscar professor/comissão usando as colunas reais da tabela atual, removendo a referência inválida a `ctc.product_id`.
-   - Preservar todo o restante do motor financeiro: carteiras, comissões, pontos, ranking, ticket/carteirinha e relatórios.
+## Correção proposta
 
-2. **Blindar o fluxo de anuidade**
-   - Ajustar o processamento de pagamento de pedido para que, quando o pedido contém o produto de anuidade, a ativação seja registrada mesmo se algum processamento financeiro secundário falhar.
-   - Marcar corretamente:
-     - `store_orders.status = paid`
-     - transação vinculada como `paid`
-     - `coaches.activation_paid_at/source/order_id`
-     - `partners.activation_paid_at/source`, quando for parceiro
-   - Para coach/parceiro/profissional em onboarding, avançar apenas a etapa correta de anuidade, sem criar obrigação imediata de mensalidade.
+Alterar `public.list_professional_available_slots` para, antes de gerar slots, **mesclar janelas contíguas do mesmo dia da semana** (fim de uma = início da outra, mesmo `slot_minutes`) em uma única faixa. Assim, 14:00–17:00 vira uma faixa única e cabem slots de 60 min a cada 30 min (14:00, 14:30, 15:00, 15:30, 16:00).
 
-3. **Reprocessar os casos afetados**
-   - Reprocessar pedidos de anuidade com pagamento aprovado mas pedido/cadastro ainda pendente, incluindo o caso atual da Tammylis.
-   - Não duplicar comissão, pontos, carteira ou pagamento: a rotina será idempotente.
+Nada muda no restante do comportamento:
+- Continua respeitando `professional_availability_blocks` (bloqueios de dia).
+- Continua checando conflito em `professional_appointments` e `external_appointments`, então **um agendamento em qualquer produto bloqueia o mesmo horário nos demais** do mesmo profissional.
+- Continua com fuso `America/Sao_Paulo`.
 
-4. **Melhorar o fallback da tela de anuidade**
-   - Manter o polling atual do Mercado Pago, mas fazer ele chamar a mesma rotina corrigida.
-   - Se o webhook atrasar, a tela deve liberar após detectar `approved`, sem depender exclusivamente do webhook.
+## Detalhes técnicos
 
-5. **Validar após aplicar**
-   - Conferir no banco que o pagamento aprovado virou pedido pago.
-   - Conferir que a anuidade aparece paga no cadastro.
-   - Conferir que a mensalidade não foi exigida como próxima etapa da anuidade.
-   - Conferir que não houve duplicidade de transação/comissão no reprocessamento.
+Migration nova (`CREATE OR REPLACE FUNCTION public.list_professional_available_slots`) com a mesma assinatura. Substituir o `FOR v_avail IN SELECT * FROM professional_availability …` por um CTE recursivo/janela que agrupa faixas contíguas por `weekday` e `slot_minutes`, algo como:
 
-## Arquivos e banco envolvidos
+```sql
+WITH ordered AS (
+  SELECT weekday, start_time, end_time, slot_minutes,
+         LAG(end_time) OVER (PARTITION BY weekday, slot_minutes ORDER BY start_time) AS prev_end
+  FROM public.professional_availability
+  WHERE professional_coach_id = _coach_id AND is_active = true
+    AND weekday = EXTRACT(DOW FROM v_day)::int
+),
+grp AS (
+  SELECT *, SUM(CASE WHEN prev_end = start_time THEN 0 ELSE 1 END)
+             OVER (PARTITION BY weekday, slot_minutes ORDER BY start_time) AS g
+  FROM ordered
+)
+SELECT weekday, MIN(start_time) AS start_time, MAX(end_time) AS end_time, MIN(slot_minutes) AS slot_minutes
+FROM grp GROUP BY weekday, slot_minutes, g;
+```
 
-- Banco: funções `mark_store_order_paid_and_process` e `process_paid_transaction`.
-- Backend: `src/lib/mercadopago-impl.server.ts` e `src/lib/coach-onboarding.server.ts`, se necessário para tornar o fluxo mais seguro.
-- UI: `src/components/profile/AnnualActivationCard.tsx`, apenas se precisar melhorar o retorno visual após aprovação.
+O restante do corpo (loop de geração + checagem de conflito) permanece igual.
 
-A correção será focada nesse fluxo; não vou mexer no sistema de loja, white label ou outras áreas.
+Sem mudanças no frontend, sem mudanças em outras tabelas, sem alteração da agenda existente do Helton.
+
+## Verificação após aplicar
+
+1. Chamar a RPC para o coach do Helton com `_duration_minutes=60` — deve retornar slots 14:00/14:30/15:00/15:30/16:00 nas próximas sextas.
+2. Simular reserva em um produto de 30 min às 14:30 e chamar a RPC de 60 min — o slot 14:00 e 14:30 devem sumir; 15:00 permanece.
+3. Abrir o modal "Consulta Helton" no app — o calendário passa a mostrar disponibilidade.
