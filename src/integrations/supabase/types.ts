@@ -10927,6 +10927,10 @@ export type Database = {
         Args: { _invoice_id: string; _reason?: string }
         Returns: undefined
       }
+      apply_annual_activation_for_store_order: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       assign_professionals_for_transaction: {
         Args: { _transaction_id: string }
         Returns: number
