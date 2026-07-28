@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
@@ -298,22 +298,22 @@ function PartnerPanel() {
       )}
 
       <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
-        {tab === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
-        {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
-        {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
-        {tab === "qrcode" && <QrCodePanel partner={partner} />}
-        {tab === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
-        {tab === "store" && hasActiveFree && <StorePage coachMode audience="partner" />}
-        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
-        {tab === "fitmind_calendar" && <FitmindCalendar />}
-        {tab === "collaborators" && <CollaboratorsPanel partner={partner} coachReferralCode={coachCtx?.referralCode ?? null} />}
-        {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
-        {tab === "wallet" && <PartnerWalletTab />}
-        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
-        {tab === "annual" && <AnnualActivationCard />}
-        {tab === "reports" && <PartnerReports />}
-        {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
-        {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+        {abaAtiva === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
+        {abaAtiva === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
+        {abaAtiva === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
+        {abaAtiva === "qrcode" && <QrCodePanel partner={partner} />}
+        {abaAtiva === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
+        {abaAtiva === "store" && hasActiveFree && <StorePage coachMode audience="partner" />}
+        {abaAtiva === "profile" && <ProfilePanel partner={partner} onReload={load} />}
+        {abaAtiva === "fitmind_calendar" && <FitmindCalendar />}
+        {abaAtiva === "collaborators" && <CollaboratorsPanel partner={partner} coachReferralCode={coachCtx?.referralCode ?? null} />}
+        {abaAtiva === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
+        {abaAtiva === "wallet" && <PartnerWalletTab />}
+        {abaAtiva === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
+        {abaAtiva === "annual" && <AnnualActivationCard />}
+        {abaAtiva === "reports" && <PartnerReports />}
+        {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
+        {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
 
 
       </main>
@@ -322,7 +322,7 @@ function PartnerPanel() {
         {tabs.map(t => {
           const badge = t.key === "collab" ? collabPending : 0;
           return (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${abaAtiva === t.key ? "text-primary" : "text-white/50"}`}>
               <t.icon className="h-5 w-5" />
               {t.label}
               {badge > 0 && (
