@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
-  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search,
+  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette,
 
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -60,6 +60,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/push-notifications", label: "Push Notifications", icon: Bell, perm: "settings" },
   { to: "/admin/email-releases", label: "Liberar E-mail", icon: UserCheck, perm: "users" },
   { to: "/admin/referral-links", label: "Links de Indicação", icon: Search, perm: "users" },
+  { to: "/admin/branding", label: "Identidade Visual", icon: Palette, perm: "settings" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 
 ];

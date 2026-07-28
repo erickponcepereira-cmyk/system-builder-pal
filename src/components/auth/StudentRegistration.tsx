@@ -17,7 +17,7 @@ import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { useBranding } from "@/components/theme-provider";
-import { CAROL_COACH_ID } from "@/lib/branding";
+import { resolveBrandTheme } from "@/lib/branding";
 import { isTestEmailClient, markSelfAsTest } from "@/lib/test-accounts.functions";
 
 
@@ -54,8 +54,14 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   // Aplica white label da Carol quando indicação/coach selecionado é dela.
   useEffect(() => {
     const coachId = referral?.coachId || selectedCoach?.id || null;
-    if (coachId === CAROL_COACH_ID) setOverride("carol");
-    else clearOverride();
+    if (!coachId) { clearOverride(); return; }
+    let ativo = true;
+    resolveBrandTheme({ coachId }).then((tema) => {
+      if (!ativo) return;
+      if (tema.key !== "fitmind") setOverride(tema.key);
+      else clearOverride();
+    });
+    return () => { ativo = false; };
   }, [referral?.coachId, selectedCoach?.id, setOverride, clearOverride]);
 
 
