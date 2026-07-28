@@ -397,28 +397,51 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
         }
       : { already_partner: false };
 
-    const { data: partner, error: partnerError } = await supabaseAdmin
+    const partnerPayload = {
+      profile_id: profile.id,
+      fantasy_name: input.fantasyName.trim(),
+      document: docDigits,
+      document_type: input.documentType,
+      whatsapp: phoneDigits,
+      city: clean(input.city),
+      state: clean(input.state)?.toUpperCase() || null,
+      business_area: clean(input.businessArea),
+      specialty: clean(input.specialty),
+      status: "pending",
+      upline_coach_id: clean(input.uplineCoachId),
+      ...activationPatch,
+    };
+
+    // Multi-unidade: procura unidade existente do mesmo dono + mesmo documento
+    const { data: existingPartner } = await supabaseAdmin
       .from("partners")
-      .upsert(
-        {
-          profile_id: profile.id,
-          fantasy_name: input.fantasyName.trim(),
-          document: docDigits,
-          document_type: input.documentType,
-          whatsapp: phoneDigits,
-          city: clean(input.city),
-          state: clean(input.state)?.toUpperCase() || null,
-          business_area: clean(input.businessArea),
-          specialty: clean(input.specialty),
-          status: "pending",
-          upline_coach_id: clean(input.uplineCoachId),
-          ...activationPatch,
-        },
-        { onConflict: "profile_id" }
-      )
       .select("id")
-      .single();
+      .eq("profile_id", profile.id)
+      .eq("document", docDigits)
+      .maybeSingle();
+
+    let partner: { id: string } | null = null;
+    let partnerError: { message: string } | null = null;
+    if (existingPartner?.id) {
+      const r = await supabaseAdmin
+        .from("partners")
+        .update(partnerPayload)
+        .eq("id", existingPartner.id)
+        .select("id")
+        .single();
+      partner = r.data;
+      partnerError = r.error;
+    } else {
+      const r = await supabaseAdmin
+        .from("partners")
+        .insert(partnerPayload)
+        .select("id")
+        .single();
+      partner = r.data;
+      partnerError = r.error;
+    }
     if (partnerError) throw new Error(partnerError.message);
+
 
     // Todo parceiro também precisa existir como aluno para acessar a loja/perfil do aluno.
     // Se o cadastro veio sem upline (caso de liberação/admin), usa o coach sistema como fallback.
