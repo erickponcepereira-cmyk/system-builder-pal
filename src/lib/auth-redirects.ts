@@ -35,3 +35,29 @@ export function getAuthRedirectUrl(path: `/${string}`) {
 export function getPublicAppUrl(path: `/${string}` = "/") {
   return `${OFFICIAL_ORIGIN}${path}`;
 }
+
+/**
+ * Origem canônica para QUALQUER link compartilhável gerado pelo app
+ * (indicação, loja, produto, QR code de check-in, etc).
+ *
+ * Regra: se o usuário está no domínio oficial (apex OU www) ou em qualquer
+ * origem insegura, devolvemos sempre `https://fitmindclub.com.br`. Isso evita
+ * gerar links `www` ou `http://`, que hoje passam por um salto em texto puro
+ * na borda e são derrubados por Chrome/antivírus/proxy em alguns aparelhos.
+ *
+ * Em preview/localhost mantemos a origem atual para não quebrar os testes.
+ */
+export function getShareOrigin(): string {
+  if (typeof window === "undefined") return OFFICIAL_ORIGIN;
+  const { hostname, origin, protocol } = window.location;
+  if (isOfficialHost(hostname)) return OFFICIAL_ORIGIN;
+  if (protocol !== "https:" && hostname !== "localhost" && hostname !== "127.0.0.1") {
+    return OFFICIAL_ORIGIN;
+  }
+  return isTrustedCurrentOrigin(hostname) ? origin : OFFICIAL_ORIGIN;
+}
+
+/** Monta uma URL compartilhável já na origem canônica. */
+export function buildShareUrl(path: `/${string}`): string {
+  return `${getShareOrigin()}${path}`;
+}
