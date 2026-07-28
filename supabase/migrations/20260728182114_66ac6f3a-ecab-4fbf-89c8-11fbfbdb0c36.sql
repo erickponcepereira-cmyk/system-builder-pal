@@ -1,0 +1,1 @@
+ALTER TABLE public.brand_themes ADD COLUMN IF NOT EXISTS nome_curto text;

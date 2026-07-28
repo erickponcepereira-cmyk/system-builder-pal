@@ -10,6 +10,8 @@ export type BrandThemeKey = string;
 export interface BrandTheme {
   key: BrandThemeKey;
   name: string;
+  /** Nome curto usado no topo do app (fallback: name). */
+  shortName: string;
   mode: "dark" | "light";
   logoFull: string;
   logoIcon: string;
@@ -48,6 +50,7 @@ export interface BrandTheme {
 export const FITMIND_THEME: BrandTheme = {
   key: "fitmind",
   name: "FitMind Club",
+  shortName: "FitMind",
   mode: "dark",
   logoFull: fitmindSplash.url,
   logoIcon: fitmindIcon.url,
@@ -86,6 +89,7 @@ export const FITMIND_THEME: BrandTheme = {
 export interface BrandThemeRow {
   key: string;
   nome: string | null;
+  nome_curto?: string | null;
   mode: string | null;
   logo_full_url: string | null;
   logo_icon_url: string | null;
@@ -119,13 +123,14 @@ export interface BrandThemeRow {
 }
 
 export const COLUNAS_TEMA =
-  "key, nome, mode, logo_full_url, logo_icon_url, favicon_url, theme_color, background, foreground, card, card_foreground, popover, popover_foreground, primary_color, primary_foreground, secondary, secondary_foreground, muted, muted_foreground, accent, accent_foreground, border, input, ring, sidebar, sidebar_foreground, sidebar_primary, sidebar_primary_foreground, sidebar_accent, sidebar_accent_foreground, sidebar_border, sidebar_ring";
+  "key, nome, nome_curto, mode, logo_full_url, logo_icon_url, favicon_url, theme_color, background, foreground, card, card_foreground, popover, popover_foreground, primary_color, primary_foreground, secondary, secondary_foreground, muted, muted_foreground, accent, accent_foreground, border, input, ring, sidebar, sidebar_foreground, sidebar_primary, sidebar_primary_foreground, sidebar_accent, sidebar_accent_foreground, sidebar_border, sidebar_ring";
 
 export function rowToTheme(row: BrandThemeRow): BrandTheme {
   const icone = row.logo_icon_url || row.logo_full_url || fitmindIcon.url;
   return {
     key: row.key,
     name: row.nome || row.key,
+    shortName: row.nome_curto || row.nome || row.key,
     mode: row.mode === "light" ? "light" : "dark",
     logoFull: row.logo_full_url || icone,
     logoIcon: icone,

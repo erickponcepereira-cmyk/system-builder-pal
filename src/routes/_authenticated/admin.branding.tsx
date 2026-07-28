@@ -56,7 +56,9 @@ const CAMPOS: Array<{ campo: keyof TemaMarcaInput; label: string }> = [
 const NOVO: TemaMarcaInput = {
   key: "",
   nome: "",
+  nome_curto: null,
   mode: "dark",
+
   logo_full_url: null,
   logo_icon_url: null,
   favicon_url: null,
@@ -228,7 +230,16 @@ function AdminBranding() {
             <Campo label="Nome exibido">
               <input value={edicao.nome} onChange={(e) => setEdicao({ ...edicao, nome: e.target.value })} className="w-full rounded-lg bg-input border border-border px-3 py-2 text-sm text-foreground" />
             </Campo>
+            <Campo label="Nome curto (topo do app)">
+              <input
+                value={edicao.nome_curto ?? ""}
+                placeholder={edicao.nome || "ex.: Divas"}
+                onChange={(e) => setEdicao({ ...edicao, nome_curto: e.target.value || null })}
+                className="w-full rounded-lg bg-input border border-border px-3 py-2 text-sm text-foreground"
+              />
+            </Campo>
             <Campo label="Identificador (sem espaços)">
+
               <input
                 value={edicao.key}
                 disabled={temas.some((t) => t.key === edicao.key)}
