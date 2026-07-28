@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { AlertTriangle, Copy, Loader2, Plus, Share2, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
-import {
 import { getShareOrigin } from "@/lib/auth-redirects";
+import {
   attachProfessionalCollaborator,
+
   detachProfessionalCollaborator,
   listEligibleStudents,
   listProfessionalCollaborators,
