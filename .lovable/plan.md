@@ -1,39 +1,41 @@
-## O que verifiquei agora
+## Diagnóstico confirmado
 
-- DNS de `fitmindclub.com.br` e `www.fitmindclub.com.br` aponta corretamente para 185.158.133.1.
-- `https://fitmindclub.com.br/` responde **200** e `www` redireciona para a raiz. Ou seja: **o servidor e o domínio estão saudáveis** — o problema é no aparelho/navegador do usuário.
+- `https://fitmindclub.com.br` responde com HTTPS válido e status 200 quando testado daqui.
+- `https://www.fitmindclub.com.br` redireciona corretamente para `https://fitmindclub.com.br`.
+- O print mostra o Chrome tentando abrir `fitmindclub.com.br/diagnostico` como **Não seguro/HTTP**, com alerta de “não pode fazer uma conexão segura”. Isso acontece antes do React/app carregar, então não é um bug de tela, carteira ou service worker do app naquele momento.
+- O domínio de e-mail do projeto ainda não está configurado para `fitmindclub.com.br`; isso pode continuar afetando confirmação de e-mail/redefinição de senha e links de autenticação.
 
-## Causa mais provável (confirmada no código)
+## Plano de correção
 
-Existe um conflito entre dois arquivos:
+1. **Forçar caminho seguro de recuperação no app**
+   - Ajustar a rota `/diagnostico` para exibir instruções mais diretas: abrir sempre `https://fitmindclub.com.br/diagnostico?sw=off` e não usar link baseado no `origin` atual quando o usuário entrou via HTTP.
+   - Adicionar botão/link explícito para a versão HTTPS oficial.
 
-- `public/sw.js` hoje é um **worker de limpeza**: ao ativar, apaga caches, força `client.navigate(url)` (recarrega a aba) e se desregistra.
-- `src/pwa-register.ts` continua **registrando `/sw.js` em produção**.
+2. **Reforçar limpeza de cache/service worker sem loop**
+   - Manter o kill-switch atual, mas revisar se existe alguma chamada antiga ainda tentando registrar `/sw.js`.
+   - Remover qualquer resquício de registro automático de service worker de app-shell, preservando apenas workers de push/mensageria.
 
-Resultado em produção: a cada visita o app registra o worker → o worker recarrega a página e se desregistra → na recarga registra de novo. Em aparelhos mais lentos ou com cache antigo isso aparece como **tela branca, site que "não abre" ou recarrega infinitamente**, exatamente em "alguns" celulares/computadores (os que já tinham o SW antigo instalado ou HTML cacheado).
+3. **Configurar domínio de e-mail do projeto**
+   - Abrir o setup de e-mail para usar o domínio customizado do projeto.
+   - Depois que o setup for concluído, ativar os templates/infra necessários para que confirmação de e-mail e redefinição de senha usem o domínio correto.
 
-## Correção proposta
+4. **Padronizar redirects de autenticação**
+   - Garantir que confirmação de cadastro, reset de senha e Google login sempre usem URL pública HTTPS oficial quando estiverem fora de preview/local.
+   - Evitar links HTTP ou origem insegura nos fluxos de e-mail.
 
-1. **Parar o loop**: remover a chamada de registro do service worker em produção (`registerAppServiceWorker` passa a apenas *desregistrar* qualquer SW do app e limpar caches). Assim o worker de limpeza roda uma única vez por aparelho e nunca mais volta.
-2. **Manter o kill-switch** em `public/sw.js` por mais um ciclo, mas sem o `client.navigate()` agressivo (evita o refresh forçado que causa a tela branca), preservando a limpeza de caches e o `unregister()`.
-3. **Não tocar** em workers de push/mensageria.
-4. **Instalação como app**: continua funcionando via `manifest.webmanifest` (Adicionar à tela inicial). Sem service worker o Chrome pode não oferecer o banner automático de instalação — o botão já existente segue funcionando. Se você quiser o banner de volta, isso vira uma entrega separada, com PWA feito corretamente.
+5. **Publicar e validar**
+   - Após implementar, será necessário publicar para os usuários afetados receberem o novo HTML/configuração.
+   - Validar com `curl` e navegador que:
+     - `http://fitmindclub.com.br/diagnostico` redireciona para HTTPS;
+     - `https://fitmindclub.com.br/diagnostico?sw=off` carrega;
+     - a página mostra o link oficial seguro;
+     - os redirects de auth apontam para HTTPS.
 
-## Página de diagnóstico e recuperação
+## Ação fora do código
 
-Criar `/diagnostico` (já existe uma rota com esse nome — vou revisar e reaproveitar) mostrando:
+Se mesmo com HTTPS válido alguns aparelhos continuarem com `ERR_CONNECTION_CLOSED`, a causa provável é DNS/rede/antivírus/proxy do aparelho. A correção prática será orientar esses usuários a testar:
 
-- domínio/origem acessada, versão do build, se há service worker registrado, quais caches existem;
-- botão **"Limpar e recarregar"** que desregistra todos os SWs do app, apaga caches e recarrega.
-
-Assim, quando alguém disser "não abre", você manda o link `fitmindclub.com.br/diagnostico?sw=off` e resolve na hora.
-
-## Se ainda houver aparelho que não abre
-
-Aí o problema não é o site, e sim rede/DNS local (operadora, DNS do roteador, Wi-Fi corporativo). O checklist que vou documentar na própria página: testar em rede móvel (4G/5G) vs Wi-Fi, e testar `https://fitmindclub.lovable.app` — se o `.lovable.app` abre e o domínio próprio não, é DNS do aparelho/rede, não do sistema.
-
-## Detalhes técnicos
-
-- Arquivos alterados: `src/pwa-register.ts`, `public/sw.js`, `src/routes/diagnostico.tsx`.
-- Sem mudanças em banco de dados, autenticação ou regras de negócio.
-- Necessário **publicar** depois da mudança para que os aparelhos afetados recebam o novo HTML.
+- abrir diretamente `https://fitmindclub.com.br/diagnostico?sw=off`;
+- limpar DNS/cache do navegador;
+- trocar DNS para 1.1.1.1 ou 8.8.8.8;
+- testar `https://fitmindclub.lovable.app` para separar problema de domínio próprio vs. app.
