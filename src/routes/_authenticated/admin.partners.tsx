@@ -27,7 +27,7 @@ function AdminPartners() {
   const load = async () => {
     setLoading(true);
     const [a, b] = await Promise.all([
-      supabase.from("partners" as never).select("*").order("created_at" as never, { ascending: false }),
+      supabase.from("partners" as never).select("*, profiles(name, email)").order("created_at" as never, { ascending: false }),
       supabase.from("partner_products" as never).select("*, partners(fantasy_name)").order("created_at" as never, { ascending: false }),
     ]);
     setPartners((a.data as unknown as PartnerRow[]) || []);
