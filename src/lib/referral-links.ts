@@ -1,3 +1,4 @@
+import { getShareOrigin } from "@/lib/auth-redirects";
 /**
  * Links de indicação.
  *
@@ -7,7 +8,7 @@
  */
 
 function origin(): string {
-  if (typeof window !== "undefined") return window.location.origin;
+  if (typeof window !== "undefined") return getShareOrigin();
   return "https://fitmindclub.com.br";
 }
 

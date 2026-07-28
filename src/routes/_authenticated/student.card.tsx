@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/student/card")({
   head: () => ({
@@ -145,7 +146,7 @@ function StudentCardPage() {
     );
   }
 
-  const checkinUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}`;
+  const checkinUrl = `${typeof window !== "undefined" ? getShareOrigin() : ""}/checkin/${card.studentId}`;
   const validUntilDate = card.validUntil ? new Date(card.validUntil) : null;
   const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now()) || !!card.partnerBenefit;
   const formattedValidUntil = validUntilDate

@@ -10,6 +10,7 @@ import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -258,7 +259,7 @@ function StudentFreebies() {
   };
 
   const checkinUrl = studentId
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${studentId}`
+    ? `${typeof window !== "undefined" ? getShareOrigin() : ""}/checkin/${studentId}`
     : "";
 
   const matchesTaxonomy = (p: { section_id: string | null; category_id: string | null; subcategory_id: string | null }) => {

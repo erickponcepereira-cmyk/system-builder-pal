@@ -17,6 +17,7 @@ import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 // ============================================================
 // COACH MULTI-STEP REGISTRATION
@@ -189,7 +190,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
-            referralLink: `${window.location.origin}/r/${referralCode}`,
+            referralLink: `${getShareOrigin()}/r/${referralCode}`,
             completedCoachCourse: completedCoachCourse === "yes",
             coachCourseNotes: coachCourseNotes || null,
           },

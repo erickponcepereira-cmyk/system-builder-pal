@@ -24,6 +24,7 @@ import {
   type RegistrationRow,
 } from "@/lib/fitmind-registrations.functions";
 import { Heart, HeartOff, ClipboardCheck } from "lucide-react";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1156,7 +1157,7 @@ function EventDetailModal({ event: ev, onClose, onChanged }: { event: FitmindEve
             <button
               type="button"
               onClick={async () => {
-                const url = `${window.location.origin}/coach?event=${ev.id}`;
+                const url = `${getShareOrigin()}/coach?event=${ev.id}`;
                 const shareData = { title: ev.title, text: ev.subtitle || ev.title, url };
                 try {
                   if (navigator.share && typeof navigator.canShare === "function" && navigator.canShare(shareData)) {
@@ -1316,7 +1317,7 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
   };
 
   const checkinUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/fitmind-checkin/${eventId}`
+    ? `${getShareOrigin()}/fitmind-checkin/${eventId}`
     : `/fitmind-checkin/${eventId}`;
 
   const CLASS_STYLES: Record<EnrichedAttendee["classification"], string> = {

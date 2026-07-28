@@ -2982,7 +2982,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setSharingResult(true);
     try {
       const { token } = await createShareFn({ data: { assessmentId: a.id, clientName: client.name } });
-      const url = `${window.location.origin}/resultado/${token}`;
+      const url = `${getShareOrigin()}/resultado/${token}`;
       const { toast } = await import("sonner");
       if (navigator.share) {
         try {
@@ -3098,6 +3098,7 @@ export default FitMindShape;
 // ============================================================
 /*
 import FitMindShape from "./FitMindShape";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 // No componente raiz do seu sistema:
 <FitMindShape

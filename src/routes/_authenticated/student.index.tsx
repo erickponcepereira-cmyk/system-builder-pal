@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/student/")({
   component: StudentHome,
@@ -182,7 +183,7 @@ function StudentHome() {
 
   const validUntilDate = card?.validUntil ? new Date(card.validUntil) : null;
   const cardActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
-  const checkinUrl = card ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}` : "";
+  const checkinUrl = card ? `${typeof window !== "undefined" ? getShareOrigin() : ""}/checkin/${card.studentId}` : "";
 
 
   return (

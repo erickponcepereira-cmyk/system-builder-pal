@@ -3,6 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { AlertTriangle, Copy, Loader2, Plus, Share2, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import {
+import { getShareOrigin } from "@/lib/auth-redirects";
   attachProfessionalCollaborator,
   detachProfessionalCollaborator,
   listEligibleStudents,
@@ -22,7 +23,7 @@ export function ProfessionalCollaboratorsPanel({ referralCode, professionalName 
   const [loading, setLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const link = referralCode ? `${window.location.origin}/r/${referralCode}` : "";
+  const link = referralCode ? `${getShareOrigin()}/r/${referralCode}` : "";
   const reached = collabs.length >= MAX_COLLABS;
 
   const reload = async () => {

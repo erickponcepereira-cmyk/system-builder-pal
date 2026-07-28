@@ -36,6 +36,7 @@ import { getMyBadges } from "@/lib/coach-badges.functions";
 import { getIndividualCareer } from "@/lib/coach-medals.functions";
 import { getCareerProgress } from "@/lib/coach-career.functions";
 import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 
 
@@ -146,7 +147,7 @@ function CoachDashboard() {
     // Sempre gerar um link absoluto para a URL publicada da página, levando direto
     // para o cadastro com o coach indicador já preenchido (via /r/:code).
     const path = `/r/${referralCode}`;
-    if (typeof window !== "undefined") return `${window.location.origin}${path}`;
+    if (typeof window !== "undefined") return `${getShareOrigin()}${path}`;
     return `https://fitmindclub.lovable.app${path}`;
   })();
 

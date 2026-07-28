@@ -18,6 +18,7 @@ import { maskCPF, maskCNPJ, maskPhone, generateReferralCode, isValidCPF, isValid
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 type Specialty = { key: string; label: string; description: string | null; requires_admin_setup: boolean };
 
@@ -252,7 +253,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
-            referralLink: `${window.location.origin}/r/${referralCode}`,
+            referralLink: `${getShareOrigin()}/r/${referralCode}`,
             completedCoachCourse: false,
             alreadyCoach: isAlreadyPro,
             activationNote: alreadyProfessionalNote.trim() || null,

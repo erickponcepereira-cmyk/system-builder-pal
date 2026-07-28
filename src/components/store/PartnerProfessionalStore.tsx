@@ -13,6 +13,7 @@ import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
 import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
 import { useServerFn } from "@tanstack/react-start";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
   const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
@@ -729,7 +730,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
 function PayLinkShare({ orderNumber, clientName }: { orderNumber: string; clientName?: string | null }) {
   if (typeof window === "undefined") return null;
-  const payLink = `${window.location.origin}/pay/${orderNumber}`;
+  const payLink = `${getShareOrigin()}/pay/${orderNumber}`;
   const waMsg = encodeURIComponent(
     `Olá ${clientName || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
   );

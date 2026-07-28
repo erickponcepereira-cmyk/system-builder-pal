@@ -4,6 +4,7 @@ import { Calendar, Users, Package, Link as LinkIcon, Copy, MessageCircle, UserPl
 import { toast } from "sonner";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 interface Props {
   coachId: string;
@@ -109,7 +110,7 @@ export function OverviewTab({ coachId, coachName }: Props) {
     return <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
-  const fullReferral = stats.referralCode ? `${window.location.origin}/r/${stats.referralCode}` : "";
+  const fullReferral = stats.referralCode ? `${getShareOrigin()}/r/${stats.referralCode}` : "";
 
   const copyReferral = () => {
     if (!fullReferral) return;
