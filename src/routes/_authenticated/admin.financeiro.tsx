@@ -988,7 +988,22 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reconciliar"}
               </button>
             </div>
+            <div className="mb-5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3">
+              <p className="mb-2 text-xs text-emerald-200/80">
+                Reprocessa automaticamente todo pagamento já <b>aprovado</b> no Mercado Pago cujo pedido/fatura
+                continua pendente, e revalida as anuidades pagas que não constaram no cadastro.
+              </p>
+              <button
+                onClick={runAll}
+                disabled={busyBulk}
+                className="inline-flex items-center gap-2 rounded-md bg-emerald-500 px-4 py-2 text-xs font-bold text-black disabled:opacity-50"
+              >
+                {busyBulk ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Reprocessar aprovados pendentes
+              </button>
+            </div>
             <h3 className="mb-2 text-xs uppercase tracking-wider text-white/40">Pendentes há mais de 5 min</h3>
+
             {pending === null ? (
               <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
             ) : pending.length === 0 ? (
