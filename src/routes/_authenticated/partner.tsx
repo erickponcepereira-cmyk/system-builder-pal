@@ -314,6 +314,7 @@ function PartnerPanel() {
         {abaAtiva === "reports" && <PartnerReports />}
         {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+        {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
 
 
       </main>
