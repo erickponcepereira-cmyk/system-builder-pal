@@ -817,6 +817,18 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 />
               </div>
             )}
+            {(editing.kind ?? "paid") === "paid" && !readOnly && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                {editing.id ? (
+                  <ProductDownloadsManager professionalProductId={editing.id} />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-white/20 bg-white/5 p-3 text-xs text-white/60">
+                    <p className="font-semibold text-white/80 mb-1">Arquivos para download após compra</p>
+                    <p>Salve o produto primeiro para poder anexar ebooks/PDFs. Depois, edite este produto novamente para enviar os arquivos.</p>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-4 flex gap-2">
               <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">
                 {readOnly ? "Fechar" : "Cancelar"}
