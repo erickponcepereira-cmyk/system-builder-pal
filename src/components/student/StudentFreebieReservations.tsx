@@ -32,6 +32,9 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  /** Reserva aguardando confirmação de cancelamento. null = diálogo fechado. */
+  const [paraCancelar, setParaCancelar] = useState<Reservation | null>(null);
+  const [cancelando, setCancelando] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -80,11 +83,31 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
     return () => clearInterval(t);
   }, [selected]);
 
-  const cancel = async (id: string) => {
-    if (!confirm("Cancelar esta reserva?")) return;
-    const { error } = await supabase.rpc("cancel_partner_freebie" as never, { _reservation_id: id } as never);
-    if (error) return toast.error(error.message);
-    toast.success("Reserva cancelada.");
+  /**
+   * Cancelamento efetivo. A confirmação acontece em diálogo próprio, não em
+   * `window.confirm` — o confirm nativo não abre em parte das WebViews do
+   * app, e o botão parecia simplesmente não funcionar.
+   *
+   * As mensagens de erro de `cancel_partner_freebie` já vêm em português
+   * do banco ("Reserva não pode ser cancelada", "Não é possível cancelar
+   * após o início do horário"), então são exibidas como vêm.
+   */
+  const confirmarCancelamento = async () => {
+    if (!paraCancelar || cancelando) return;
+    setCancelando(true);
+    const { error } = await supabase.rpc(
+      "cancel_partner_freebie" as never,
+      { _reservation_id: paraCancelar.id } as never,
+    );
+    setCancelando(false);
+    setParaCancelar(null);
+
+    if (error) {
+      toast.error(error.message || "Não foi possível cancelar a reserva.");
+      load(); // recarrega para refletir o estado real
+      return;
+    }
+    toast.success("Reserva cancelada");
     setSelected(null);
     load();
   };
@@ -105,27 +128,44 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
           const isUsed = r.status === "used";
           const state = getReservationState(r, now);
           return (
-            <button
+            // Container, não <button>: o cancelar é um botão próprio e não
+            // pode ficar aninhado dentro de outro botão.
+            <div
               key={r.id}
-              onClick={() => setSelected(r)}
-              className="w-full flex items-center gap-2 rounded-lg bg-black/30 p-2 text-left hover:bg-black/40"
+              className="flex items-center gap-2 rounded-lg bg-black/30 p-2 transition-colors hover:bg-black/40"
             >
-              <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelected(r)}
+                className="flex-1 min-w-0 text-left"
+              >
                 <p className="text-xs font-bold text-white truncate">{r.partner_products?.name}</p>
                 <p className="text-[10px] text-white/50 truncate">{r.partners?.fantasy_name}</p>
                 <p className="text-[10px] text-white/60 mt-0.5 flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {fmtDay(r.slot_start)} · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
                 </p>
+              </button>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {isUsed ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-green-400"><CheckCircle2 className="h-3 w-3" /> Usado</span>
+                ) : state.canOpenQr ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-primary"><QrCode className="h-3 w-3" /> QR</span>
+                ) : (
+                  <span className={`text-[10px] font-bold ${state.tone}`}>{state.label}</span>
+                )}
+                {/* Cancelar visível na própria lista, sem precisar abrir o QR. */}
+                {state.canCancel && (
+                  <button
+                    type="button"
+                    onClick={() => setParaCancelar(r)}
+                    className="rounded-md border border-red-400/25 px-2 py-0.5 text-[10px] font-bold text-red-300 transition-colors hover:bg-red-500/10"
+                  >
+                    Cancelar
+                  </button>
+                )}
               </div>
-              {isUsed ? (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-green-400"><CheckCircle2 className="h-3 w-3" /> Usado</span>
-              ) : state.canOpenQr ? (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-primary"><QrCode className="h-3 w-3" /> QR</span>
-              ) : (
-                <span className={`text-[10px] font-bold ${state.tone}`}>{state.label}</span>
-              )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -185,12 +225,61 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
                 <p className="mt-3 text-[10px] text-white/40">
                   {state.canOpenQr ? "Mostre este QR ao parceiro para registrar sua presença." : "A reserva fica registrada para o parceiro mesmo antes da liberação do QR."}
                 </p>
-                {state.canCancel && <button onClick={() => cancel(selected.id)} className="mt-4 w-full rounded-lg bg-white/5 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10">
+                {state.canCancel && <button type="button" onClick={() => setParaCancelar(selected)} className="mt-4 w-full rounded-lg bg-white/5 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10">
                   Cancelar reserva
                 </button>}
               </>;
               })()
             )}
+          </div>
+        </div>
+      )}
+      {/*
+        Diálogo de confirmação próprio, acima do modal do QR (z-110 > z-100),
+        porque o cancelar também pode ser acionado de dentro dele.
+      */}
+      {paraCancelar && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => { if (!cancelando) setParaCancelar(null); }}
+        >
+          <div
+            className="w-full max-w-xs rounded-2xl p-5"
+            style={{ backgroundColor: "#1A1A1A" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-white">Cancelar esta reserva?</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/60">
+              Você poderá reservar outro horário depois.
+            </p>
+            <p className="mt-2 text-[11px] text-white/45">
+              {paraCancelar.partner_products?.name} · {fmtDay(paraCancelar.slot_start)} ·{" "}
+              {fmtTime(paraCancelar.slot_start)}–{fmtTime(paraCancelar.slot_end)}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={cancelando}
+                onClick={() => setParaCancelar(null)}
+                className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={cancelando}
+                onClick={confirmarCancelamento}
+                className="flex-1 rounded-lg bg-red-500/15 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/25 disabled:opacity-40"
+              >
+                {cancelando ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cancelando
+                  </span>
+                ) : (
+                  "Cancelar reserva"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
