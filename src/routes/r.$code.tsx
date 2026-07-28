@@ -7,15 +7,18 @@ import { gravarAtribuicao } from "@/lib/atribuicao";
 import { z } from "zod";
 
 /**
- * `/r/{code}` é o mecanismo de ATRIBUIÇÃO (quem indicou). O DESTINO
- * depende da intenção do link:
+ * `/r/{code}` deixou de ser um funil de mão única para o cadastro.
  *
- *   /r/CODE              -> cadastro (link de indicação clássico)
- *   /r/CODE?to=cadastro  -> cadastro
- *   /r/CODE?to=loja      -> loja pública vinculada ao indicador
+ * Ele continua sendo o mecanismo de ATRIBUIÇÃO (quem indicou), mas o
+ * DESTINO agora depende da intenção do link:
+ *
  *   /r/CODE?p={id}       -> abre o produto
+ *   /r/CODE?to=cadastro  -> vai direto ao cadastro
+ *   /r/CODE              -> abre a loja pública
+ *
+ * Links antigos não quebram: os que já circulam por aí têm `?p=` ou nada,
+ * e nos dois casos passam a cair em conteúdo em vez de um formulário.
  */
-
 export const Route = createFileRoute("/r/$code")({
   validateSearch: (search: Record<string, unknown>) =>
     z
@@ -81,12 +84,19 @@ function ReferralLandingPage() {
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         sessionStorage.setItem("fitmind_pending_product", productId);
-        const [{ data: ch }, { data: pp }, { data: pr }] = await Promise.all([
-          supabase.from("products").select("id").eq("id", productId).maybeSingle(),
+        const [chRes, ppRes, prRes] = await Promise.all([
+          // `products` fechou para anon na migration de 28/07. Ler a tabela
+          // direto aqui devolvia 401 e o link do coach parava de resolver o
+          // produto exatamente para quem esta deslogado — que e o alvo do
+          // link. Por isso vai pela RPC publica, que ja filtra por ativo.
+          supabase.rpc("catalogo_publico").eq("id", productId).limit(1),
           supabase.from("partner_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
           supabase.from("professional_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
         ]);
-        if (ch?.id) productKind = "challenge";
+        const ch = Array.isArray(chRes.data) ? chRes.data : [];
+        const pp = ppRes.data;
+        const pr = prRes.data;
+        if (ch.length) productKind = "challenge";
         else if ((pp as any)?.id) productKind = "partner";
         else if ((pr as any)?.id) productKind = "professional";
         if (productKind) {
@@ -129,21 +139,20 @@ function ReferralLandingPage() {
           navigate({ to: "/student/store" });
           return;
         }
+        // intenção explícita de cadastro
+        if (destinoPedido === "cadastro") {
+          navigate({ to: "/register" });
+          return;
+        }
         // link de produto. Hoje só `products` tem permalink público;
         // partner/professional caem na loja até ganharem página própria.
         if (productId && productKind === "challenge") {
           navigate({ to: "/produto/$id", params: { id: productId } });
           return;
         }
-        // link explícito da loja vinculada ao indicador
-        if (destinoPedido === "loja" || (productId && !productKind)) {
-          navigate({ to: "/loja" });
-          return;
-        }
-        // padrão do link de indicação: cadastro com o indicador travado
-        navigate({ to: "/register" });
+        // padrão: loja pública, não formulário
+        navigate({ to: "/loja" });
       }, 900);
-
 
 
 
@@ -171,13 +180,12 @@ function ReferralLandingPage() {
               Você foi convidado por <span className="font-semibold text-white">{sponsorName}</span>.
             </p>
             <p className="mt-4 text-xs text-white/40">
-              {productId
-                ? "Abrindo o produto..."
-                : destinoPedido === "loja"
-                  ? "Abrindo a loja..."
-                  : "Levando você ao cadastro..."}
+              {destinoPedido === "cadastro"
+                ? "Levando você ao cadastro..."
+                : productId
+                  ? "Abrindo o produto..."
+                  : "Abrindo a loja..."}
             </p>
-
             <Loader2 className="mx-auto mt-3 h-4 w-4 animate-spin text-white/40" />
           </>
         )}

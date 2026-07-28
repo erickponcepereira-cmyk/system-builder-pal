@@ -167,13 +167,29 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   };
 
   const load = async () => {
+    // Colunas financeiras: custo, taxas e a tabela de comissao em 3 niveis.
+    // So descem para o navegador em modo coach, que e quem tem motivo
+    // legitimo para ver o proprio ganho. Para aluno elas nao saem do servidor.
+    //
+    // A policy nova de `products` e USING (true) TO authenticated: a margem
+    // saiu da internet aberta, mas seguia visivel para qualquer um dos 107
+    // cadastrados — e para qualquer concorrente que criasse conta gratis.
+    //
+    // Efeito colateral desejado: sem esses campos, `hasCommissionData` no
+    // ProductDetailModal fica falso e o detalhamento de comissao deixa de
+    // renderizar para aluno. Aquela guarda e so por dados, nao checa papel.
+    const COLUNAS_FINANCEIRAS = coachMode
+      ? ",commission_coach,commission_level1,commission_level2,commission_level3" +
+        ",app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage" +
+        ",tax_percentage,cost,other_costs"
+      : "";
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days").eq("status", "active").order("sort_order"),
+      supabase.from("products").select(`id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days${COLUNAS_FINANCEIRAS}`).eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience,target_audiences" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select(`id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days,visibility_audiences${COLUNAS_FINANCEIRAS}` as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
     const [{ data: catRows }, { data: subcatRows }] = await Promise.all([
