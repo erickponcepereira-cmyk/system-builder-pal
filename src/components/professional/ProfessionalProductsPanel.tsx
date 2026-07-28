@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { listCoproducedProducts } from "@/lib/collab.functions";
+import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
 
 type TimeRange = { start: string; end: string };
@@ -815,6 +816,18 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   creatorId={coachId}
                   productNetValueBrl={Number(editing.professional_net_amount || editing.price || 0)}
                 />
+              </div>
+            )}
+            {(editing.kind ?? "paid") === "paid" && !readOnly && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                {editing.id ? (
+                  <ProductDownloadsManager professionalProductId={editing.id} />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-white/20 bg-white/5 p-3 text-xs text-white/60">
+                    <p className="font-semibold text-white/80 mb-1">Arquivos para download após compra</p>
+                    <p>Salve o produto primeiro para poder anexar ebooks/PDFs. Depois, edite este produto novamente para enviar os arquivos.</p>
+                  </div>
+                )}
               </div>
             )}
             <div className="mt-4 flex gap-2">

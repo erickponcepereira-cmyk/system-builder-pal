@@ -6395,6 +6395,7 @@ export type Database = {
           name: string
           partner_product_id: string | null
           product_id: string | null
+          professional_product_id: string | null
           size_bytes: number | null
           sort_order: number
           updated_at: string
@@ -6407,6 +6408,7 @@ export type Database = {
           name: string
           partner_product_id?: string | null
           product_id?: string | null
+          professional_product_id?: string | null
           size_bytes?: number | null
           sort_order?: number
           updated_at?: string
@@ -6419,6 +6421,7 @@ export type Database = {
           name?: string
           partner_product_id?: string | null
           product_id?: string | null
+          professional_product_id?: string | null
           size_bytes?: number | null
           sort_order?: number
           updated_at?: string
@@ -6443,6 +6446,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_downloads_professional_product_id_fkey"
+            columns: ["professional_product_id"]
+            isOneToOne: false
+            referencedRelation: "professional_products"
             referencedColumns: ["id"]
           },
         ]
