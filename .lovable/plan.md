@@ -1,41 +1,31 @@
-## Diagnóstico confirmado
+## Diagnóstico confirmado agora (medido do sandbox)
 
-- `https://fitmindclub.com.br` responde com HTTPS válido e status 200 quando testado daqui.
-- `https://www.fitmindclub.com.br` redireciona corretamente para `https://fitmindclub.com.br`.
-- O print mostra o Chrome tentando abrir `fitmindclub.com.br/diagnostico` como **Não seguro/HTTP**, com alerta de “não pode fazer uma conexão segura”. Isso acontece antes do React/app carregar, então não é um bug de tela, carteira ou service worker do app naquele momento.
-- O domínio de e-mail do projeto ainda não está configurado para `fitmindclub.com.br`; isso pode continuar afetando confirmação de e-mail/redefinição de senha e links de autenticação.
+Os três pontos que você levantou estão corretos e foram verificados:
 
-## Plano de correção
+1. **Dois certificados separados** — o apex tem `CN=fitmindclub.com.br` com SAN só do apex; o www tem `CN=www.fitmindclub.com.br` com SAN só do www. Não existe um certificado único cobrindo os dois.
+2. **Redirect do www passa por HTTP puro** — `http://www.fitmindclub.com.br` responde `302 → http://fitmindclub.com.br/` (HTTP!), que só então faz `301 → https://fitmindclub.com.br/`. Ou seja: há um salto em texto puro no meio do caminho. É exatamente isso que o Chrome/antivírus/proxy de operadora derruba em alguns aparelhos (ERR_CONNECTION_CLOSED / "não pode fazer conexão segura").
+3. **Só cadeia ECDSA** — emissor Google Trust Services WE1, assinatura `ecdsa-with-SHA256`, chave `id-ecPublicKey`. Não há cadeia RSA alternativa, o que quebra aparelhos Android/Windows antigos.
 
-1. **Forçar caminho seguro de recuperação no app**
-   - Ajustar a rota `/diagnostico` para exibir instruções mais diretas: abrir sempre `https://fitmindclub.com.br/diagnostico?sw=off` e não usar link baseado no `origin` atual quando o usuário entrou via HTTP.
-   - Adicionar botão/link explícito para a versão HTTPS oficial.
+## O que já fiz
 
-2. **Reforçar limpeza de cache/service worker sem loop**
-   - Manter o kill-switch atual, mas revisar se existe alguma chamada antiga ainda tentando registrar `/sw.js`.
-   - Remover qualquer resquício de registro automático de service worker de app-shell, preservando apenas workers de push/mensageria.
+Enviei o pedido formal ao time da Lovable com as três solicitações e as evidências medidas (saída de `openssl s_client` e das chamadas `curl -I`), explicando que são usuários reais em produção sendo bloqueados.
 
-3. **Configurar domínio de e-mail do projeto**
-   - Abrir o setup de e-mail para usar o domínio customizado do projeto.
-   - Depois que o setup for concluído, ativar os templates/infra necessários para que confirmação de e-mail e redefinição de senha usem o domínio correto.
+## Importante: nada disso se resolve no código
 
-4. **Padronizar redirects de autenticação**
-   - Garantir que confirmação de cadastro, reset de senha e Google login sempre usem URL pública HTTPS oficial quando estiverem fora de preview/local.
-   - Evitar links HTTP ou origem insegura nos fluxos de e-mail.
+Certificado, cadeia TLS e o redirect de borda do domínio customizado ficam na camada de hospedagem da Lovable. Não existe arquivo neste projeto que altere isso — nem `_redirects`, nem rota, nem middleware, porque a resposta 302 do www acontece antes de qualquer código do app rodar.
 
-5. **Publicar e validar**
-   - Após implementar, será necessário publicar para os usuários afetados receberem o novo HTML/configuração.
-   - Validar com `curl` e navegador que:
-     - `http://fitmindclub.com.br/diagnostico` redireciona para HTTPS;
-     - `https://fitmindclub.com.br/diagnostico?sw=off` carrega;
-     - a página mostra o link oficial seguro;
-     - os redirects de auth apontam para HTTPS.
+## Mitigação opcional enquanto o time não aplica
 
-## Ação fora do código
+Se quiser reduzir o impacto agora, dá para:
 
-Se mesmo com HTTPS válido alguns aparelhos continuarem com `ERR_CONNECTION_CLOSED`, a causa provável é DNS/rede/antivírus/proxy do aparelho. A correção prática será orientar esses usuários a testar:
+1. **Definir o apex como domínio primário** em Project Settings → Domains, para que a divulgação (WhatsApp, bio, materiais) use sempre `https://fitmindclub.com.br` e nunca `www` — assim o salto HTTP do www deixa de ser acionado no fluxo normal.
+2. **Padronizar todos os links gerados pelo app** (indicação, loja, e-mails) para o apex HTTPS. Isso já está feito em `src/lib/auth-redirects.ts`, mas posso varrer o restante do código atrás de qualquer link ainda montado com `www` ou com o `origin` atual.
+3. **Orientar os casos remanescentes** para `https://fitmindclub.lovable.app`, que serve o mesmo app e ajuda a separar problema de domínio próprio vs. aparelho.
 
-- abrir diretamente `https://fitmindclub.com.br/diagnostico?sw=off`;
-- limpar DNS/cache do navegador;
-- trocar DNS para 1.1.1.1 ou 8.8.8.8;
-- testar `https://fitmindclub.lovable.app` para separar problema de domínio próprio vs. app.
+Me diga se quer que eu execute a mitigação 2 (varredura e padronização de links para o apex HTTPS) — as outras duas são ações suas no painel e na comunicação.
+
+&nbsp;
+
+**A mitigação 1 pode fazer já**, definir o apex como domínio primário no painel. É inofensiva e correta de qualquer jeito.
+
+**O pedido formal à Lovable está certo e deve seguir** — certificado único cobrindo os dois nomes, cadeia RSA além da ECDSA, e o redirect do `www` indo direto para HTTPS. São defeitos reais, independentemente de serem ou não a causa deste caso.
