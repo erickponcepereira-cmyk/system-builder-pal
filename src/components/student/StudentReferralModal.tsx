@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 import { computeSlotAmounts, type ValueSlot } from "@/lib/financialEngine";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 const FitcoinIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
   <img src={fitcoinAsset.url} alt="" aria-hidden className={`inline-block object-contain align-[-2px] ${className}`} />
@@ -172,7 +173,7 @@ export function StudentReferralModal({
   }, [products, search]);
 
   const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://fitmindclub.lovable.app";
+    typeof window !== "undefined" ? getShareOrigin() : "https://fitmindclub.lovable.app";
 
   const shareUrl = selected ? `${baseUrl}/r/${referralCode}?p=${selected.id}` : "";
 

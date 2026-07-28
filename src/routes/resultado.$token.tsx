@@ -14,6 +14,7 @@ import { getAssessmentShareByToken, type PublicShareData } from "@/lib/assessmen
 import { Logo } from "@/components/Logo";
 import FitMindShapeResultView from "@/components/coach/FitMindShapeResultView";
 import type { FitMindClient, FitMindAssessment } from "@/components/coach/FitMindShape";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/resultado/$token")({
   head: () => ({
@@ -131,8 +132,8 @@ function ResultadoPage() {
   const assessment = toAssessment(data);
 
   const registerUrl = data.coachReferralCode
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/r/${data.coachReferralCode}`
-    : `${typeof window !== "undefined" ? window.location.origin : ""}/register?role=student`;
+    ? `${typeof window !== "undefined" ? getShareOrigin() : ""}/r/${data.coachReferralCode}`
+    : `${typeof window !== "undefined" ? getShareOrigin() : ""}/register?role=student`;
 
   const share = async () => {
     const url = window.location.href;

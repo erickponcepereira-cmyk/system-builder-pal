@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { Users, Copy, Share2, AlertTriangle } from "lucide-react";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 type Collab = {
   id: string;
@@ -33,7 +34,7 @@ export function CollaboratorsTab({ coachId, displayName }: { coachId: string; di
     })();
   }, [coachId]);
 
-  const link = referralCode ? `${window.location.origin}/r/${referralCode}` : "";
+  const link = referralCode ? `${getShareOrigin()}/r/${referralCode}` : "";
 
   const copy = () => {
     if (!link) return;

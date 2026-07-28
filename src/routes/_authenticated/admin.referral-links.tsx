@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Search, Copy, Check, Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { listAllReferralLinks, type ReferralLinkRow } from "@/lib/admin-referral-links.functions";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/admin/referral-links")({
   head: () => ({
@@ -37,7 +38,7 @@ function AdminReferralLinks() {
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
-    setOrigin(typeof window !== "undefined" ? window.location.origin : "");
+    setOrigin(typeof window !== "undefined" ? getShareOrigin() : "");
     (async () => {
       try {
         const res = await listFn({ data: undefined as never });

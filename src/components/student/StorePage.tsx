@@ -16,6 +16,7 @@ import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-override
 import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -151,8 +152,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     // basta incluí-los aqui.
     const temPermalink = kind === "challenge" || kind === "item";
     const url = temPermalink
-      ? `${window.location.origin}/produto/${productSourceId}?ref=${myReferralCode}`
-      : `${window.location.origin}/r/${myReferralCode}?p=${productSourceId}`;
+      ? `${getShareOrigin()}/produto/${productSourceId}?ref=${myReferralCode}`
+      : `${getShareOrigin()}/r/${myReferralCode}?p=${productSourceId}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Indicação FitMind Club", url });
@@ -1045,7 +1046,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                 onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
               {coachMode && (() => {
-                const payLink = `${window.location.origin}/pay/${payOrder.number}`;
+                const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
                 const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
                 const waMsg = encodeURIComponent(
                   `Olá ${selectedClient?.name || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
@@ -1551,7 +1552,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
               onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && (() => {
-              const payLink = `${window.location.origin}/pay/${payOrder.number}`;
+              const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
               const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
               const waMsg = encodeURIComponent(
                 `Olá ${selectedClient?.name || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`

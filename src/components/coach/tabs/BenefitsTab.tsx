@@ -9,6 +9,7 @@ import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 type PartnerFreeProduct = {
   id: string;
@@ -174,9 +175,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   };
 
   const checkinUrl = studentId
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${studentId}`
+    ? `${typeof window !== "undefined" ? getShareOrigin() : ""}/checkin/${studentId}`
     : coachId
-      ? `${typeof window !== "undefined" ? window.location.origin : ""}/coach/${coachId}`
+      ? `${typeof window !== "undefined" ? getShareOrigin() : ""}/coach/${coachId}`
       : "";
 
   return (

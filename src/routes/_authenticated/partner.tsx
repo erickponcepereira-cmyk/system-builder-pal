@@ -41,6 +41,7 @@ import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
 import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
 
 import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 
 
@@ -201,7 +202,7 @@ function PartnerPanel() {
         avatarUrl: pt.photo_url,
         patent: null,
         referralCode: c.referral_code || "",
-        referralLink: c.referral_code ? `${window.location.origin}/r/${c.referral_code}` : "",
+        referralLink: c.referral_code ? `${getShareOrigin()}/r/${c.referral_code}` : "",
         uplineCoachId: c.upline_coach_id,
         totalActiveStudents: 0,
         totalSales: 0,
@@ -449,7 +450,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
   const [showVisits, setShowVisits] = useState(false);
   const [uplineCoach, setUplineCoach] = useState<{ name: string; phone: string | null } | null>(null);
   const effectiveReferralCode = coachReferralCode || partner.referral_code;
-  const referralLink = effectiveReferralCode ? `${window.location.origin}/r/${effectiveReferralCode}` : "";
+  const referralLink = effectiveReferralCode ? `${getShareOrigin()}/r/${effectiveReferralCode}` : "";
 
   useEffect(() => {
     (async () => {
@@ -1467,7 +1468,7 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
 }
 
 function QrCodePanel({ partner }: { partner: Partner }) {
-  const url = `${window.location.origin}/partner-checkin/${partner.id}`;
+  const url = `${getShareOrigin()}/partner-checkin/${partner.id}`;
   const [mode, setMode] = useState<"display" | "scan">("scan");
   return (
     <div className="space-y-3">
@@ -1812,7 +1813,7 @@ function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; 
   const [collabs, setCollabs] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const effectiveCode = coachReferralCode || partner.referral_code;
-  const link = effectiveCode ? `${window.location.origin}/r/${effectiveCode}` : "";
+  const link = effectiveCode ? `${getShareOrigin()}/r/${effectiveCode}` : "";
 
   useEffect(() => {
     (async () => {

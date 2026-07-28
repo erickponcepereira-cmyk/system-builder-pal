@@ -11,6 +11,7 @@ import {
 } from "@/lib/coach-sales.functions";
 import { previewCoachSaleEarnings, type SaleEarningsItem } from "@/lib/financial.functions";
 import type { PaymentMethod } from "@/lib/financialEngine";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 type CartItem = {
   productId: string;
@@ -134,7 +135,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
 
   const copyPayLink = () => {
     if (!result) return;
-    const url = `${window.location.origin}${result.payUrl}`;
+    const url = `${getShareOrigin()}${result.payUrl}`;
     navigator.clipboard.writeText(url);
     toast.success("Link copiado!");
   };
@@ -382,7 +383,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
               <div className="rounded-lg p-4 mb-4 text-left" style={{ backgroundColor: "#1A1A1A" }}>
                 <p className="text-xs text-white/50 mb-2">Link de pagamento</p>
                 <p className="text-xs text-primary break-all font-mono">
-                  {typeof window !== "undefined" ? `${window.location.origin}${result.payUrl}` : result.payUrl}
+                  {typeof window !== "undefined" ? `${getShareOrigin()}${result.payUrl}` : result.payUrl}
                 </p>
               </div>
 

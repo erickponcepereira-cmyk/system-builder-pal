@@ -13,6 +13,7 @@ import {
 } from "@/lib/google-calendar.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 function toLocalInput(iso: string) {
   const d = new Date(iso);
@@ -115,7 +116,7 @@ export function UpcomingAppointments() {
 
   const copyInvite = async (ev: UpcomingEvent) => {
     if (!ev.publicToken) return;
-    const url = `${window.location.origin}/invite/${ev.publicToken}`;
+    const url = `${getShareOrigin()}/invite/${ev.publicToken}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(ev.id);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getShareOrigin } from "@/lib/auth-redirects";
 
 /** Retorna o código de indicação do usuário logado (coach > partner > student). */
 export function useMyReferralCode(): string | null {
@@ -42,7 +43,7 @@ export async function shareReferralProduct(
   title = "Indicação FitMind Club",
 ): Promise<boolean> {
   if (!referralCode) return false;
-  const url = `${window.location.origin}/r/${referralCode}?p=${productId}`;
+  const url = `${getShareOrigin()}/r/${referralCode}?p=${productId}`;
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({ title, url });
