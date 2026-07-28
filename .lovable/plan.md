@@ -1,108 +1,49 @@
-## Antes de tudo: dois arquivos citados não existem
+## Situação verificada agora
 
-Verifiquei o repositório e o banco:
+- O perfil `gibadelmondes@hotmail.com` existe (Gilberto Delmondes, papel `partner`) e já tem **1 unidade**: "Mutação Fit", status `approved`.
+- **Bloqueio encontrado:** a tabela `partners` tem a restrição única `partners_profile_id_key` em `profile_id`. Ou seja, hoje **é impossível** o mesmo perfil ter 3 academias — a segunda inserção falha no banco. A Entrega 1 criou toda a camada de permissões e o seletor, mas o cadastro de unidades adicionais ainda não é possível.
+- Não existe tela para criar uma segunda unidade: o cadastro de parceiro é 1 por perfil.
 
-- `docs/propostas/multi-unidade-parceiro.sql` — **não existe** (a pasta só tem `loja-publica-e-vazamento.sql`)
-- `src/lib/unidades-parceiro.ts` — **não existe**
+Resposta direta à sua pergunta: **não**, você não precisa criar 3 perfis (3 logins). O modelo escolhido é 1 login = várias unidades. Mas para isso funcionar faltam duas coisas: remover a restrição do banco e criar o botão "Nova unidade".
 
-Então a "camada de front já pronta" e a "especificação do banco" precisam ser escritas nesta entrega, seguindo exatamente o contrato que você descreveu (`carregarUnidades`, `pode`, `escolherUnidadeAtiva`, `lembrarUnidadeAtiva`, `PERMISSOES`, `ROTULOS_PERMISSAO`). O restante da entrega segue como especificado.
+## O que vou implementar
 
-O que confirmei no banco/código:
+### 1. Migration
+- Remover `partners_profile_id_key` e criar índice **não único** em `partners(profile_id)`. A coluna continua existindo (nada é removido).
+- Ajustar o que assume 1 parceiro por perfil no banco (auditar funções que usam `WHERE profile_id = ... LIMIT 1`, principalmente `current_partner_id`, já revisada na Entrega 1).
+- Garantir que criar uma unidade nova gere automaticamente a linha `owner` em `partner_members`, a carteira da unidade e o `referral_code` da unidade (trigger).
 
-- `partner.tsx:147` usa mesmo `select("*") ... .eq("profile_id", profile.id).maybeSingle()` — estoura com 2+ linhas
-- `partner_products` (owner insert/update/delete), `partner_visits`, `partners_owner_update`, `ppo_partner_select`, `partner_posts_owner_cud` estão hoje **sem cláusula `TO`** (roles = `{public}`) — vão ser recriadas com `TO authenticated`
-- existe `public.current_partner_id()` que faz `LIMIT 1` sobre `partners` pelo `profile_id`. **Esse é o ponto crítico**: com 3 unidades no mesmo perfil ele passa a devolver uma unidade aleatória, e várias policies dependem dele (`partner_posts`, `partner_product_orders`, `partner_product_order_status_log`, `partner_coupons`). Precisa ser tratado nesta entrega.
+### 2. Botão "Nova unidade" no painel do parceiro
+- No seletor de unidades já existente no topo do `partner.tsx`, item final "+ Nova unidade".
+- Modal com nome fantasia, documento, cidade/estado, endereço, WhatsApp, foto — os mesmos campos do cadastro atual.
+- A unidade nasce com status `pending` e aparece na aba de liberação do admin, igual a qualquer parceiro.
+- Só quem é `owner` de alguma unidade vê o botão.
 
----
+### 3. Admin
+- Na tela de liberação de parceiros, mostrar o dono (perfil) ao lado do nome da unidade, para você não confundir 3 linhas do mesmo dono.
 
-## Entrega 1 — escopo
+## Passo a passo que você vai seguir depois (tutorial)
 
-### 1.1 Migration nova (nada de editar migrations antigas)
+**A) Criar as outras 2 academias**
+1. Entrar com `gibadelmondes@hotmail.com` → painel **Parceiro**.
+2. No topo, abrir o seletor de unidade → **+ Nova unidade** → preencher "Academia 2" → salvar. Repetir para a terceira.
+3. Entrar como admin → **Cloud/Admin → Parceiros → liberar** as duas novas (ou usar "Isentar/Liberar" como já faz hoje).
+4. Voltar ao painel do Gilberto: o seletor no topo mostra as 3, e trocar de unidade troca produtos, carteira, gratuitos e pedidos daquela academia.
 
-**Tabela**
+**B) Criar a recepção de uma academia**
+1. A recepcionista cria uma conta normal no app (ou já tem uma) — basta ter e-mail cadastrado.
+2. Gilberto seleciona a academia dela no topo → aba **Membros** → **Convidar por e-mail** → informa o e-mail dela → papel `staff`.
+3. Nas caixinhas de permissão marca só o que ela pode: por exemplo *Ver visão geral* e *Usar leitor de QR*. Deixa produtos e carteira desmarcados.
+4. Ela entra com o login dela: vê só aquela academia e só as 2 abas. O bloqueio é no banco, não só na tela — tentativa de editar produto pela API volta erro de permissão.
 
-```
-partner_members(
-  id uuid pk,
-  partner_id uuid -> partners(id) on delete cascade,
-  profile_id uuid -> profiles(id) on delete cascade,
-  papel text check in ('owner','manager','staff'),
-  permissoes text[] default '{}',
-  created_at, updated_at,
-  unique(partner_id, profile_id)
-)
-```
-Com `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated`, `GRANT ALL ... TO service_role`, RLS ligada.
+**C) Como fica a rede (MLM)**
+- As 3 academias **não** são 3 cadastros abaixo dele na árvore. São 3 unidades ao lado, penduradas no mesmo perfil.
+- A rede/upline continua sendo a do perfil do Gilberto: toda venda das 3 sobe pela mesma árvore, com o mesmo upline nível 1/2/3 dele.
+- A carteira e os relatórios são **separados por unidade**, então você consegue ver quanto cada academia vendeu, mas a comissão de rede é consolidada no perfil dele.
+- Se um dia você quiser que cada academia tenha upline própria (nós distintos na árvore), aí sim seriam 3 perfis — e o painel único deixa de existir. Não é o que está implementado.
 
-**Funções (`SECURITY DEFINER`, `STABLE`, `search_path=public`)**
+## Detalhes técnicos
 
-- `partner_pode(_partner_id uuid, _permissao text) returns boolean` — true se o usuário logado é `owner` da unidade, ou tem `_permissao` no array, ou é admin
-- `minhas_unidades_parceiro()` — retorna `partner_id, fantasy_name, city, state, photo_url, status, papel, permissoes` das unidades do perfil logado
-- `current_partner_ids() returns setof uuid` — **novo**, substitui o `LIMIT 1` nas policies existentes que hoje usam `current_partner_id()` (mantenho `current_partner_id()` viva para não quebrar chamadas espalhadas, mas ela passa a preferir a unidade `owner`)
-
-**Backfill (na mesma migration)**: uma linha `owner` em `partner_members` para cada `partners.profile_id` não nulo.
-
-**RLS de `partner_members`**: leitura para membros da própria unidade; escrita só para quem tem `members.gerenciar` naquela unidade (ou admin); bloqueio de alterar/remover linha `owner` por trigger.
-
-Catálogo de permissões: `overview.ver`, `products.editar`, `freebies.editar`, `scanner.usar`, `wallet.ver`, `orders.ver`, `timeline.editar`, `reports.ver`, `members.gerenciar`, `profile.editar`, `agenda.ver`, `collab.ver`, `network.ver`, `store.ver`, `subscription.ver`.
-
-### 1.2 RLS por permissão
-
-Recriar (drop + create, sempre com `TO authenticated`) trocando `partners.profile_id = perfil do usuário` por `public.partner_pode(partner_id, '<permissao>')`:
-
-- `partner_products` — insert/update/delete → `products.editar`; o select público aprovado permanece como está
-- `partner_product_schedules` (gratuitos/horários) → `freebies.editar`
-- `partner_freebie_reservations` (leitura do estabelecimento) → `scanner.usar` ou `freebies.editar`
-- `partner_wallets` → `wallet.ver`
-- `partner_product_orders` / `partner_product_order_status_log` (ramo do parceiro) → `orders.ver`, via `current_partner_ids()`
-- `partner_posts` → `timeline.editar`
-- `partner_visits`, `partner_coupons` (ramo parceiro) → por unidade, `TO authenticated`
-- `partners_owner_update` → `profile.editar`
-
-Auditoria: rodo `pg_policies` procurando toda referência a `current_partner_id()` ou `partners.profile_id` e corrijo o conjunto inteiro, não só a lista acima.
-
-### 1.3 `src/lib/unidades-parceiro.ts` (criar)
-
-Exporta `Unidade`, `PERMISSOES`, `ROTULOS_PERMISSAO`, `carregarUnidades(perfilId)` (RPC `minhas_unidades_parceiro`, com fallback para consulta direta em `partners` devolvendo papel `owner` com todas as permissões), `pode(unidade, permissao)`, `escolherUnidadeAtiva(unidades, lembrada)`, `lembrarUnidadeAtiva(partnerId)` via `localStorage`.
-
-### 1.4 `partner.tsx`
-
-- substituir a resolução do parceiro por `carregarUnidades`; carregar dados sempre pelo `partner_id` da unidade ativa
-- seletor no topo (foto, nome fantasia, cidade) quando houver 2+ unidades; trocar recarrega e persiste
-- `baseTabs`/`tabs` filtradas por `pode()`; se a aba ativa perder permissão, cai na primeira permitida
-- trocar o `select("*")` de `partner_products` por lista explícita de colunas (o painel do parceiro é a própria loja dele, mas ainda assim listo colunas para não expor campos de comissão a uma recepção)
-
-### 1.5 Aba "Membros"
-
-Visível só com `members.gerenciar`. Lista membros da unidade ativa (nome, e-mail, papel), convite por e-mail (busca `profiles` por e-mail; se não existir, aviso para a pessoa se cadastrar antes), checkboxes com todas as chaves de `ROTULOS_PERMISSAO` em português, `owner` sem edição/remoção.
-
-### 1.6 Validação
-
-`npx vite build`, e no banco:
-`SELECT tablename, policyname FROM pg_policies WHERE schemaname='public' AND 'public' = ANY(roles);` — nenhuma policy nova, e as antigas de parceiro que eu tocar saem da lista.
-
-Paro aqui para você conferir antes da Entrega 2.
-
----
-
-## Sua pergunta: dono de 3 academias, como fica a rede
-
-Respondendo agora porque isso muda o que eu escrevo na migration.
-
-**Cadastros.** O dono tem **1 perfil (login)** e **3 linhas em `partners`** — uma por academia. Ele não precisa de 3 logins. O que liga o perfil dele às 3 é a nova `partner_members` com papel `owner` nas três. No painel ele troca de unidade pelo seletor.
-
-**Vendas e carteira.** Cada venda pertence à academia onde foi feita: `partner_product_orders.partner_id` aponta para aquela unidade, e existe **uma `partner_wallets` por `partner_id`**, ou seja, 3 carteiras separadas. É o que você pediu ("produtos e carteira separados por academia"). Se você quiser saque consolidado depois, dá para somar as três na tela — mas o registro contábil continua por unidade, que é o certo para relatório por academia.
-
-**MLM / upline.** Aqui está o ponto que você precisa validar. A rede **não** usa `partners`; ela usa `coaches.upline_coach_id`. A tabela `partners` tem `upline_coach_id`, mas isso é só "quem indicou este parceiro". Então, hoje:
-
-- as 3 academias podem ter o mesmo `upline_coach_id` (quem indicou o dono)
-- o dono, como pessoa, tem **um** registro de coach (um perfil = um coach). Ele não vira "upline 1 de si mesmo três vezes"
-
-Ou seja: **o dono não fica como upline nível 1 das 3 academias no sentido de MLM** com a modelagem atual. As comissões de rede das vendas das 3 sobem para a linha do coach dono (e daí para o upline dele) — não passam por três nós intermediários. Na prática o dono recebe como vendedor/dono da unidade, e a rede acima dele recebe os 10/5/3.
-
-Se o que você quer é diferente — que cada academia seja um **nó próprio de rede** com o dono como upline 1 delas — isso exige um perfil/coach separado por academia (3 logins) e não é o desenho desta entrega. Me diga qual dos dois você quer:
-
-- **(A)** 1 login, 3 unidades, rede sobe direto pelo coach do dono — é o que vou implementar
-- **(B)** 3 logins/coaches, dono como upline das 3 — vira outra modelagem, com impacto em comissões
-
-Se você não responder, sigo com **(A)**.
+- Arquivos afetados: nova migration em `supabase/migrations/`, `src/routes/_authenticated/partner.tsx` (item "+ Nova unidade" no seletor), novo `src/components/partner/NovaUnidadeDialog.tsx`, e a tela de aprovação em admin.
+- Toda policy nova sai com `TO authenticated` explícito; nenhuma consulta com `select("*")`.
+- Validação com `npx vite build` (o typecheck não cobre `src/routes`).
