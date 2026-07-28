@@ -456,7 +456,7 @@ function ProfilePage() {
             {section.items.map((it, i) => {
               const target = "to" in it && it.to ? it.to : null;
               const search = ("search" in it ? (it as { search?: Record<string, unknown> }).search : undefined);
-              const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] cursor-pointer ${
+              const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-foreground/[0.04] cursor-pointer ${
                 i !== section.items.length - 1 ? "border-b border-foreground/5" : ""
               }`;
               const body = (
