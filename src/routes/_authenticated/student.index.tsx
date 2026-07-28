@@ -197,12 +197,12 @@ function StudentHome() {
             )}
           </div>
           <div>
-            <p className="text-xs text-white/40">{greeting},</p>
-            <p className="text-sm font-bold text-white">{studentName} 🔥</p>
+            <p className="text-xs text-foreground/40">{greeting},</p>
+            <p className="text-sm font-bold text-foreground">{studentName} 🔥</p>
           </div>
         </div>
-        <Link to="/student/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
-          <Bell className="h-5 w-5 text-white/70" />
+        <Link to="/student/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
+          <Bell className="h-5 w-5 text-foreground/70" />
           {unreadNotifications > 0 && (
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
               {unreadNotifications}
@@ -245,10 +245,10 @@ function StudentHome() {
           <Gift className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-white">Indique e ganhe comissão</p>
-          <p className="text-[11px] text-white/55">Escolha um produto, gere o link e envie para um(a) amigo(a) 🎁</p>
+          <p className="text-sm font-bold text-foreground">Indique e ganhe comissão</p>
+          <p className="text-[11px] text-foreground/55">Escolha um produto, gere o link e envie para um(a) amigo(a) 🎁</p>
         </div>
-        <ChevronRight className="h-5 w-5 text-white/40" />
+        <ChevronRight className="h-5 w-5 text-foreground/40" />
       </button>
 
       {/* Meu Treino */}
@@ -257,10 +257,10 @@ function StudentHome() {
           <Dumbbell className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-white">Meu Treino</p>
-          <p className="text-[11px] text-white/55">Iniciar treino, evolução e conquistas 🏆</p>
+          <p className="text-sm font-bold text-foreground">Meu Treino</p>
+          <p className="text-[11px] text-foreground/55">Iniciar treino, evolução e conquistas 🏆</p>
         </div>
-        <ChevronRight className="h-5 w-5 text-white/40" />
+        <ChevronRight className="h-5 w-5 text-foreground/40" />
       </Link>
 
 
@@ -271,15 +271,15 @@ function StudentHome() {
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">FitMind Club</p>
-              <p className="text-[10px] text-white/50">Carteirinha do aluno</p>
+              <p className="text-[10px] text-foreground/50">Carteirinha do aluno</p>
             </div>
-            <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${cardActive ? "bg-primary/20 text-primary" : "bg-white/10 text-white/50"}`}>
+            <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${cardActive ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground/50"}`}>
               <ShieldCheck className="h-3 w-3" /> {cardActive ? "Ativa" : "Inativa"}
             </div>
           </div>
 
           <div className="relative mt-4 flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-2 ring-primary/40">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-foreground/10 ring-2 ring-primary/40">
               {card.avatarUrl ? (
                 <img src={card.avatarUrl} alt={card.name} className="h-full w-full object-cover" />
               ) : (
@@ -287,10 +287,10 @@ function StudentHome() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-bold text-white">{card.name}</p>
-              <p className="mt-1 text-[11px] text-white/45">Plano: <span className="text-white/80">{card.plan}</span></p>
+              <p className="truncate text-lg font-bold text-foreground">{card.name}</p>
+              <p className="mt-1 text-[11px] text-foreground/45">Plano: <span className="text-foreground/80">{card.plan}</span></p>
               {card.coachName && (
-                <p className="text-[11px] text-white/45">Coach: <span className="text-white/80">{card.coachName}</span></p>
+                <p className="text-[11px] text-foreground/45">Coach: <span className="text-foreground/80">{card.coachName}</span></p>
               )}
             </div>
           </div>
@@ -310,9 +310,9 @@ function StudentHome() {
               )}
             </>
           ) : (
-            <div className="relative mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-sm font-bold text-white">Carteirinha inativa</p>
-              <p className="mt-1 text-[11px] text-white/55">
+            <div className="relative mt-5 rounded-2xl border border-foreground/10 bg-foreground/5 p-4 text-center">
+              <p className="text-sm font-bold text-foreground">Carteirinha inativa</p>
+              <p className="mt-1 text-[11px] text-foreground/55">
                 Adquira um produto com acesso à carteirinha para ativar seu QR code.
               </p>
             </div>
@@ -322,42 +322,42 @@ function StudentHome() {
 
       {/* Progresso do desafio real — escondido para coach/profissional/parceiro */}
       {!challengeBlocked && (
-        <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
+        <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-foreground/[0.07]" style={{ backgroundColor: "var(--card)" }}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold text-white">Desafio FitMind</h2>
+              <h2 className="text-sm font-semibold text-foreground">Desafio FitMind</h2>
             </div>
             {challenge && challengeProgress ? (
               <span className="text-xs font-bold text-primary">Dia {challengeProgress.elapsed}/{challengeProgress.total}</span>
             ) : (
-              <span className="text-[10px] font-bold uppercase text-white/40">Sem inscrição</span>
+              <span className="text-[10px] font-bold uppercase text-foreground/40">Sem inscrição</span>
             )}
           </div>
 
           {challenge && challengeProgress ? (
             <>
-              <p className="text-[11px] text-white/50 mb-2">
+              <p className="text-[11px] text-foreground/50 mb-2">
                 {challenge.competitionLabel} · <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Turma {challenge.groupNumber}</span>
               </p>
-              <Progress value={challengeProgress.pct} className="h-2 bg-white/5" />
-              <div className="mt-2 flex justify-between text-[11px] text-white/50">
+              <Progress value={challengeProgress.pct} className="h-2 bg-foreground/5" />
+              <div className="mt-2 flex justify-between text-[11px] text-foreground/50">
                 <span>{challengeProgress.pct}% concluído</span>
                 <span>{challengeProgress.remaining} dias restantes</span>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
-                  <p className="font-bold text-white">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
+                <div className="rounded-lg bg-foreground/5 px-2.5 py-2">
+                  <p className="text-foreground/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
+                  <p className="font-bold text-foreground">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
                 </div>
-                <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
-                  <p className="font-bold text-white">{fmtDate(challenge.finalWeighIn)}</p>
+                <div className="rounded-lg bg-foreground/5 px-2.5 py-2">
+                  <p className="text-foreground/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
+                  <p className="font-bold text-foreground">{fmtDate(challenge.finalWeighIn)}</p>
                 </div>
-                <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                  <p className="text-white/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
-                  <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
+                <div className="rounded-lg bg-foreground/5 px-2.5 py-2">
+                  <p className="text-foreground/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
+                  <p className="font-bold text-foreground">{fmtDate(challenge.awardDate)}</p>
                 </div>
                 <div className="rounded-lg bg-primary/10 px-2.5 py-2">
                   <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Tickets</p>
@@ -366,7 +366,7 @@ function StudentHome() {
               </div>
             </>
           ) : (
-            <div className="text-xs text-white/55">
+            <div className="text-xs text-foreground/55">
               <p>Você ainda não está inscrito no desafio.</p>
               {tokens > 0 && (
                 <p className="mt-1 text-primary font-semibold flex items-center gap-1">

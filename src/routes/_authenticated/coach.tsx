@@ -278,7 +278,7 @@ function CoachDashboard() {
     fetchProgress()
       .then((p) => {
         const cur = p.patents.find((x) => x.key === p.currentPatentKey);
-        if (cur) setTeamPatent({ name: cur.display_name, color: cur.badge_color || "#FF4230" });
+        if (cur) setTeamPatent({ name: cur.display_name, color: cur.badge_color || "var(--primary)" });
         else setTeamPatent(null);
       })
       .catch(() => setTeamPatent(null));
@@ -314,11 +314,11 @@ function CoachDashboard() {
   return (
     <CoachOnboardingGate>
     <SubscriptionGuard walletSource="coach">
-    <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
+    <div className="flex min-h-screen" style={{ backgroundColor: "var(--background)" }}>
 
       {/* Mobile header */}
       <div
-        className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-white/5 px-4 py-2 backdrop-blur-xl lg:hidden"
+        className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-foreground/5 px-4 py-2 backdrop-blur-xl lg:hidden"
         style={{
           backgroundColor: "rgba(10,10,10,0.94)",
           paddingTop: "max(2rem, env(safe-area-inset-top))",
@@ -328,7 +328,7 @@ function CoachDashboard() {
       >
         <div className="flex min-w-0 items-center gap-2">
 <Logo className="h-9 w-auto shrink-0 object-contain" />
-          <span className="truncate font-bold text-white">FitMind Club</span>
+          <span className="truncate font-bold text-foreground">FitMind Club</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <RoleSwitcher current="coach" />
@@ -336,7 +336,7 @@ function CoachDashboard() {
             type="button"
             aria-label={sidebarOpen ? "Fechar menu" : "Abrir menu"}
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-white/10 text-white active:bg-white/20"
+            className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-foreground/10 text-foreground active:bg-foreground/20"
           >
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -345,26 +345,26 @@ function CoachDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[60] flex w-64 flex-col overflow-y-auto overscroll-contain transform border-r border-white/5 p-4 transition-transform lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-[60] flex w-64 flex-col overflow-y-auto overscroll-contain transform border-r border-foreground/5 p-4 transition-transform lg:relative lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
-        style={{ backgroundColor: "#0F0F0F", paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        style={{ backgroundColor: "var(--secondary)", paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
         <div className="mb-8 flex items-center gap-2 px-2 pt-14 lg:pt-0">
 <Logo className="h-9 w-auto object-contain" />
-          <span className="text-lg font-bold text-white">FitMind Club</span>
+          <span className="text-lg font-bold text-foreground">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Coach
           </span>
         </div>
 
-        <div className="mb-6 rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="mb-6 rounded-xl p-3" style={{ backgroundColor: "var(--card)" }}>
           <div className="flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary font-bold">
               {coachName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">{coachName}</p>
+              <p className="text-sm font-bold text-foreground truncate">{coachName}</p>
               {teamPatent ? (
                 <div className="mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5"
                   style={{ backgroundColor: `${teamPatent.color}20`, border: `1px solid ${teamPatent.color}55` }}>
@@ -400,7 +400,7 @@ function CoachDashboard() {
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors w-full text-left ${
                   isActive
                     ? "bg-primary/15 text-primary font-semibold"
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -443,7 +443,7 @@ function CoachDashboard() {
         ) : (
           <button
             onClick={() => navigate({ to: "/become-partner" })}
-            className="mt-2 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 transition-colors"
+            className="mt-2 flex items-center gap-3 rounded-lg bg-foreground/5 px-3 py-2.5 text-sm font-semibold text-foreground/70 hover:bg-foreground/10 transition-colors"
           >
             <Repeat className="h-4 w-4" />
             Tornar-se Empresa Parceira
@@ -453,7 +453,7 @@ function CoachDashboard() {
 
         <button
           onClick={handleLogout}
-          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/40 hover:text-white transition-colors"
+          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground/40 hover:text-foreground transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sair
@@ -479,8 +479,8 @@ function CoachDashboard() {
                   <Award className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-bold text-white">Aguardando autorização do admin</h3>
-                  <p className="mt-1 text-xs text-white/70">
+                  <h3 className="text-sm font-bold text-foreground">Aguardando autorização do admin</h3>
+                  <p className="mt-1 text-xs text-foreground/70">
                     Seu cadastro de coach está em análise. Explore o seu perfil de aluno enquanto aguarda — você será notificado assim que for autorizado.
                   </p>
                   {hasStudentProfile && (
