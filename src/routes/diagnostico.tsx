@@ -43,6 +43,8 @@ export const Route = createFileRoute("/diagnostico")({
       { property: "og:title", content: "Diagnóstico de acesso — FitMind Club" },
       { property: "og:description", content: "Verifique e limpe dados locais de acesso ao FitMind Club." },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "Diagnóstico de acesso — FitMind Club" },
+      { name: "twitter:description", content: "Verifique e limpe dados locais de acesso ao FitMind Club." },
       { name: "twitter:card", content: "summary" },
     ],
   }),
