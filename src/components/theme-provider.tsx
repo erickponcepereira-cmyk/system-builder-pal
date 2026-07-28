@@ -2,8 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   BrandTheme,
   BrandThemeKey,
-  CAROL_COACH_ID,
-  CAROL_PROFILE_ID,
   FITMIND_THEME,
   getThemeByKey,
   resolveBrandTheme,
@@ -29,17 +27,19 @@ function readOverride(): BrandThemeKey | null {
   if (typeof sessionStorage === "undefined") return null;
   try {
     const v = sessionStorage.getItem(OVERRIDE_KEY);
-    if (v === "carol" || v === "fitmind") return v;
-  } catch { /* ignore */ }
-  // Fallback: se houver referral da Carol no sessionStorage
-  try {
-    const referral = sessionStorage.getItem("fitmind_referral");
-    if (referral) {
-      const parsed = JSON.parse(referral) as { coachId?: string | null };
-      if (parsed?.coachId === CAROL_COACH_ID) return "carol";
-    }
+    if (v) return v;
   } catch { /* ignore */ }
   return null;
+}
+
+function readReferralCoachId(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const referral = sessionStorage.getItem("fitmind_referral");
+    if (!referral) return null;
+    const parsed = JSON.parse(referral) as { coachId?: string | null };
+    return parsed?.coachId ?? null;
+  } catch { return null; }
 }
 
 function applyThemeToDocument(theme: BrandTheme) {
@@ -74,7 +74,7 @@ function applyThemeToDocument(theme: BrandTheme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [override, setOverrideState] = useState<BrandThemeKey | null>(() => readOverride());
-  const [coachId, setCoachId] = useState<string | null>(null);
+  const [coachId, setCoachId] = useState<string | null>(() => readReferralCoachId());
   const [profileId, setProfileId] = useState<string | null>(null);
   const lastUserId = useRef<string | null>(null);
 
@@ -100,9 +100,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setProfileId(pid);
 
       if (!pid) { setCoachId(null); return; }
-
-      // Se for a Carol (coach), o próprio profileId dispara o tema
-      if (pid === CAROL_PROFILE_ID) { setCoachId(CAROL_COACH_ID); return; }
 
       // Se for aluno, buscar coach_id
       const { data: student } = await supabase
@@ -139,10 +136,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const theme = useMemo(
-    () => resolveBrandTheme({ coachId, profileId, override }),
-    [coachId, profileId, override],
-  );
+  const [theme, setTheme] = useState<BrandTheme>(FITMIND_THEME);
+
+  useEffect(() => {
+    let ativo = true;
+    resolveBrandTheme({ coachId, profileId, override })
+      .then((t) => { if (ativo) setTheme(t); })
+      .catch(() => { if (ativo) setTheme(FITMIND_THEME); });
+    return () => { ativo = false; };
+  }, [coachId, profileId, override]);
 
   useEffect(() => { applyThemeToDocument(theme); }, [theme]);
 

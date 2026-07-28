@@ -574,6 +574,117 @@ export type Database = {
           },
         ]
       }
+      brand_themes: {
+        Row: {
+          accent: string
+          accent_foreground: string
+          background: string
+          border: string
+          card: string
+          card_foreground: string
+          created_at: string
+          favicon_url: string | null
+          foreground: string
+          input: string
+          key: string
+          logo_full_url: string | null
+          logo_icon_url: string | null
+          mode: string
+          muted: string
+          muted_foreground: string
+          nome: string
+          popover: string
+          popover_foreground: string
+          primary_color: string
+          primary_foreground: string
+          ring: string
+          secondary: string
+          secondary_foreground: string
+          sidebar: string
+          sidebar_accent: string
+          sidebar_accent_foreground: string
+          sidebar_border: string
+          sidebar_foreground: string
+          sidebar_primary: string
+          sidebar_primary_foreground: string
+          sidebar_ring: string
+          theme_color: string
+          updated_at: string
+        }
+        Insert: {
+          accent: string
+          accent_foreground: string
+          background: string
+          border: string
+          card: string
+          card_foreground: string
+          created_at?: string
+          favicon_url?: string | null
+          foreground: string
+          input: string
+          key: string
+          logo_full_url?: string | null
+          logo_icon_url?: string | null
+          mode?: string
+          muted: string
+          muted_foreground: string
+          nome: string
+          popover: string
+          popover_foreground: string
+          primary_color: string
+          primary_foreground: string
+          ring: string
+          secondary: string
+          secondary_foreground: string
+          sidebar: string
+          sidebar_accent: string
+          sidebar_accent_foreground: string
+          sidebar_border: string
+          sidebar_foreground: string
+          sidebar_primary: string
+          sidebar_primary_foreground: string
+          sidebar_ring: string
+          theme_color?: string
+          updated_at?: string
+        }
+        Update: {
+          accent?: string
+          accent_foreground?: string
+          background?: string
+          border?: string
+          card?: string
+          card_foreground?: string
+          created_at?: string
+          favicon_url?: string | null
+          foreground?: string
+          input?: string
+          key?: string
+          logo_full_url?: string | null
+          logo_icon_url?: string | null
+          mode?: string
+          muted?: string
+          muted_foreground?: string
+          nome?: string
+          popover?: string
+          popover_foreground?: string
+          primary_color?: string
+          primary_foreground?: string
+          ring?: string
+          secondary?: string
+          secondary_foreground?: string
+          sidebar?: string
+          sidebar_accent?: string
+          sidebar_accent_foreground?: string
+          sidebar_border?: string
+          sidebar_foreground?: string
+          sidebar_primary?: string
+          sidebar_primary_foreground?: string
+          sidebar_ring?: string
+          theme_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calendar_shares: {
         Row: {
           created_at: string
@@ -2224,6 +2335,7 @@ export type Database = {
           bank_name: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          brand_theme_key: string | null
           can_create_fitmind_events: boolean
           card_valid_until: string | null
           career_goal_progress: Json | null
@@ -2286,6 +2398,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          brand_theme_key?: string | null
           can_create_fitmind_events?: boolean
           card_valid_until?: string | null
           career_goal_progress?: Json | null
@@ -2348,6 +2461,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          brand_theme_key?: string | null
           can_create_fitmind_events?: boolean
           card_valid_until?: string | null
           career_goal_progress?: Json | null
@@ -2402,6 +2516,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaches_brand_theme_key_fkey"
+            columns: ["brand_theme_key"]
+            isOneToOne: false
+            referencedRelation: "brand_themes"
+            referencedColumns: ["key"]
           },
           {
             foreignKeyName: "coaches_profile_id_fkey"
@@ -5909,6 +6030,7 @@ export type Database = {
           approved_at: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          brand_theme_key: string | null
           business_area: string | null
           card_valid_until: string | null
           city: string | null
@@ -5951,6 +6073,7 @@ export type Database = {
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          brand_theme_key?: string | null
           business_area?: string | null
           card_valid_until?: string | null
           city?: string | null
@@ -5993,6 +6116,7 @@ export type Database = {
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          brand_theme_key?: string | null
           business_area?: string | null
           card_valid_until?: string | null
           city?: string | null
@@ -6026,6 +6150,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partners_brand_theme_key_fkey"
+            columns: ["brand_theme_key"]
+            isOneToOne: false
+            referencedRelation: "brand_themes"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "partners_profile_id_fkey"
             columns: ["profile_id"]
@@ -11523,6 +11654,51 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolver_tema_marca: {
+        Args: { _coach_id?: string; _profile_id?: string }
+        Returns: {
+          accent: string
+          accent_foreground: string
+          background: string
+          border: string
+          card: string
+          card_foreground: string
+          created_at: string
+          favicon_url: string | null
+          foreground: string
+          input: string
+          key: string
+          logo_full_url: string | null
+          logo_icon_url: string | null
+          mode: string
+          muted: string
+          muted_foreground: string
+          nome: string
+          popover: string
+          popover_foreground: string
+          primary_color: string
+          primary_foreground: string
+          ring: string
+          secondary: string
+          secondary_foreground: string
+          sidebar: string
+          sidebar_accent: string
+          sidebar_accent_foreground: string
+          sidebar_border: string
+          sidebar_foreground: string
+          sidebar_primary: string
+          sidebar_primary_foreground: string
+          sidebar_ring: string
+          theme_color: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_themes"
           isOneToOne: true
           isSetofReturn: false
         }
