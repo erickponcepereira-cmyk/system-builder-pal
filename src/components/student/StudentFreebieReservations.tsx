@@ -32,6 +32,8 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [confirmCancel, setConfirmCancel] = useState<Reservation | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   /** Reserva aguardando confirmação de cancelamento. null = diálogo fechado. */
   const [paraCancelar, setParaCancelar] = useState<Reservation | null>(null);
   const [cancelando, setCancelando] = useState(false);
