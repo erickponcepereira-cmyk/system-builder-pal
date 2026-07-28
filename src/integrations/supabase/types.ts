@@ -6029,7 +6029,7 @@ export type Database = {
           {
             foreignKeyName: "partners_profile_id_fkey"
             columns: ["profile_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

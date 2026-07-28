@@ -38,6 +38,8 @@ import { PartnerReports } from "@/components/partner/PartnerReports";
 import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
+import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
+
 import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
 
 
@@ -119,6 +121,9 @@ function PartnerPanel() {
   const [partner, setPartner] = useState<Partner | null>(null);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [unidadeAtiva, setUnidadeAtiva] = useState<Unidade | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [novaUnidadeOpen, setNovaUnidadeOpen] = useState(false);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [visits, setVisits] = useState(0);
@@ -149,9 +154,11 @@ function PartnerPanel() {
     }
     const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();
     if (!profile) { setLoading(false); return; }
+    setProfileId(profile.id);
 
     const lista = await carregarUnidades(profile.id);
     setUnidades(lista);
+
     const ativa = escolherUnidadeAtiva(lista, alvoPartnerId ?? unidadeAtiva?.partnerId ?? null);
     if (!ativa) { setUnidadeAtiva(null); setPartner(null); setLoading(false); return; }
     setUnidadeAtiva(ativa);
@@ -261,6 +268,11 @@ function PartnerPanel() {
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
 
+  // Só quem é dono de alguma unidade pode abrir outra academia no mesmo login
+  const podeCriarUnidade = !!profileId && unidades.some((u) => u.papel === "owner");
+
+
+
   const abaAtiva: Tab = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "overview");
 
 
@@ -291,7 +303,7 @@ function PartnerPanel() {
         </div>
       </header>
 
-      {unidades.length > 1 && (
+      {(unidades.length > 1 || podeCriarUnidade) && (
         <div className="border-b border-white/5 px-4 py-2 flex gap-2 overflow-x-auto" style={{ backgroundColor: "#141414" }}>
           {unidades.map((u) => (
             <button
@@ -310,8 +322,27 @@ function PartnerPanel() {
               </div>
             </button>
           ))}
+          {podeCriarUnidade && (
+            <button
+              onClick={() => setNovaUnidadeOpen(true)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 min-w-[150px] text-left bg-white/5 border border-dashed border-white/20 text-white/70 hover:text-white"
+            >
+              <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center"><Plus className="h-4 w-4" /></div>
+              <p className="text-xs font-semibold">Nova unidade</p>
+            </button>
+          )}
         </div>
       )}
+
+      {profileId && (
+        <NovaUnidadeDialog
+          profileId={profileId}
+          open={novaUnidadeOpen}
+          onOpenChange={setNovaUnidadeOpen}
+          onCreated={(id) => { setTab("overview"); load(id); }}
+        />
+      )}
+
 
       {partner.status !== "approved" && (
         <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 text-xs text-yellow-200 flex items-center gap-2">

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin/partners")({
   component: AdminPartners,
 });
 
-interface PartnerRow { id: string; fantasy_name: string; document: string | null; whatsapp: string | null; city: string | null; state: string | null; status: string; photo_url: string | null; description: string | null; }
+interface PartnerRow { id: string; fantasy_name: string; document: string | null; whatsapp: string | null; city: string | null; state: string | null; status: string; photo_url: string | null; description: string | null; profile_id: string; profiles?: { name: string | null; email: string | null } | null; }
 interface ProductRow { id: string; partner_id: string; name: string; kind: string; redemption_mode: string | null; status: string; price: number; image_url: string | null; admin_notes: string | null; partners?: { fantasy_name: string } | null; }
 
 function AdminPartners() {
@@ -27,7 +27,7 @@ function AdminPartners() {
   const load = async () => {
     setLoading(true);
     const [a, b] = await Promise.all([
-      supabase.from("partners" as never).select("*").order("created_at" as never, { ascending: false }),
+      supabase.from("partners" as never).select("*, profiles(name, email)").order("created_at" as never, { ascending: false }),
       supabase.from("partner_products" as never).select("*, partners(fantasy_name)").order("created_at" as never, { ascending: false }),
     ]);
     setPartners((a.data as unknown as PartnerRow[]) || []);
@@ -69,6 +69,8 @@ function AdminPartners() {
                   <p className="text-sm font-bold text-white hover:text-primary">{p.fantasy_name}</p>
                 </button>
                 <p className="text-[11px] text-white/50">{p.document || "—"} · {p.city}/{p.state}</p>
+                <p className="text-[11px] text-white/40">Dono: {p.profiles?.name || "—"}{partners.filter(x => x.profile_id === p.profile_id).length > 1 ? ` · ${partners.filter(x => x.profile_id === p.profile_id).length} unidades` : ""}</p>
+
                 <p className="text-[11px] text-white/40 mt-1">WhatsApp: {p.whatsapp || "—"}</p>
                 <span className={`mt-2 inline-block text-[10px] px-2 py-0.5 rounded ${p.status === "approved" ? "bg-green-500/15 text-green-400" : p.status === "blocked" ? "bg-red-500/15 text-red-400" : "bg-yellow-500/15 text-yellow-400"}`}>{p.status}</span>
                 <div className="mt-2 flex gap-1.5 flex-wrap">
