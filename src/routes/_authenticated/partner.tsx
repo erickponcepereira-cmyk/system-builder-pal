@@ -140,7 +140,7 @@ function PartnerPanel() {
     return () => { alive = false; clearInterval(t); };
   }, [partner?.id]);
 
-  const load = async () => {
+  const load = async (alvoPartnerId?: string) => {
 
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
@@ -149,7 +149,19 @@ function PartnerPanel() {
     }
     const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();
     if (!profile) { setLoading(false); return; }
-    const { data: p } = await supabase.from("partners" as never).select("*").eq("profile_id" as never, profile.id).maybeSingle();
+
+    const lista = await carregarUnidades(profile.id);
+    setUnidades(lista);
+    const ativa = escolherUnidadeAtiva(lista, alvoPartnerId ?? unidadeAtiva?.partnerId ?? null);
+    if (!ativa) { setUnidadeAtiva(null); setPartner(null); setLoading(false); return; }
+    setUnidadeAtiva(ativa);
+    lembrarUnidadeAtiva(ativa.partnerId);
+
+    const { data: p } = await supabase
+      .from("partners" as never)
+      .select("id, profile_id, fantasy_name, description, photo_url, cover_url, whatsapp, public_whatsapp, instagram, facebook, website, address, city, state, status, document, document_type, business_area, specialty, referral_code, referral_link, free_redeem_policy" as never)
+      .eq("id" as never, ativa.partnerId as never)
+      .maybeSingle();
     if (!p) { setLoading(false); return; }
     const pt = p as unknown as Partner;
     setPartner(pt);
@@ -186,6 +198,7 @@ function PartnerPanel() {
     }
     setLoading(false);
   };
+
 
   useEffect(() => { load(); }, []);
 
