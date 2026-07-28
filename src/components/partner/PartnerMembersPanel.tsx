@@ -8,6 +8,8 @@ import {
   type Permissao,
   type Unidade,
 } from "@/lib/unidades-parceiro";
+import { addPartnerMemberByEmail } from "@/lib/partner-members.functions";
+
 
 interface Membro {
   id: string;
