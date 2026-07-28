@@ -140,7 +140,11 @@ export const listPartnerTeam = createServerFn({ method: "POST" })
 
     let alvos = data.todas ? gerenciaveis : gerenciaveis.filter((id) => id === data.partnerId);
     if (me.role === "admin" && data.partnerId && !data.todas) alvos = [data.partnerId];
-    if (alvos.length === 0) return { unidades: [] as Array<{ partnerId: string; fantasyName: string; membros: unknown[] }> };
+    type MembroEquipe = {
+      id: string; profileId: string; papel: "owner" | "manager" | "staff";
+      permissoes: string[]; nome: string; email: string; perfis: string[]; desde: string;
+    };
+    if (alvos.length === 0) return { unidades: [] as Array<{ partnerId: string; fantasyName: string; membros: MembroEquipe[] }> };
 
     const [{ data: unidades }, { data: linhas }] = await Promise.all([
       supabaseAdmin.from("partners").select("id, fantasy_name").in("id", alvos),
