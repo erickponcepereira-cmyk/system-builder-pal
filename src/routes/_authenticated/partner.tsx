@@ -38,6 +38,8 @@ import { PartnerReports } from "@/components/partner/PartnerReports";
 import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
+import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
+
 import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
 
 
