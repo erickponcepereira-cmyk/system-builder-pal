@@ -1,28 +1,43 @@
-## Problema
+## Diagnóstico (confirmado nos dados)
 
-Hoje o cancelamento de uma reserva de produto gratuito só existe dentro do modal de QR (`StudentFreebieReservations`), escondido atrás de um clique no card, e usa `window.confirm` — que em alguns navegadores/webview do app não abre, dando a sensação de "botão que não funciona". Na lista de reservas não há nenhum botão de cancelar.
+Caso Ana Flávia Lucas (`profile 7deffbca…`), saque aprovado de R$ 60,00:
 
-A regra de backend (`cancel_partner_freebie`) já funciona: cancela apenas reservas com status `reserved` e somente antes do início do horário; caso contrário devolve erro.
+- `wallets`: `total_earned 254,27` · `total_withdrawn 155,56` · `pending 38,31` · **`available 0,40`**
+- `professional_wallets`: `available 2,48`
+- Saques já pagos: 50,56 + 105,00 = 155,56 ✔
 
-## O que fazer (só frontend)
+A função `recalc_wallets_for_owner` **já desconta do saldo disponível os saques em aberto** (status `requested/approved/processing` — bloco "reserved"). Ou seja: os R$ 60 aprovados saíram de `available` e viraram reserva (60,40 → 0,40).
 
-1. **Botão de cancelar na lista de reservas** (`src/components/student/StudentFreebieReservations.tsx`)
-   - Em cada linha de reserva ainda cancelável (status `reserved` e horário ainda não iniciado), mostrar um botão "Cancelar" visível ao lado do status, sem precisar abrir o QR.
-   - Trocar o `<button>` que envolve a linha inteira por um container, com área clicável para abrir o QR e o botão de cancelar separado (evita clique aninhado).
+Só que `admin_mark_withdrawal_paid` valida assim:
 
-2. **Confirmação em modal próprio**
-   - Substituir `window.confirm` por um diálogo de confirmação dentro do app ("Cancelar esta reserva? Você poderá reservar outro horário depois."), com botões Voltar / Cancelar reserva.
-   - Estado de carregando no botão enquanto a chamada roda, evitando cliques duplos.
+```sql
+v_available = wallets.available + partner_wallets.available + professional_wallets.available
+IF v_available < w.amount THEN RAISE 'Saldo disponível insuficiente (R$ %)'
+```
 
-3. **Feedback claro**
-   - Sucesso: toast "Reserva cancelada" e recarregar a lista.
-   - Erro vindo do backend (ex.: horário já iniciado): mostrar a mensagem traduzida em toast e recarregar a lista para refletir o estado real.
+Como o próprio saque já foi reservado (subtraído), o valor nunca "cabe" na conferência → **contagem dupla**. Todo saque aprovado com valor maior que o troco restante trava na hora de marcar como pago. Não há dinheiro faltando: o valor existe, apenas está reservado para esse mesmo pedido.
 
-4. **Mesmo comportamento no painel do coach**
-   - O componente já é reutilizado em `BenefitsTab` (coach) e em `student.freebies`, então a correção vale para os dois painéis automaticamente. Verificar visualmente as duas telas.
+Problemas secundários encontrados no mesmo caminho:
 
-## Detalhes técnicos
+1. A soma de verificação **ignora `student_wallets`** (Ana tem 40,00 lá), então saques de aluno-indicador pagos pela tela geral podem falhar por engano.
+2. Existe uma função legada `update_coach_withdrawal_status` que, ao marcar como pago, **debita a carteira na mão e soma em `total_withdrawn`** — o que conflita com o `recalc_wallets_for_owner` (que recalcula tudo a partir das comissões) e pode gerar saldo negativo/divergente se ainda for chamada em algum ponto.
+3. `admin_mark_student_withdrawal_paid` tem a mesma conferência isolada e também debita manualmente.
 
-- Arquivo único alterado: `src/components/student/StudentFreebieReservations.tsx`.
-- Continua usando `supabase.rpc("cancel_partner_freebie", { _reservation_id })`; nenhuma mudança de banco.
-- `getReservationState` continua sendo a fonte da verdade para `canCancel`, agora consumido também pela lista.
+## Correção
+
+**Migração de banco (única):**
+
+1. Reescrever `admin_mark_withdrawal_paid`:
+   - Calcular o disponível somando `wallets` + `partner_wallets` + `professional_wallets` + `student_wallets` do perfil.
+   - **Somar de volta a reserva deste próprio pedido** (o valor do saque que está sendo pago) antes de comparar — isto é, comparar contra "disponível + reservado deste pedido".
+   - Manter a tolerância de arredondamento e a mensagem de erro, mas incluir no texto o disponível e o reservado, para o admin entender o que faltou quando realmente faltar.
+   - Continuar chamando `recalc_wallets_for_owner` no final (é ele que move o valor de "reservado" para "sacado" ao virar `paid`).
+2. Ajustar `admin_mark_student_withdrawal_paid` com a mesma lógica de reserva (não exigir que o valor ainda esteja em `available` se ele já foi reservado).
+3. Neutralizar a função legada `update_coach_withdrawal_status`: em vez de debitar carteira manualmente, delegar para `admin_mark_withdrawal_paid` / atualizar status e chamar `recalc_wallets_for_owner`, evitando dedução dupla.
+
+**Verificação após a migração:**
+
+- Marcar o saque de R$ 60,00 da Ana Flávia como pago e conferir: `withdrawal_requests.status = paid`, `wallets.total_withdrawn` passa a 215,56 e `available` volta a refletir só o que sobrou.
+- Rodar uma consulta de auditoria em todos os perfis com saque em aberto para confirmar que nenhum ficou com `available` negativo ou com reserva órfã.
+
+Sem mudanças de frontend — a tela de Pagamentos já usa essas funções.
