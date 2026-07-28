@@ -3099,7 +3099,6 @@ export default FitMindShape;
 // ============================================================
 /*
 import FitMindShape from "./FitMindShape";
-import { getShareOrigin } from "@/lib/auth-redirects";
 
 // No componente raiz do seu sistema:
 <FitMindShape
