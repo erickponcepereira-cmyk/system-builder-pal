@@ -69,6 +69,8 @@ function AdminPartners() {
                   <p className="text-sm font-bold text-white hover:text-primary">{p.fantasy_name}</p>
                 </button>
                 <p className="text-[11px] text-white/50">{p.document || "—"} · {p.city}/{p.state}</p>
+                <p className="text-[11px] text-white/40">Dono: {p.profiles?.name || "—"}{partners.filter(x => x.profile_id === p.profile_id).length > 1 ? ` · ${partners.filter(x => x.profile_id === p.profile_id).length} unidades` : ""}</p>
+
                 <p className="text-[11px] text-white/40 mt-1">WhatsApp: {p.whatsapp || "—"}</p>
                 <span className={`mt-2 inline-block text-[10px] px-2 py-0.5 rounded ${p.status === "approved" ? "bg-green-500/15 text-green-400" : p.status === "blocked" ? "bg-red-500/15 text-red-400" : "bg-yellow-500/15 text-yellow-400"}`}>{p.status}</span>
                 <div className="mt-2 flex gap-1.5 flex-wrap">
