@@ -296,7 +296,7 @@ function PartnerPanel() {
         </div>
       </header>
 
-      {unidades.length > 1 && (
+      {(unidades.length > 1 || podeCriarUnidade) && (
         <div className="border-b border-white/5 px-4 py-2 flex gap-2 overflow-x-auto" style={{ backgroundColor: "#141414" }}>
           {unidades.map((u) => (
             <button
@@ -315,8 +315,27 @@ function PartnerPanel() {
               </div>
             </button>
           ))}
+          {podeCriarUnidade && (
+            <button
+              onClick={() => setNovaUnidadeOpen(true)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 min-w-[150px] text-left bg-white/5 border border-dashed border-white/20 text-white/70 hover:text-white"
+            >
+              <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center"><Plus className="h-4 w-4" /></div>
+              <p className="text-xs font-semibold">Nova unidade</p>
+            </button>
+          )}
         </div>
       )}
+
+      {profileId && (
+        <NovaUnidadeDialog
+          profileId={profileId}
+          open={novaUnidadeOpen}
+          onOpenChange={setNovaUnidadeOpen}
+          onCreated={(id) => { setTab("overview"); load(id); }}
+        />
+      )}
+
 
       {partner.status !== "approved" && (
         <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 text-xs text-yellow-200 flex items-center gap-2">
