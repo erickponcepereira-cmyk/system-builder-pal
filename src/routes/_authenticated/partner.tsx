@@ -152,8 +152,8 @@ function PartnerPanel() {
     }
     const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();
     if (!profile) { setLoading(false); return; }
+    setProfileId(profile.id);
 
-    const lista = await carregarUnidades(profile.id);
     setUnidades(lista);
     const ativa = escolherUnidadeAtiva(lista, alvoPartnerId ?? unidadeAtiva?.partnerId ?? null);
     if (!ativa) { setUnidadeAtiva(null); setPartner(null); setLoading(false); return; }
