@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin/partners")({
   component: AdminPartners,
 });
 
-interface PartnerRow { id: string; fantasy_name: string; document: string | null; whatsapp: string | null; city: string | null; state: string | null; status: string; photo_url: string | null; description: string | null; }
+interface PartnerRow { id: string; fantasy_name: string; document: string | null; whatsapp: string | null; city: string | null; state: string | null; status: string; photo_url: string | null; description: string | null; profile_id: string; profiles?: { name: string | null; email: string | null } | null; }
 interface ProductRow { id: string; partner_id: string; name: string; kind: string; redemption_mode: string | null; status: string; price: number; image_url: string | null; admin_notes: string | null; partners?: { fantasy_name: string } | null; }
 
 function AdminPartners() {
