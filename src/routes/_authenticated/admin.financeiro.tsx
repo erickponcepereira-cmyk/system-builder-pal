@@ -903,9 +903,12 @@ function RecipientsTable({ title, rows, kind, onPay }: {
 function ReconcileButton({ onDone }: { onDone: () => void }) {
   const callReconcile = useServerFn(reconcileMpPayment);
   const fetchPending = useServerFn(listPendingMpPayments);
+  const runBulk = useServerFn(reconcileApprovedPendingPayments);
+  const runAnnual = useServerFn(reconcileAnnualActivations);
   const [open, setOpen] = useState(false);
   const [mpId, setMpId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyBulk, setBusyBulk] = useState(false);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchPending>> | null>(null);
 
   const loadPending = () => fetchPending().then(setPending).catch(() => setPending([]));
@@ -924,6 +927,31 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
       setBusy(false);
     }
   };
+
+  const runAll = async () => {
+    setBusyBulk(true);
+    try {
+      const r = await runBulk();
+      const a = await runAnnual();
+      if (r.candidates === 0 && a.fixed === 0) {
+        toast.success("Nada a reprocessar — tudo em dia.");
+      } else {
+        toast.success(
+          `${r.processed} pedido(s) reprocessado(s), ${r.failed} falha(s) • ${a.fixed} anuidade(s) revisada(s)`,
+        );
+        if (r.failed > 0) {
+          r.details.filter((d) => !d.ok).slice(0, 3).forEach((d) => toast.error(`${d.sourceKind}: ${d.message}`));
+        }
+      }
+      onDone();
+      loadPending();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reprocessar");
+    } finally {
+      setBusyBulk(false);
+    }
+  };
+
 
   return (
     <>
