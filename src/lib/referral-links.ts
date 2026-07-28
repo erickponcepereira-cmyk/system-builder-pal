@@ -8,6 +8,9 @@ import { getShareOrigin } from "@/lib/auth-redirects";
  */
 
 function origin(): string {
+  return getShareOrigin();
+}
+function _legacyOrigin(): string {
   if (typeof window !== "undefined") return getShareOrigin();
   return "https://fitmindclub.com.br";
 }
