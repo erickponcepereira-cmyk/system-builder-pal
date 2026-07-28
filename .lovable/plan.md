@@ -1,51 +1,39 @@
-## Diagnóstico (confirmado no banco)
+## O que verifiquei agora
 
-Os dois produtos do Helton usam **a mesma agenda** (mesmo `coach_id`), e a RPC `list_professional_available_slots` já bloqueia horários já agendados em qualquer produto (`professional_appointments` filtra por `professional_coach_id`, não por produto). Ou seja, a regra "agendou em um, bloqueia no outro" **já funciona**.
+- DNS de `fitmindclub.com.br` e `www.fitmindclub.com.br` aponta corretamente para 185.158.133.1.
+- `https://fitmindclub.com.br/` responde **200** e `www` redireciona para a raiz. Ou seja: **o servidor e o domínio estão saudáveis** — o problema é no aparelho/navegador do usuário.
 
-O motivo de um produto mostrar horários e o outro não é a duração:
+## Causa mais provável (confirmada no código)
 
-- **Avaliação (R$ 129,99)** → `default_duration_minutes = 30`
-- **Consulta (R$ 285,00)** → `default_duration_minutes = 60`
-- **Acompanhamento (R$ 789,90)** → `default_duration_minutes = 60`
+Existe um conflito entre dois arquivos:
 
-A agenda do Helton está cadastrada como **6 janelas separadas de 30 min** (14:00–14:30, 14:30–15:00, … 16:30–17:00). A RPC itera janela por janela e sai do loop assim que `slot_end > end_time` da janela. Para 60 min, nenhum slot cabe em uma janela de 30 min → "não tem horários disponíveis nos próximos 90 dias", mesmo havendo 3h corridas livres.
+- `public/sw.js` hoje é um **worker de limpeza**: ao ativar, apaga caches, força `client.navigate(url)` (recarrega a aba) e se desregistra.
+- `src/pwa-register.ts` continua **registrando `/sw.js` em produção**.
+
+Resultado em produção: a cada visita o app registra o worker → o worker recarrega a página e se desregistra → na recarga registra de novo. Em aparelhos mais lentos ou com cache antigo isso aparece como **tela branca, site que "não abre" ou recarrega infinitamente**, exatamente em "alguns" celulares/computadores (os que já tinham o SW antigo instalado ou HTML cacheado).
 
 ## Correção proposta
 
-Alterar `public.list_professional_available_slots` para, antes de gerar slots, **mesclar janelas contíguas do mesmo dia da semana** (fim de uma = início da outra, mesmo `slot_minutes`) em uma única faixa. Assim, 14:00–17:00 vira uma faixa única e cabem slots de 60 min a cada 30 min (14:00, 14:30, 15:00, 15:30, 16:00).
+1. **Parar o loop**: remover a chamada de registro do service worker em produção (`registerAppServiceWorker` passa a apenas *desregistrar* qualquer SW do app e limpar caches). Assim o worker de limpeza roda uma única vez por aparelho e nunca mais volta.
+2. **Manter o kill-switch** em `public/sw.js` por mais um ciclo, mas sem o `client.navigate()` agressivo (evita o refresh forçado que causa a tela branca), preservando a limpeza de caches e o `unregister()`.
+3. **Não tocar** em workers de push/mensageria.
+4. **Instalação como app**: continua funcionando via `manifest.webmanifest` (Adicionar à tela inicial). Sem service worker o Chrome pode não oferecer o banner automático de instalação — o botão já existente segue funcionando. Se você quiser o banner de volta, isso vira uma entrega separada, com PWA feito corretamente.
 
-Nada muda no restante do comportamento:
-- Continua respeitando `professional_availability_blocks` (bloqueios de dia).
-- Continua checando conflito em `professional_appointments` e `external_appointments`, então **um agendamento em qualquer produto bloqueia o mesmo horário nos demais** do mesmo profissional.
-- Continua com fuso `America/Sao_Paulo`.
+## Página de diagnóstico e recuperação
+
+Criar `/diagnostico` (já existe uma rota com esse nome — vou revisar e reaproveitar) mostrando:
+
+- domínio/origem acessada, versão do build, se há service worker registrado, quais caches existem;
+- botão **"Limpar e recarregar"** que desregistra todos os SWs do app, apaga caches e recarrega.
+
+Assim, quando alguém disser "não abre", você manda o link `fitmindclub.com.br/diagnostico?sw=off` e resolve na hora.
+
+## Se ainda houver aparelho que não abre
+
+Aí o problema não é o site, e sim rede/DNS local (operadora, DNS do roteador, Wi-Fi corporativo). O checklist que vou documentar na própria página: testar em rede móvel (4G/5G) vs Wi-Fi, e testar `https://fitmindclub.lovable.app` — se o `.lovable.app` abre e o domínio próprio não, é DNS do aparelho/rede, não do sistema.
 
 ## Detalhes técnicos
 
-Migration nova (`CREATE OR REPLACE FUNCTION public.list_professional_available_slots`) com a mesma assinatura. Substituir o `FOR v_avail IN SELECT * FROM professional_availability …` por um CTE recursivo/janela que agrupa faixas contíguas por `weekday` e `slot_minutes`, algo como:
-
-```sql
-WITH ordered AS (
-  SELECT weekday, start_time, end_time, slot_minutes,
-         LAG(end_time) OVER (PARTITION BY weekday, slot_minutes ORDER BY start_time) AS prev_end
-  FROM public.professional_availability
-  WHERE professional_coach_id = _coach_id AND is_active = true
-    AND weekday = EXTRACT(DOW FROM v_day)::int
-),
-grp AS (
-  SELECT *, SUM(CASE WHEN prev_end = start_time THEN 0 ELSE 1 END)
-             OVER (PARTITION BY weekday, slot_minutes ORDER BY start_time) AS g
-  FROM ordered
-)
-SELECT weekday, MIN(start_time) AS start_time, MAX(end_time) AS end_time, MIN(slot_minutes) AS slot_minutes
-FROM grp GROUP BY weekday, slot_minutes, g;
-```
-
-O restante do corpo (loop de geração + checagem de conflito) permanece igual.
-
-Sem mudanças no frontend, sem mudanças em outras tabelas, sem alteração da agenda existente do Helton.
-
-## Verificação após aplicar
-
-1. Chamar a RPC para o coach do Helton com `_duration_minutes=60` — deve retornar slots 14:00/14:30/15:00/15:30/16:00 nas próximas sextas.
-2. Simular reserva em um produto de 30 min às 14:30 e chamar a RPC de 60 min — o slot 14:00 e 14:30 devem sumir; 15:00 permanece.
-3. Abrir o modal "Consulta Helton" no app — o calendário passa a mostrar disponibilidade.
+- Arquivos alterados: `src/pwa-register.ts`, `public/sw.js`, `src/routes/diagnostico.tsx`.
+- Sem mudanças em banco de dados, autenticação ou regras de negócio.
+- Necessário **publicar** depois da mudança para que os aparelhos afetados recebam o novo HTML.

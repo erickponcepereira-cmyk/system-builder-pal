@@ -1,67 +1,64 @@
-// Registra o Service Worker apenas em produção fora dos previews Lovable.
-// Necessário para o Chrome/Android oferecer instalação como app (WebAPK).
-// Kill-switch: acesse com ?sw=off para forçar desregistro.
+// Service worker do app DESATIVADO.
+//
+// Motivo: `public/sw.js` é um worker de limpeza (kill-switch). Registrá-lo em
+// produção criava um ciclo — registra → limpa caches → desregistra → registra
+// de novo — que em alguns aparelhos aparecia como tela branca / site que não
+// abre. Agora esta função apenas garante que nenhum service worker do app
+// permaneça registrado no aparelho e limpa caches antigos do app-shell.
+//
+// Workers de push/mensageria (firebase-messaging-sw, OneSignal) NÃO são tocados.
 
-const SW_PATH = "/sw.js";
+const APP_SW_PATHS = ["/sw.js", "/service-worker.js"];
 
-function isBlockedContext(): boolean {
-  if (!import.meta.env.PROD) return true;
-  if (typeof window === "undefined") return true;
-  try {
-    if (window.self !== window.top) return true;
-  } catch {
-    return true;
-  }
-  const host = window.location.hostname;
-  if (
-    host.startsWith("id-preview--") ||
-    host.startsWith("preview--") ||
-    host === "lovableproject.com" ||
-    host.endsWith(".lovableproject.com") ||
-    host === "lovableproject-dev.com" ||
-    host.endsWith(".lovableproject-dev.com") ||
-    host === "beta.lovable.dev" ||
-    host.endsWith(".beta.lovable.dev")
-  ) {
-    return true;
-  }
-  if (new URLSearchParams(window.location.search).has("sw") &&
-      new URLSearchParams(window.location.search).get("sw") === "off") {
-    return true;
-  }
-  return false;
+function isAppServiceWorker(scriptURL: string): boolean {
+  if (!scriptURL) return false;
+  if (scriptURL.includes("firebase-messaging") || scriptURL.includes("OneSignal")) return false;
+  return APP_SW_PATHS.some((path) => {
+    try {
+      return new URL(scriptURL).pathname === path;
+    } catch {
+      return scriptURL.endsWith(path);
+    }
+  });
 }
 
-async function unregisterOwnSW() {
-  if (!("serviceWorker" in navigator)) return;
+async function unregisterAppServiceWorkers() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
   try {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    for (const r of regs) {
-      const scriptURL = r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || "";
-      // Só desregistra o SW da aplicação; NÃO toca em firebase-messaging-sw etc.
-      if (scriptURL.endsWith(SW_PATH)) {
-        await r.unregister();
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const registration of registrations) {
+      const scriptURL =
+        registration.active?.scriptURL ||
+        registration.waiting?.scriptURL ||
+        registration.installing?.scriptURL ||
+        "";
+      if (isAppServiceWorker(scriptURL)) {
+        await registration.unregister();
       }
     }
-  } catch {}
+  } catch {
+    /* silencioso: limpeza é best-effort */
+  }
 }
 
+async function deleteAppShellCaches() {
+  if (typeof window === "undefined" || !("caches" in window)) return;
+  try {
+    const names = await caches.keys();
+    const appCaches = names.filter((name) =>
+      /(^|-)precache-v\d+-|(^|-)runtime-|(^|-)googleAnalytics-|^html$|^workbox-/.test(name),
+    );
+    await Promise.allSettled(appCaches.map((name) => caches.delete(name)));
+  } catch {
+    /* silencioso */
+  }
+}
+
+/**
+ * Mantido com o mesmo nome para não quebrar chamadas existentes.
+ * Não registra nada — apenas desfaz registros antigos do service worker do app.
+ */
 export function registerAppServiceWorker() {
   if (typeof window === "undefined") return;
-  if (!("serviceWorker" in navigator)) return;
-
-  if (isBlockedContext()) {
-    // Em preview/dev: garante que nenhum SW da app fique registrado.
-    unregisterOwnSW();
-    return;
-  }
-
-  // Produção: registra o SW mínimo para viabilizar instalação PWA no Android.
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register(SW_PATH, { scope: "/" })
-      .catch((err) => {
-        console.warn("[PWA] Falha ao registrar service worker:", err);
-      });
-  });
+  void unregisterAppServiceWorkers().then(deleteAppShellCaches);
 }

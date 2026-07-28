@@ -192,7 +192,24 @@ function DiagnosticsPage() {
           </Button>
         </section>
 
+        <section className="rounded-xl border border-border bg-card p-4">
+          <h2 className="text-base font-semibold">Ainda não abre em algum aparelho?</h2>
+          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>Teste no 4G/5G (sem Wi-Fi). Se abrir, o bloqueio é da rede/Wi-Fi.</li>
+            <li>
+              Teste{" "}
+              <a href="https://fitmindclub.lovable.app" className="text-primary underline">
+                fitmindclub.lovable.app
+              </a>
+              . Se esse abrir e o domínio próprio não, é DNS do aparelho ou da rede — não é o sistema.
+            </li>
+            <li>Troque o DNS do aparelho/roteador para 1.1.1.1 ou 8.8.8.8 e tente de novo.</li>
+            <li>Se o app estiver instalado na tela inicial, desinstale e instale novamente.</li>
+          </ol>
+        </section>
+
         <details className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+
           <summary className="cursor-pointer text-foreground">Detalhes técnicos</summary>
           <dl className="mt-3 space-y-2 break-all">
             <Detail label="URL" value={state.href} />
