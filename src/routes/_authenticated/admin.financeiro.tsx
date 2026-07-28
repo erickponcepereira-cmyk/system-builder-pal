@@ -22,6 +22,8 @@ import {
   adminReconcileAllWallets,
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
+import { reconcileApprovedPendingPayments, reconcileAnnualActivations } from "@/lib/admin-reconcile.functions";
+
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 import { TestModeCard, TestModeBanner } from "@/components/admin/TestModeBanner";
 import {
