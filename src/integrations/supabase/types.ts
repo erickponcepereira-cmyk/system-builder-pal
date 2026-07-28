@@ -10778,6 +10778,24 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      catalogo_publico: {
+        Args: never
+        Returns: {
+          badge: string
+          categoria_id: string
+          coach_id: string
+          descricao: string
+          id: string
+          imagem_url: string
+          imagens: string[]
+          nome: string
+          preco: number
+          preco_original: number
+          secao_id: string
+          subcategoria_id: string
+          subtitulo: string
+        }[]
+      }
       coach_assessment_counts: {
         Args: { _coach_id: string; _master?: boolean }
         Returns: {
