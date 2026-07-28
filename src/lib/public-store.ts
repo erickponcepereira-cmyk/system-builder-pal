@@ -26,12 +26,17 @@ export type PublicProductKind =
   | "digital"
   | "store"
   | "item"
-  | "partner";
+  | "partner"
+  | "professional";
+
+/** Origem da vitrine — controla as abas da loja pública. */
+export type PublicProductSource = "fitmind" | "partner" | "professional";
 
 /** Espelha 1:1 as colunas de `public_store_catalog`. */
 export interface PublicProduct {
   id: string;
   kind: PublicProductKind;
+  source: PublicProductSource;
   title: string;
   subtitle: string | null;
   /** Truncado no servidor (~180 chars). Descrição completa exige conta. */
@@ -45,9 +50,30 @@ export interface PublicProduct {
   imageUrl: string | null;
   sectionId: string | null;
   sectionName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  subcategoryId: string | null;
   /** Booleano de propósito — quantidade exata não é pública. */
   inStock: boolean;
 }
+
+/** Card de navegação da vitrine (seção, categoria ou subcategoria). */
+export interface PublicTaxonomyCard {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  cardWidth: number | null;
+  cardHeight: number | null;
+}
+
+/** Seção/categoria da loja, para os filtros públicos. */
+export interface PublicTaxonomy {
+  sections: PublicTaxonomyCard[];
+  categories: (PublicTaxonomyCard & { sectionId: string })[];
+  subcategories: (PublicTaxonomyCard & { categoryId: string })[];
+}
+
+
 
 /** Espelha 1:1 as colunas de `public_store_benefits`. */
 export interface PublicBenefit {
@@ -109,8 +135,13 @@ export function readReferralContext(): PublicStoreContext {
 /** Colunas de vitrine. Conferidas contra types.ts — nenhuma é de custo. */
 const COLUNAS_VITRINE =
   "id,name,subtitle,short_description,price,original_price,is_price_range," +
-  "min_price,max_price,badge_label,image_url,section_id,stock,kind," +
-  "is_featured,sort_order";
+  "min_price,max_price,badge_label,image_url,section_id,category_id," +
+  "subcategory_id,stock,kind,is_featured,sort_order";
+
+/** Parceiro/profissional têm um subconjunto menor — sem faixa de preço. */
+const COLUNAS_VITRINE_TERCEIROS =
+  "id,name,description,price,original_price,image_url,section_id,category_id," +
+  "subcategory_id,stock,sort_order";
 
 const KINDS_VALIDOS: PublicProductKind[] = [
   "challenge",
@@ -118,6 +149,7 @@ const KINDS_VALIDOS: PublicProductKind[] = [
   "store",
   "item",
   "partner",
+  "professional",
 ];
 
 function normalizarKind(v: unknown): PublicProductKind {
@@ -138,26 +170,37 @@ function numeroOuNulo(v: unknown): number | null {
 
 type Linha = Record<string, unknown>;
 
-/**
- * Aceita as DUAS formas de linha que chegam aqui:
- *
- *  - tabela `products`, com colunas em ingles (name, price, image_url...)
- *  - RPC `catalogo_publico()`, que devolve em portugues (nome, preco,
- *    imagem_url, secao_id...) conforme a assinatura aplicada em 28/07
- *
- * Sem isso, tudo que vem pela RPC vira "Sem nome" e preco 0 — que foi
- * exatamente o que aconteceu quando `products` fechou para anon e a RPC
- * passou a ser o caminho principal.
- */
-function mapearProduto(r: Linha, nomesSecao: Map<string, string>): PublicProduct {
-  const texto = (...chaves: string[]): string | null => {
+/** Taxonomia resolvida de uma vez para toda a vitrine. */
+interface Taxonomia {
+  secoes: Map<string, PublicTaxonomyCard>;
+  categorias: Map<string, PublicTaxonomyCard & { sectionId: string }>;
+  subcategorias: Map<string, PublicTaxonomyCard & { categoryId: string }>;
+}
+
+const TAXONOMIA_VAZIA: Taxonomia = {
+  secoes: new Map(),
+  categorias: new Map(),
+  subcategorias: new Map(),
+};
+
+function mapearProduto(
+  r: Linha,
+  tax: Taxonomia,
+  source: PublicProductSource = "fitmind",
+): PublicProduct {
+  // Duas formas de linha chegam aqui: a tabela `products`, com colunas em
+  // ingles, e a RPC `catalogo_publico()`, que devolve em portugues (nome,
+  // preco, imagem_url, secao_id...). Sem aceitar as duas, tudo que vem da
+  // RPC vira "Sem nome" com preco zero — e a RPC virou o caminho principal
+  // quando `products` fechou para anon em 28/07.
+  const txt = (...chaves: string[]): string | null => {
     for (const k of chaves) {
       const v = r[k];
       if (typeof v === "string" && v.length) return v;
     }
     return null;
   };
-  const num = (...chaves: string[]): number | null => {
+  const nmb = (...chaves: string[]): number | null => {
     for (const k of chaves) {
       const v = numeroOuNulo(r[k]);
       if (v !== null) return v;
@@ -165,84 +208,178 @@ function mapearProduto(r: Linha, nomesSecao: Map<string, string>): PublicProduct
     return null;
   };
 
-  const secaoId = texto("section_id", "secao_id");
-  const estoque = num("stock", "estoque");
+  const secaoId = txt("section_id", "secao_id");
+  const categoriaId = txt("category_id", "categoria_id");
+  const categoria = categoriaId ? tax.categorias.get(categoriaId) : undefined;
+  const estoque = nmb("stock");
+  const kind =
+    source === "partner"
+      ? "partner"
+      : source === "professional"
+        ? "professional"
+        : normalizarKind(r.kind);
   return {
     id: String(r.id),
-    kind: normalizarKind(r.kind),
-    title: texto("name", "nome") ?? "Sem nome",
-    subtitle: texto("subtitle", "subtitulo"),
+    kind,
+    source,
+    title: txt("name", "nome") ?? "Sem nome",
+    subtitle: txt("subtitle", "subtitulo"),
     shortDescription: truncar(
-      texto("short_description", "subtitulo", "descricao", "description"),
+      txt("short_description", "description", "descricao"),
     ),
-    price: num("price", "preco") ?? 0,
-    originalPrice: num("original_price", "preco_original"),
+    price: nmb("price", "preco") ?? 0,
+    originalPrice: nmb("original_price", "preco_original"),
     isPriceRange: r.is_price_range === true,
-    minPrice: num("min_price"),
-    maxPrice: num("max_price"),
-    badgeLabel: texto("badge_label", "badge"),
-    imageUrl: texto("image_url", "imagem_url"),
-    sectionId: secaoId,
-    sectionName: secaoId ? (nomesSecao.get(secaoId) ?? null) : null,
+    minPrice: nmb("min_price"),
+    maxPrice: nmb("max_price"),
+    badgeLabel: txt("badge_label", "badge"),
+    imageUrl: txt("image_url", "imagem_url"),
+    sectionId: secaoId ?? categoria?.sectionId ?? null,
+    sectionName: (() => {
+      const id = secaoId ?? categoria?.sectionId ?? null;
+      return id ? (tax.secoes.get(id)?.name ?? null) : null;
+    })(),
+    categoryId: categoriaId,
+    categoryName: categoria?.name ?? null,
+    subcategoryId: txt("subcategory_id", "subcategoria_id"),
     // quantidade exata não é pública — só o booleano de propósito
     inStock: estoque === null ? true : estoque > 0,
   };
 }
 
-async function nomesDeSecao(): Promise<Map<string, string>> {
-  const mapa = new Map<string, string>();
-  const { data } = await supabase
-    .from("store_sections")
-    .select("id,name")
-    .eq("is_active", true);
-  for (const r of (data ?? []) as Linha[]) {
-    if (typeof r.id === "string" && typeof r.name === "string") {
-      mapa.set(r.id, r.name);
+/** Só colunas de vitrine — imagem e dimensão do card, nada mais. */
+const COLUNAS_CARD = "id,name,image_url,card_width,card_height";
+
+function cardDe(r: Linha): PublicTaxonomyCard {
+  return {
+    id: String(r.id),
+    name: typeof r.name === "string" ? r.name : "",
+    imageUrl: typeof r.image_url === "string" ? r.image_url : null,
+    cardWidth: numeroOuNulo(r.card_width),
+    cardHeight: numeroOuNulo(r.card_height),
+  };
+}
+
+async function carregarTaxonomia(): Promise<Taxonomia> {
+  const [secoes, categorias, subcategorias] = await Promise.all([
+    supabase
+      .from("store_sections")
+      .select(COLUNAS_CARD)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("store_categories")
+      .select(`${COLUNAS_CARD},section_id`)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("store_subcategories")
+      .select(`${COLUNAS_CARD},category_id`)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+  ]);
+
+  const tax: Taxonomia = {
+    secoes: new Map(),
+    categorias: new Map(),
+    subcategorias: new Map(),
+  };
+  for (const r of ((secoes.data ?? []) as unknown as Linha[])) {
+    if (typeof r.id === "string") tax.secoes.set(r.id, cardDe(r));
+  }
+  for (const r of ((categorias.data ?? []) as unknown as Linha[])) {
+    if (typeof r.id === "string") {
+      tax.categorias.set(r.id, {
+        ...cardDe(r),
+        sectionId: typeof r.section_id === "string" ? r.section_id : "",
+      });
     }
   }
-  return mapa;
+  for (const r of ((subcategorias.data ?? []) as unknown as Linha[])) {
+    if (typeof r.id === "string") {
+      tax.subcategorias.set(r.id, {
+        ...cardDe(r),
+        categoryId: typeof r.category_id === "string" ? r.category_id : "",
+      });
+    }
+  }
+  return tax;
 }
+
+/** Seções, categorias e subcategorias ativas, para a navegação pública. */
+export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
+  const tax = await carregarTaxonomia();
+  return {
+    sections: [...tax.secoes.values()],
+    categories: [...tax.categorias.values()],
+    subcategories: [...tax.subcategorias.values()],
+  };
+}
+
 
 /**
  * Vitrine de produtos, sem sessão.
  *
- * Caminho preferido: RPC `catalogo_publico()`, SECURITY DEFINER, que devolve
- * só colunas de vitrine. Enquanto ela não existe, cai para leitura direta
- * das MESMAS colunas — nunca `select("*")`. Ou seja: mesmo com `products`
- * ainda aberto para anon (situação de 26/07), esta tela não puxa custo.
+ * Três fontes: catálogo FitMind (`products`), produtos de parceiros
+ * aprovados e produtos de profissionais aprovados e ativos. Cada consulta
+ * pede colunas explícitas — nunca `select("*")` — e cada uma degrada em
+ * silêncio para a loja nunca ficar em branco por causa de uma fonte só.
  */
 export async function fetchPublicCatalog(
   referralCode: string | null,
 ): Promise<PublicProduct[]> {
   void referralCode; // ordenação por coach/parceiro entra junto com a RPC
-  const secoes = await nomesDeSecao();
+  const tax = await carregarTaxonomia().catch(() => TAXONOMIA_VAZIA);
 
-  const viaRpc = await supabase.rpc("catalogo_publico");
-  if (!viaRpc.error && Array.isArray(viaRpc.data)) {
-    return (viaRpc.data as Linha[]).map((r) => mapearProduto(r, secoes));
-  }
-
-  const [legado, novo] = await Promise.all([
+  const [rpc, parceiro, profissional] = await Promise.all([
+    // `products` fechou para anon em 28/07 (era o vazamento de custo e
+    // comissao). A vitrine FitMind passa a vir da RPC catalogo_publico(),
+    // SECURITY DEFINER, que devolve apenas colunas de vitrine e ja filtra
+    // por ativo. As tabelas de parceiro e profissional seguem legiveis.
+    supabase.rpc("catalogo_publico"),
     supabase
-      .from("products")
-      .select(COLUNAS_VITRINE)
-      .eq("status", "active")
-      .is("kind", null)
+      .from("partner_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("status", "approved")
       .order("sort_order", { ascending: true }),
     supabase
-      .from("products")
-      .select(COLUNAS_VITRINE)
-      .not("kind", "is", null)
-      .eq("is_active", true)
+      .from("professional_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("status", "approved")
+      .eq("is_active_by_professional", true)
       .order("sort_order", { ascending: true }),
   ]);
 
-  const linhas = [
-    ...((legado.data ?? []) as unknown as Linha[]),
-    ...((novo.data ?? []) as unknown as Linha[]),
+  const linhas = (r: { data: unknown }) => (r.data ?? []) as unknown as Linha[];
+
+  let fitmind = linhas(rpc);
+  if (rpc.error || !fitmind.length) {
+    // Fallback para sessao autenticada, onde a tabela continua legivel.
+    // Nunca e o caminho de um anonimo.
+    const [legado, novo] = await Promise.all([
+      supabase
+        .from("products")
+        .select(COLUNAS_VITRINE)
+        .eq("status", "active")
+        .is("kind", null)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("products")
+        .select(COLUNAS_VITRINE)
+        .not("kind", "is", null)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+    ]);
+    fitmind = [...linhas(legado), ...linhas(novo)];
+  }
+
+  return [
+    ...fitmind.map((r) => mapearProduto(r, tax, "fitmind")),
+    ...linhas(parceiro).map((r) => mapearProduto(r, tax, "partner")),
+    ...linhas(profissional).map((r) => mapearProduto(r, tax, "professional")),
   ];
-  return linhas.map((r) => mapearProduto(r, secoes));
 }
+
 
 /**
  * Um produto só, para o permalink `/produto/{id}`.
@@ -259,42 +396,69 @@ export async function fetchPublicProduct(
 ): Promise<PublicProduct | null> {
   if (!id) return null;
 
-  const secoes = await nomesDeSecao();
-
-  // Caminho principal: a RPC. Desde que `products` fechou para anon
-  // (migration de 28/07), ler a tabela direto devolve 401 e a pagina de
-  // produto morre para visitante deslogado — que e exatamente o publico
-  // desta rota. A RPC ja filtra por ativo, entao nao precisa checar status.
-  const viaRpc = await supabase
-    .rpc("catalogo_publico")
-    .eq("id", id)
-    .limit(1);
-
+  // Caminho principal: a RPC. Ler `products` direto devolve 401 para anon
+  // desde 28/07, e o anonimo e exatamente o publico desta rota — era isso
+  // que fazia todo link de produto compartilhado cair em "nao encontrado".
+  // A RPC ja filtra por ativo, entao nao ha status a checar aqui.
+  const viaRpc = await supabase.rpc("catalogo_publico").eq("id", id).limit(1);
   if (!viaRpc.error && Array.isArray(viaRpc.data) && viaRpc.data.length) {
-    return mapearProduto((viaRpc.data as Linha[])[0], secoes);
+    return mapearProduto(
+      (viaRpc.data as unknown as Linha[])[0],
+      await carregarTaxonomia(),
+      "fitmind",
+    );
   }
 
   // Fallback para sessao autenticada, onde a tabela continua legivel.
-  // Nunca vira o caminho de um anonimo; serve para nao regredir a
-  // experiencia de quem esta logado se a RPC falhar.
   const { data, error } = await supabase
     .from("products")
     .select(`${COLUNAS_VITRINE},status,is_active`)
     .eq("id", id)
     .limit(1);
 
-  if (error) return null;
-  const linha = ((data ?? []) as unknown as Linha[])[0];
-  if (!linha) return null;
+  const linha = error ? undefined : ((data ?? []) as unknown as Linha[])[0];
 
-  const ativo =
-    linha.kind === null || linha.kind === undefined
-      ? linha.status === "active"
-      : linha.is_active === true;
-  if (!ativo) return null;
+  if (linha) {
+    const ativo =
+      linha.kind === null || linha.kind === undefined
+        ? linha.status === "active"
+        : linha.is_active === true;
+    if (!ativo) return null;
+    return mapearProduto(linha, await carregarTaxonomia(), "fitmind");
+  }
 
-  return mapearProduto(linha, secoes);
+  // Permalinks de parceiro e profissional usam a mesma rota `/produto/{id}`.
+  const [parceiro, profissional] = await Promise.all([
+    supabase
+      .from("partner_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("id", id)
+      .eq("status", "approved")
+      .limit(1),
+    supabase
+      .from("professional_products")
+      .select(COLUNAS_VITRINE_TERCEIROS)
+      .eq("id", id)
+      .eq("status", "approved")
+      .eq("is_active_by_professional", true)
+      .limit(1),
+  ]);
+
+  const doParceiro = ((parceiro.data ?? []) as unknown as Linha[])[0];
+  if (doParceiro) {
+    return mapearProduto(doParceiro, await carregarTaxonomia(), "partner");
+  }
+  const doProfissional = ((profissional.data ?? []) as unknown as Linha[])[0];
+  if (doProfissional) {
+    return mapearProduto(
+      doProfissional,
+      await carregarTaxonomia(),
+      "professional",
+    );
+  }
+  return null;
 }
+
 
 /**
  * Benefícios de parceiro, sem sessão.

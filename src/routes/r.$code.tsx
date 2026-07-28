@@ -7,18 +7,15 @@ import { gravarAtribuicao } from "@/lib/atribuicao";
 import { z } from "zod";
 
 /**
- * `/r/{code}` deixou de ser um funil de mão única para o cadastro.
+ * `/r/{code}` é o mecanismo de ATRIBUIÇÃO (quem indicou). O DESTINO
+ * depende da intenção do link:
  *
- * Ele continua sendo o mecanismo de ATRIBUIÇÃO (quem indicou), mas o
- * DESTINO agora depende da intenção do link:
- *
+ *   /r/CODE              -> cadastro (link de indicação clássico)
+ *   /r/CODE?to=cadastro  -> cadastro
+ *   /r/CODE?to=loja      -> loja pública vinculada ao indicador
  *   /r/CODE?p={id}       -> abre o produto
- *   /r/CODE?to=cadastro  -> vai direto ao cadastro
- *   /r/CODE              -> abre a loja pública
- *
- * Links antigos não quebram: os que já circulam por aí têm `?p=` ou nada,
- * e nos dois casos passam a cair em conteúdo em vez de um formulário.
  */
+
 export const Route = createFileRoute("/r/$code")({
   validateSearch: (search: Record<string, unknown>) =>
     z
@@ -85,10 +82,9 @@ function ReferralLandingPage() {
       if (productId) {
         sessionStorage.setItem("fitmind_pending_product", productId);
         const [chRes, ppRes, prRes] = await Promise.all([
-          // `products` fechou para anon na migration de 28/07. Ler a tabela
-          // direto aqui devolvia 401 e o link do coach parava de resolver o
-          // produto exatamente para quem esta deslogado — que e o alvo do
-          // link. Por isso vai pela RPC publica, que ja filtra por ativo.
+          // `products` fechou para anon em 28/07. Ler a tabela direto aqui
+          // devolvia 401 e o link do coach parava de resolver o produto
+          // exatamente para quem esta deslogado — que e o alvo do link.
           supabase.rpc("catalogo_publico").eq("id", productId).limit(1),
           supabase.from("partner_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
           supabase.from("professional_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
@@ -139,20 +135,21 @@ function ReferralLandingPage() {
           navigate({ to: "/student/store" });
           return;
         }
-        // intenção explícita de cadastro
-        if (destinoPedido === "cadastro") {
-          navigate({ to: "/register" });
-          return;
-        }
         // link de produto. Hoje só `products` tem permalink público;
         // partner/professional caem na loja até ganharem página própria.
         if (productId && productKind === "challenge") {
           navigate({ to: "/produto/$id", params: { id: productId } });
           return;
         }
-        // padrão: loja pública, não formulário
-        navigate({ to: "/loja" });
+        // link explícito da loja vinculada ao indicador
+        if (destinoPedido === "loja" || (productId && !productKind)) {
+          navigate({ to: "/loja" });
+          return;
+        }
+        // padrão do link de indicação: cadastro com o indicador travado
+        navigate({ to: "/register" });
       }, 900);
+
 
 
 
@@ -180,12 +177,13 @@ function ReferralLandingPage() {
               Você foi convidado por <span className="font-semibold text-white">{sponsorName}</span>.
             </p>
             <p className="mt-4 text-xs text-white/40">
-              {destinoPedido === "cadastro"
-                ? "Levando você ao cadastro..."
-                : productId
-                  ? "Abrindo o produto..."
-                  : "Abrindo a loja..."}
+              {productId
+                ? "Abrindo o produto..."
+                : destinoPedido === "loja"
+                  ? "Abrindo a loja..."
+                  : "Levando você ao cadastro..."}
             </p>
+
             <Loader2 className="mx-auto mt-3 h-4 w-4 animate-spin text-white/40" />
           </>
         )}
