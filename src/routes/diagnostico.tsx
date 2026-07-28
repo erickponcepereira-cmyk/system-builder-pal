@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Copy, Globe2, Loader2, RefreshCw, ShieldAlert, Trash2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { OFFICIAL_ORIGIN, PUBLISHED_ORIGIN } from "@/lib/auth-redirects";
 
 type DiagnosticState = {
   href: string;
@@ -31,6 +32,9 @@ const initialState: DiagnosticState = {
   storageCleared: false,
 };
 
+const OFFICIAL_DIAGNOSTIC_URL = `${OFFICIAL_ORIGIN}/diagnostico?sw=off`;
+const FALLBACK_APP_URL = `${PUBLISHED_ORIGIN}/diagnostico?sw=off`;
+
 export const Route = createFileRoute("/diagnostico")({
   head: () => ({
     meta: [
@@ -39,6 +43,8 @@ export const Route = createFileRoute("/diagnostico")({
       { property: "og:title", content: "Diagnóstico de acesso — FitMind Club" },
       { property: "og:description", content: "Verifique e limpe dados locais de acesso ao FitMind Club." },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "Diagnóstico de acesso — FitMind Club" },
+      { name: "twitter:description", content: "Verifique e limpe dados locais de acesso ao FitMind Club." },
       { name: "twitter:card", content: "summary" },
     ],
   }),
@@ -101,9 +107,10 @@ function DiagnosticsPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const cleanUrl = useMemo(() => {
-    if (!state.origin) return "";
-    return `${state.origin}/diagnostico?sw=off`;
-  }, [state.origin]);
+    return OFFICIAL_DIAGNOSTIC_URL;
+  }, []);
+
+  const isInsecureOfficialAccess = state.host.includes("fitmindclub.com.br") && state.protocol === "http:";
 
   useEffect(() => {
     let active = true;
@@ -156,6 +163,23 @@ function DiagnosticsPage() {
           </div>
         </section>
 
+        {isInsecureOfficialAccess && (
+          <section className="rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="mt-0.5 h-5 w-5 text-destructive" />
+              <div>
+                <h2 className="text-base font-semibold text-destructive">Este aparelho abriu a versão insegura do domínio.</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use sempre o endereço oficial com HTTPS para evitar bloqueio do Chrome, antivírus ou rede.
+                </p>
+                <Button asChild className="mt-4 w-full sm:w-auto">
+                  <a href={OFFICIAL_DIAGNOSTIC_URL}>Abrir versão segura</a>
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="grid gap-3 sm:grid-cols-2">
           <InfoItem icon={<Globe2 />} label="Domínio" value={state.host || "verificando"} />
           <InfoItem icon={<Wifi />} label="Conexão do navegador" value={state.online ? "online" : "offline"} />
@@ -186,10 +210,15 @@ function DiagnosticsPage() {
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-base font-semibold">Link de recuperação</h2>
           <p className="mt-1 break-all rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">{cleanUrl || "Carregando link..."}</p>
-          <Button type="button" variant="outline" onClick={handleCopy} className="mt-3 w-full sm:w-auto">
-            <Copy className="h-4 w-4" />
-            {copied ? "Copiado" : "Copiar link"}
-          </Button>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <Button asChild className="w-full sm:w-auto">
+              <a href={OFFICIAL_DIAGNOSTIC_URL}>Abrir HTTPS oficial</a>
+            </Button>
+            <Button type="button" variant="outline" onClick={handleCopy} className="w-full sm:w-auto">
+              <Copy className="h-4 w-4" />
+              {copied ? "Copiado" : "Copiar link"}
+            </Button>
+          </div>
         </section>
 
         <section className="rounded-xl border border-border bg-card p-4">
@@ -198,7 +227,7 @@ function DiagnosticsPage() {
             <li>Teste no 4G/5G (sem Wi-Fi). Se abrir, o bloqueio é da rede/Wi-Fi.</li>
             <li>
               Teste{" "}
-              <a href="https://fitmindclub.lovable.app" className="text-primary underline">
+              <a href={FALLBACK_APP_URL} className="text-primary underline">
                 fitmindclub.lovable.app
               </a>
               . Se esse abrir e o domínio próprio não, é DNS do aparelho ou da rede — não é o sistema.

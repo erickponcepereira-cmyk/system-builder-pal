@@ -25,8 +25,10 @@ function isTrustedCurrentOrigin(hostname: string) {
 
 export function getAuthRedirectUrl(path: `/${string}`) {
   if (typeof window === "undefined") return `${OFFICIAL_ORIGIN}${path}`;
-  const { hostname, origin } = window.location;
-  const base = isTrustedCurrentOrigin(hostname) ? origin : OFFICIAL_ORIGIN;
+  const { hostname, origin, protocol } = window.location;
+  if (isOfficialHost(hostname)) return `${OFFICIAL_ORIGIN}${path}`;
+  const secureOrigin = protocol === "https:" || hostname === "localhost" || hostname === "127.0.0.1";
+  const base = isTrustedCurrentOrigin(hostname) && secureOrigin ? origin : OFFICIAL_ORIGIN;
   return `${base}${path}`;
 }
 
