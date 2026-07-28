@@ -117,6 +117,8 @@ function PartnerPanel() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [partner, setPartner] = useState<Partner | null>(null);
+  const [unidades, setUnidades] = useState<Unidade[]>([]);
+  const [unidadeAtiva, setUnidadeAtiva] = useState<Unidade | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [visits, setVisits] = useState(0);
