@@ -388,7 +388,12 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
 
     // 2) Insere/atualiza linha em partners (idempotente via onConflict)
     const nowIso = new Date().toISOString();
-    const activationPatch = input.alreadyPartner
+    const activationPatch: {
+      already_partner: boolean;
+      activation_paid_at?: string;
+      activation_source?: string;
+      activation_note?: string | null;
+    } = input.alreadyPartner
       ? {
           already_partner: true,
           activation_paid_at: nowIso,
@@ -396,6 +401,7 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
           activation_note: clean(input.activationNote),
         }
       : { already_partner: false };
+
 
     const partnerPayload = {
       profile_id: profile.id,
