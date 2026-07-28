@@ -5200,6 +5200,51 @@ export type Database = {
           },
         ]
       }
+      partner_members: {
+        Row: {
+          created_at: string
+          id: string
+          papel: string
+          partner_id: string
+          permissoes: string[]
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          papel?: string
+          partner_id: string
+          permissoes?: string[]
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          papel?: string
+          partner_id?: string
+          permissoes?: string[]
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_members_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_posts: {
         Row: {
           caption: string | null
@@ -10944,6 +10989,7 @@ export type Database = {
       }
       current_coach_id: { Args: never; Returns: string }
       current_partner_id: { Args: never; Returns: string }
+      current_partner_ids: { Args: never; Returns: string[] }
       current_profile_id: { Args: never; Returns: string }
       current_student_id: { Args: never; Returns: string }
       current_user_coach_ids: { Args: never; Returns: string[] }
@@ -11194,11 +11240,28 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      minhas_unidades_parceiro: {
+        Args: never
+        Returns: {
+          city: string
+          fantasy_name: string
+          papel: string
+          partner_id: string
+          permissoes: string[]
+          photo_url: string
+          state: string
+          status: string
+        }[]
+      }
       notify_admin_pending_specialty: {
         Args: { _coach_id: string }
         Returns: undefined
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_pode: {
+        Args: { _partner_id: string; _permissao: string }
+        Returns: boolean
+      }
       partner_preview_coupon: {
         Args: { p_token: string }
         Returns: {
