@@ -123,6 +123,10 @@ function PartnerPanel() {
   const [unidadeAtiva, setUnidadeAtiva] = useState<Unidade | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [novaUnidadeOpen, setNovaUnidadeOpen] = useState(false);
+  const [seletorAberto, setSeletorAberto] = useState(() => {
+    try { return localStorage.getItem("fitmind_seletor_unidades") !== "0"; } catch { return true; }
+  });
+
 
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
