@@ -37,16 +37,18 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       if (!profile?.id || !active) return;
       const found: RoleOption["key"][] = [];
       if (profile.role === "admin") found.push("admin");
-      const [{ data: coach }, { data: partner }, { data: student }] = await Promise.all([
+      const [{ data: coach }, { data: partner }, { data: student }, { data: membro }] = await Promise.all([
         supabase.from("coaches").select("id, is_professional, approved_at").eq("profile_id", profile.id).maybeSingle(),
         supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
         supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partner_members" as never).select("id" as never).eq("profile_id" as never, profile.id).limit(1).maybeSingle(),
       ]);
       if (coach) {
         found.push("coach");
         if ((coach as any).is_professional && (coach as any).approved_at) found.push("professional");
       }
-      if (partner) found.push("partner");
+      if (partner || membro) found.push("partner");
+
       if (student) found.push("student");
       if (active) setRoles(found);
     })();
