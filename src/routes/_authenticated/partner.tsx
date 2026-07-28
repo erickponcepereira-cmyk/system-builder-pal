@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
@@ -37,6 +37,9 @@ import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
 import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
+import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
+import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
+
 
 
 
@@ -46,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members";
 
 
 interface Partner {
@@ -114,6 +117,8 @@ function PartnerPanel() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [partner, setPartner] = useState<Partner | null>(null);
+  const [unidades, setUnidades] = useState<Unidade[]>([]);
+  const [unidadeAtiva, setUnidadeAtiva] = useState<Unidade | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [visits, setVisits] = useState(0);
@@ -135,7 +140,7 @@ function PartnerPanel() {
     return () => { alive = false; clearInterval(t); };
   }, [partner?.id]);
 
-  const load = async () => {
+  const load = async (alvoPartnerId?: string) => {
 
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
@@ -144,7 +149,19 @@ function PartnerPanel() {
     }
     const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();
     if (!profile) { setLoading(false); return; }
-    const { data: p } = await supabase.from("partners" as never).select("*").eq("profile_id" as never, profile.id).maybeSingle();
+
+    const lista = await carregarUnidades(profile.id);
+    setUnidades(lista);
+    const ativa = escolherUnidadeAtiva(lista, alvoPartnerId ?? unidadeAtiva?.partnerId ?? null);
+    if (!ativa) { setUnidadeAtiva(null); setPartner(null); setLoading(false); return; }
+    setUnidadeAtiva(ativa);
+    lembrarUnidadeAtiva(ativa.partnerId);
+
+    const { data: p } = await supabase
+      .from("partners" as never)
+      .select("id, profile_id, fantasy_name, description, photo_url, cover_url, whatsapp, public_whatsapp, instagram, facebook, website, address, city, state, status, document, document_type, business_area, specialty, referral_code, referral_link, free_redeem_policy" as never)
+      .eq("id" as never, ativa.partnerId as never)
+      .maybeSingle();
     if (!p) { setLoading(false); return; }
     const pt = p as unknown as Partner;
     setPartner(pt);
@@ -182,6 +199,7 @@ function PartnerPanel() {
     setLoading(false);
   };
 
+
   useEffect(() => { load(); }, []);
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); };
@@ -196,6 +214,26 @@ function PartnerPanel() {
 
   const hasActiveFree = products.some(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner);
   const pendingCount = products.filter(p => p.status === "pending").length;
+
+  const PERMISSAO_DA_ABA: Record<Tab, Permissao> = {
+    overview: "overview.ver",
+    products: "products.editar",
+    scanner: "scanner.usar",
+    timeline: "timeline.editar",
+    qrcode: "overview.ver",
+    freebies: "freebies.editar",
+    store: "store.ver",
+    network: "network.ver",
+    wallet: "wallet.ver",
+    subscription: "subscription.ver",
+    annual: "subscription.ver",
+    reports: "reports.ver",
+    fitmind_calendar: "agenda.ver",
+    collaborators: "members.gerenciar",
+    collab: "collab.ver",
+    profile: "profile.editar",
+    members: "members.gerenciar",
+  };
 
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
@@ -219,8 +257,12 @@ function PartnerPanel() {
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
+    { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
-  ];
+  ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
+
+  const abaAtiva: Tab = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "overview");
+
 
 
   return (
@@ -249,6 +291,28 @@ function PartnerPanel() {
         </div>
       </header>
 
+      {unidades.length > 1 && (
+        <div className="border-b border-white/5 px-4 py-2 flex gap-2 overflow-x-auto" style={{ backgroundColor: "#141414" }}>
+          {unidades.map((u) => (
+            <button
+              key={u.partnerId}
+              onClick={() => { setTab("overview"); load(u.partnerId); }}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 min-w-[160px] text-left ${u.partnerId === unidadeAtiva?.partnerId ? "bg-primary/15 border border-primary/40" : "bg-white/5 border border-white/10"}`}
+            >
+              {u.photoUrl ? (
+                <img src={u.photoUrl} alt={u.fantasyName} className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs font-bold">{u.fantasyName.charAt(0)}</div>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{u.fantasyName}</p>
+                <p className="text-[10px] text-white/40 truncate">{[u.city, u.state].filter(Boolean).join(" · ") || (u.papel === "owner" ? "Dono" : u.papel === "manager" ? "Gerente" : "Equipe")}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {partner.status !== "approved" && (
         <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 text-xs text-yellow-200 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" /> Sua empresa aguarda aprovação do admin. Você já pode preencher o perfil e cadastrar produtos.
@@ -256,22 +320,23 @@ function PartnerPanel() {
       )}
 
       <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
-        {tab === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
-        {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
-        {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
-        {tab === "qrcode" && <QrCodePanel partner={partner} />}
-        {tab === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
-        {tab === "store" && hasActiveFree && <StorePage coachMode audience="partner" />}
-        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
-        {tab === "fitmind_calendar" && <FitmindCalendar />}
-        {tab === "collaborators" && <CollaboratorsPanel partner={partner} coachReferralCode={coachCtx?.referralCode ?? null} />}
-        {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
-        {tab === "wallet" && <PartnerWalletTab />}
-        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
-        {tab === "annual" && <AnnualActivationCard />}
-        {tab === "reports" && <PartnerReports />}
-        {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
-        {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+        {abaAtiva === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
+        {abaAtiva === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
+        {abaAtiva === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
+        {abaAtiva === "qrcode" && <QrCodePanel partner={partner} />}
+        {abaAtiva === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
+        {abaAtiva === "store" && hasActiveFree && <StorePage coachMode audience="partner" />}
+        {abaAtiva === "profile" && <ProfilePanel partner={partner} onReload={load} />}
+        {abaAtiva === "fitmind_calendar" && <FitmindCalendar />}
+        {abaAtiva === "collaborators" && <CollaboratorsPanel partner={partner} coachReferralCode={coachCtx?.referralCode ?? null} />}
+        {abaAtiva === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
+        {abaAtiva === "wallet" && <PartnerWalletTab />}
+        {abaAtiva === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
+        {abaAtiva === "annual" && <AnnualActivationCard />}
+        {abaAtiva === "reports" && <PartnerReports />}
+        {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
+        {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+        {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
 
 
       </main>
@@ -280,7 +345,7 @@ function PartnerPanel() {
         {tabs.map(t => {
           const badge = t.key === "collab" ? collabPending : 0;
           return (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${abaAtiva === t.key ? "text-primary" : "text-white/50"}`}>
               <t.icon className="h-5 w-5" />
               {t.label}
               {badge > 0 && (
