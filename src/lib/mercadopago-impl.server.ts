@@ -13,6 +13,26 @@ export function siteUrl() {
 
 export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice";
 
+const ANNUAL_ACTIVATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
+
+async function isAnnualActivationStoreOrder(orderId: string) {
+  const { data } = await supabaseAdmin
+    .from("store_order_items")
+    .select("id")
+    .eq("order_id", orderId)
+    .or(
+      `product_id.eq.${ANNUAL_ACTIVATION_PRODUCT_ID},store_product_id.eq.${ANNUAL_ACTIVATION_PRODUCT_ID},digital_product_id.eq.${ANNUAL_ACTIVATION_PRODUCT_ID}`,
+    )
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
+
+async function applyAnnualActivationFallback(orderId: string) {
+  const { error } = await supabaseAdmin.rpc("apply_annual_activation_for_store_order" as never, { _order_id: orderId } as never);
+  if (error) throw new Error(error.message);
+}
+
 export async function loadSource(kind: SourceKind, id: string) {
   if (kind === "store_order") {
     const { data, error } = await supabaseAdmin
@@ -101,8 +121,17 @@ export async function attachPaymentToSource(
 
 export async function applyApproval(kind: SourceKind, id: string) {
   if (kind === "store_order") {
+    const annualActivationOrder = await isAnnualActivationStoreOrder(id);
     const { error } = await supabaseAdmin.rpc("mark_store_order_paid_and_process" as never, { _order_id: id } as never);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (!annualActivationOrder) throw new Error(error.message);
+      console.error("[mp] store order financial processing failed; applying annual activation fallback:", error.message);
+      await applyAnnualActivationFallback(id);
+      return;
+    }
+    if (annualActivationOrder) {
+      await applyAnnualActivationFallback(id);
+    }
     try {
       const { handlePaidStoreOrderForActivation } = await import("./coach-onboarding.server");
       await handlePaidStoreOrderForActivation(id);
@@ -518,6 +547,13 @@ export async function handleGetStatus(paymentRowId: string) {
       }
     } catch (e) {
       console.error("[mp poll] getPayment failed:", e);
+    }
+  }
+  if (row.status === "approved" && row.source_kind === "store_order") {
+    try {
+      await applyApproval("store_order", row.source_id as string);
+    } catch (e) {
+      console.error("[mp poll] approved store order reapply failed:", e);
     }
   }
   return row;

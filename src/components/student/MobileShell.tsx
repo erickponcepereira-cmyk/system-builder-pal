@@ -5,6 +5,7 @@ import { CalendarDays, TrendingUp, Gift, Home, ShoppingBag, Trophy, User } from 
 import { cn } from "@/lib/utils";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { Logo } from "@/components/Logo";
+import { useBranding } from "@/components/theme-provider";
 
 interface MobileShellProps {
   children: ReactNode;
@@ -21,6 +22,7 @@ const navItems = [
 
 export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
+  const { theme } = useBranding();
 
   return (
     <div className="w-full flex justify-center bg-background" style={{ minHeight: "100dvh" }}>
@@ -35,7 +37,7 @@ export function MobileShell({ children }: MobileShellProps) {
         >
           <div className="flex items-center gap-2">
             <Logo className="h-7 w-7 object-contain" />
-            <span className="text-sm font-bold text-sidebar-foreground">FitMind</span>
+            <span className="text-sm font-bold text-sidebar-foreground">{theme.shortName}</span>
           </div>
           <RoleSwitcher current="student" />
         </header>

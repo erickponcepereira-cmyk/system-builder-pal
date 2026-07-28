@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Briefcase, Dumbbell, Loader2, LogOut, Shield, Stethoscope, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { useBranding } from "@/components/theme-provider";
 import { toast } from "sonner";
 
 type AccessOptions = {
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/portal-selector")({
 function PortalSelectorPage() {
   console.log("[PORTAL] mounted");
   const navigate = useNavigate();
+  const { theme } = useBranding();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<AccessOptions | null>(null);
@@ -163,15 +165,15 @@ function PortalSelectorPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#111111" }}>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "var(--background)" }}>
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3 mb-8">
           <Logo className="h-20 w-20 object-contain" />
-          <h1 className="text-2xl font-bold text-white">FitMind Club</h1>
+          <h1 className="text-2xl font-bold text-foreground">{theme.name}</h1>
         </div>
 
-        <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
-          <h2 className="text-xl font-bold text-white mb-6">Entrar como</h2>
+        <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "var(--card)" }}>
+          <h2 className="text-xl font-bold text-foreground mb-6">Entrar como</h2>
 
           {loading && (
             <div className="flex items-center justify-center py-10">
@@ -187,14 +189,14 @@ function PortalSelectorPage() {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-white hover:bg-primary/20"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground hover:bg-primary/20"
               >
                 Tentar novamente
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground hover:bg-white/10"
               >
                 <LogOut className="h-4 w-4" /> Sair e voltar ao login
               </button>
@@ -207,7 +209,7 @@ function PortalSelectorPage() {
                 <button
                   type="button"
                   onClick={() => enterArea("admin")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-foreground transition-colors hover:bg-primary/20"
                 >
                   <Shield className="h-5 w-5 text-primary" />
                   <span className="font-semibold">Painel de Admin</span>
@@ -217,7 +219,7 @@ function PortalSelectorPage() {
                 <button
                   type="button"
                   onClick={() => enterArea("coach")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-foreground transition-colors hover:bg-primary/20"
                 >
                   <Dumbbell className="h-5 w-5 text-primary" />
                   <span className="font-semibold">Painel de Coach</span>
@@ -227,7 +229,7 @@ function PortalSelectorPage() {
                 <button
                   type="button"
                   onClick={() => enterArea("professional")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-white transition-colors hover:bg-cyan-400/20"
+                  className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-foreground transition-colors hover:bg-cyan-400/20"
                 >
                   <Stethoscope className="h-5 w-5 text-cyan-400" />
                   <span className="font-semibold">Painel de Profissional</span>
@@ -237,9 +239,9 @@ function PortalSelectorPage() {
                 <button
                   type="button"
                   onClick={() => enterArea("student")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-foreground transition-colors hover:bg-white/10"
                 >
-                  <User className="h-5 w-5 text-white/70" />
+                  <User className="h-5 w-5 text-foreground/70" />
                   <span className="font-semibold">Painel de Aluno</span>
                 </button>
               )}
@@ -247,9 +249,9 @@ function PortalSelectorPage() {
                 <button
                   type="button"
                   onClick={() => enterArea("partner")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-foreground transition-colors hover:bg-white/10"
                 >
-                  <Briefcase className="h-5 w-5 text-white/70" />
+                  <Briefcase className="h-5 w-5 text-foreground/70" />
                   <span className="font-semibold">Painel de Parceiro</span>
                 </button>
               )}
@@ -257,7 +259,7 @@ function PortalSelectorPage() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs text-white/50 hover:text-white/80 hover:bg-white/5"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs text-foreground/50 hover:text-foreground/80 hover:bg-white/5"
               >
                 <LogOut className="h-3.5 w-3.5" /> Sair
               </button>

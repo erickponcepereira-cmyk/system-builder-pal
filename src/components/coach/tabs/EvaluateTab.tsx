@@ -847,14 +847,14 @@ export function EvaluateTab() {
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+            <h1 className="text-2xl font-bold text-foreground">Avaliar Aluno</h1>
             {isMaster && (
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/40">
                 Master Coach · acesso a todos os alunos
               </span>
             )}
           </div>
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-foreground/50">
             {isMaster
               ? "Você pode avaliar alunos de qualquer coach da rede. O coach titular aparece no card do aluno."
               : "Registre bioimpedância, anamnese e evolução"}
@@ -871,7 +871,7 @@ export function EvaluateTab() {
             className="w-full flex items-center gap-2 px-4 py-3 text-left"
           >
             <Trophy className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-bold text-white flex-1">Alunos com Desafio ativo aguardando avaliação</h2>
+            <h2 className="text-sm font-bold text-foreground flex-1">Alunos com Desafio ativo aguardando avaliação</h2>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">{challengeCandidates.length}</span>
             <span className={`text-primary text-xs transition-transform ${challengeBannerOpen ? "rotate-180" : ""}`}>▼</span>
           </button>
@@ -884,7 +884,7 @@ export function EvaluateTab() {
                   : "bg-red-500/10 border-red-400/40";
                 const btnTone = isFinal
                   ? "bg-yellow-400 text-black hover:bg-yellow-300"
-                  : "bg-red-500 text-white hover:bg-red-400";
+                  : "bg-red-500 text-foreground hover:bg-red-400";
                 const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
                 const finalDate = c.finalWeighInDate
                   ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
@@ -892,7 +892,7 @@ export function EvaluateTab() {
                 return (
                   <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{c.studentName}</p>
                       <p className={`text-[11px] truncate ${labelTone}`}>
                         {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
                         {isFinal && finalDate ? ` em ${finalDate}` : ""}
@@ -1149,32 +1149,32 @@ export function EvaluateTab() {
           }
         }}
         groups={[
-          { id: "challenge", name: "Desafio 30 Dias", color: "#dc2626" },
-          { id: "premium", name: "Alunos Premium", color: "#991b1b" },
+          { id: "challenge", name: "Desafio 30 Dias", color: "var(--primary)" },
+          { id: "premium", name: "Alunos Premium", color: "color-mix(in srgb, var(--primary) 70%, black)" },
         ]}
-        themeColor="#dc2626"
+        themeColor="var(--primary)"
         themeFontFamily="inherit"
       />
 
       {linkingClient && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/50 p-4"
           onClick={() => setLinkingClient(null)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl"
+            className="w-full max-w-lg rounded-2xl border border-foreground/10 bg-zinc-950 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
-                <h3 className="text-base font-bold text-white">Integrar ao cadastro do sistema</h3>
-                <p className="text-xs text-white/50 mt-0.5">
-                  Vincular as avaliações de <b className="text-white/80">{linkingClient.name}</b> ao cadastro de um aluno.
+                <h3 className="text-base font-bold text-foreground">Integrar ao cadastro do sistema</h3>
+                <p className="text-xs text-foreground/50 mt-0.5">
+                  Vincular as avaliações de <b className="text-foreground/80">{linkingClient.name}</b> ao cadastro de um aluno.
                 </p>
               </div>
               <button
                 onClick={() => setLinkingClient(null)}
-                className="text-white/60 hover:text-white text-sm"
+                className="text-foreground/60 hover:text-foreground text-sm"
               >
                 ✕
               </button>
@@ -1185,14 +1185,14 @@ export function EvaluateTab() {
               value={linkSearch}
               onChange={(e) => setLinkSearch(e.target.value)}
               placeholder="Buscar aluno pelo nome ou e-mail..."
-              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40 mb-3 focus:outline-none focus:border-primary/60"
+              className="w-full rounded-lg bg-foreground/50 border border-foreground/10 px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 mb-3 focus:outline-none focus:border-primary/60"
             />
 
-            <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5">
+            <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-foreground/10 divide-y divide-white/5">
               {linkLoading ? (
-                <div className="p-6 text-center text-sm text-white/60">Carregando alunos...</div>
+                <div className="p-6 text-center text-sm text-foreground/60">Carregando alunos...</div>
               ) : linkStudents.length === 0 ? (
-                <div className="p-6 text-center text-sm text-white/60">Nenhum aluno encontrado</div>
+                <div className="p-6 text-center text-sm text-foreground/60">Nenhum aluno encontrado</div>
               ) : (
                 linkStudents
                   .filter((s) => {
@@ -1205,11 +1205,11 @@ export function EvaluateTab() {
                     <button
                       key={s.id}
                       onClick={() => requestLinkClientToStudent(linkingClient, s)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-center justify-between gap-2"
+                      className="w-full text-left px-3 py-2.5 hover:bg-foreground/5 transition flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{s.name}</p>
-                        <p className="text-[11px] text-white/50 truncate">
+                        <p className="text-sm font-semibold text-foreground truncate">{s.name}</p>
+                        <p className="text-[11px] text-foreground/50 truncate">
                           Coach: {s.coachName || "—"}
                           {s.email ? ` · ${s.email}` : ""}
                         </p>
@@ -1222,7 +1222,7 @@ export function EvaluateTab() {
               )}
             </div>
 
-            <p className="text-[11px] text-white/40 mt-3">
+            <p className="text-[11px] text-foreground/40 mt-3">
               Após integrar, todas as avaliações passam a aparecer para o aluno no perfil dele e nos históricos do coach.
             </p>
           </div>
@@ -1231,14 +1231,14 @@ export function EvaluateTab() {
 
       {confirmLink && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-foreground/50 p-4"
           onClick={() => !confirmBusy && setConfirmLink(null)}
         >
           <div
             className="w-full max-w-md rounded-2xl border border-red-500/40 bg-zinc-950 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-base font-bold text-white mb-2">
+            <h3 className="text-base font-bold text-foreground mb-2">
               Confirmar vinculação irreversível
             </h3>
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100 mb-3">
@@ -1273,15 +1273,15 @@ export function EvaluateTab() {
               </div>
             )}
 
-            <label className="block text-xs text-white/70 mb-1.5">
-              Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
+            <label className="block text-xs text-foreground/70 mb-1.5">
+              Digite <b className="text-foreground">CONFIRMAR</b> para prosseguir:
             </label>
             <input
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="CONFIRMAR"
-              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
+              className="w-full rounded-lg bg-foreground/50 border border-foreground/10 px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 mb-3 focus:outline-none focus:border-red-500/60"
               disabled={confirmBusy}
               autoFocus
             />
@@ -1290,14 +1290,14 @@ export function EvaluateTab() {
               <button
                 onClick={() => setConfirmLink(null)}
                 disabled={confirmBusy}
-                className="px-3 py-2 text-sm text-white/70 hover:text-white disabled:opacity-40"
+                className="px-3 py-2 text-sm text-foreground/70 hover:text-foreground disabled:opacity-40"
               >
                 Cancelar
               </button>
               <button
                 onClick={executeConfirmedLink}
                 disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
-                className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {confirmBusy
                   ? (confirmLink.existingClientName ? "Transferindo..." : "Vinculando...")

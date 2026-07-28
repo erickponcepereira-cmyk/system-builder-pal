@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Flame, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useBranding } from "@/components/theme-provider";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme } = useBranding();
 
   return (
     <header
@@ -20,7 +22,7 @@ export function Header() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Flame className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-foreground">FitMind Club</span>
+          <span className="text-xl font-bold text-foreground">{theme.name}</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
