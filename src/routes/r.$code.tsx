@@ -135,18 +135,31 @@ function ReferralLandingPage() {
           navigate({ to: "/student/store" });
           return;
         }
-        // link de produto. Hoje só `products` tem permalink público;
-        // partner/professional caem na loja até ganharem página própria.
+        // intenção explícita de cadastro
+        if (destinoPedido === "cadastro") {
+          navigate({ to: "/register" });
+          return;
+        }
+        // Produto FitMind: permalink próprio, com Open Graph.
         if (productId && productKind === "challenge") {
           navigate({ to: "/produto/$id", params: { id: productId } });
           return;
         }
+        // QUALQUER outro link com produto vai para a vitrine com o produto
+        // aberto. Antes, parceiro e profissional tinham `productKind`
+        // preenchido e diferente de "challenge": escapavam das condições
+        // acima e caíam no `/register` do final da cadeia. Era esse o bug
+        // de "link de produto volta para o cadastro".
+        if (productId) {
+          navigate({ to: "/loja", search: { produto: productId } });
+          return;
+        }
         // link explícito da loja vinculada ao indicador
-        if (destinoPedido === "loja" || (productId && !productKind)) {
+        if (destinoPedido === "loja") {
           navigate({ to: "/loja" });
           return;
         }
-        // padrão do link de indicação: cadastro com o indicador travado
+        // padrão do link de indicação sem produto: cadastro com indicador travado
         navigate({ to: "/register" });
       }, 900);
 

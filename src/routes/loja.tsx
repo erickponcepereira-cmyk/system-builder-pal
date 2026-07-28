@@ -28,6 +28,18 @@ export const Route = createFileRoute("/loja")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  /**
+   * `?produto={id}` abre a vitrine já com aquele produto aberto.
+   *
+   * É o destino dos links compartilhados de produto de parceiro e de
+   * profissional, que não têm permalink próprio. Antes esses links caíam
+   * no cadastro: em `/r/{code}` eles tinham `productKind` preenchido e
+   * diferente de "challenge", escapavam das duas condições de destino e
+   * batiam no `/register` que era o padrão da cadeia.
+   */
+  validateSearch: (search: Record<string, unknown>) => ({
+    produto: typeof search.produto === "string" ? search.produto : undefined,
+  }),
   component: PublicStorePage,
 });
 
@@ -47,6 +59,7 @@ const TABS: { id: StoreTab; label: string }[] = [
 const TAXONOMIA_VAZIA: PublicTaxonomy = { sections: [], categories: [], subcategories: [] };
 
 function PublicStorePage() {
+  const { produto: produtoDoLink } = Route.useSearch();
   const [products, setProducts] = useState<PublicProduct[]>([]);
   const [benefits, setBenefits] = useState<PublicBenefit[]>([]);
   const [taxonomy, setTaxonomy] = useState<PublicTaxonomy>(TAXONOMIA_VAZIA);
@@ -91,6 +104,19 @@ function PublicStorePage() {
     })();
     return () => { cancelled = true; };
   }, [montado, referral.referralCode]);
+
+  /**
+   * Abre o produto vindo de `?produto={id}` assim que o catálogo chega.
+   * Também troca para a aba certa, senão o modal abre sobre uma vitrine
+   * que não contém aquele item e fechar deixa a pessoa perdida.
+   */
+  useEffect(() => {
+    if (loading || !produtoDoLink || detail) return;
+    const alvo = products.find((p) => p.id === produtoDoLink);
+    if (!alvo) return;
+    setTab(alvo.source === "fitmind" ? "fitmind" : "market");
+    setDetail(alvo);
+  }, [loading, produtoDoLink, products, detail]);
 
   /** Trocar de aba não pode manter uma seção que não existe nela. */
   useEffect(() => {
