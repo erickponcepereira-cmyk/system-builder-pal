@@ -1,30 +1,28 @@
-## Diagnóstico (verificado no banco e no código)
+## Problema
 
-- O Erick **foi vinculado com sucesso**: existe a linha em `partner_members` (unidade do Gilberto, papel `staff`, permissões `overview.ver, agenda.ver, timeline.editar, scanner.usar, profile.editar, store.ver`). Ou seja, o convite e o salvamento das permissões funcionam.
-- O que falta é o **caminho de entrada**: nada no app leva o Erick ao painel da unidade.
-  - `RoleSwitcher.tsx` só oferece o painel "Parceiro" quando existe linha em `partners` com `profile_id` do usuário. O Erick é membro, não dono, então a opção nunca aparece (ele fica só como Aluno).
-  - Mesmo forçando `/partner`, o `PartnerOnboardingGate` (que checa se o perfil é dono de um cadastro de parceiro) e o `SubscriptionGuard` bloqueariam o membro pedindo pagamento/aprovação de parceiro — regras que valem para o dono, não para a recepção.
-- Do lado do dono, a aba **Membros** hoje lista só a unidade ativa e não mostra quem é a pessoa na plataforma (aluno, coach etc.), o que dá a sensação de "não sei quem está na minha equipe".
+Hoje o cancelamento de uma reserva de produto gratuito só existe dentro do modal de QR (`StudentFreebieReservations`), escondido atrás de um clique no card, e usa `window.confirm` — que em alguns navegadores/webview do app não abre, dando a sensação de "botão que não funciona". Na lista de reservas não há nenhum botão de cancelar.
 
-## Entrega desta correção
+A regra de backend (`cancel_partner_freebie`) já funciona: cancela apenas reservas com status `reserved` e somente antes do início do horário; caso contrário devolve erro.
 
-### 1. Membro da equipe consegue entrar na unidade
-- `RoleSwitcher`: além de `partners`, considerar vínculo em `partner_members` (via a RPC de unidades já existente). Se a pessoa é membro de alguma unidade, a opção **Parceiro** aparece no seletor de painel (que já existe no painel do aluno).
-- `partner.tsx`: carregar as unidades **antes** dos gates. Se o usuário não é dono de nenhuma unidade (papel `manager`/`staff`), pular `PartnerOnboardingGate` e `SubscriptionGuard` — mensalidade/anuidade e aprovação são responsabilidade do dono. As abas continuam filtradas pelas permissões dele.
-- Se o membro não tiver nenhuma permissão marcada, mostrar tela explicativa ("peça acesso ao dono da unidade") em vez de tela vazia.
-- Ao adicionar um membro, criar uma **notificação** no perfil dele ("Você foi adicionado à equipe de {unidade}"), para que algo aconteça visivelmente no perfil do convidado.
+## O que fazer (só frontend)
 
-### 2. Dono enxerga e controla a equipe
-- Aba **Membros** passa a mostrar, por pessoa: nome, e-mail, papel na unidade (Dono/Gerente/Equipe), **perfil na plataforma** (Aluno / Coach / Profissional / Parceiro / Admin) e data de entrada.
-- Alternador **"Só esta unidade" / "Todas as minhas unidades"**, com as pessoas agrupadas por unidade — o dono vê a equipe inteira das 3 academias em um lugar.
-- Permissões: as caixas continuam por aba, agora com rótulo "Abas liberadas", contador (ex.: 6 de 15), botões **Marcar todas** / **Limpar** e confirmação visual de salvo (hoje salva sem feedback claro).
-- Alterar permissão ou papel reflete imediatamente nas abas que o membro vê no próximo carregamento do painel dele.
+1. **Botão de cancelar na lista de reservas** (`src/components/student/StudentFreebieReservations.tsx`)
+   - Em cada linha de reserva ainda cancelável (status `reserved` e horário ainda não iniciado), mostrar um botão "Cancelar" visível ao lado do status, sem precisar abrir o QR.
+   - Trocar o `<button>` que envolve a linha inteira por um container, com área clicável para abrir o QR e o botão de cancelar separado (evita clique aninhado).
+
+2. **Confirmação em modal próprio**
+   - Substituir `window.confirm` por um diálogo de confirmação dentro do app ("Cancelar esta reserva? Você poderá reservar outro horário depois."), com botões Voltar / Cancelar reserva.
+   - Estado de carregando no botão enquanto a chamada roda, evitando cliques duplos.
+
+3. **Feedback claro**
+   - Sucesso: toast "Reserva cancelada" e recarregar a lista.
+   - Erro vindo do backend (ex.: horário já iniciado): mostrar a mensagem traduzida em toast e recarregar a lista para refletir o estado real.
+
+4. **Mesmo comportamento no painel do coach**
+   - O componente já é reutilizado em `BenefitsTab` (coach) e em `student.freebies`, então a correção vale para os dois painéis automaticamente. Verificar visualmente as duas telas.
 
 ## Detalhes técnicos
 
-- Sem migração nova: `partner_members`, `partner_pode`, `minhas_unidades_parceiro` e as políticas de RLS já existem e estão corretas (`select` via `current_partner_ids()`, `update`/`delete` via `partner_pode(partner_id,'members.gerenciar')`).
-- A leitura de nome/e-mail/role dos membros continua pela tabela `profiles` restrita aos ids já visíveis pela política atual; nenhuma policy nova, nenhum dado exposto a mais.
-- A notificação de convite é criada no server function `addPartnerMemberByEmail`, que já roda com privilégio e valida permissão do chamador.
-- Arquivos alterados: `src/components/RoleSwitcher.tsx`, `src/routes/_authenticated/partner.tsx`, `src/components/partner/PartnerMembersPanel.tsx`, `src/lib/partner-members.functions.ts` (+ leitura da equipe por unidade).
-
-Depois disso, paro para você testar com o Erick antes de iniciar a Entrega 2.
+- Arquivo único alterado: `src/components/student/StudentFreebieReservations.tsx`.
+- Continua usando `supabase.rpc("cancel_partner_freebie", { _reservation_id })`; nenhuma mudança de banco.
+- `getReservationState` continua sendo a fonte da verdade para `canCancel`, agora consumido também pela lista.
