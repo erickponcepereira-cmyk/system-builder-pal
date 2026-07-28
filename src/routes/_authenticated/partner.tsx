@@ -268,6 +268,11 @@ function PartnerPanel() {
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
 
+  // Só quem é dono de alguma unidade pode abrir outra academia no mesmo login
+  const podeCriarUnidade = !!profileId && unidades.some((u) => u.papel === "owner");
+
+
+
   const abaAtiva: Tab = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "overview");
 
 
