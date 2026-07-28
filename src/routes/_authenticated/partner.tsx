@@ -291,6 +291,28 @@ function PartnerPanel() {
         </div>
       </header>
 
+      {unidades.length > 1 && (
+        <div className="border-b border-white/5 px-4 py-2 flex gap-2 overflow-x-auto" style={{ backgroundColor: "#141414" }}>
+          {unidades.map((u) => (
+            <button
+              key={u.partnerId}
+              onClick={() => { setTab("overview"); load(u.partnerId); }}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 min-w-[160px] text-left ${u.partnerId === unidadeAtiva?.partnerId ? "bg-primary/15 border border-primary/40" : "bg-white/5 border border-white/10"}`}
+            >
+              {u.photoUrl ? (
+                <img src={u.photoUrl} alt={u.fantasyName} className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs font-bold">{u.fantasyName.charAt(0)}</div>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{u.fantasyName}</p>
+                <p className="text-[10px] text-white/40 truncate">{[u.city, u.state].filter(Boolean).join(" · ") || (u.papel === "owner" ? "Dono" : u.papel === "manager" ? "Gerente" : "Equipe")}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {partner.status !== "approved" && (
         <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 text-xs text-yellow-200 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" /> Sua empresa aguarda aprovação do admin. Você já pode preencher o perfil e cadastrar produtos.
