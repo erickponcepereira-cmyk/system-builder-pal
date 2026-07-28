@@ -433,7 +433,13 @@ function PartnerPanel() {
       </nav>
 
     </div>
-    </SubscriptionGuard>
+  );
+
+  if (!ehDonoDeAlguma) return conteudo;
+
+  return (
+    <PartnerOnboardingGate>
+      <SubscriptionGuard walletSource="partner">{conteudo}</SubscriptionGuard>
     </PartnerOnboardingGate>
   );
 }
