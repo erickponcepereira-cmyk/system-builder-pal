@@ -8,6 +8,8 @@ import {
   type Permissao,
   type Unidade,
 } from "@/lib/unidades-parceiro";
+import { addPartnerMemberByEmail } from "@/lib/partner-members.functions";
+
 
 interface Membro {
   id: string;
@@ -63,24 +65,20 @@ export function PartnerMembersPanel({ unidade }: { unidade: Unidade }) {
     const alvo = email.trim().toLowerCase();
     if (!alvo) return;
     setConvidando(true);
-    const { data: perfil } = await supabase.from("profiles").select("id, name").eq("email", alvo).maybeSingle();
-    if (!perfil) {
+    try {
+      const res = await addPartnerMemberByEmail({
+        data: { partnerId: unidade.partnerId, email: alvo },
+      });
+      setEmail("");
+      toast.success(`${res.name || alvo} adicionado à unidade.`);
+      carregar();
+    } catch (err: any) {
+      toast.error(err?.message || "Não foi possível adicionar o membro.");
+    } finally {
       setConvidando(false);
-      toast.error("Nenhuma conta com esse e-mail. Peça para a pessoa se cadastrar primeiro no app.");
-      return;
     }
-    const { error } = await supabase.from("partner_members" as never).insert({
-      partner_id: unidade.partnerId,
-      profile_id: perfil.id,
-      papel: "staff",
-      permissoes: ["overview.ver"],
-    } as never);
-    setConvidando(false);
-    if (error) { toast.error(error.message); return; }
-    setEmail("");
-    toast.success(`${perfil.name || alvo} adicionado à unidade.`);
-    carregar();
   };
+
 
   const alternar = async (m: Membro, permissao: Permissao) => {
     if (m.papel === "owner") return;

@@ -123,6 +123,10 @@ function PartnerPanel() {
   const [unidadeAtiva, setUnidadeAtiva] = useState<Unidade | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [novaUnidadeOpen, setNovaUnidadeOpen] = useState(false);
+  const [seletorAberto, setSeletorAberto] = useState(() => {
+    try { return localStorage.getItem("fitmind_seletor_unidades") !== "0"; } catch { return true; }
+  });
+
 
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -304,35 +308,60 @@ function PartnerPanel() {
       </header>
 
       {(unidades.length > 1 || podeCriarUnidade) && (
-        <div className="border-b border-white/5 px-4 py-2 flex gap-2 overflow-x-auto" style={{ backgroundColor: "#141414" }}>
-          {unidades.map((u) => (
-            <button
-              key={u.partnerId}
-              onClick={() => { setTab("overview"); load(u.partnerId); }}
-              className={`flex items-center gap-2 rounded-xl px-3 py-2 min-w-[160px] text-left ${u.partnerId === unidadeAtiva?.partnerId ? "bg-primary/15 border border-primary/40" : "bg-white/5 border border-white/10"}`}
-            >
-              {u.photoUrl ? (
-                <img src={u.photoUrl} alt={u.fantasyName} className="h-8 w-8 rounded-lg object-cover" />
-              ) : (
-                <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs font-bold">{u.fantasyName.charAt(0)}</div>
+        seletorAberto ? (
+          <div className="border-b border-white/5 px-4 py-2" style={{ backgroundColor: "#141414" }}>
+            <div className="flex gap-2 overflow-x-auto">
+              {unidades.map((u) => (
+                <button
+                  key={u.partnerId}
+                  onClick={() => { setTab("overview"); load(u.partnerId); }}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 min-w-[160px] text-left ${u.partnerId === unidadeAtiva?.partnerId ? "bg-primary/15 border border-primary/40" : "bg-white/5 border border-white/10"}`}
+                >
+                  {u.photoUrl ? (
+                    <img src={u.photoUrl} alt={u.fantasyName} className="h-8 w-8 rounded-lg object-cover" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs font-bold">{u.fantasyName.charAt(0)}</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{u.fantasyName}</p>
+                    <p className="text-[10px] text-white/40 truncate">{[u.city, u.state].filter(Boolean).join(" · ") || (u.papel === "owner" ? "Dono" : u.papel === "manager" ? "Gerente" : "Equipe")}</p>
+                  </div>
+                </button>
+              ))}
+              {podeCriarUnidade && (
+                <button
+                  onClick={() => setNovaUnidadeOpen(true)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 min-w-[150px] text-left bg-white/5 border border-dashed border-white/20 text-white/70 hover:text-white"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center"><Plus className="h-4 w-4" /></div>
+                  <p className="text-xs font-semibold">Nova unidade</p>
+                </button>
               )}
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{u.fantasyName}</p>
-                <p className="text-[10px] text-white/40 truncate">{[u.city, u.state].filter(Boolean).join(" · ") || (u.papel === "owner" ? "Dono" : u.papel === "manager" ? "Gerente" : "Equipe")}</p>
-              </div>
-            </button>
-          ))}
-          {podeCriarUnidade && (
+            </div>
+            <div className="mt-2 flex justify-end">
+              <button
+                onClick={() => { setSeletorAberto(false); try { localStorage.setItem("fitmind_seletor_unidades", "0"); } catch { /* ignora */ } }}
+                className="rounded-lg bg-primary/15 border border-primary/40 px-3 py-1 text-[11px] font-semibold text-primary"
+              >
+                Concluir
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="border-b border-white/5 px-4 py-2 flex items-center justify-between gap-2" style={{ backgroundColor: "#141414" }}>
+            <p className="text-[11px] text-white/50 truncate">
+              Unidade ativa: <span className="text-white font-semibold">{unidadeAtiva?.fantasyName || partner.fantasy_name}</span>
+            </p>
             <button
-              onClick={() => setNovaUnidadeOpen(true)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 min-w-[150px] text-left bg-white/5 border border-dashed border-white/20 text-white/70 hover:text-white"
+              onClick={() => { setSeletorAberto(true); try { localStorage.setItem("fitmind_seletor_unidades", "1"); } catch { /* ignora */ } }}
+              className="shrink-0 rounded-lg bg-white/5 border border-white/10 px-3 py-1 text-[11px] font-semibold text-white/70 hover:text-white"
             >
-              <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center"><Plus className="h-4 w-4" /></div>
-              <p className="text-xs font-semibold">Nova unidade</p>
+              Trocar / nova unidade
             </button>
-          )}
-        </div>
+          </div>
+        )
       )}
+
 
       {profileId && (
         <NovaUnidadeDialog
