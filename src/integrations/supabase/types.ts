@@ -593,6 +593,7 @@ export type Database = {
           muted: string
           muted_foreground: string
           nome: string
+          nome_curto: string | null
           popover: string
           popover_foreground: string
           primary_color: string
@@ -629,6 +630,7 @@ export type Database = {
           muted: string
           muted_foreground: string
           nome: string
+          nome_curto?: string | null
           popover: string
           popover_foreground: string
           primary_color: string
@@ -665,6 +667,7 @@ export type Database = {
           muted?: string
           muted_foreground?: string
           nome?: string
+          nome_curto?: string | null
           popover?: string
           popover_foreground?: string
           primary_color?: string
@@ -11678,6 +11681,7 @@ export type Database = {
           muted: string
           muted_foreground: string
           nome: string
+          nome_curto: string | null
           popover: string
           popover_foreground: string
           primary_color: string

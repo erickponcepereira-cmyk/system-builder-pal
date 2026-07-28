@@ -254,11 +254,11 @@ function ProfilePage() {
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
       <header className="pt-2">
-        <h1 className="text-2xl font-bold text-white">Perfil</h1>
+        <h1 className="text-2xl font-bold text-foreground">Perfil</h1>
       </header>
 
       {/* Profile card */}
-      <div className="rounded-2xl p-5 flex items-center gap-4" style={{ backgroundColor: "#1A1A1A" }}>
+      <div className="rounded-2xl p-5 flex items-center gap-4" style={{ backgroundColor: "var(--card)" }}>
         <div className="relative">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/40 overflow-hidden">
             {profile.photo_url ? (
@@ -267,13 +267,13 @@ function ProfilePage() {
               <span className="text-xl font-bold text-primary">{profile.name.charAt(0)}</span>
             )}
           </div>
-          <button onClick={() => navigate({ to: "/student/profile/edit" })} className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary border-2" style={{ borderColor: "#1A1A1A" }}>
+          <button onClick={() => navigate({ to: "/student/profile/edit" })} className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary border-2" style={{ borderColor: "var(--card)" }}>
             <Camera className="h-3 w-3 text-primary-foreground" />
           </button>
         </div>
         <div className="flex-1">
-          <p className="text-base font-bold text-white">{profile.name}</p>
-          <p className="text-xs text-white/50">{profile.email}</p>
+          <p className="text-base font-bold text-foreground">{profile.name}</p>
+          <p className="text-xs text-foreground/50">{profile.email}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             
             {isInfluencer && (
@@ -294,44 +294,44 @@ function ProfilePage() {
 
       {/* Stats reais */}
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={() => setShowChallengesModal(true)} className="rounded-2xl p-3 text-center transition hover:bg-white/5" style={{ backgroundColor: "#1A1A1A" }}>
+        <button onClick={() => setShowChallengesModal(true)} className="rounded-2xl p-3 text-center transition hover:bg-foreground/5" style={{ backgroundColor: "var(--card)" }}>
           <div className="mb-0.5 flex items-center justify-center gap-1">
             <Trophy className="h-3 w-3 text-primary" />
-            <p className="text-base font-bold text-white">{challengesCount}</p>
+            <p className="text-base font-bold text-foreground">{challengesCount}</p>
           </div>
-          <p className="text-[10px] text-white/40">Desafios participados</p>
+          <p className="text-[10px] text-foreground/40">Desafios participados</p>
           <p className="mt-0.5 text-[9px] text-primary">Ver histórico →</p>
         </button>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-base font-bold text-white">{bioWeightDiff != null ? `${bioWeightDiff > 0 ? "-" : "+"}${Math.abs(bioWeightDiff).toFixed(1)}` : (totalKgLost > 0 ? `-${totalKgLost.toFixed(1)}` : "0")}</p>
-          <p className="text-[10px] text-white/40">kg perdidos {bioWeightDiff != null ? "(bioimpedância)" : "no total"}</p>
+        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "var(--card)" }}>
+          <p className="text-base font-bold text-foreground">{bioWeightDiff != null ? `${bioWeightDiff > 0 ? "-" : "+"}${Math.abs(bioWeightDiff).toFixed(1)}` : (totalKgLost > 0 ? `-${totalKgLost.toFixed(1)}` : "0")}</p>
+          <p className="text-[10px] text-foreground/40">kg perdidos {bioWeightDiff != null ? "(bioimpedância)" : "no total"}</p>
         </div>
       </div>
 
 
       {/* Histórico de moedas de desafio */}
       {tokenHistory.length > 0 && (
-        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
           <button onClick={() => setShowTokenHistory((v) => !v)} className="flex w-full items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-primary" />
-              <p className="text-sm font-bold text-white">Tickets de desafio</p>
-              <span className="text-[10px] text-white/40">({tokenHistory.length} total · {tokenHistory.filter((t) => !t.consumedAt).length} disponíveis)</span>
+              <p className="text-sm font-bold text-foreground">Tickets de desafio</p>
+              <span className="text-[10px] text-foreground/40">({tokenHistory.length} total · {tokenHistory.filter((t) => !t.consumedAt).length} disponíveis)</span>
             </div>
-            <ChevronRight className={`h-4 w-4 text-white/40 transition ${showTokenHistory ? "rotate-90" : ""}`} />
+            <ChevronRight className={`h-4 w-4 text-foreground/40 transition ${showTokenHistory ? "rotate-90" : ""}`} />
           </button>
           {showTokenHistory && (
             <div className="mt-3 space-y-2">
               {tokenHistory.map((t) => (
-                <div key={t.id} className="rounded-lg border border-white/5 p-3 text-xs" style={{ backgroundColor: "#0F0F0F" }}>
+                <div key={t.id} className="rounded-lg border border-foreground/5 p-3 text-xs" style={{ backgroundColor: "var(--secondary)" }}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${t.consumedAt ? "bg-white/10 text-white/60" : "bg-success/20 text-success"}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${t.consumedAt ? "bg-foreground/10 text-foreground/60" : "bg-success/20 text-success"}`}>
                       {t.consumedAt ? "Usada" : "Disponível"}
                     </span>
-                    <span className="text-[10px] text-white/40">Gerada em {new Date(t.grantedAt).toLocaleDateString("pt-BR")}</span>
+                    <span className="text-[10px] text-foreground/40">Gerada em {new Date(t.grantedAt).toLocaleDateString("pt-BR")}</span>
                   </div>
                   {t.consumedAt && (
-                    <div className="mt-2 text-[11px] text-white/70">
+                    <div className="mt-2 text-[11px] text-foreground/70">
                       Usada em <strong>{new Date(t.consumedAt).toLocaleDateString("pt-BR")}</strong>
                       {t.competitionLabel && <> para entrar em <strong className="text-primary">{t.competitionLabel}</strong></>}
                     </div>
@@ -344,19 +344,19 @@ function ProfilePage() {
       )}
 
       {/* Fitcoin (cashback de indicações) */}
-      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+      <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
         <div className="flex items-center gap-2">
           <img src={fitcoinAsset.url} alt="Fitcoin" className="h-6 w-6 object-contain" />
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fitcoin · Cashback</p>
         </div>
         <div className="mt-1 flex items-center gap-2">
           <img src={fitcoinAsset.url} alt="" aria-hidden className="h-7 w-7 object-contain" />
-          <p className="text-3xl font-bold text-white">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
+          <p className="text-3xl font-bold text-foreground">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
         </div>
-        <p className="text-[11px] text-white/40">
+        <p className="text-[11px] text-foreground/40">
           1 Fitcoin = R$ 1,00 · use como desconto nas suas compras na loja.
         </p>
-        <p className="mt-2 text-[10px] text-white/40">
+        <p className="mt-2 text-[10px] text-foreground/40">
           Ganhe Fitcoin indicando produtos elegíveis. O cashback não é sacável em dinheiro.
         </p>
         <button
@@ -373,23 +373,23 @@ function ProfilePage() {
         <button
           type="button"
           onClick={() => setShowReferralsModal(true)}
-          className="rounded-2xl p-4 text-left transition hover:bg-white/5"
-          style={{ backgroundColor: "#1A1A1A" }}
+          className="rounded-2xl p-4 text-left transition hover:bg-foreground/5"
+          style={{ backgroundColor: "var(--card)" }}
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white">Minhas indicações</h2>
+            <h2 className="text-sm font-bold text-foreground">Minhas indicações</h2>
             <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{Math.max(referrals.length, referralCommissions.length)}</span>
           </div>
           {referralCommissions.length === 0 && referrals.length === 0 ? (
-            <p className="text-xs text-white/45">Nenhum amigo entrou pelo seu link ainda.</p>
+            <p className="text-xs text-foreground/45">Nenhum amigo entrou pelo seu link ainda.</p>
           ) : referralCommissions.length > 0 ? (
             <>
               <div className="space-y-2">
                 {referralCommissions.slice(0, 3).map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-foreground/5 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-white">{c.buyer_name || "Cliente"}</p>
-                      <p className="truncate text-[10px] text-white/40">{c.product_label || "Produto"}</p>
+                      <p className="truncate text-xs font-bold text-foreground">{c.buyer_name || "Cliente"}</p>
+                      <p className="truncate text-[10px] text-foreground/40">{c.product_label || "Produto"}</p>
                     </div>
                     <span className="text-[10px] font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</span>
                   </div>
@@ -401,12 +401,12 @@ function ProfilePage() {
             <>
               <div className="space-y-2">
                 {referrals.slice(0, 3).map((referral) => (
-                  <div key={referral.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                  <div key={referral.id} className="flex items-center justify-between rounded-xl bg-foreground/5 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-white">{referral.profiles?.name || "Aluno indicado"}</p>
-                      <p className="truncate text-[10px] text-white/40">{referral.profiles?.email || "cadastro confirmado"}</p>
+                      <p className="truncate text-xs font-bold text-foreground">{referral.profiles?.name || "Aluno indicado"}</p>
+                      <p className="truncate text-[10px] text-foreground/40">{referral.profiles?.email || "cadastro confirmado"}</p>
                     </div>
-                    <span className="text-[10px] text-white/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
+                    <span className="text-[10px] text-foreground/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
                   </div>
                 ))}
               </div>
@@ -416,20 +416,20 @@ function ProfilePage() {
         </button>
 
 
-        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white">Saques</h2>
-            <span className="text-[10px] font-bold uppercase text-white/35">histórico</span>
+            <h2 className="text-sm font-bold text-foreground">Saques</h2>
+            <span className="text-[10px] font-bold uppercase text-foreground/35">histórico</span>
           </div>
           {withdrawals.length === 0 ? (
-            <p className="text-xs text-white/45">Você ainda não solicitou saques.</p>
+            <p className="text-xs text-foreground/45">Você ainda não solicitou saques.</p>
           ) : (
             <div className="space-y-2">
               {withdrawals.slice(0, 4).map((withdrawal) => (
-                <div key={withdrawal.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                <div key={withdrawal.id} className="flex items-center justify-between rounded-xl bg-foreground/5 px-3 py-2">
                   <div>
-                    <p className="text-xs font-bold text-white">R$ {Number(withdrawal.amount).toFixed(2).replace(".", ",")}</p>
-                    <p className="text-[10px] text-white/40">{withdrawal.requested_at ? new Date(withdrawal.requested_at).toLocaleDateString("pt-BR") : "—"}</p>
+                    <p className="text-xs font-bold text-foreground">R$ {Number(withdrawal.amount).toFixed(2).replace(".", ",")}</p>
+                    <p className="text-[10px] text-foreground/40">{withdrawal.requested_at ? new Date(withdrawal.requested_at).toLocaleDateString("pt-BR") : "—"}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusPill status={withdrawal.status} />
@@ -449,23 +449,23 @@ function ProfilePage() {
       {/* Sections */}
       {sections.map((section) => (
         <div key={section.title}>
-          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40 px-1">
+          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-foreground/40 px-1">
             {section.title}
           </h2>
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "var(--card)" }}>
             {section.items.map((it, i) => {
               const target = "to" in it && it.to ? it.to : null;
               const search = ("search" in it ? (it as { search?: Record<string, unknown> }).search : undefined);
-              const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] cursor-pointer ${
-                i !== section.items.length - 1 ? "border-b border-white/5" : ""
+              const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-foreground/[0.04] cursor-pointer ${
+                i !== section.items.length - 1 ? "border-b border-foreground/5" : ""
               }`;
               const body = (
                 <>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
-                    <it.icon className="h-4 w-4 text-white/70" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground/5">
+                    <it.icon className="h-4 w-4 text-foreground/70" />
                   </div>
-                  <span className="flex-1 text-sm text-white">{it.label}</span>
-                  <ChevronRight className="h-4 w-4 text-white/30" />
+                  <span className="flex-1 text-sm text-foreground">{it.label}</span>
+                  <ChevronRight className="h-4 w-4 text-foreground/30" />
                 </>
               );
               return target ? (
@@ -493,13 +493,13 @@ function ProfilePage() {
       <button
         onClick={handleLogout}
         className="mt-2 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
-        style={{ backgroundColor: "#1A1A1A" }}
+        style={{ backgroundColor: "var(--card)" }}
       >
         <LogOut className="h-4 w-4" />
         Sair da conta
       </button>
 
-      <p className="text-center text-[10px] text-white/20 mt-2">FitMind Club v1.0.0</p>
+      <p className="text-center text-[10px] text-foreground/20 mt-2">FitMind Club v1.0.0</p>
 
       <StudentReferralModal
         open={referralModalOpen}
@@ -508,10 +508,10 @@ function ProfilePage() {
       />
 
       {withdrawOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5">
-            <h2 className="text-lg font-bold text-white">Solicitar saque</h2>
-            <p className="mt-1 text-xs text-white/50">Disponível: R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5">
+            <h2 className="text-lg font-bold text-foreground">Solicitar saque</h2>
+            <p className="mt-1 text-xs text-foreground/50">Disponível: R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
             <div className="mt-4 space-y-3">
               <Field label="Valor a sacar">
                 <input value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} className="field-control" />
@@ -537,7 +537,7 @@ function ProfilePage() {
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button onClick={() => setWithdrawOpen(false)} className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancelar</button>
+              <button onClick={() => setWithdrawOpen(false)} className="rounded-xl bg-foreground/10 px-4 py-3 text-sm font-bold text-foreground">Cancelar</button>
               <button onClick={requestWithdrawal} className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">Confirmar</button>
             </div>
           </div>
@@ -545,16 +545,16 @@ function ProfilePage() {
       )}
 
       {showChallengesModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShowChallengesModal(false)}>
-          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm" onClick={() => setShowChallengesModal(false)}>
+          <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">Histórico de desafios</h2>
-              <button onClick={() => setShowChallengesModal(false)} className="text-white/40 hover:text-white">
+              <h2 className="text-lg font-bold text-foreground">Histórico de desafios</h2>
+              <button onClick={() => setShowChallengesModal(false)} className="text-foreground/40 hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
             {enrollments.length === 0 ? (
-              <p className="text-sm text-white/50">Você ainda não participou de nenhum desafio.</p>
+              <p className="text-sm text-foreground/50">Você ainda não participou de nenhum desafio.</p>
             ) : (
               <div className="space-y-2">
                 {enrollments.map((e) => {
@@ -563,27 +563,27 @@ function ProfilePage() {
                   const kg = Number(e.result_kg);
                   const pct = Number(e.result_pct);
                   return (
-                    <div key={e.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                    <div key={e.id} className="rounded-xl border border-foreground/5 p-3" style={{ backgroundColor: "var(--secondary)" }}>
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-sm font-bold text-white">{label}</p>
-                          <p className="text-[10px] text-white/40">
+                          <p className="text-sm font-bold text-foreground">{label}</p>
+                          <p className="text-[10px] text-foreground/40">
                             {e.initial_date ? new Date(e.initial_date).toLocaleDateString("pt-BR") : "—"}
                             {e.final_date && <> → {new Date(e.final_date).toLocaleDateString("pt-BR")}</>}
                           </p>
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${e.status === "completed" ? "bg-success/20 text-success" : e.status === "enrolled" ? "bg-primary/20 text-primary" : "bg-white/10 text-white/60"}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${e.status === "completed" ? "bg-success/20 text-success" : e.status === "enrolled" ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground/60"}`}>
                           {e.status === "completed" ? "Concluído" : e.status === "enrolled" ? "Em andamento" : e.status}
                         </span>
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-lg bg-white/5 p-2">
-                          <p className="text-[9px] uppercase text-white/40">Inicial</p>
-                          <p className="text-sm font-bold text-white">{e.initial_weight ?? "—"}<span className="text-[9px] text-white/40"> kg</span></p>
+                        <div className="rounded-lg bg-foreground/5 p-2">
+                          <p className="text-[9px] uppercase text-foreground/40">Inicial</p>
+                          <p className="text-sm font-bold text-foreground">{e.initial_weight ?? "—"}<span className="text-[9px] text-foreground/40"> kg</span></p>
                         </div>
-                        <div className="rounded-lg bg-white/5 p-2">
-                          <p className="text-[9px] uppercase text-white/40">Final</p>
-                          <p className="text-sm font-bold text-white">{e.final_weight ?? "—"}<span className="text-[9px] text-white/40"> kg</span></p>
+                        <div className="rounded-lg bg-foreground/5 p-2">
+                          <p className="text-[9px] uppercase text-foreground/40">Final</p>
+                          <p className="text-sm font-bold text-foreground">{e.final_weight ?? "—"}<span className="text-[9px] text-foreground/40"> kg</span></p>
                         </div>
                         <div className="rounded-lg bg-primary/10 p-2">
                           <p className="text-[9px] uppercase text-primary/80">Resultado</p>
@@ -601,31 +601,31 @@ function ProfilePage() {
       )}
 
       {showReferralsModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShowReferralsModal(false)}>
-          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm" onClick={() => setShowReferralsModal(false)}>
+          <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Minhas indicações</h2>
-                <p className="text-[11px] text-white/40">{referralCommissions.length} comissão(ões) · total ganho R$ {referralCommissions.reduce((s, c) => s + c.amount, 0).toFixed(2).replace(".", ",")}</p>
+                <h2 className="text-lg font-bold text-foreground">Minhas indicações</h2>
+                <p className="text-[11px] text-foreground/40">{referralCommissions.length} comissão(ões) · total ganho R$ {referralCommissions.reduce((s, c) => s + c.amount, 0).toFixed(2).replace(".", ",")}</p>
               </div>
-              <button onClick={() => setShowReferralsModal(false)} className="text-white/40 hover:text-white">
+              <button onClick={() => setShowReferralsModal(false)} className="text-foreground/40 hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
             {referralCommissions.length === 0 ? (
-              <p className="text-sm text-white/50">Nenhuma comissão de indicação ainda. Quando alguém usar seu link e fizer uma compra, aparece aqui.</p>
+              <p className="text-sm text-foreground/50">Nenhuma comissão de indicação ainda. Quando alguém usar seu link e fizer uma compra, aparece aqui.</p>
             ) : (
               <div className="space-y-2">
                 {referralCommissions.map((c) => {
                   const statusLabel = c.status === "paid" ? "Pago" : c.status === "available" ? "Disponível" : c.status === "pending" ? "Pendente" : c.status === "cancelled" ? "Cancelado" : c.status || "—";
-                  const statusColor = c.status === "paid" || c.status === "available" ? "bg-success/20 text-success" : c.status === "cancelled" ? "bg-red-500/20 text-red-400" : "bg-white/10 text-white/60";
+                  const statusColor = c.status === "paid" || c.status === "available" ? "bg-success/20 text-success" : c.status === "cancelled" ? "bg-red-500/20 text-red-400" : "bg-foreground/10 text-foreground/60";
                   return (
-                    <div key={c.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                    <div key={c.id} className="rounded-xl border border-foreground/5 p-3" style={{ backgroundColor: "var(--secondary)" }}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-white">{c.buyer_name || "Cliente"}</p>
-                          <p className="truncate text-[11px] text-white/50">{c.product_label || "Produto"}</p>
-                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
+                          <p className="truncate text-sm font-bold text-foreground">{c.buyer_name || "Cliente"}</p>
+                          <p className="truncate text-[11px] text-foreground/50">{c.product_label || "Produto"}</p>
+                          <p className="mt-0.5 text-[10px] text-foreground/35">{new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</p>
@@ -647,7 +647,7 @@ function ProfilePage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-white/50">{label}</span>
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-foreground/50">{label}</span>
       {children}
     </label>
   );

@@ -4,7 +4,7 @@ import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middlewa
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const COLUNAS =
-  "key, nome, mode, logo_full_url, logo_icon_url, favicon_url, theme_color, background, foreground, card, card_foreground, popover, popover_foreground, primary_color, primary_foreground, secondary, secondary_foreground, muted, muted_foreground, accent, accent_foreground, border, input, ring, sidebar, sidebar_foreground, sidebar_primary, sidebar_primary_foreground, sidebar_accent, sidebar_accent_foreground, sidebar_border, sidebar_ring";
+  "key, nome, nome_curto, mode, logo_full_url, logo_icon_url, favicon_url, theme_color, background, foreground, card, card_foreground, popover, popover_foreground, primary_color, primary_foreground, secondary, secondary_foreground, muted, muted_foreground, accent, accent_foreground, border, input, ring, sidebar, sidebar_foreground, sidebar_primary, sidebar_primary_foreground, sidebar_accent, sidebar_accent_foreground, sidebar_border, sidebar_ring";
 
 async function exigirAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -22,6 +22,7 @@ async function exigirAdmin(userId: string) {
 const temaSchema = z.object({
   key: z.string().min(2).max(40).regex(/^[a-z0-9-]+$/, "Use apenas letras minúsculas, números e hífen"),
   nome: z.string().min(2),
+  nome_curto: z.string().nullable().optional(),
   mode: z.enum(["dark", "light"]),
   logo_full_url: z.string().nullable().optional(),
   logo_icon_url: z.string().nullable().optional(),

@@ -435,3 +435,71 @@ select option {
 :root[data-theme="carol"] .rounded-xl {
   border-color: var(--border);
 }
+
+/* ============================================================
+   White label — camada de compatibilidade
+   Redireciona classes fixas (branco/preto/vermelho) para os
+   tokens do tema. Não afeta o tema padrão FitMind (escuro).
+   ============================================================ */
+
+/* Vermelho fixo -> cor primária do tema (qualquer tema != fitmind) */
+:root:not([data-theme="fitmind"]) .text-red-500,
+:root:not([data-theme="fitmind"]) .text-red-600,
+:root:not([data-theme="fitmind"]) .text-red-400 {
+  color: var(--primary) !important;
+}
+:root:not([data-theme="fitmind"]) .bg-red-500,
+:root:not([data-theme="fitmind"]) .bg-red-600 {
+  background-color: var(--primary) !important;
+}
+:root:not([data-theme="fitmind"]) .border-red-500,
+:root:not([data-theme="fitmind"]) .border-red-600 {
+  border-color: var(--primary) !important;
+}
+:root:not([data-theme="fitmind"]) .bg-red-500\/10,
+:root:not([data-theme="fitmind"]) .bg-red-500\/20 {
+  background-color: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+}
+
+/* Temas claros: texto/fundos fixos em branco/preto -> tokens */
+:root.light .text-white { color: var(--foreground) !important; }
+:root.light .text-white\/90 { color: color-mix(in srgb, var(--foreground) 90%, transparent) !important; }
+:root.light .text-white\/80 { color: color-mix(in srgb, var(--foreground) 80%, transparent) !important; }
+:root.light .text-white\/70 { color: color-mix(in srgb, var(--foreground) 72%, transparent) !important; }
+:root.light .text-white\/60 { color: color-mix(in srgb, var(--foreground) 65%, transparent) !important; }
+:root.light .text-white\/50 { color: color-mix(in srgb, var(--foreground) 58%, transparent) !important; }
+:root.light .text-white\/45 { color: color-mix(in srgb, var(--foreground) 55%, transparent) !important; }
+:root.light .text-white\/40 { color: color-mix(in srgb, var(--foreground) 52%, transparent) !important; }
+:root.light .text-white\/35 { color: color-mix(in srgb, var(--foreground) 48%, transparent) !important; }
+:root.light .text-white\/30 { color: color-mix(in srgb, var(--foreground) 45%, transparent) !important; }
+:root.light .text-white\/20 { color: color-mix(in srgb, var(--foreground) 38%, transparent) !important; }
+
+:root.light .bg-white\/5 { background-color: color-mix(in srgb, var(--foreground) 6%, transparent) !important; }
+:root.light .bg-white\/10 { background-color: color-mix(in srgb, var(--foreground) 10%, transparent) !important; }
+:root.light .bg-white\/15 { background-color: color-mix(in srgb, var(--foreground) 14%, transparent) !important; }
+:root.light .bg-white\/20 { background-color: color-mix(in srgb, var(--foreground) 18%, transparent) !important; }
+:root.light .border-white\/5 { border-color: color-mix(in srgb, var(--foreground) 8%, transparent) !important; }
+:root.light .border-white\/10 { border-color: color-mix(in srgb, var(--foreground) 14%, transparent) !important; }
+:root.light .border-white\/20 { border-color: color-mix(in srgb, var(--foreground) 20%, transparent) !important; }
+
+:root.light .bg-black,
+:root.light .bg-black\/90 { background-color: var(--background) !important; }
+:root.light .bg-black\/80,
+:root.light .bg-black\/70,
+:root.light .bg-black\/60,
+:root.light .bg-black\/50,
+:root.light .bg-black\/40 {
+  background-color: color-mix(in srgb, var(--foreground) 45%, transparent) !important;
+}
+:root.light .bg-black\/30,
+:root.light .bg-black\/20 { background-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important; }
+:root.light .text-black { color: var(--background) !important; }
+
+/* Cinzas fixos comuns em cards escuros */
+:root.light .bg-zinc-900,
+:root.light .bg-neutral-900,
+:root.light .bg-slate-900,
+:root.light .bg-\[\#0B0707\],
+:root.light .bg-\[\#111111\],
+:root.light .bg-\[\#161212\],
+:root.light .bg-\[\#1A1A1A\] { background-color: var(--card) !important; }

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useBranding } from "@/components/theme-provider";
 import { canAccess, type AdminPermKey, type AdminPerms } from "@/lib/admin-permissions";
 
 const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; perm: AdminPermKey }[] = [
@@ -69,6 +70,7 @@ export function AdminShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { theme } = useBranding();
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
   const [hasCoach, setHasCoach] = useState(false);
   const [hasStudent, setHasStudent] = useState(false);
@@ -160,7 +162,7 @@ export function AdminShell() {
       >
         <div className="flex items-center gap-2">
 <Logo className="h-8 w-auto object-contain" />
-          <span className="font-bold text-white">FitMind Club Admin</span>
+          <span className="font-bold text-white">{theme.name} Admin</span>
         </div>
         <div className="flex items-center gap-2">
           <RoleSwitcher current="admin" />
@@ -179,7 +181,7 @@ export function AdminShell() {
       >
         <div className="mb-8 hidden items-center gap-2 px-2 lg:flex">
 <Logo className="h-9 w-auto object-contain" />
-          <span className="text-lg font-bold text-white">FitMind Club</span>
+          <span className="text-lg font-bold text-white">{theme.name}</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             {isMaster ? "Master" : "Admin"}
           </span>
