@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { listCoproducedProducts } from "@/lib/collab.functions";
+import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
 
 type TimeRange = { start: string; end: string };
