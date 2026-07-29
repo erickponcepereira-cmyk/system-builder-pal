@@ -75,13 +75,17 @@ export function loadDeviceFingerprint(view = "checkout"): Promise<void> {
 /** Aguarda até o security.js publicar o device id (com timeout curto). */
 export async function getDeviceId(timeoutMs = 4000): Promise<string | null> {
   if (typeof window === "undefined") return null;
+  const norm = (v: unknown) => {
+    const s = typeof v === "string" ? v.trim() : v ? String(v).trim() : "";
+    return s && s.length <= 4000 ? s : null;
+  };
   await loadDeviceFingerprint();
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const id = (window as any).MP_DEVICE_SESSION_ID;
-    if (id) return String(id);
+    const id = norm((window as any).MP_DEVICE_SESSION_ID);
+    if (id) return id;
     await new Promise((r) => setTimeout(r, 200));
   }
-  return (window as any).MP_DEVICE_SESSION_ID ? String((window as any).MP_DEVICE_SESSION_ID) : null;
+  return norm((window as any).MP_DEVICE_SESSION_ID);
 }
 
