@@ -142,8 +142,17 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             if (payment.date_of_expiration) pixPayload.pix_expires_at = payment.date_of_expiration;
           }
 
-          // Cobranças recorrentes diretas já são registradas por recurring.server.
+          // Cobrança recorrente direta: fecha o ciclo da assinatura (a tentativa
+          // pode ter ficado "em análise" e só agora vira aprovada/recusada).
           if (kind === "recurring") {
+            if (sourceId) {
+              try {
+                const { settleRecurringCharge } = await import("@/lib/recurring.server");
+                await settleRecurringCharge(sourceId, String(mpPaymentId), status as any, payment.status_detail || null);
+              } catch (e) {
+                console.error("[mp webhook] settleRecurringCharge falhou:", e);
+              }
+            }
             return Response.json({ ok: true, status, recurring: true });
           }
 
@@ -255,6 +264,23 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
 
           // ── 6. Aplica aprovação (motor financeiro existente) ──
           await applyApproval(kind as SourceKind, sourceId);
+
+          // Se este pagamento veio de uma cobrança recorrente da mensalidade
+          // (fluxo de fatura), fecha também o ciclo da assinatura.
+          try {
+            const { data: chargeRow } = await supabaseAdmin
+              .from("recurring_charges" as never)
+              .select("subscription_id" as never)
+              .eq("mp_payment_id" as never, String(mpPaymentId) as never)
+              .maybeSingle();
+            const subId = (chargeRow as any)?.subscription_id as string | undefined;
+            if (subId) {
+              const { settleRecurringCharge } = await import("@/lib/recurring.server");
+              await settleRecurringCharge(subId, String(mpPaymentId), status as any, payment.status_detail || null);
+            }
+          } catch (e) {
+            console.error("[mp webhook] settle recorrência via fatura falhou:", e);
+          }
 
           return new Response(JSON.stringify({ ok: true, status }), { status: 200, headers: { "content-type": "application/json" } });
         } catch (err: any) {
