@@ -138,6 +138,7 @@ import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.w
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
 import { Route as ApiPublicHooksRecurringChargeRouteImport } from './routes/api/public/hooks/recurring-charge'
 import { Route as ApiPublicHooksNetworkUnlockSnapshotRouteImport } from './routes/api/public/hooks/network-unlock-snapshot'
+import { Route as ApiPublicHooksMpSweepRouteImport } from './routes/api/public/hooks/mp-sweep'
 import { Route as ApiPublicCareerResetExpiredRouteImport } from './routes/api/public/career.reset-expired'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
@@ -877,6 +878,11 @@ const ApiPublicHooksNetworkUnlockSnapshotRoute =
     path: '/api/public/hooks/network-unlock-snapshot',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMpSweepRoute = ApiPublicHooksMpSweepRouteImport.update({
+  id: '/api/public/hooks/mp-sweep',
+  path: '/api/public/hooks/mp-sweep',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCareerResetExpiredRoute =
   ApiPublicCareerResetExpiredRouteImport.update({
     id: '/api/public/career/reset-expired',
@@ -1041,6 +1047,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -1175,6 +1182,7 @@ export interface FileRoutesByTo {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -1313,6 +1321,7 @@ export interface FileRoutesById {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -1451,6 +1460,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
@@ -1585,6 +1595,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
@@ -1722,6 +1733,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
@@ -1767,6 +1779,7 @@ export interface RootRouteChildren {
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
+  ApiPublicHooksMpSweepRoute: typeof ApiPublicHooksMpSweepRoute
   ApiPublicHooksNetworkUnlockSnapshotRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   ApiPublicHooksRecurringChargeRoute: typeof ApiPublicHooksRecurringChargeRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
@@ -2680,6 +2693,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/mp-sweep': {
+      id: '/api/public/hooks/mp-sweep'
+      path: '/api/public/hooks/mp-sweep'
+      fullPath: '/api/public/hooks/mp-sweep'
+      preLoaderRoute: typeof ApiPublicHooksMpSweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/career/reset-expired': {
       id: '/api/public/career/reset-expired'
       path: '/api/public/career/reset-expired'
@@ -3061,6 +3081,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
+  ApiPublicHooksMpSweepRoute: ApiPublicHooksMpSweepRoute,
   ApiPublicHooksNetworkUnlockSnapshotRoute:
     ApiPublicHooksNetworkUnlockSnapshotRoute,
   ApiPublicHooksRecurringChargeRoute: ApiPublicHooksRecurringChargeRoute,

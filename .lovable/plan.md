@@ -1,48 +1,47 @@
-## O que eu confirmei no banco antes de planejar
+## Objetivo
 
-- Hoje **não existe** nenhuma linha com `level > 0` e rótulo "sem upline" — mas existem **~200 comissões de retorno sem nenhuma marca no rótulo**: linhas com `slot_label = 'Linha 1/2/3'` (e `Upline N`) em que o **beneficiário é o próprio coach vendedor** da venda. Total afetado: R$ 200+ (ex.: Linha 3 → 33 linhas, R$ 61,57; Linha 2 → 29 linhas, R$ 88,05; Linha 1 → 9 linhas, R$ 49,07), parte já `available`, parte `pending`.
-- Isso confirma o diagnóstico e mostra que a "correção mínima" (mover a checagem do texto para antes do nível) **não resolve**: esses casos não têm "sem upline" no rótulo. Só a comparação estrutural resolve.
-- A mesma regra frágil está duplicada no SQL, dentro de `recalc_wallets_for_owner`:
-  `level > 0 OR (label ~ 'linha|upline N' AND label !~ 'sem upline')`. É ela que joga o retorno no bloqueio de rede.
-- `listBlockedCommissions` já inclui os dois tipos de bloqueio (prazo e rede), mas usa `isNetworkCommissionRow` — ou seja, hoje ele classifica errado junto com o resto; corrigindo o classificador, ele passa a acertar.
-- Textos: `PendingInfo days={3}` em `WalletTab.tsx:265` e `MyNetworkPanel.tsx:191`; o banco usa 7 dias.
+Garantir que uma venda que ficou "pendente" no Mercado Pago e depois foi aprovada gere a comissão do coach mesmo que o webhook não chegue — sem depender de alguém clicar em "reconciliar" no admin.
 
-## Abordagem
+## Como funciona hoje (verificado no código)
 
-Em vez de manter duas regras de texto (SQL + TS) que sempre divergem, gravo a classificação **uma vez, no banco**, e todo mundo lê o mesmo campo.
+- `src/routes/api.public.mp.webhook.ts`: o MP reenvia notificação quando o status muda. Ao virar `approved`, o webhook busca o pagamento na API do MP, valida `source_kind`, existência do pedido e o valor (tolerância R$ 0,05) e chama `applyApproval(kind, sourceId)` — é esse passo que grava as comissões. Idempotente: se o registro local já está `approved`, não reprocessa.
+- `src/lib/mp-reconcile.functions.ts`: `listPendingMpPayments` (pendentes/in_process há mais de 5 min) e `reconcileMpPayment` (consulta o MP e aplica) — **manuais**, exigem um admin logado.
+- `src/lib/admin-reconcile.functions.ts`: `reconcileApprovedPendingPayments` varre pagamentos aprovados cuja origem continua pendente — também manual.
 
-### 1. Coluna canônica `is_network` em `commissions`
+Lacunas: (a) nada roda sozinho; (b) `reconcileMpPayment` só aplica aprovação para `store_order`, `transaction` e `partner_product_order` — `subscription_invoice` fica de fora, ao contrário do webhook.
 
-- Migration adiciona `is_network boolean not null default false`.
-- Função `public.commission_is_network(...)`: é rede quando a comissão é fatia de linha/upline **e** o beneficiário **não é o coach vendedor** daquela venda. O vendedor é resolvido pela origem (`partner_product_orders.selling_coach_id` / coach vendedor do pedido de loja) e, como reserva, pela linha "Comissão do Vendedor" da mesma venda.
-- Trigger `BEFORE INSERT/UPDATE` preenche a coluna, para nenhum caminho novo (loja, parceiro, profissional, recorrência) depender de rótulo.
+## O que fazer
 
-### 2. Padronizar a gravação do retorno
+### 1. Rota pública de varredura (cron)
 
-Nas funções que geram comissão sem upline, gravar sempre `level = 0` e `slot_label = 'Comissão Direta (sem upline N<n>)'` — a convenção já correta. O valor das fatias **não muda**, só o rótulo/nível/destino.
+Nova rota `src/routes/api/public/hooks/mp-sweep.ts`, no mesmo padrão das rotas de hooks já existentes:
 
-### 3. Consumo único da classificação
+- `POST`, protegida por segredo no header (comparação timing-safe), igual às outras rotas de hook do projeto.
+- Busca em `mercadopago_payments` os registros com status `pending`/`in_process` criados nos últimos 7 dias (limite ~200, mais antigos primeiro).
+- Para cada um: consulta a API do MP (`getPayment`), atualiza status local e, se estiver aprovado, chama `applyApproval` — reaproveitando exatamente o mesmo caminho do webhook, com a mesma checagem de idempotência (não reaplica se a origem já está paga).
+- Em seguida, executa a mesma varredura de `reconcileApprovedPendingPayments`: aprovados no MP cuja origem continua pendente.
+- Retorna um resumo (`verificados`, `aprovados`, `aplicados`, `falhas`) e registra falhas no log, uma a uma, sem abortar o lote.
 
-- `recalc_wallets_for_owner`: trocar a expressão de texto por `c.is_network`.
-- `src/lib/financial-dedupe.ts`: `isNetworkCommissionRow` passa a ler o campo da linha (com o texto só como fallback para dados antigos), e os chamadores (`admin-financial.functions.ts`, `admin-payouts.functions.ts`, `network-unlock.functions.ts`) passam a selecionar `is_network`.
+### 2. Agendar
 
-### 4. Backfill com revisão antes do UPDATE
+Agendar a rota via `pg_cron` (mesmo mecanismo já usado pela cobrança recorrente), a cada 15 minutos, apontando para a URL estável de produção.
 
-- Primeiro rodo o SELECT (mesma condição estrutural) e te mostro **a lista de pessoas, quantidade e valores**.
-- Só depois da sua conferência aplico a migration que normaliza `level`/`slot_label`/`is_network` e roda `admin_reconcile_all_wallets`.
+### 3. Corrigir a assimetria do reconcile manual
 
-### 5. Prazo 7 dias
+Em `reconcileMpPayment`, incluir `subscription_invoice` na lista de tipos que disparam `applyApproval`, igualando ao webhook.
 
-Constante única `COMMISSION_HOLD_DAYS = 7` (em `src/lib/financial-dedupe.ts`), importada em `WalletTab.tsx` e `MyNetworkPanel.tsx`.
+### 4. Visibilidade no admin
 
-### 6. Verificação da antecipação pelo admin
+No painel de pagamentos, mostrar a data/resultado da última varredura automática, para não parecer que "não aconteceu nada".
 
-Depois da correção, testo `listBlockedCommissions` com um coach que tenha saldo de rede bloqueado e confirmo que aparecem os dois tipos (prazo e meta de rede) e que `advanceCommissionRelease` libera.
+## Restrições
 
-## Aceite verificado ao final
+- **Nenhuma alteração** em `src/server/mercadopago.server.ts`, `src/lib/mercadopago-impl.server.ts` ou no webhook. A varredura apenas reutiliza `getPayment` e `applyApproval`.
+- Nenhuma mudança em cálculo ou valor de comissão.
+- Sem `EXCEPTION WHEN OTHERS THEN NULL`: toda falha é logada com o id do pagamento.
 
-Coach sem upline vê a fatia de retorno em **direta e desbloqueada**; rede mostra só downline; Ana Flávia, Nathan e Vimark consistentes; textos com 7 dias; admin antecipa nos dois bloqueios.
+## Aceite
 
-## Não faço
-
-Não mexo na regra dos 7 dias no banco, não altero cálculo de valores, e nenhum `UPDATE` em `commissions` sem você revisar o SELECT antes.
+- Um pagamento aprovado no MP com webhook perdido é processado em no máximo 15 minutos e gera a comissão.
+- Rodar a varredura duas vezes seguidas não duplica comissão.
+- A invariante das carteiras continua zerada.
