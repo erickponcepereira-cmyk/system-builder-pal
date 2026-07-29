@@ -57,3 +57,14 @@ export function dedupePointLogs<T extends PointLogLike>(rows: T[] | null | undef
   }
   return out;
 }
+
+/**
+ * Toda compra na loja grava duas linhas: `store_orders` + uma `transactions`
+ * espelho com `purchase_type = 'store_order'`. Somar as duas fontes dobra o
+ * faturamento. Use este filtro sempre que somar transações junto de pedidos.
+ */
+export const NON_MIRRORED_TX_FILTER = "purchase_type.is.null,purchase_type.neq.store_order";
+
+export function isMirroredStoreOrderTx(purchaseType: string | null | undefined) {
+  return purchaseType === "store_order";
+}
