@@ -526,7 +526,7 @@ async function persistSavedCard(params: {
   payer: { email: string; name?: string; doc?: string };
   cardToken: string;
   mpResp: any;
-}) {
+}): Promise<string | null> {
   try {
     if (!params.studentId) return null;
     const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
