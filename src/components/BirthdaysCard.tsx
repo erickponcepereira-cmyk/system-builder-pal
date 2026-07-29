@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Cake, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseDateOnly, daysUntilBirthday, ageOnNextBirthday, todayLocal } from "@/lib/date-only";
 
 type Person = {
   id: string;
@@ -20,29 +21,6 @@ interface Props {
   title?: string;
 }
 
-function parseBd(b: string | null) {
-  if (!b) return null;
-  const d = new Date(b);
-  if (isNaN(d.getTime())) return null;
-  return d;
-}
-
-function daysUntilBirthday(bd: Date, today = new Date()) {
-  const y = today.getFullYear();
-  let next = new Date(y, bd.getMonth(), bd.getDate());
-  if (next < new Date(y, today.getMonth(), today.getDate())) {
-    next = new Date(y + 1, bd.getMonth(), bd.getDate());
-  }
-  const ms = next.getTime() - new Date(y, today.getMonth(), today.getDate()).getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
-
-function ageOn(bd: Date, when: Date) {
-  let a = when.getFullYear() - bd.getFullYear();
-  const m = when.getMonth() - bd.getMonth();
-  if (m < 0 || (m === 0 && when.getDate() < bd.getDate())) a--;
-  return a;
-}
 
 export function BirthdaysCard({ scope, coachId, title }: Props) {
   const [people, setPeople] = useState<Person[]>([]);
@@ -95,16 +73,17 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
   }, [scope, coachId]);
 
   const items = useMemo(() => {
-    const today = new Date();
+    const today = todayLocal();
     const list = people
       .map((p) => {
-        const bd = parseBd(p.birthdate);
+        const bd = parseDateOnly(p.birthdate);
         if (!bd) return null;
-        const days = daysUntilBirthday(bd, today);
-        const age = ageOn(bd, today) + (days === 0 ? 0 : 0);
+        const days = daysUntilBirthday(bd, today) ?? 0;
+        const age = ageOnNextBirthday(bd, today) ?? 0;
         return { ...p, bd, days, age };
       })
       .filter((x): x is NonNullable<typeof x> => !!x);
+
 
     if (scope === "week") return list.filter((x) => x.days <= 7).sort((a, b) => a.days - b.days);
     if (scope === "coach-month") {
@@ -170,7 +149,7 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
                     <p className="truncate text-[11px] font-semibold text-primary">Coach: {p.coachName}</p>
                   )}
                   <p className="text-[11px] text-muted-foreground">
-                    {dateStr} · {p.age + (p.days === 0 ? 0 : 1)} anos
+                    {dateStr} · {p.age} anos
                     {p.role ? ` · ${p.role}` : ""}
                   </p>
                 </div>

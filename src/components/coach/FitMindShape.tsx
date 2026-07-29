@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly } from "@/lib/date-only";
 // ============================================================
 // FITMIND SHAPE — Script para colar no Lovable
 // Cole este conteúdo como prompt no Lovable OU use o código
@@ -2090,17 +2091,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const StepDados = () => {
       const autoAge = (() => {
         if (!selectedClient?.birthDate) return null;
-        const b = new Date(selectedClient.birthDate);
-        if (isNaN(b.getTime())) return null;
         const refDate = assessment.date
           ? new Date(assessment.date.length === 10 ? assessment.date + "T12:00:00" : assessment.date)
           : new Date();
         const ref = isNaN(refDate.getTime()) ? new Date() : refDate;
-        let a = ref.getFullYear() - b.getFullYear();
-        const m = ref.getMonth() - b.getMonth();
-        if (m < 0 || (m === 0 && ref.getDate() < b.getDate())) a--;
-        return a;
+        return calcAgeFromDateOnly(selectedClient.birthDate, ref);
       })();
+
       const ageLocked = autoAge !== null;
       // Auto-set quando aluno cadastrado
       if (ageLocked && assessment.age !== autoAge) {

@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly, formatDateOnlyBR } from "@/lib/date-only";
 import { useEffect, useState } from "react";
 import { X, Cake, Loader2, Activity, ClipboardList, ShoppingBag, TrendingUp, EyeOff, ShieldCheck, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -12,19 +13,14 @@ type Props = {
   onClose: () => void;
 };
 
-const fmtBR = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
-const fmtBRLong = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
+const fmtBR = (d: string | null | undefined) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d) : new Date(d).toLocaleDateString("pt-BR");
+const fmtBRLong = (d: string | null | undefined) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d, { day: "2-digit", month: "long", year: "numeric" }) : new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 const money = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toFixed(2).replace(".", ",")}` : "—";
 
 function calcAge(birth: string | null) {
-  if (!birth) return null;
-  const b = new Date(birth);
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age;
+  return calcAgeFromDateOnly(birth);
 }
+
 
 export default function ProfessionalStudentDetailsModal({ studentId, onClose }: Props) {
   const fetchDetail = useServerFn(getProfessionalStudentDetail);

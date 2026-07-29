@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly, formatDateOnlyBR } from "@/lib/date-only";
 import { useEffect, useState } from "react";
 import { Plus, Users, Search, Cake, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,10 +30,9 @@ const SKIN_LABEL: Record<string, string> = {
 const GENDER_LABEL: Record<string, string> = { female: "F", male: "M", other: "—" };
 
 function calcAge(birthDate: string | null) {
-  if (!birthDate) return null;
-  const y = new Date(birthDate).getFullYear();
-  return new Date().getFullYear() - y;
+  return calcAgeFromDateOnly(birthDate);
 }
+
 
 export function ProfessionalStudentsTab({ coachId }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -128,7 +128,7 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
                       <p className="truncate text-xs text-white/45">{s.whatsapp || s.email || "—"}</p>
                       {s.birth_date && (
                         <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-white/55">
-                          <Cake className="h-3 w-3" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}
+                          <Cake className="h-3 w-3" /> {formatDateOnlyBR(s.birth_date)}
                         </p>
                       )}
                     </div>

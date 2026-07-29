@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly, formatDateOnlyBR } from "@/lib/date-only";
 import { useEffect, useState } from "react";
 import { X, Cake, ExternalLink, Loader2, Activity, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,18 +17,13 @@ type Client = { id: string; name: string; email: string | null; whatsapp: string
 type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; bmi: number | null };
 type Anam = { id: string; updated_at: string; answers: Record<string, unknown> };
 
-const fmtBR = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
-const fmtBRLong = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
+const fmtBR = (d: string | null) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d) : new Date(d).toLocaleDateString("pt-BR");
+const fmtBRLong = (d: string | null) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d, { day: "2-digit", month: "long", year: "numeric" }) : new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
 function calcAge(birth: string | null) {
-  if (!birth) return null;
-  const b = new Date(birth);
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age;
+  return calcAgeFromDateOnly(birth);
 }
+
 
 export default function ClientDetailsModal({ clientId, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumo");
