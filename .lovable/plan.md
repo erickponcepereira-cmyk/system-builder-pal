@@ -1,56 +1,31 @@
-## Diagnóstico (confirmado no banco)
+## O que já verifiquei no ambiente (agora)
 
-Puxei os últimos pagamentos com cartão: **todas as recusas recentes são `cc_rejected_high_risk`** (Flavia 85,00; Helton 100,00; Luana 179,90 ×3; e outros). Não é erro de cartão nem de código — é o antifraude do Mercado Pago reprovando por falta de sinais.
+- O agendamento automático existe e está ativo: job `recurring-card-charges`, todo dia às `0 10 * * *` UTC (07:00 BRT), chamando `/api/public/hooks/recurring-charge`.
+- O endpoint existe e exige a chave pública no header `apikey`.
+- A lógica de cobrança (`chargeDueSubscriptions`) busca assinaturas `active` com `next_charge_at <= hoje`, tenta até 3 vezes (retentativas em 3 e 7 dias) e grava cada tentativa em `recurring_charges`.
+- **Estado atual do banco: 0 produtos recorrentes, 0 cartões salvos, 0 assinaturas, 0 cobranças.** Ou seja: nada foi testado ainda e não há dado nenhum para o cron processar — por isso "não acontece nada" hoje.
 
-Causa: hoje enviamos um payload mínimo (`src/server/mercadopago.server.ts` → `createCardPayment`): valor, token, parcelas, e-mail e CPF. Faltam exatamente os campos que o MP usa para pontuar risco:
+Conclusão: o encanamento está no lugar, mas o fluxo precisa ser exercitado ponta a ponta com um caso real de teste.
 
-- **`device_id`** (fingerprint do `security.js` do MP) — hoje não existe em lugar nenhum do projeto. É o item de maior peso; sem ele, transações caem em high risk com frequência.
-- **`additional_info`**: itens (id, título, quantidade, preço), dados do pagador (nome, sobrenome, telefone, endereço), primeira compra/tempo de conta.
-- **`statement_descriptor`** e `three_ds_mode` (3-D Secure) — o 3DS transfere a validação ao banco e reduz muito a recusa por risco.
+## O que vou implementar para permitir testar
 
-A tabela `saved_payment_cards` já existe no banco (mp_customer_id, mp_card_id, brand, last_four...), mas **não é usada por nenhum arquivo do projeto** — está vazia de código.
+1. **Botão "Cobrar agora" no painel admin de Recorrências** (`RecurringSubscriptionsPanel`): dispara a rotina de cobrança imediatamente para uma assinatura específica, sem esperar o cron das 07h. Mostra o resultado (aprovado/recusado + motivo do Mercado Pago).
+2. **Botão "Antecipar vencimento"**: define `next_charge_at` para hoje numa assinatura de teste, para simular que o mês virou.
+3. **Aba "Histórico de cobranças"** dentro do painel: lista `recurring_charges` (data, tentativa, valor, status, motivo da recusa), que hoje não é visível em lugar nenhum.
+4. Ambos os botões protegidos por verificação de admin no servidor.
 
-## Entrega 1 — Reduzir/eliminar recusas por risco
+## Roteiro de teste que você vai seguir depois
 
-1. **Device fingerprint**: carregar `https://www.mercadopago.com/v2/security.js` com `view="checkout"` no checkout, ler `window.MP_DEVICE_SESSION_ID` e enviar junto ao criar o pagamento; no servidor, mandar no header `X-meli-session-id`.
-2. **Payload completo**: incluir `additional_info` (items da origem — pedido/fatura/produto —, payer com nome, sobrenome, CPF, telefone, endereço quando houver, `registration_date` do perfil) e `statement_descriptor` com o nome da marca.
-3. **3-D Secure**: ativar `three_ds_mode: "optional"`; quando o MP devolver `pending_challenge`, exibir o desafio do banco no checkout e concluir o pagamento após a validação.
-4. **Coleta de dados no checkout**: exigir CPF e telefone válidos antes de habilitar o botão (payload incompleto é penalizado).
-5. **Anti-retentativa**: bloquear novas tentativas no mesmo cartão logo após um `high_risk` (o MP endurece a cada retentativa) e sugerir PIX — hoje já sugerimos, mas sem travar a repetição.
-6. **Painel admin**: uma aba de diagnóstico listando tentativas com `status_detail`, para acompanhar a taxa de aprovação depois da mudança.
-
-Observação honesta: `high_risk` também depende da reputação da conta MP. Os itens acima costumam resolver a maior parte, mas se persistir será preciso abrir chamado no MP pedindo revisão do perfil de risco da conta.
-
-## Entrega 2 — Produtos com cobrança recorrente
-
-Você escolheu os dois modelos. Faremos um motor único com dois trilhos:
-
-**Configuração (novo)**
-- Campos de recorrência nos produtos (loja, parceiro, profissional): `is_recurring`, `interval` (mensal/anual), `recurrence_amount`, `trial/primeira cobrança`, `engine` (`saved_card` ou `mp_preapproval`).
-- Aba "Recorrências" no admin: listar assinaturas ativas, valor, próxima cobrança, status, cancelar/pausar.
-
-**Trilho A — cartão salvo (usa nossas faturas)**
-- Ao pagar com cartão marcando "salvar cartão", criar Customer + Card no MP e gravar em `saved_payment_cards` (só o token do MP, nunca o número).
-- Nova tabela `recurring_subscriptions` (assinante, produto, valor, dia, cartão, status, próxima cobrança) e `recurring_charges` (histórico de tentativas).
-- Rota `/api/public/hooks/recurring-charge` disparada por `pg_cron` diariamente: gera a fatura, cobra o cartão salvo (com device/additional_info), registra sucesso/falha, retenta em D+3 e D+7, e bloqueia/notifica após falha final.
-- Integra com o que já existe: `subscription_invoices` para a mensalidade da plataforma e `apply_annual_activation_*` para anuidade.
-
-**Trilho B — assinatura nativa do MP (Preapproval)**
-- Para planos simples: criar plano/assinatura no MP e redirecionar o usuário para autorizar.
-- O webhook `/api/public/mp/webhook` passa a tratar eventos `preapproval` e `subscription_authorized_payment`, marcando a fatura como paga e disparando as comissões pelo mesmo caminho já usado hoje.
-
-**Tela do usuário**
-- Em Perfil → Assinaturas: cartão cadastrado, próxima cobrança, histórico, trocar cartão, cancelar.
+1. Criar um produto de teste com recorrência ativada e valor baixo (ex.: R$ 1,00 mensal).
+2. Comprar esse produto com cartão real marcando **"Salvar este cartão"**.
+3. Conferir no admin → Recorrências: deve aparecer 1 assinatura `active` com próxima cobrança daqui a 1 mês, e o cartão salvo no perfil do comprador.
+4. Clicar em **"Antecipar vencimento"** e depois em **"Cobrar agora"**.
+5. Resultado esperado: nova linha em Histórico com status `approved`, próxima cobrança empurrada +1 mês, e o pagamento visível no Mercado Pago.
+6. Testar recusa: usar cartão de teste recusado do MP → deve gravar `rejected`, incrementar tentativa e reagendar em 3 dias; após 3 falhas vira `past_due`.
+7. Testar cancelamento: aluno desativa o débito automático no perfil → assinatura vai para `canceled` e deixa de ser cobrada.
 
 ## Detalhes técnicos
 
-- Arquivos principais: `src/server/mercadopago.server.ts`, `src/lib/mercadopago-impl.server.ts`, `src/lib/mercadopago.functions.ts`, `src/components/payments/MercadoPagoCheckout.tsx`, `src/routes/api.public.mp.webhook.ts`.
-- Novos: `src/lib/recurring.functions.ts` + `recurring.server.ts`, rota de cron, painel admin e aba do usuário.
-- Migração: colunas de recorrência nos produtos, tabelas `recurring_subscriptions` e `recurring_charges` com GRANTs e RLS (dono vê o seu; service_role total), RLS na `saved_payment_cards`.
-- Cron via `pg_cron` + `pg_net` chamando a rota pública com `apikey`.
-
-## Ordem sugerida
-
-1. Entrega 1 (risco no cartão) — é o que está sangrando hoje.
-2. Trilho A (cartão salvo + cron) integrado às faturas atuais.
-3. Trilho B (Preapproval) + telas de gestão.
+- Novas server functions em `src/lib/recurring.functions.ts`: `adminForceCharge`, `adminSetNextChargeDate`, `adminListCharges` — todas com checagem de role admin via `context.supabase`.
+- Reaproveita `chargeOne`/`chargeDueSubscriptions` de `recurring.server.ts` (import dinâmico dentro do handler, sem vazar service role para o bundle do cliente).
+- Nenhuma alteração no cron nem no webhook do Mercado Pago.
