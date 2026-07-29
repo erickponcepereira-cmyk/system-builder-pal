@@ -208,14 +208,15 @@ function RootComponent() {
   }, []);
   return (
     <ThemeProvider>
-      <ImageCropProvider>
-        <AuthLoadingGate>
-          <Outlet />
-        </AuthLoadingGate>
-        <Toaster richColors position="top-center" />
-      </ImageCropProvider>
+      <QueryClientProvider client={queryClient}>
+        <ImageCropProvider>
+          <AuthLoadingGate>
+            <Outlet />
+          </AuthLoadingGate>
+          <Toaster richColors position="top-center" />
+        </ImageCropProvider>
+      </QueryClientProvider>
     </ThemeProvider>
-
   );
 }
 
