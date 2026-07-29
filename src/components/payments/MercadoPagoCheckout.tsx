@@ -357,6 +357,19 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
       {tab === "card" && (
         <div className="space-y-3">
           <div ref={cardFormRef} id={cardContainerId} />
+          {allowSaveCard && (
+            <label className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
+              <input type="checkbox" checked={saveCard} onChange={(e) => setSaveCard(e.target.checked)} className="accent-primary" />
+              Salvar este cartão para cobranças automáticas (mensalidade/assinatura)
+            </label>
+          )}
+          {threeDs && (
+            <div className="rounded-lg border border-border bg-background p-2">
+              <p className="mb-2 text-xs text-muted-foreground">Validação de segurança do seu banco:</p>
+              <iframe id="mp-3ds-frame" name="mp-3ds-frame" title="Validação 3-D Secure" className="h-[420px] w-full rounded-md bg-white" />
+            </div>
+          )}
+
           {paymentError && (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
               <p>{paymentError}</p>
