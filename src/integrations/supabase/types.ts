@@ -8106,6 +8106,8 @@ export type Database = {
           is_master_admin: boolean
           is_test: boolean
           last_app_login_at: string | null
+          merged_at: string | null
+          merged_into_profile_id: string | null
           must_reset_password: boolean
           name: string
           neighborhood: string | null
@@ -8143,6 +8145,8 @@ export type Database = {
           is_master_admin?: boolean
           is_test?: boolean
           last_app_login_at?: string | null
+          merged_at?: string | null
+          merged_into_profile_id?: string | null
           must_reset_password?: boolean
           name: string
           neighborhood?: string | null
@@ -8180,6 +8184,8 @@ export type Database = {
           is_master_admin?: boolean
           is_test?: boolean
           last_app_login_at?: string | null
+          merged_at?: string | null
+          merged_into_profile_id?: string | null
           must_reset_password?: boolean
           name?: string
           neighborhood?: string | null
@@ -8200,7 +8206,15 @@ export type Database = {
           withdrawal_blocked?: boolean
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_merged_into_profile_id_fkey"
+            columns: ["merged_into_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_notifications_queue: {
         Row: {
@@ -11019,6 +11033,15 @@ export type Database = {
           _withdrawal_id: string
         }
         Returns: undefined
+      }
+      admin_merge_profiles: {
+        Args: {
+          p_actor?: string
+          p_dry_run?: boolean
+          p_source: string
+          p_target: string
+        }
+        Returns: Json
       }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_reconcile_all_wallets: { Args: never; Returns: number }
