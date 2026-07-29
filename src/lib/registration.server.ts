@@ -578,3 +578,195 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   await ensureStudentForProfile(profile.id, input.uplineCoachId);
   return { ok: true, profileId: profile.id };
 }
+export type UpgradeExistingToCoachInput = {
+  userId: string;
+  uplineCoachId: string;
+  pixKey?: string | null;
+  pixKeyType?: string | null;
+  bankName?: string | null;
+  bankAgency?: string | null;
+  bankAccount?: string | null;
+  bankAccountType?: string | null;
+  completedCoachCourse?: boolean;
+  coachCourseNotes?: string | null;
+  alreadyCoach?: boolean;
+  activationNote?: string | null;
+};
+
+/**
+ * Converte uma conta JÁ EXISTENTE (aluno, parceiro, profissional) em coach,
+ * sem criar novo usuário/perfil — evita contas duplicadas.
+ */
+export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput) {
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role, status")
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (profileErr) throw new Error(profileErr.message);
+  if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
+  if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
+  if (!clean(input.uplineCoachId)) throw new Error("Selecione um coach indicador para continuar.");
+
+  const { data: existingCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id, is_professional, onboarding_stage")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+
+  if (existingCoach?.id && !existingCoach.is_professional) {
+    throw new Error("Sua conta já possui cadastro de coach.");
+  }
+
+  const nowIso = new Date().toISOString();
+  const alreadyCoach = !!input.alreadyCoach;
+  const approvedAt = alreadyCoach ? nowIso : null;
+  const activationPatch = alreadyCoach
+    ? {
+        already_coach: true,
+        activation_paid_at: nowIso,
+        activation_source: "already_coach",
+        activation_note: clean(input.activationNote),
+      }
+    : {};
+
+  const coachPatch = {
+    upline_coach_id: input.uplineCoachId,
+    pix_key: clean(input.pixKey),
+    pix_key_type: clean(input.pixKeyType),
+    bank_name: clean(input.bankName),
+    bank_agency: clean(input.bankAgency),
+    bank_account: clean(input.bankAccount),
+    bank_account_type: clean(input.bankAccountType),
+    completed_coach_course: input.completedCoachCourse ?? false,
+    coach_course_notes: clean(input.coachCourseNotes),
+    approved_at: approvedAt,
+    onboarding_stage: (approvedAt ? "released" : "awaiting_payment") as "released" | "awaiting_payment",
+    ...activationPatch,
+  };
+
+  if (existingCoach?.id) {
+    // Profissional virando também coach comum: mantém a linha existente.
+    const { error: updErr } = await supabaseAdmin
+      .from("coaches")
+      .update(coachPatch)
+      .eq("id", existingCoach.id);
+    if (updErr) throw new Error(updErr.message);
+  } else {
+    let referralCode = makeReferralCode();
+    let lastErr: { code?: string; message: string } | null = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const { error: insErr } = await supabaseAdmin.from("coaches").insert({
+        profile_id: profile.id,
+        referral_code: referralCode,
+        referral_link: `/r/${referralCode}`,
+        is_professional: false,
+        ...coachPatch,
+      });
+      if (!insErr) { lastErr = null; break; }
+      lastErr = insErr;
+      if (insErr.code !== "23505") break;
+      referralCode = makeReferralCode();
+    }
+    if (lastErr) throw new Error(lastErr.message);
+  }
+
+  // Nunca rebaixa contas já ativas — o painel de aluno continua liberado.
+  await supabaseAdmin
+    .from("profiles")
+    .update({ role: "coach", status: profile.status === "active" ? "active" : "pending" })
+    .eq("id", profile.id);
+
+  await ensureStudentForProfile(profile.id, input.uplineCoachId);
+  return { ok: true, profileId: profile.id };
+}
+
+export type UpgradeExistingToPartnerInput = {
+  userId: string;
+  fantasyName: string;
+  document: string;
+  documentType: "cnpj" | "cpf";
+  whatsapp: string;
+  city?: string | null;
+  state?: string | null;
+  businessArea?: string | null;
+  specialty?: string | null;
+  uplineCoachId: string;
+  alreadyPartner?: boolean;
+  activationNote?: string | null;
+};
+
+/**
+ * Converte uma conta JÁ EXISTENTE em empresa parceira, mantendo o mesmo
+ * profile (e o papel atual quando o usuário já é coach/profissional).
+ */
+export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerInput) {
+  const docDigits = digits(input.document);
+  if (!docDigits) throw new Error("Documento inválido.");
+  if (input.documentType === "cpf" && !isValidCPF(docDigits)) {
+    throw new Error("CPF inválido. Verifique os dados informados.");
+  }
+  if (!clean(input.uplineCoachId)) throw new Error("Selecione um coach indicador para continuar.");
+
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (profileErr) throw new Error(profileErr.message);
+  if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
+  if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
+
+  const nowIso = new Date().toISOString();
+  const activationPatch = input.alreadyPartner
+    ? {
+        already_partner: true,
+        activation_paid_at: nowIso,
+        activation_source: "already_partner",
+        activation_note: clean(input.activationNote),
+      }
+    : { already_partner: false };
+
+  const partnerPayload = {
+    profile_id: profile.id,
+    fantasy_name: input.fantasyName.trim(),
+    document: docDigits,
+    document_type: input.documentType,
+    whatsapp: digits(input.whatsapp),
+    city: clean(input.city),
+    state: clean(input.state)?.toUpperCase() || null,
+    business_area: clean(input.businessArea),
+    specialty: clean(input.specialty),
+    status: "pending",
+    upline_coach_id: clean(input.uplineCoachId),
+    ...activationPatch,
+  };
+
+  const { data: existingPartner } = await supabaseAdmin
+    .from("partners")
+    .select("id")
+    .eq("profile_id", profile.id)
+    .eq("document", docDigits)
+    .maybeSingle();
+
+  let partnerId: string | null = null;
+  if (existingPartner?.id) {
+    const { data, error } = await supabaseAdmin
+      .from("partners").update(partnerPayload).eq("id", existingPartner.id).select("id").single();
+    if (error) throw new Error(error.message);
+    partnerId = data?.id ?? null;
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from("partners").insert(partnerPayload).select("id").single();
+    if (error) throw new Error(error.message);
+    partnerId = data?.id ?? null;
+  }
+
+  // Só promove o papel quando a conta ainda é de aluno — coach/profissional mantém o painel atual.
+  if (profile.role === "student") {
+    await supabaseAdmin.from("profiles").update({ role: "partner" }).eq("id", profile.id);
+  }
+
+  await ensureStudentForProfile(profile.id, input.uplineCoachId, partnerId);
+  return { ok: true, profileId: profile.id, partnerId };
+}
