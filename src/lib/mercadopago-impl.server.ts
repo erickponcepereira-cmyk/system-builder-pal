@@ -671,7 +671,7 @@ export async function handleCreateCard(data: CardInput) {
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);
     if ((data.saveCard || data.subscribe) && data.card.token) {
-      const savedCardId = await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+      const savedCardId = await persistSavedCard({ studentId: src.studentId, payer: cardPayer, cardToken: data.card.token, mpResp });
       if (data.subscribe) {
         try {
           const { activateSubscriptionForSource } = await import("./recurrence-source.server");
