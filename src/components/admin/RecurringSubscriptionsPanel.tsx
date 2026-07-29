@@ -123,6 +123,12 @@ export function RecurringSubscriptionsPanel() {
                   <div className="flex gap-1">
                     {s.status !== "cancelled" && (
                       <>
+                        {s.engine === "saved_card" && (
+                          <>
+                            <IconBtn title="Antecipar vencimento para hoje" disabled={busy === s.id} onClick={() => anticipate(s.id)}><CalendarClock className="h-3.5 w-3.5" /></IconBtn>
+                            <IconBtn title="Cobrar agora (teste)" disabled={busy === s.id} onClick={() => chargeNow(s.id)}><Zap className="h-3.5 w-3.5" /></IconBtn>
+                          </>
+                        )}
                         {s.status === "paused" ? (
                           <IconBtn title="Reativar" onClick={() => mut.mutate({ id: s.id, status: "active" })}><Play className="h-3.5 w-3.5" /></IconBtn>
                         ) : (
