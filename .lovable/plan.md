@@ -1,32 +1,34 @@
-Plano para corrigir as recusas recorrentes por análise de risco no Mercado Pago sem quebrar PIX, pagamento único e recorrência:
+## Diagnóstico (verificado no banco)
 
-1. Separar pagador da conta e titular do cartão
-- Hoje o checkout envia para o Mercado Pago o nome/e-mail/documento do cadastro como pagador.
-- Isso aumenta recusa quando o cartão é de outra pessoa, porque o CPF/nome do cadastro pode divergir do titular do cartão.
-- Ajustar o fluxo para usar os dados retornados pelo Brick do Mercado Pago como dados principais do titular/pagador do cartão, e não sobrescrever com o nome do cadastro.
+Consultei os pagamentos recentes em `mercadopago_payments`:
 
-2. Remover enriquecimento antifraude incompatível com cartão de terceiro
-- O backend hoje busca telefone/endereço/data de cadastro pelo e-mail do perfil e injeta em `additional_info.payer`.
-- Para cartão, isso pode piorar o score quando o cartão pertence a outra pessoa.
-- Manter itens/produtos no `additional_info`, mas para cartão só enviar dados de pessoa quando forem consistentes com o titular informado no formulário.
-- Preservar PIX como está, pois PIX não depende da mesma validação de cartão.
+- **Nenhum pagamento de cartão ficou realmente "em análise"**. Os dois testes de hoje (05:30 e 05:35, R$ 1,00) estão gravados como `rejected / cc_rejected_high_risk`. A mensagem "Pagamento em análise. Você será notificado." que apareceu na tela veio do fluxo PIX pendente do mesmo pedido (linha PIX `pending_waiting_transfer` criada às 05:29), não do cartão — ou seja, o usuário vê um aviso que não corresponde ao resultado real do cartão.
+- Nesses dois testes o campo `payer_name` está **nulo** (antes das últimas mudanças vinha preenchido). O Brick `cardPayment` não devolve o nome do titular no `onSubmit` (só `payer.email` e `payer.identification`), então, ao parar de usar o nome do cadastro, o pagamento passou a ser enviado ao Mercado Pago **sem nome do titular** — o que piora ainda mais o score antifraude e mantém o `cc_rejected_high_risk`.
 
-3. Melhorar o payload do cartão
-- Garantir que `payer.email`, `payer.first_name`, `payer.last_name` e `payer.identification` reflitam o titular preenchido no formulário de cartão.
-- Manter `deviceId`, `X-meli-session-id`, `capture: true`, `binary_mode: false` e `three_d_secure_mode: optional` para reduzir risco.
-- Em recorrência inicial, salvar o cartão só depois de pagamento aprovado.
-- Em cobrança recorrente futura com cartão salvo, continuar sem 3DS interativo.
+## O que fazer
 
-4. Ajustar a experiência da tela
-- Adicionar uma orientação curta no checkout informando que, se o cartão for de outra pessoa, os dados no formulário devem ser do titular do cartão.
-- Quando vier `cc_rejected_high_risk`, exibir mensagem clara em português e orientar a tentar com dados do titular, outro cartão ou PIX.
+1. **Recuperar o nome real do titular do cartão (servidor)**
+   - No fluxo de cartão, consultar o token no Mercado Pago (`GET /v1/card_tokens/{token}`), que devolve `cardholder.name` e `cardholder.identification`.
+   - Usar esses dados como `payer` do pagamento (nome + CPF do titular), com fallback para o que veio do formulário e, por último, para o e-mail da conta.
+   - Assim o pagamento volta a ir completo (nome + documento coerentes com o cartão), sem reintroduzir os dados do cadastro de quem está logado.
 
-5. Revisar pontos de entrada
-- Conferir todos os usos de `MercadoPagoCheckout` para garantir que o `defaultPayer` continue útil para e-mail inicial, mas não force nome/CPF errado no cartão.
-- Não mexer em regras financeiras, comissões, carteiras, pedidos ou assinaturas além do necessário para o payload do Mercado Pago.
+2. **Coerência do e-mail do pagador**
+   - Manter o e-mail da conta (obrigatório para o MP), mas garantir que nome/documento venham sempre do titular do cartão.
 
-6. Validação
-- Procurar no código se ainda existe envio de `three_ds_mode` antigo ou dados de cadastro sobrescrevendo titular do cartão.
-- Verificar o fluxo por leitura/checagem focada nos arquivos de Mercado Pago.
+3. **Mensagens corretas no checkout**
+   - Separar o estado do PIX do estado do cartão: só mostrar "Pagamento em análise" quando o próprio cartão retornar `in_process`/`pending`.
+   - Ao gerar um cartão novo em um pedido que já tem PIX pendente, limpar o aviso do PIX para não confundir o resultado.
+   - Exibir sempre o motivo real da recusa (já traduzido) logo abaixo do formulário.
 
-Detalhe técnico: a principal mudança será no `MercadoPagoCheckout.tsx` e no `mercadopago-impl.server.ts`, separando `payer` de cadastro do `cardholder/payer` efetivamente retornado pelo Brick para cartão.
+4. **Diagnóstico rápido de risco**
+   - Registrar no `raw_response`/log qual origem do nome do titular foi usada (token, formulário ou vazio), para conseguir confirmar em produção que o payload está completo.
+
+## Observação importante
+
+`cc_rejected_high_risk` é decisão do antifraude do Mercado Pago. Enviar nome/CPF do titular, device fingerprint e itens (tudo isso já existe ou volta com esta correção) maximiza a chance de aprovação, mas se os cartões testados continuarem recusados pode ser necessário abrir chamado no Mercado Pago para revisão do perfil da conta vendedora — vou indicar isso caso o próximo teste ainda recuse com payload completo.
+
+## Arquivos afetados
+
+- `src/server/mercadopago.server.ts` — nova função para ler o card token.
+- `src/lib/mercadopago-impl.server.ts` — montar o payer a partir do titular do cartão.
+- `src/components/payments/MercadoPagoCheckout.tsx` — mensagens/estado por método de pagamento.

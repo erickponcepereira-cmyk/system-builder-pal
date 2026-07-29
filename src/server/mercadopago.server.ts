@@ -194,6 +194,14 @@ export async function getPayment(mpPaymentId: string) {
   return mpFetch(`/v1/payments/${mpPaymentId}`, { method: "GET" });
 }
 
+/**
+ * Lê o card token gerado no frontend. É a única fonte confiável do NOME do
+ * titular: o Brick de cartão não devolve o cardholder no onSubmit.
+ */
+export async function getCardToken(token: string) {
+  return mpFetch(`/v1/card_tokens/${token}`, { method: "GET" });
+}
+
 // ───────────────────────── Customers & Cards (cartão salvo) ──────────────────
 
 export async function findOrCreateCustomer(email: string, name?: string, doc?: string) {

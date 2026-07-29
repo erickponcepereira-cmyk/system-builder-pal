@@ -41,6 +41,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [cardNotice, setCardNotice] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
   const [saveCard, setSaveCard] = useState(false);
   const [recurrence, setRecurrence] = useState<{ title: string; amount: number; intervalType: string; trialDays: number; allowOneTime: boolean } | null>(null);
@@ -163,9 +164,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
     setPaymentError(null);
   }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
 
-  // Polling do PIX
+  // Polling do PIX — pausa enquanto o usuário está na aba de cartão para não
+  // misturar o status do PIX pendente com o resultado do cartão.
   useEffect(() => {
-    if (!pixData || pixApproved) return;
+    if (!pixData || pixApproved || tab === "card") return;
     const interval = setInterval(async () => {
       const r = await statusFn({ data: { paymentRowId: pixData.rowId } });
       if (r?.status === "approved") {
@@ -174,12 +176,12 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         onApproved?.();
         clearInterval(interval);
       } else if (r?.status === "rejected" || r?.status === "cancelled") {
-        toast.error("Pagamento não aprovado. Tente novamente.");
+        toast.error("Pagamento PIX não aprovado. Tente novamente.");
         clearInterval(interval);
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [pixData, pixApproved, statusFn, onApproved]);
+  }, [pixData, pixApproved, tab, statusFn, onApproved]);
 
   // Inicializa SDK MP para o cartão quando troca pra aba cartão
   useEffect(() => {
@@ -237,7 +239,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               (async () => {
                 setCardLoading(true);
                 setPaymentError(null);
+                setCardNotice(null);
                 setLastStatusDetail(null);
+                toast.dismiss();
                 try {
                   const deviceId = await getDeviceId();
                   const cardPayer = buildCardPayer(cardFormData);
@@ -268,7 +272,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     toast.success("Pagamento aprovado!");
                     onApproved?.();
                   } else if (r.status === "in_process" || r.status === "pending") {
-                    toast.info("Pagamento em análise. Você será notificado.");
+                    const msg = "Pagamento no cartão em análise pelo Mercado Pago. Você será notificado assim que houver resposta.";
+                    setCardNotice(msg);
+                    toast.info(msg);
                   } else {
                     const msg = friendlyPaymentMessage(r.status, r.statusDetail);
                     setPaymentError(msg);
@@ -447,6 +453,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               <p className="mb-2 text-xs text-muted-foreground">Validação de segurança do seu banco:</p>
               <iframe id="mp-3ds-frame" name="mp-3ds-frame" title="Validação 3-D Secure" className="h-[420px] w-full rounded-md bg-white" />
             </div>
+          )}
+
+          {cardNotice && (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">{cardNotice}</p>
           )}
 
           {paymentError && (
