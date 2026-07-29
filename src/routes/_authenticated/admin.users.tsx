@@ -3,9 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, MailCheck } from "lucide-react";
+import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, MailCheck, Merge } from "lucide-react";
 import { ADMIN_PERMISSIONS, type AdminPerms } from "@/lib/admin-permissions";
 import { confirmUserEmailByProfileId } from "@/lib/admin-users.functions";
+import { MergeAccountsPanel } from "@/components/admin/MergeAccountsPanel";
+
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "Administradores — FitMind Club" }] }),
