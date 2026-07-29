@@ -48,8 +48,7 @@ const sections = [
   {
     title: "Negócios",
     items: [
-      { icon: GraduationCap, label: "Quero ser Coach", to: "/student/coach-course" },
-      { icon: GraduationCap, label: "Já sou Coach — vincular à minha conta", to: "/upgrade/coach" },
+      { icon: GraduationCap, label: "Quero ser Coach", to: "/upgrade/coach" },
       { icon: Briefcase, label: "Quero ser Profissional", to: "/student/professional-track" },
       { icon: Building2, label: "Quero ser Empresa Parceira", to: "/student/partner-track" },
     ],
