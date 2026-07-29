@@ -5900,6 +5900,7 @@ export type Database = {
           is_mirrored: boolean
           is_physical: boolean
           is_ready_for_sale: boolean
+          is_recurring: boolean
           kind: string
           mirror_source_product_id: string | null
           monthly_redeem_limit: number | null
@@ -5913,6 +5914,10 @@ export type Database = {
           pix_fee_percentage: number
           price: number | null
           price_input_mode: string
+          recurrence_amount: number | null
+          recurrence_engine: string
+          recurrence_interval: string
+          recurrence_trial_days: number
           redemption_instructions: string | null
           redemption_location_name: string | null
           redemption_location_url: string | null
@@ -5956,6 +5961,7 @@ export type Database = {
           is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
+          is_recurring?: boolean
           kind: string
           mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
@@ -5969,6 +5975,10 @@ export type Database = {
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           redemption_instructions?: string | null
           redemption_location_name?: string | null
           redemption_location_url?: string | null
@@ -6012,6 +6022,7 @@ export type Database = {
           is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
+          is_recurring?: boolean
           kind?: string
           mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
@@ -6025,6 +6036,10 @@ export type Database = {
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           redemption_instructions?: string | null
           redemption_location_name?: string | null
           redemption_location_url?: string | null
@@ -7088,6 +7103,7 @@ export type Database = {
           is_active: boolean
           is_featured: boolean | null
           is_price_range: boolean | null
+          is_recurring: boolean
           kind: string | null
           marketing_plan: number | null
           master_coach_commission: number | null
@@ -7107,6 +7123,10 @@ export type Database = {
           product_type: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max: number | null
           profit_percentage_min: number | null
+          recurrence_amount: number | null
+          recurrence_engine: string
+          recurrence_interval: string
+          recurrence_trial_days: number
           referral_commission_percentage: number | null
           required_badge: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission: number | null
@@ -7176,6 +7196,7 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          is_recurring?: boolean
           kind?: string | null
           marketing_plan?: number | null
           master_coach_commission?: number | null
@@ -7195,6 +7216,10 @@ export type Database = {
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           referral_commission_percentage?: number | null
           required_badge?: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission?: number | null
@@ -7264,6 +7289,7 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          is_recurring?: boolean
           kind?: string | null
           marketing_plan?: number | null
           master_coach_commission?: number | null
@@ -7283,6 +7309,10 @@ export type Database = {
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           referral_commission_percentage?: number | null
           required_badge?: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission?: number | null
@@ -7681,6 +7711,7 @@ export type Database = {
           is_mirrored: boolean
           is_physical: boolean
           is_ready_for_sale: boolean
+          is_recurring: boolean
           is_schedulable: boolean
           kind: string
           mirror_source_product_id: string | null
@@ -7697,6 +7728,10 @@ export type Database = {
           price: number
           price_input_mode: string
           professional_net_amount: number | null
+          recurrence_amount: number | null
+          recurrence_engine: string
+          recurrence_interval: string
+          recurrence_trial_days: number
           redemption_instructions: string | null
           redemption_location_name: string | null
           redemption_location_url: string | null
@@ -7746,6 +7781,7 @@ export type Database = {
           is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
+          is_recurring?: boolean
           is_schedulable?: boolean
           kind?: string
           mirror_source_product_id?: string | null
@@ -7762,6 +7798,10 @@ export type Database = {
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           redemption_instructions?: string | null
           redemption_location_name?: string | null
           redemption_location_url?: string | null
@@ -7811,6 +7851,7 @@ export type Database = {
           is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
+          is_recurring?: boolean
           is_schedulable?: boolean
           kind?: string
           mirror_source_product_id?: string | null
@@ -7827,6 +7868,10 @@ export type Database = {
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           redemption_instructions?: string | null
           redemption_location_name?: string | null
           redemption_location_url?: string | null
@@ -8313,6 +8358,143 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_charges: {
+        Row: {
+          amount: number
+          attempt: number
+          created_at: string
+          id: string
+          invoice_id: string | null
+          mp_payment_id: string | null
+          reference_date: string
+          status: string
+          status_detail: string | null
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          attempt?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          mp_payment_id?: string | null
+          reference_date?: string
+          status?: string
+          status_detail?: string | null
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attempt?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          mp_payment_id?: string | null
+          reference_date?: string
+          status?: string
+          status_detail?: string | null
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_charges_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_subscriptions: {
+        Row: {
+          amount: number
+          billing_day: number
+          cancelled_at: string | null
+          created_at: string
+          engine: string
+          failure_count: number
+          id: string
+          interval_type: string
+          last_charge_at: string | null
+          last_failure_reason: string | null
+          mp_preapproval_id: string | null
+          next_charge_at: string | null
+          product_id: string | null
+          product_kind: string
+          profile_id: string | null
+          saved_card_id: string | null
+          status: string
+          student_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          billing_day?: number
+          cancelled_at?: string | null
+          created_at?: string
+          engine?: string
+          failure_count?: number
+          id?: string
+          interval_type?: string
+          last_charge_at?: string | null
+          last_failure_reason?: string | null
+          mp_preapproval_id?: string | null
+          next_charge_at?: string | null
+          product_id?: string | null
+          product_kind?: string
+          profile_id?: string | null
+          saved_card_id?: string | null
+          status?: string
+          student_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          billing_day?: number
+          cancelled_at?: string | null
+          created_at?: string
+          engine?: string
+          failure_count?: number
+          id?: string
+          interval_type?: string
+          last_charge_at?: string | null
+          last_failure_reason?: string | null
+          mp_preapproval_id?: string | null
+          next_charge_at?: string | null
+          product_id?: string | null
+          product_kind?: string
+          profile_id?: string | null
+          saved_card_id?: string | null
+          status?: string
+          student_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_subscriptions_saved_card_id_fkey"
+            columns: ["saved_card_id"]
+            isOneToOne: false
+            referencedRelation: "saved_payment_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -8837,9 +9019,14 @@ export type Database = {
           image_url: string | null
           is_herbalife: boolean | null
           is_physical: boolean
+          is_recurring: boolean
           name: string
           original_price: number | null
           price: number
+          recurrence_amount: number | null
+          recurrence_engine: string
+          recurrence_interval: string
+          recurrence_trial_days: number
           sort_order: number | null
           status: string | null
           stock: number | null
@@ -8854,9 +9041,14 @@ export type Database = {
           image_url?: string | null
           is_herbalife?: boolean | null
           is_physical?: boolean
+          is_recurring?: boolean
           name: string
           original_price?: number | null
           price: number
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           sort_order?: number | null
           status?: string | null
           stock?: number | null
@@ -8871,9 +9063,14 @@ export type Database = {
           image_url?: string | null
           is_herbalife?: boolean | null
           is_physical?: boolean
+          is_recurring?: boolean
           name?: string
           original_price?: number | null
           price?: number
+          recurrence_amount?: number | null
+          recurrence_engine?: string
+          recurrence_interval?: string
+          recurrence_trial_days?: number
           sort_order?: number | null
           status?: string | null
           stock?: number | null
