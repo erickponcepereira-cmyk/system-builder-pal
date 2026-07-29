@@ -267,7 +267,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
     if (!payer.email) { toast.error("Informe seu e-mail"); return; }
     setGeneratingPix(true);
     try {
-      const r = await pixFn({ data: { source, payer } });
+      const deviceId = await getDeviceId();
+      const r = await pixFn({ data: { source, payer, deviceId } });
+
       if ((r as any)?._error) throw new Error((r as any)._error.replace(/^HANDLER:\s*/i, ""));
       if (!r.qrCode) throw new Error("QR Code não retornado");
       setPixData({ qr: r.qrCode, qrBase64: r.qrCodeBase64 || "", ticketUrl: r.ticketUrl, rowId: r.paymentRowId });
