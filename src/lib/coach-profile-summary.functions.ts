@@ -73,8 +73,11 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
     if (studentIds.length) {
       const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
       const cutoff = await getServerCutoffIso();
+      // Toda compra na loja grava DUAS linhas: o store_order e uma transaction
+      // espelho com purchase_type = 'store_order'. Somar as duas dobrava as vendas.
       let txq = supabaseAdmin
-        .from("transactions").select("gross_amount,paid_at").in("student_id", studentIds).eq("status", "paid");
+        .from("transactions").select("gross_amount,paid_at,purchase_type").in("student_id", studentIds).eq("status", "paid")
+        .neq("purchase_type", "store_order");
       if (cutoff) txq = txq.gte("paid_at", cutoff);
       const { data: txs } = await txq;
       ((txs || []) as Array<{ gross_amount: number }>).forEach((t) => { totalSales += Number(t.gross_amount) || 0; });
@@ -83,6 +86,7 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
       if (cutoff) oq = oq.gte("updated_at", cutoff);
       const { data: orders } = await oq;
       ((orders || []) as Array<{ total_amount: number }>).forEach((o) => { totalSales += Number(o.total_amount) || 0; });
+
     }
     const totalActiveStudents = ownStudents.length;
 
