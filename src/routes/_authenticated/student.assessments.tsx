@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, Activity, ExternalLink, Scale, Droplets, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ChevronLeft, Activity, ExternalLink, Share2, Scale, Droplets, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getOrCreateMyAssessmentShare } from "@/lib/assessment-share.functions";
+import { getShareOrigin } from "@/lib/auth-redirects";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/student/assessments")({
   head: () => ({
@@ -29,13 +33,11 @@ type Row = {
   coach_id: string;
 };
 
-type ShareMap = Record<string, string>;
-
 const fmt = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
 function MyAssessmentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [shares, setShares] = useState<ShareMap>({});
+  const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -64,19 +66,48 @@ function MyAssessmentsPage() {
       if (error) console.error(error);
       const list = (data as any[]) || [];
       setRows(list);
-      if (list.length > 0) {
-        const ids = list.map((r) => r.id);
-        const { data: sh } = await supabase
-          .from("assessment_shares" as never)
-          .select("assessment_id, token")
-          .in("assessment_id" as never, ids as never);
-        const map: ShareMap = {};
-        ((sh as any[]) || []).forEach((s) => { map[s.assessment_id] = s.token; });
-        setShares(map);
-      }
       setLoading(false);
     })();
   }, []);
+
+  const shareFn = useServerFn(getOrCreateMyAssessmentShare);
+
+  const resolveToken = async (assessmentId: string) => {
+    const { token } = await shareFn({ data: { assessmentId } });
+    return `${getShareOrigin()}/resultado/${token}`;
+  };
+
+  const openFull = async (assessmentId: string) => {
+    setBusy(assessmentId);
+    const win = window.open("", "_blank");
+    try {
+      const url = await resolveToken(assessmentId);
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch (e) {
+      win?.close();
+      toast.error((e as Error).message || "Não foi possível abrir a avaliação");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const shareFull = async (assessmentId: string) => {
+    setBusy(assessmentId);
+    try {
+      const url = await resolveToken(assessmentId);
+      if (navigator.share) {
+        try { await navigator.share({ title: "Minha avaliação corporal", url }); } catch { /* cancelado */ }
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado: " + url);
+      }
+    } catch (e) {
+      toast.error((e as Error).message || "Não foi possível gerar o link");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const toggle = (id: string) => {
     setSelected((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
