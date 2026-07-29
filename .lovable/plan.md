@@ -1,36 +1,25 @@
-## O que está acontecendo
+## Problema
 
-Confirmei no banco: o cadastro do Helton está correto — `birthdate = 1995-07-30`.
+Nas duas telas (PIX e cartão), o erro é o mesmo:
 
-O erro é de fuso horário na exibição. O `BirthdaysCard` faz `new Date("1995-07-30")`, e o JavaScript interpreta datas nesse formato como **meia-noite UTC**. No horário de Brasília (UTC-3) isso vira **29/07 às 21h**, ou seja, o sistema "acha" que o aniversário é dia 29 — exatamente o sintoma relatado. O mesmo desvio afeta a idade exibida e qualquer lista/filtro de aniversariantes.
+```
+VALIDATION: too_big, maximum 200, path: ["deviceId"]
+```
 
-Já existe no projeto um utilitário correto (`parseBirthDate` em `src/lib/water-goal.ts`), mas vários componentes não o usam.
+O checkout envia o device fingerprint do Mercado Pago (`MP_DEVICE_SESSION_ID`), gerado pelo `security.js`. Esse identificador hoje vem bem maior que 200 caracteres, mas o validador em `src/lib/mercadopago.functions.ts` limita a 200 (`z.string().max(200)`) tanto em `createPixCheckout` quanto em `createCardCheckout`. Como o antifraude foi ativado, todo pagamento passa a enviar esse valor e ambos os fluxos falham antes de chegar ao Mercado Pago — não é problema de recorrência em si, é o checkout inteiro.
 
 ## Correção
 
-1. **Utilitário único de data-only**
-   Extrair/expor um helper compartilhado (`src/lib/date-only.ts`) com:
-   - `parseDateOnly(s)` → interpreta `YYYY-MM-DD` e `DD/MM/AAAA` no calendário local (sem UTC);
-   - `formatDateOnlyBR(s)` → exibição `dd/mm/aaaa` sem deslocamento;
-   - `calcAge(s)` e `daysUntilBirthday(s)` já corrigidos.
-   Reaproveita a lógica de validação existente em `water-goal.ts`, que passa a importar daí (sem duplicar regra).
+1. **`src/lib/mercadopago.functions.ts`**
+   - Ampliar o limite do `deviceId` para um teto seguro (ex.: 4000 caracteres) nos dois validadores.
+   - Tornar o campo tolerante: se vier maior que o teto ou inválido, seguir sem o device id em vez de derrubar o pagamento (o fingerprint é opcional para o Mercado Pago; ele só melhora a aprovação).
 
-2. **BirthdaysCard** (`src/components/BirthdaysCard.tsx`)
-   - Trocar `parseBd` pela função nova.
-   - Corrigir o cálculo de idade: hoje soma `+1` fora do dia do aniversário de forma incorreta em alguns casos; passar a usar a idade que a pessoa fará na próxima data.
-   - Marcar "Hoje!" comparando dia/mês no calendário local.
+2. **`src/lib/mercadopago.ts` (`getDeviceId`)**
+   - Normalizar o valor retornado (trim) e devolver `null` quando estiver vazio, para não enviar lixo ao servidor.
 
-3. **Varredura das demais telas com o mesmo padrão** (`new Date(birth_date)`), corrigindo cada uma:
-   - `professional/ClientDetailsModal.tsx`
-   - `professional/ProfessionalStudentsTab.tsx`
-   - `professional/ProfessionalStudentDetailsModal.tsx`
-   - `coach/StudentDetailsModal.tsx`
-   - `coach/FitMindShape.tsx` e `coach/tabs/EvaluateTab.tsx` (idade usada em avaliação/protocolo — hoje pode calcular 1 dia a menos e mudar a idade em quem faz aniversário no dia)
+3. **`createCardCheckout`**
+   - Hoje ele lança exceção crua e a mensagem técnica aparece para o usuário ("Pagamento recusado: [{ code: too_big ... }]"). Passar a retornar erro limpo/legível como o fluxo PIX já faz, para que falhas de validação nunca vazem JSON na tela.
 
-4. **Verificação**
-   - Conferir no preview que Helton aparece como "amanhã · 30 jul" hoje (29/07) e como "Hoje!" amanhã.
-   - Rodar consulta de amostra de perfis com aniversário nos próximos dias para conferir a lista.
+## Validação
 
-## Observações técnicas
-
-Nenhuma migração de banco é necessária — os dados estão corretos, o defeito é só de parsing no frontend. Não altero nenhum fluxo de salvamento (inputs `type="date"` já gravam `YYYY-MM-DD` corretamente).
+- Testar compra do produto recorrente de R$ 1,00 nos dois modos: "Assinar (cobrança automática)" com cartão e "Pagar só desta vez" com PIX, confirmando que o QR é gerado e o cartão é processado.

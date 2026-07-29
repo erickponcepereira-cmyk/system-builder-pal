@@ -12,6 +12,19 @@ const SourceSchema = z.object({
   id: z.string().uuid(),
 });
 
+// O device fingerprint do Mercado Pago (security.js) pode ser bem longo.
+// Nunca deve derrubar o pagamento: se vier inválido/gigante, seguimos sem ele.
+const DeviceIdSchema = z
+  .any()
+  .transform((v) => {
+    if (typeof v !== "string") return null;
+    const s = v.trim();
+    if (!s || s.length > 4000) return null;
+    return s;
+  })
+  .nullable()
+  .optional();
+
 const cleanCheckoutError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || "Falha ao criar pagamento");
   return message
@@ -30,7 +43,7 @@ export const createPixCheckout = createServerFn({ method: "POST" })
         data: z.object({
           source: SourceSchema,
           payer: PayerSchema,
-          deviceId: z.string().max(200).optional().nullable(),
+          deviceId: DeviceIdSchema,
         }).parse(input),
       };
     } catch (e: any) {
@@ -49,25 +62,33 @@ export const createPixCheckout = createServerFn({ method: "POST" })
 
 /** Cria pagamento com cartão (token gerado no frontend). */
 export const createCardCheckout = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({
-      source: SourceSchema,
-      payer: PayerSchema,
-      card: z.object({
-        token: z.string(),
-        installments: z.number().int().min(1).max(12),
-        paymentMethodId: z.string(),
-        issuerId: z.string().optional(),
-      }),
-      deviceId: z.string().max(200).optional().nullable(),
-      saveCard: z.boolean().optional(),
-      subscribe: z.boolean().optional(),
-    }).parse(input)
-  )
+  .inputValidator((input: unknown) => {
+    try {
+      return {
+        ok: true as const,
+        data: z.object({
+          source: SourceSchema,
+          payer: PayerSchema,
+          card: z.object({
+            token: z.string(),
+            installments: z.number().int().min(1).max(12),
+            paymentMethodId: z.string(),
+            issuerId: z.string().optional(),
+          }),
+          deviceId: DeviceIdSchema,
+          saveCard: z.boolean().optional(),
+          subscribe: z.boolean().optional(),
+        }).parse(input),
+      };
+    } catch (e: any) {
+      return { ok: false as const, error: "Não foi possível validar os dados do cartão. Tente novamente." };
+    }
+  })
   .handler(async ({ data }) => {
+    if (!data.ok) throw new Error(data.error);
     try {
       const { handleCreateCard } = await import("./mercadopago-impl.server");
-      return await handleCreateCard(data);
+      return await handleCreateCard(data.data);
     } catch (e) {
       throw new Error(cleanCheckoutError(e));
     }
