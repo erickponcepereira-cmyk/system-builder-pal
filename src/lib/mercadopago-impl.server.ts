@@ -493,6 +493,8 @@ export type CardInput = {
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
   deviceId?: string | null;
   saveCard?: boolean;
+  /** Cliente escolheu assinar (cobrança automática recorrente). */
+  subscribe?: boolean;
 };
 
 /**
