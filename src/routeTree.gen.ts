@@ -49,6 +49,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedUpgradeRoleRouteImport } from './routes/_authenticated/upgrade.$role'
 import { Route as AuthenticatedStudentWorkoutRouteImport } from './routes/_authenticated/student.workout'
 import { Route as AuthenticatedStudentSupportRouteImport } from './routes/_authenticated/student.support'
 import { Route as AuthenticatedStudentStoreRouteImport } from './routes/_authenticated/student.store'
@@ -347,6 +348,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedUpgradeRoleRoute =
+  AuthenticatedUpgradeRoleRouteImport.update({
+    id: '/upgrade/$role',
+    path: '/upgrade/$role',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStudentWorkoutRoute =
   AuthenticatedStudentWorkoutRouteImport.update({
     id: '/workout',
@@ -1018,6 +1025,7 @@ export interface FileRoutesByFullPath {
   '/student/store': typeof AuthenticatedStudentStoreRoute
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
+  '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/student/': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1150,6 +1158,7 @@ export interface FileRoutesByTo {
   '/student/store': typeof AuthenticatedStudentStoreRoute
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
+  '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/student': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1286,6 +1295,7 @@ export interface FileRoutesById {
   '/_authenticated/student/store': typeof AuthenticatedStudentStoreRoute
   '/_authenticated/student/support': typeof AuthenticatedStudentSupportRoute
   '/_authenticated/student/workout': typeof AuthenticatedStudentWorkoutRoute
+  '/_authenticated/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/student/': typeof AuthenticatedStudentIndexRoute
   '/_authenticated/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1422,6 +1432,7 @@ export interface FileRouteTypes {
     | '/student/store'
     | '/student/support'
     | '/student/workout'
+    | '/upgrade/$role'
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
@@ -1554,6 +1565,7 @@ export interface FileRouteTypes {
     | '/student/store'
     | '/student/support'
     | '/student/workout'
+    | '/upgrade/$role'
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
@@ -1689,6 +1701,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/store'
     | '/_authenticated/student/support'
     | '/_authenticated/student/workout'
+    | '/_authenticated/upgrade/$role'
     | '/_authenticated/admin/'
     | '/_authenticated/student/'
     | '/_authenticated/admin/coaches/inactivity'
@@ -2029,6 +2042,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/upgrade/$role': {
+      id: '/_authenticated/upgrade/$role'
+      path: '/upgrade/$role'
+      fullPath: '/upgrade/$role'
+      preLoaderRoute: typeof AuthenticatedUpgradeRoleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/student/workout': {
       id: '/_authenticated/student/workout'
@@ -2965,6 +2985,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
   AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRouteWithChildren
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
+  AuthenticatedUpgradeRoleRoute: typeof AuthenticatedUpgradeRoleRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -2975,6 +2996,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,
   AuthenticatedProfessionalRoute: AuthenticatedProfessionalRouteWithChildren,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
+  AuthenticatedUpgradeRoleRoute: AuthenticatedUpgradeRoleRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
