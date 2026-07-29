@@ -836,6 +836,33 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         </div>
       )}
 
+      {(() => {
+        const problemas = products.filter(
+          (p: any) => p.status === "pending" || !p.section_id || !p.category_id,
+        );
+        if (problemas.length === 0) return null;
+        return (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+            <p className="text-xs font-bold text-amber-300">{problemas.length} produto(s) não estão aparecendo na loja</p>
+            <div className="mt-2 space-y-1">
+              {problemas.map((p: any) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setEditing({ ...p })}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg bg-black/25 px-2.5 py-1.5 text-left hover:bg-black/40"
+                >
+                  <span className="truncate text-[11px] text-white">{p.name}</span>
+                  <span className="shrink-0 text-[10px] font-bold text-amber-300">
+                    {p.status === "pending" ? "Aguardando aprovação do admin" : !p.section_id ? "Definir seção da loja" : "Definir subcategoria"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {products.length === 0 && <p className="text-sm text-white/40 text-center py-8">Nenhum produto cadastrado ainda.</p>}
 
       <div className="space-y-2">
