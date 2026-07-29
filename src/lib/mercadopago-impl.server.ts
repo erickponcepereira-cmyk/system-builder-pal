@@ -263,7 +263,9 @@ export async function applyApproval(kind: SourceKind, id: string) {
 export type PixInput = {
   source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
+  deviceId?: string | null;
 };
+
 
 /**
  * Busca pagamento MP existente para o par (source_kind, source_id).
