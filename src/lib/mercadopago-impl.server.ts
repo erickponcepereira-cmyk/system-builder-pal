@@ -585,16 +585,34 @@ export async function handleCreateCard(data: CardInput) {
 
   await assertNotRecentlyHighRisk(data.source.kind, data.source.id);
 
+  // ── Titular do cartão ─────────────────────────────────────────────────────
+  // O Brick não devolve o nome do titular no onSubmit; sem nome o antifraude do
+  // MP recusa por risco. Lemos o cardholder direto do card token.
+  let holderSource = "form";
+  const cardPayer = { ...data.payer };
+  try {
+    const { getCardToken } = await import("@/server/mercadopago.server");
+    const tk: any = await getCardToken(data.card.token);
+    const tkName = String(tk?.cardholder?.name || "").trim();
+    const tkDoc = String(tk?.cardholder?.identification?.number || "").replace(/\D/g, "");
+    if (tkName) { cardPayer.name = tkName; holderSource = "token"; }
+    if (tkDoc.length >= 11) cardPayer.doc = tkDoc;
+  } catch (e) {
+    console.error("[mp card token] não foi possível ler o titular:", e);
+  }
+  if (!cardPayer.name) holderSource = "empty";
+  console.log("[mp card] titular origem:", holderSource, "nome?", !!cardPayer.name, "doc?", !!cardPayer.doc);
+
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
   // Cada submissão de cartão precisa ser uma tentativa nova. Quando o Mercado Pago
   // recusa por risco, reutilizar a mesma chave prende a fatura no mesmo pagamento.
   const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
 
-  const risk = await buildRiskContext(data.source.kind, data.source.id, data.payer, {
+  const risk = await buildRiskContext(data.source.kind, data.source.id, cardPayer, {
     amount: src.amount,
     description: src.description,
-  });
+  }, { includeProfilePayer: false });
 
   const mpResp = await createCardPayment(
     {
@@ -604,13 +622,17 @@ export async function handleCreateCard(data: CardInput) {
       installments: data.card.installments,
       paymentMethodId: data.card.paymentMethodId,
       issuerId: data.card.issuerId,
-      payerEmail: data.payer.email,
-      payerName: data.payer.name,
-      payerDoc: data.payer.doc,
+      payerEmail: cardPayer.email,
+      payerName: cardPayer.name,
+      payerDoc: cardPayer.doc,
       externalReference: externalRef,
       notificationUrl,
       items: risk.items,
-      additionalPayer: risk.additionalPayer,
+      additionalPayer: {
+        ...(risk.additionalPayer || {}),
+        firstName: (cardPayer.name || "").trim().split(/\s+/)[0] || undefined,
+        lastName: (cardPayer.name || "").trim().split(/\s+/).slice(1).join(" ") || undefined,
+      },
       deviceId: data.deviceId ?? null,
       statementDescriptor: "FITMINDCLUB",
       threeDs: data.threeDs !== false,
