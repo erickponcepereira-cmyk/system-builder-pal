@@ -200,7 +200,11 @@ export function CoproductionEditor({
   }
 
   const submit = async () => {
-    if (!picked && (!useCode || !code.trim())) {
+    if (!editingId && !picked) {
+      toast.error("Busque e selecione o coprodutor por e-mail, nome ou código.");
+      return;
+    }
+    if (false && !useCode && !code) {
       toast.error("Selecione um coprodutor ou informe o código.");
       return;
     }
