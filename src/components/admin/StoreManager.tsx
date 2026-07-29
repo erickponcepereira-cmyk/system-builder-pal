@@ -98,6 +98,9 @@ export function StoreManager() {
   const [newSubcategoryFor, setNewSubcategoryFor] = useState<string | null>(null);
   const [newSubcategoryDraft, setNewSubcategoryDraft] = useState<Partial<Subcategory>>({});
 
+  const [sectionCounts, setSectionCounts] = useState<Record<string, number>>({});
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: c }, { data: sc }] = await Promise.all([
@@ -108,6 +111,11 @@ export function StoreManager() {
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
     setSubcategories(((sc as unknown) as Subcategory[]) || []);
+    try {
+      const report = await fetchShelfReport();
+      setSectionCounts(Object.fromEntries(report.section_counts.map((r) => [r.section_id, Number(r.total)])));
+      setCategoryCounts(Object.fromEntries(report.category_counts.map((r) => [r.category_id, Number(r.total)])));
+    } catch { /* diagnóstico é complementar; não bloqueia a tela */ }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
