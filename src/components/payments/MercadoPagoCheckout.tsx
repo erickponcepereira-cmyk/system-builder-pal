@@ -15,8 +15,11 @@ interface Props {
   description: string;
   defaultPayer?: Payer;
   initialMethod?: "pix" | "card";
+  /** Exibe a opção de salvar o cartão para cobranças recorrentes. */
+  allowSaveCard?: boolean;
   onApproved?: () => void;
 }
+
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
