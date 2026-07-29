@@ -20,14 +20,9 @@ const fmtBR = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") 
 const fmtBRLong = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
 
 function calcAge(birth: string | null) {
-  if (!birth) return null;
-  const b = new Date(birth);
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age;
+  return calcAgeFromDateOnly(birth);
 }
+
 
 export default function ClientDetailsModal({ clientId, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumo");

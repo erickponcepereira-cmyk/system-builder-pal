@@ -149,7 +149,7 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
                     <p className="truncate text-[11px] font-semibold text-primary">Coach: {p.coachName}</p>
                   )}
                   <p className="text-[11px] text-muted-foreground">
-                    {dateStr} · {p.age + (p.days === 0 ? 0 : 1)} anos
+                    {dateStr} · {p.age} anos
                     {p.role ? ` · ${p.role}` : ""}
                   </p>
                 </div>

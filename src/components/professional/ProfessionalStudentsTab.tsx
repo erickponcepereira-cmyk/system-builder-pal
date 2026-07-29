@@ -29,10 +29,9 @@ const SKIN_LABEL: Record<string, string> = {
 const GENDER_LABEL: Record<string, string> = { female: "F", male: "M", other: "—" };
 
 function calcAge(birthDate: string | null) {
-  if (!birthDate) return null;
-  const y = new Date(birthDate).getFullYear();
-  return new Date().getFullYear() - y;
+  return calcAgeFromDateOnly(birthDate);
 }
+
 
 export function ProfessionalStudentsTab({ coachId }: Props) {
   const [rows, setRows] = useState<Row[]>([]);

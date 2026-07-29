@@ -57,14 +57,9 @@ const fmtBRLong = (d: string | null | undefined) => d ? new Date(d).toLocaleDate
 const money = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toFixed(2).replace(".", ",")}` : "—";
 
 function calcAge(birth: string | null) {
-  if (!birth) return null;
-  const b = new Date(birth);
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age;
+  return calcAgeFromDateOnly(birth);
 }
+
 
 export default function StudentDetailsModal({ studentId, onClose, initialTab = "resumo" }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab);
