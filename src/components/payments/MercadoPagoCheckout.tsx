@@ -272,7 +272,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     toast.success("Pagamento aprovado!");
                     onApproved?.();
                   } else if (r.status === "in_process" || r.status === "pending") {
-                    toast.info("Pagamento em análise. Você será notificado.");
+                    const msg = "Pagamento no cartão em análise pelo Mercado Pago. Você será notificado assim que houver resposta.";
+                    setCardNotice(msg);
+                    toast.info(msg);
                   } else {
                     const msg = friendlyPaymentMessage(r.status, r.statusDetail);
                     setPaymentError(msg);
