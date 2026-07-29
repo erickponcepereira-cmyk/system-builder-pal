@@ -369,7 +369,14 @@ export function StoreManager() {
                         ))}
                         {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
                       </div>
-                      <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>
+                      <div className="text-xs text-white/40">
+                        /{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s) · {sectionCounts[s.id] ?? 0} produto(s)
+                        {!s.is_active && (sectionCounts[s.id] ?? 0) > 0 && (
+                          <span className="ml-2 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">
+                            inativa — {sectionCounts[s.id]} produto(s) ocultos da loja
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {s.pending && (
                       <button onClick={() => approveSection(s.id)} className="flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/25">
