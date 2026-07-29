@@ -407,6 +407,11 @@ export async function handleCreatePix(data: PixInput) {
   // Pagamento aprovado continua bloqueado por source/status antes de chegar aqui.
   const idempotencyKey = `pix-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
 
+  const risk = await buildRiskContext(data.source.kind, data.source.id, data.payer, {
+    amount: src.amount,
+    description: src.description,
+  });
+
   let mpResp: any;
   try {
     mpResp = await createPixPayment(
@@ -418,9 +423,13 @@ export async function handleCreatePix(data: PixInput) {
         payerDoc: data.payer.doc,
         externalReference: externalRef,
         notificationUrl,
+        items: risk.items,
+        additionalPayer: risk.additionalPayer,
+        deviceId: data.deviceId ?? null,
       },
       idempotencyKey
     );
+
   } catch (e: any) {
     throw new Error(`[DIAG] ${e?.message || String(e)}`);
   }
