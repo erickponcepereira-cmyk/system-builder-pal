@@ -195,6 +195,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setPaymentError(null);
                 setLastStatusDetail(null);
                 try {
+                  const deviceId = await getDeviceId();
                   const r = await cardFn({
                     data: {
                       source,
@@ -209,10 +210,19 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                         paymentMethodId: cardFormData.payment_method_id,
                         issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
                       },
+                      deviceId,
+                      saveCard: saveCardRef.current,
                     },
                   });
                   console.log("[MP card response]", r);
-                  if (r.status === "approved") {
+                  if ((r as any)?.threeDs?.externalResourceUrl && (r as any)?.threeDs?.creq) {
+                    setThreeDs({
+                      url: (r as any).threeDs.externalResourceUrl,
+                      creq: (r as any).threeDs.creq,
+                      rowId: r.paymentRowId,
+                    });
+                    toast.info("Validação do banco necessária. Conclua na janela de segurança.");
+                  } else if (r.status === "approved") {
                     toast.success("Pagamento aprovado!");
                     onApproved?.();
                   } else if (r.status === "in_process" || r.status === "pending") {
@@ -223,6 +233,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     setLastStatusDetail(String(r.statusDetail || ""));
                     toast.error(msg, { duration: 9000 });
                   }
+
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
                   const msg = friendlyPaymentMessage("rejected", err?.message) || "Falha no pagamento. Verifique os dados do cartão.";
