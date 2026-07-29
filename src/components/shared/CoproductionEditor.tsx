@@ -87,7 +87,7 @@ export function CoproductionEditor({
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [productId]);
 
   const resetForm = () => {
-    setPicked(null); setCode(""); setUseCode(false);
+    setPicked(null); setCode(""); setUseCode(false); setSearch(""); setResults([]);
     setSplitKind("percent"); setPercent(""); setAmount("");
     setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
     setEditingId(null);
@@ -99,14 +99,44 @@ export function CoproductionEditor({
     if (candidates.length === 0) {
       try {
         const r = await listCandidates({ data: { excludeType: creatorType, excludeId: creatorId } });
-        setCandidates(r.items);
+        setCandidates(r.items.map((c) => ({ ...c, emailMasked: null, code: null })));
       } catch (e: any) { toast.error(e.message); }
     }
   };
 
+  // Busca unificada: e-mail, nome ou código (debounce)
+  useEffect(() => {
+    const term = search.trim();
+    if (!openModal || editingId || picked) return;
+    if (term.length < 3) { setResults([]); setSearching(false); return; }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const looksLikeCode = /^[A-Za-z0-9]{6,12}$/.test(term) && !term.includes("@");
+        const hits: CoproducerHit[] = [];
+        if (looksLikeCode) {
+          const byCode = await resolveCode({ data: { code: term } });
+          if (byCode && !(byCode.type === creatorType && byCode.id === creatorId)) hits.push(byCode);
+        }
+        const r = await searchCandidates({ data: { query: term, excludeType: creatorType, excludeId: creatorId } });
+        r.items.forEach((it) => {
+          if (!hits.some((h) => h.type === it.type && h.id === it.id)) hits.push(it);
+        });
+        if (!cancelled) setResults(hits);
+      } catch (e: any) {
+        if (!cancelled) { setResults([]); toast.error(e.message); }
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, openModal, editingId, picked]);
+
   const openEdit = (it: any) => {
     setEditingId(it.id);
-    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName });
+    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName, emailMasked: null, code: null });
     setUseCode(false); setCode("");
     setSplitKind(it.split_kind === "fixed" ? "fixed" : "percent");
     setPercent(it.split_kind === "percent" ? String(Number(it.percent_of_net || 0)) : "");
