@@ -213,35 +213,7 @@ export async function chargeDueSubscriptions() {
 
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const sub of subs) {
-    try {
-      await chargeOne(sub);
-      await supabaseAdmin
-        .from("recurring_subscriptions" as never)
-        .update({
-          failure_count: 0,
-          last_failure_reason: null,
-          last_charge_at: new Date().toISOString(),
-          next_charge_at: nextChargeDate(sub),
-        } as never)
-        .eq("id" as never, sub.id as never);
-      results.push({ id: sub.id, ok: true });
-    } catch (e: any) {
-      const failures = sub.failure_count + 1;
-      const exhausted = failures >= MAX_ATTEMPTS;
-      const retryIn = RETRY_DAYS[Math.min(failures - 1, RETRY_DAYS.length - 1)];
-      const retryDate = new Date();
-      retryDate.setDate(retryDate.getDate() + retryIn);
-      await supabaseAdmin
-        .from("recurring_subscriptions" as never)
-        .update({
-          failure_count: failures,
-          last_failure_reason: String(e?.message || e).slice(0, 300),
-          status: exhausted ? "past_due" : "active",
-          next_charge_at: exhausted ? null : retryDate.toISOString().slice(0, 10),
-        } as never)
-        .eq("id" as never, sub.id as never);
-      results.push({ id: sub.id, ok: false, error: String(e?.message || e) });
-    }
+    results.push(await runChargeCycle(sub));
   }
   return { processed: subs.length, results };
 }
