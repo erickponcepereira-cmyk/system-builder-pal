@@ -12,6 +12,19 @@ const SourceSchema = z.object({
   id: z.string().uuid(),
 });
 
+// O device fingerprint do Mercado Pago (security.js) pode ser bem longo.
+// Nunca deve derrubar o pagamento: se vier inválido/gigante, seguimos sem ele.
+const DeviceIdSchema = z
+  .any()
+  .transform((v) => {
+    if (typeof v !== "string") return null;
+    const s = v.trim();
+    if (!s || s.length > 4000) return null;
+    return s;
+  })
+  .nullable()
+  .optional();
+
 const cleanCheckoutError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || "Falha ao criar pagamento");
   return message
