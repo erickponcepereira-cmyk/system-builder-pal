@@ -217,3 +217,33 @@ export const adminSetRecurringStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Admin (teste): define a próxima cobrança para uma data (padrão: hoje). */
+export const adminSetNextChargeDate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; date?: string }) =>
+    z.object({ id: z.string().uuid(), date: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Sem permissão");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const target = data.date || new Date().toISOString().slice(0, 10);
+    const { error } = await supabaseAdmin
+      .from("recurring_subscriptions" as never)
+      .update({ next_charge_at: target, status: "active" } as never)
+      .eq("id" as never, data.id as never);
+    if (error) throw new Error(error.message);
+    return { ok: true, next_charge_at: target };
+  });
+
+/** Admin (teste): dispara a cobrança de uma assinatura imediatamente. */
+export const adminForceCharge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Sem permissão");
+    const { chargeSubscriptionNow } = await import("./recurring.server");
+    const res = await chargeSubscriptionNow(data.id);
+    return res;
+  });

@@ -153,6 +153,52 @@ async function chargeOne(sub: Sub) {
   return { ok: true };
 }
 
+/** Executa a cobrança de uma assinatura (com update de próxima data / falhas). */
+async function runChargeCycle(sub: Sub) {
+  try {
+    await chargeOne(sub);
+    await supabaseAdmin
+      .from("recurring_subscriptions" as never)
+      .update({
+        failure_count: 0,
+        last_failure_reason: null,
+        last_charge_at: new Date().toISOString(),
+        next_charge_at: nextChargeDate(sub),
+      } as never)
+      .eq("id" as never, sub.id as never);
+    return { id: sub.id, ok: true as const };
+  } catch (e: any) {
+    const failures = sub.failure_count + 1;
+    const exhausted = failures >= MAX_ATTEMPTS;
+    const retryIn = RETRY_DAYS[Math.min(failures - 1, RETRY_DAYS.length - 1)];
+    const retryDate = new Date();
+    retryDate.setDate(retryDate.getDate() + retryIn);
+    await supabaseAdmin
+      .from("recurring_subscriptions" as never)
+      .update({
+        failure_count: failures,
+        last_failure_reason: String(e?.message || e).slice(0, 300),
+        status: exhausted ? "past_due" : "active",
+        next_charge_at: exhausted ? null : retryDate.toISOString().slice(0, 10),
+      } as never)
+      .eq("id" as never, sub.id as never);
+    return { id: sub.id, ok: false as const, error: String(e?.message || e) };
+  }
+}
+
+/** Cobra uma assinatura específica imediatamente (usado no teste manual do admin). */
+export async function chargeSubscriptionNow(id: string) {
+  const { data } = await supabaseAdmin
+    .from("recurring_subscriptions" as never)
+    .select("*" as never)
+    .eq("id" as never, id as never)
+    .maybeSingle();
+  const sub = data as unknown as Sub | null;
+  if (!sub) throw new Error("Assinatura não encontrada");
+  if ((sub as any).engine !== "saved_card") throw new Error("Só é possível forçar cobrança de assinaturas com cartão salvo");
+  return runChargeCycle(sub);
+}
+
 /** Executado diariamente pelo cron: cobra todas as assinaturas vencidas. */
 export async function chargeDueSubscriptions() {
   const today = new Date().toISOString().slice(0, 10);
@@ -167,35 +213,7 @@ export async function chargeDueSubscriptions() {
 
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const sub of subs) {
-    try {
-      await chargeOne(sub);
-      await supabaseAdmin
-        .from("recurring_subscriptions" as never)
-        .update({
-          failure_count: 0,
-          last_failure_reason: null,
-          last_charge_at: new Date().toISOString(),
-          next_charge_at: nextChargeDate(sub),
-        } as never)
-        .eq("id" as never, sub.id as never);
-      results.push({ id: sub.id, ok: true });
-    } catch (e: any) {
-      const failures = sub.failure_count + 1;
-      const exhausted = failures >= MAX_ATTEMPTS;
-      const retryIn = RETRY_DAYS[Math.min(failures - 1, RETRY_DAYS.length - 1)];
-      const retryDate = new Date();
-      retryDate.setDate(retryDate.getDate() + retryIn);
-      await supabaseAdmin
-        .from("recurring_subscriptions" as never)
-        .update({
-          failure_count: failures,
-          last_failure_reason: String(e?.message || e).slice(0, 300),
-          status: exhausted ? "past_due" : "active",
-          next_charge_at: exhausted ? null : retryDate.toISOString().slice(0, 10),
-        } as never)
-        .eq("id" as never, sub.id as never);
-      results.push({ id: sub.id, ok: false, error: String(e?.message || e) });
-    }
+    results.push(await runChargeCycle(sub));
   }
   return { processed: subs.length, results };
 }
