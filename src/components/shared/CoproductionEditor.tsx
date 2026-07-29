@@ -8,6 +8,9 @@ import {
   cancelCoproduction,
   updateCoproduction,
   listCoproducerCandidates,
+  searchCoproducerCandidates,
+  resolveCoproducerCode,
+  type CoproducerHit,
   type OwnerType,
 } from "@/lib/collab.functions";
 
