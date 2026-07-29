@@ -96,5 +96,5 @@ export const adminMergeProfiles = createServerFn({ method: "POST" })
     } as never);
     if (error) throw new Error(error.message);
 
-    return { ok: true, dryRun: data.dryRun, result: result as Record<string, unknown> };
+    return { ok: true, dryRun: data.dryRun, result: JSON.stringify(result ?? {}) };
   });
