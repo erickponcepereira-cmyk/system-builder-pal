@@ -494,6 +494,10 @@ export type CardInput = {
   source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
+  /** Titular do cartão informado no formulário (pode ser outra pessoa). */
+  holder?: { name?: string; doc?: string };
+  /** Metadados devolvidos pelo Brick (bin / últimos 4 / nome impresso). */
+  cardMeta?: { bin?: string; lastFour?: string; cardholderName?: string };
   deviceId?: string | null;
   saveCard?: boolean;
   /** Desliga 3DS para cobranças off-session com cartão salvo. */
@@ -529,11 +533,16 @@ async function assertNotRecentlyHighRisk(kind: SourceKind, id: string) {
 async function persistSavedCard(params: {
   studentId: string | null;
   payer: { email: string; name?: string; doc?: string };
+  /** Titular real do cartão — usado nas cobranças recorrentes. */
+  holder?: { name?: string; doc?: string };
+  cardMeta?: { bin?: string; lastFour?: string; cardholderName?: string };
   cardToken: string;
   mpResp: any;
 }): Promise<string | null> {
   try {
     if (!params.studentId) return null;
+    const holderName = params.holder?.name || params.cardMeta?.cardholderName || params.payer.name || null;
+    const holderDoc = (params.holder?.doc || params.payer.doc || "").replace(/\D/g, "") || null;
     const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
     const customer = await findOrCreateCustomer(params.payer.email, params.payer.name, params.payer.doc);
     const card = await createCustomerCard(String(customer.id), params.cardToken);
@@ -542,10 +551,11 @@ async function persistSavedCard(params: {
       mp_customer_id: String(customer.id),
       mp_card_id: String(card.id),
       payer_email: params.payer.email,
-      cardholder_name: card?.cardholder?.name || params.payer.name || null,
+      cardholder_name: card?.cardholder?.name || holderName,
+      cardholder_doc: card?.cardholder?.identification?.number || holderDoc,
       brand: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
-      last_four: card?.last_four_digits || null,
-      first_six: card?.first_six_digits || null,
+      last_four: card?.last_four_digits || params.cardMeta?.lastFour || null,
+      first_six: card?.first_six_digits || params.cardMeta?.bin || null,
       expiration_month: card?.expiration_month || null,
       expiration_year: card?.expiration_year || null,
       payment_method_id: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
@@ -586,22 +596,33 @@ export async function handleCreateCard(data: CardInput) {
   await assertNotRecentlyHighRisk(data.source.kind, data.source.id);
 
   // ── Titular do cartão ─────────────────────────────────────────────────────
-  // O Brick não devolve o nome do titular no onSubmit; sem nome o antifraude do
-  // MP recusa por risco. Lemos o cardholder direto do card token.
-  let holderSource = "form";
+  // O titular pode ser outra pessoa (cônjuge, pai, sócio). Prioridade:
+  // 1) dados informados no formulário; 2) cardholder do card token; 3) conta.
+  // O e-mail do payer continua sendo o da conta.
+  let holderSource = "conta";
   const cardPayer = { ...data.payer };
-  try {
-    const { getCardToken } = await import("@/server/mercadopago.server");
-    const tk: any = await getCardToken(data.card.token);
-    const tkName = String(tk?.cardholder?.name || "").trim();
-    const tkDoc = String(tk?.cardholder?.identification?.number || "").replace(/\D/g, "");
-    if (tkName) { cardPayer.name = tkName; holderSource = "token"; }
-    if (tkDoc.length >= 11) cardPayer.doc = tkDoc;
-  } catch (e) {
-    console.error("[mp card token] não foi possível ler o titular:", e);
+  const formHolderName = String(data.holder?.name || "").trim();
+  const formHolderDoc = String(data.holder?.doc || "").replace(/\D/g, "");
+  if (formHolderName) { cardPayer.name = formHolderName; holderSource = "form"; }
+  if (formHolderDoc.length >= 11) cardPayer.doc = formHolderDoc;
+  if (!formHolderName || formHolderDoc.length < 11) {
+    try {
+      const { getCardToken } = await import("@/server/mercadopago.server");
+      const tk: any = await getCardToken(data.card.token);
+      const tkName = String(tk?.cardholder?.name || "").trim();
+      const tkDoc = String(tk?.cardholder?.identification?.number || "").replace(/\D/g, "");
+      if (!formHolderName && tkName) { cardPayer.name = tkName; holderSource = "token"; }
+      if (formHolderDoc.length < 11 && tkDoc.length >= 11) cardPayer.doc = tkDoc;
+    } catch (e) {
+      console.error("[mp card token] não foi possível ler o titular:", e);
+    }
   }
   if (!cardPayer.name) holderSource = "empty";
-  console.log("[mp card] titular origem:", holderSource, "nome?", !!cardPayer.name, "doc?", !!cardPayer.doc);
+  console.log(
+    "[mp card] titular origem:", holderSource,
+    "nome?", !!cardPayer.name, "doc?", !!cardPayer.doc,
+    "bin:", data.cardMeta?.bin || "-", "final:", data.cardMeta?.lastFour || "-",
+  );
 
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
@@ -609,10 +630,13 @@ export async function handleCreateCard(data: CardInput) {
   // recusa por risco, reutilizar a mesma chave prende a fatura no mesmo pagamento.
   const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
 
-  const risk = await buildRiskContext(data.source.kind, data.source.id, cardPayer, {
+  // `payer` leva o TITULAR do cartão; `additional_info.payer` leva o perfil de
+  // compra do COMPRADOR (telefone, endereço, data de cadastro), que é onde o
+  // Mercado Pago espera esses sinais.
+  const risk = await buildRiskContext(data.source.kind, data.source.id, data.payer, {
     amount: src.amount,
     description: src.description,
-  }, { includeProfilePayer: false });
+  }, { includeProfilePayer: true });
 
   const mpResp = await createCardPayment(
     {
@@ -628,11 +652,7 @@ export async function handleCreateCard(data: CardInput) {
       externalReference: externalRef,
       notificationUrl,
       items: risk.items,
-      additionalPayer: {
-        ...(risk.additionalPayer || {}),
-        firstName: (cardPayer.name || "").trim().split(/\s+/)[0] || undefined,
-        lastName: (cardPayer.name || "").trim().split(/\s+/).slice(1).join(" ") || undefined,
-      },
+      additionalPayer: risk.additionalPayer,
       deviceId: data.deviceId ?? null,
       statementDescriptor: "FITMINDCLUB",
       threeDs: data.threeDs !== false,
@@ -671,7 +691,14 @@ export async function handleCreateCard(data: CardInput) {
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);
     if ((data.saveCard || data.subscribe) && data.card.token) {
-      const savedCardId = await persistSavedCard({ studentId: src.studentId, payer: cardPayer, cardToken: data.card.token, mpResp });
+      const savedCardId = await persistSavedCard({
+        studentId: src.studentId,
+        payer: data.payer,
+        holder: { name: cardPayer.name, doc: cardPayer.doc },
+        cardMeta: data.cardMeta,
+        cardToken: data.card.token,
+        mpResp,
+      });
       if (data.subscribe) {
         try {
           const { activateSubscriptionForSource } = await import("./recurrence-source.server");

@@ -40,6 +40,13 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
 export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
+  // Titular do cartão: pré-preenchido com o comprador, mas editável.
+  const [holder, setHolder] = useState<{ name: string; doc: string }>({
+    name: defaultPayer?.name || "",
+    doc: defaultPayer?.doc || "",
+  });
+  const [holderError, setHolderError] = useState<string | null>(null);
+  const holderRef = useRef<{ name: string; doc: string }>({ name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [cardNotice, setCardNotice] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
@@ -96,6 +103,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
   useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
   useEffect(() => { subscribeRef.current = mode === "subscribe"; }, [mode]);
+  useEffect(() => { holderRef.current = holder; }, [holder]);
 
   // Produto de assinatura? Oferece as duas formas de pagamento ao cliente.
   useEffect(() => {
@@ -159,10 +167,12 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
   useEffect(() => {
     setPayer(defaultPayer || { email: "", name: "", doc: "" });
+    setHolder({ name: defaultPayer?.name || "", doc: defaultPayer?.doc || "" });
     setPixData(null);
     setPixApproved(false);
     setPaymentError(null);
   }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
+
 
   // Polling do PIX — pausa enquanto o usuário está na aba de cartão para não
   // misturar o status do PIX pendente com o resultado do cartão.
@@ -233,7 +243,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               setPaymentError(`[${err?.type || "erro"}] ${msg}`);
               toast.error(msg, { duration: 8000 });
             },
-            onSubmit: (cardFormData: any) => {
+            onSubmit: (cardFormData: any, additionalData?: any) => {
             // O Brick exige uma Promise; resolva sempre para liberar o loading do botão
             return new Promise<void>((resolve) => {
               (async () => {
@@ -241,19 +251,41 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setPaymentError(null);
                 setCardNotice(null);
                 setLastStatusDetail(null);
+                setHolderError(null);
                 toast.dismiss();
                 try {
+                  const holderNow = holderRef.current;
+                  const holderName = String(holderNow.name || "").trim();
+                  const holderDoc = String(holderNow.doc || "").replace(/\D/g, "");
+                  if (holderName.split(/\s+/).filter(Boolean).length < 2) {
+                    setHolderError("Informe o nome completo do titular, como impresso no cartão.");
+                    setCardLoading(false);
+                    resolve();
+                    return;
+                  }
+                  if (holderDoc.length !== 11 && holderDoc.length !== 14) {
+                    setHolderError("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido do titular.");
+                    setCardLoading(false);
+                    resolve();
+                    return;
+                  }
                   const deviceId = await getDeviceId();
                   const cardPayer = buildCardPayer(cardFormData);
                   const r = await cardFn({
                     data: {
                       source,
-                      payer: cardPayer,
+                      payer: { ...cardPayer, email: cardPayer.email || payer.email },
                       card: {
                         token: cardFormData.token,
                         installments: Number(cardFormData.installments || 1),
                         paymentMethodId: cardFormData.payment_method_id,
                         issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
+                      },
+                      holder: { name: holderName, doc: holderDoc },
+                      cardMeta: {
+                        bin: additionalData?.bin ? String(additionalData.bin).slice(0, 10) : undefined,
+                        lastFour: additionalData?.lastFourDigits ? String(additionalData.lastFourDigits).slice(0, 4) : undefined,
+                        cardholderName: additionalData?.cardholderName ? String(additionalData.cardholderName).slice(0, 120) : undefined,
                       },
                       deviceId,
                       saveCard: saveCardRef.current || subscribeRef.current,
@@ -433,10 +465,30 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
       {tab === "card" && (
         <div className="space-y-3">
-          <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-            Se o cartão for de outra pessoa, preencha no formulário os dados do titular do cartão.
-          </p>
+          <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
+            <p className="text-xs font-bold text-foreground">Dados do titular do cartão</p>
+            <p className="text-[11px] text-muted-foreground">
+              Cartão em nome de outra pessoa? Ajuste os dados do titular — precisam ser exatamente os do cartão.
+            </p>
+            <input
+              type="text"
+              placeholder="Nome completo do titular (como impresso no cartão)"
+              value={holder.name}
+              onChange={(e) => setHolder((h) => ({ ...h, name: e.target.value }))}
+              className="w-full rounded-lg bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="CPF ou CNPJ do titular"
+              value={holder.doc}
+              onChange={(e) => setHolder((h) => ({ ...h, doc: e.target.value }))}
+              className="w-full rounded-lg bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            {holderError && <p className="text-xs font-semibold text-destructive">{holderError}</p>}
+          </div>
           <div ref={cardFormRef} id={cardContainerId} />
+
           {recurrence && mode === "subscribe" && (
             <p className="rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
               Cartão será salvo para a cobrança automática de {money(recurrence.amount)} / {recurrence.intervalType === "yearly" ? "ano" : "mês"}.

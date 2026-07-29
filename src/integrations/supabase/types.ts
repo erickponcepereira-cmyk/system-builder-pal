@@ -8435,6 +8435,8 @@ export type Database = {
           last_failure_reason: string | null
           mp_preapproval_id: string | null
           next_charge_at: string | null
+          pending_charge_id: string | null
+          pending_since: string | null
           product_id: string | null
           product_kind: string
           profile_id: string | null
@@ -8458,6 +8460,8 @@ export type Database = {
           last_failure_reason?: string | null
           mp_preapproval_id?: string | null
           next_charge_at?: string | null
+          pending_charge_id?: string | null
+          pending_since?: string | null
           product_id?: string | null
           product_kind?: string
           profile_id?: string | null
@@ -8481,6 +8485,8 @@ export type Database = {
           last_failure_reason?: string | null
           mp_preapproval_id?: string | null
           next_charge_at?: string | null
+          pending_charge_id?: string | null
+          pending_since?: string | null
           product_id?: string | null
           product_kind?: string
           profile_id?: string | null
@@ -8701,6 +8707,7 @@ export type Database = {
       saved_payment_cards: {
         Row: {
           brand: string | null
+          cardholder_doc: string | null
           cardholder_name: string | null
           created_at: string
           expiration_month: number | null
@@ -8719,6 +8726,7 @@ export type Database = {
         }
         Insert: {
           brand?: string | null
+          cardholder_doc?: string | null
           cardholder_name?: string | null
           created_at?: string
           expiration_month?: number | null
@@ -8737,6 +8745,7 @@ export type Database = {
         }
         Update: {
           brand?: string | null
+          cardholder_doc?: string | null
           cardholder_name?: string | null
           created_at?: string
           expiration_month?: number | null

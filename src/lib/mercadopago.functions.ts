@@ -43,6 +43,15 @@ export const createCardCheckout = createServerFn({ method: "POST" })
             paymentMethodId: z.string(),
             issuerId: z.string().optional(),
           }),
+          holder: z.object({
+            name: z.string().trim().max(120).optional(),
+            doc: z.string().trim().max(30).optional(),
+          }).optional(),
+          cardMeta: z.object({
+            bin: z.string().max(10).optional(),
+            lastFour: z.string().max(4).optional(),
+            cardholderName: z.string().max(120).optional(),
+          }).optional(),
           deviceId: DeviceIdSchema,
           saveCard: z.boolean().optional(),
           subscribe: z.boolean().optional(),
