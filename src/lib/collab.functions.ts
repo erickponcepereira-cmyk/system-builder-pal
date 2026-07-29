@@ -677,3 +677,105 @@ export const getCollabPendingCounts = createServerFn({ method: "POST" })
     const calendarShares = Number(shares.count || 0);
     return { coproductions, calendarShares, total: coproductions + calendarShares };
   });
+
+// ---------- busca de coprodutores (e-mail / nome / código) ----------
+
+function maskEmail(email?: string | null): string | null {
+  if (!email) return null;
+  const [user, domain] = email.split("@");
+  if (!domain) return null;
+  const head = user.slice(0, 3);
+  return `${head}${user.length > 3 ? "***" : ""}@${domain}`;
+}
+
+export type CoproducerHit = {
+  type: OwnerType;
+  id: string;
+  name: string;
+  emailMasked: string | null;
+  code: string | null;
+};
+
+async function assertCollabActor(supabase: any, userId: string) {
+  const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
+  if (!profile?.id) throw new Error("Perfil não encontrado.");
+  return profile.id as string;
+}
+
+/** Busca coprodutores por e-mail, nome ou código — sem limite de rede. */
+export const searchCoproducerCandidates = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { query: string; excludeType?: OwnerType; excludeId?: string }) => d)
+  .handler(async ({ context, data }): Promise<{ items: CoproducerHit[] }> => {
+    const term = (data.query || "").trim();
+    if (term.length < 3) return { items: [] };
+    await assertCollabActor(context.supabase as any, context.userId);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+
+    const [{ data: profs }, { data: parts }] = await Promise.all([
+      admin
+        .from("coaches")
+        .select("id, profiles:profile_id(name, email)")
+        .eq("is_professional", true)
+        .not("approved_at", "is", null)
+        .is("blocked_at", null)
+        .limit(200),
+      admin
+        .from("partners")
+        .select("id, fantasy_name, profiles:profile_id(name, email)")
+        .eq("status", "approved")
+        .limit(200),
+    ]);
+
+    const t = term.toLowerCase();
+    const items: CoproducerHit[] = [];
+
+    (profs || []).forEach((c: any) => {
+      const name = c.profiles?.name || "";
+      const email = c.profiles?.email || "";
+      if (!name.toLowerCase().includes(t) && !email.toLowerCase().includes(t)) return;
+      if (data.excludeType === "professional" && data.excludeId === c.id) return;
+      items.push({ type: "professional", id: c.id, name: name || "Profissional", emailMasked: maskEmail(email), code: null });
+    });
+
+    (parts || []).forEach((p: any) => {
+      const name = p.fantasy_name || p.profiles?.name || "";
+      const email = p.profiles?.email || "";
+      if (!name.toLowerCase().includes(t) && !email.toLowerCase().includes(t)) return;
+      if (data.excludeType === "partner" && data.excludeId === p.id) return;
+      items.push({ type: "partner", id: p.id, name: name || "Parceiro", emailMasked: maskEmail(email), code: null });
+    });
+
+    items.sort((a, b) => a.name.localeCompare(b.name));
+    return { items: items.slice(0, 20) };
+  });
+
+/** Resolve um código de compartilhamento e devolve o nome do dono na hora. */
+export const resolveCoproducerCode = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { code: string }) => d)
+  .handler(async ({ context, data }): Promise<CoproducerHit | null> => {
+    const code = (data.code || "").trim().toUpperCase();
+    if (code.length < 4) return null;
+    await assertCollabActor(context.supabase as any, context.userId);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const { data: row } = await admin
+      .from("entity_share_codes")
+      .select("owner_type, owner_id")
+      .eq("code", code)
+      .maybeSingle();
+    if (!row) return null;
+
+    if (row.owner_type === "partner") {
+      const { data: p } = await admin.from("partners").select("id, fantasy_name, profiles:profile_id(name, email)").eq("id", row.owner_id).maybeSingle();
+      if (!p) return null;
+      return { type: "partner", id: p.id, name: p.fantasy_name || p.profiles?.name || "Parceiro", emailMasked: maskEmail(p.profiles?.email), code };
+    }
+    const { data: c } = await admin.from("coaches").select("id, profiles:profile_id(name, email)").eq("id", row.owner_id).maybeSingle();
+    if (!c) return null;
+    return { type: "professional", id: c.id, name: c.profiles?.name || "Profissional", emailMasked: maskEmail(c.profiles?.email), code };
+  });

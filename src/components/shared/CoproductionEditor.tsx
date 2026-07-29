@@ -8,6 +8,9 @@ import {
   cancelCoproduction,
   updateCoproduction,
   listCoproducerCandidates,
+  searchCoproducerCandidates,
+  resolveCoproducerCode,
+  type CoproducerHit,
   type OwnerType,
 } from "@/lib/collab.functions";
 
@@ -42,15 +45,17 @@ export function CoproductionEditor({
   const cancel = useServerFn(cancelCoproduction);
   const update = useServerFn(updateCoproduction);
   const listCandidates = useServerFn(listCoproducerCandidates);
+  const searchCandidates = useServerFn(searchCoproducerCandidates);
+  const resolveCode = useServerFn(resolveCoproducerCode);
 
   const [items, setItems] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState<{ type: OwnerType; id: string; name: string }[]>([]);
+  const [candidates, setCandidates] = useState<CoproducerHit[]>([]);
+  const [results, setResults] = useState<CoproducerHit[]>([]);
+  const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
-  const [picked, setPicked] = useState<{ type: OwnerType; id: string; name: string } | null>(null);
-  const [useCode, setUseCode] = useState(false);
-  const [code, setCode] = useState("");
+  const [picked, setPicked] = useState<CoproducerHit | null>(null);
   const [splitKind, setSplitKind] = useState<"percent" | "fixed">("percent");
   const [percent, setPercent] = useState("");
   const [amount, setAmount] = useState("");
@@ -80,7 +85,7 @@ export function CoproductionEditor({
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [productId]);
 
   const resetForm = () => {
-    setPicked(null); setCode(""); setUseCode(false);
+    setPicked(null); setSearch(""); setResults([]);
     setSplitKind("percent"); setPercent(""); setAmount("");
     setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
     setEditingId(null);
@@ -92,15 +97,44 @@ export function CoproductionEditor({
     if (candidates.length === 0) {
       try {
         const r = await listCandidates({ data: { excludeType: creatorType, excludeId: creatorId } });
-        setCandidates(r.items);
+        setCandidates(r.items.map((c) => ({ ...c, emailMasked: null, code: null })));
       } catch (e: any) { toast.error(e.message); }
     }
   };
 
+  // Busca unificada: e-mail, nome ou código (debounce)
+  useEffect(() => {
+    const term = search.trim();
+    if (!openModal || editingId || picked) return;
+    if (term.length < 3) { setResults([]); setSearching(false); return; }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const looksLikeCode = /^[A-Za-z0-9]{6,12}$/.test(term) && !term.includes("@");
+        const hits: CoproducerHit[] = [];
+        if (looksLikeCode) {
+          const byCode = await resolveCode({ data: { code: term } });
+          if (byCode && !(byCode.type === creatorType && byCode.id === creatorId)) hits.push(byCode);
+        }
+        const r = await searchCandidates({ data: { query: term, excludeType: creatorType, excludeId: creatorId } });
+        r.items.forEach((it) => {
+          if (!hits.some((h) => h.type === it.type && h.id === it.id)) hits.push(it);
+        });
+        if (!cancelled) setResults(hits);
+      } catch (e: any) {
+        if (!cancelled) { setResults([]); toast.error(e.message); }
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, openModal, editingId, picked]);
+
   const openEdit = (it: any) => {
     setEditingId(it.id);
-    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName });
-    setUseCode(false); setCode("");
+    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName, emailMasked: null, code: null });
     setSplitKind(it.split_kind === "fixed" ? "fixed" : "percent");
     setPercent(it.split_kind === "percent" ? String(Number(it.percent_of_net || 0)) : "");
     setAmount(it.split_kind === "fixed" ? String(Number(it.fixed_amount_brl || 0)) : "");
@@ -163,8 +197,8 @@ export function CoproductionEditor({
   }
 
   const submit = async () => {
-    if (!picked && (!useCode || !code.trim())) {
-      toast.error("Selecione um coprodutor ou informe o código.");
+    if (!editingId && !picked) {
+      toast.error("Busque e selecione o coprodutor por e-mail, nome ou código.");
       return;
     }
     if (splitKind === "percent") {
@@ -201,7 +235,7 @@ export function CoproductionEditor({
             productType, productId, creatorType, creatorId,
             collaboratorType: picked?.type,
             collaboratorId: picked?.id,
-            collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
+            collaboratorCode: picked?.code || undefined,
             splitKind,
             percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
             fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
@@ -219,7 +253,10 @@ export function CoproductionEditor({
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
-  const filtered = candidates.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  // Sem busca: sugestões da própria rede. Com busca: resultados globais (e-mail/nome/código).
+  const visibleOptions: CoproducerHit[] = search.trim().length >= 3
+    ? results
+    : candidates.slice(0, 30);
 
   return (
     <div className="space-y-3">
@@ -320,43 +357,50 @@ export function CoproductionEditor({
                 Coprodutor: <strong>{picked?.name}</strong>
                 <p className="text-[10px] text-white/40 mt-0.5">O coprodutor não pode ser alterado. Para trocar, exclua e crie um novo.</p>
               </div>
-            ) : !useCode ? (
+            ) : (
               <>
                 <div className="relative">
                   <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-white/40" />
                   <input
-                    value={search} onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar parceiro/profissional..."
+                    value={search} onChange={(e) => { setSearch(e.target.value); setPicked(null); }}
+                    placeholder="Buscar por e-mail, nome ou código..."
                     className="w-full rounded-lg bg-black/40 border border-white/10 pl-7 pr-2 py-2 text-xs text-white"
                   />
                 </div>
-                <div className="max-h-48 overflow-y-auto space-y-1 rounded-lg" style={{ backgroundColor: "#1A1A1A" }}>
-                  {filtered.length === 0 && <p className="text-[11px] text-white/30 p-3 text-center">Nenhum resultado</p>}
-                  {filtered.map((c) => (
-                    <button
-                      key={`${c.type}-${c.id}`}
-                      onClick={() => setPicked(c)}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-white/5 ${picked?.id === c.id ? "bg-primary/15" : ""}`}
-                    >
-                      <span className="text-white truncate">{c.name}</span>
-                      <span className="text-[10px] text-white/40">{c.type === "partner" ? "Parceiro" : "Profissional"}</span>
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => { setUseCode(true); setPicked(null); }} className="text-[11px] text-primary underline">
-                  Fora da lista? Usar código
-                </button>
-              </>
-            ) : (
-              <>
-                <input
-                  value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="Código do coprodutor"
-                  className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white uppercase font-mono"
-                />
-                <button onClick={() => setUseCode(false)} className="text-[11px] text-primary underline">
-                  Voltar para busca
-                </button>
+                {picked ? (
+                  <div className="rounded-lg px-3 py-2 text-xs text-white flex items-center justify-between" style={{ backgroundColor: "#132a19" }}>
+                    <span>
+                      Selecionado: <strong>{picked.name}</strong>
+                      <span className="block text-[10px] text-white/50">
+                        {picked.type === "partner" ? "Parceiro" : "Profissional"}
+                        {picked.emailMasked ? ` · ${picked.emailMasked}` : ""}
+                      </span>
+                    </span>
+                    <button onClick={() => setPicked(null)} className="text-white/60"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-1 rounded-lg" style={{ backgroundColor: "#1A1A1A" }}>
+                    {searching && <p className="text-[11px] text-white/40 p-3 text-center">Buscando...</p>}
+                    {!searching && visibleOptions.length === 0 && (
+                      <p className="text-[11px] text-white/30 p-3 text-center">
+                        {search.trim().length < 3 ? "Digite ao menos 3 letras do e-mail, nome ou o código." : "Nenhum resultado encontrado."}
+                      </p>
+                    )}
+                    {visibleOptions.map((c) => (
+                      <button
+                        key={`${c.type}-${c.id}`}
+                        onClick={() => setPicked(c)}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-white/5"
+                      >
+                        <span className="min-w-0">
+                          <span className="text-white truncate block">{c.name}</span>
+                          {c.emailMasked && <span className="text-[10px] text-white/40">{c.emailMasked}</span>}
+                        </span>
+                        <span className="text-[10px] text-white/40 shrink-0 ml-2">{c.type === "partner" ? "Parceiro" : "Profissional"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 

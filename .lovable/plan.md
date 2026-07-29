@@ -1,31 +1,32 @@
-## O que já verifiquei no ambiente (agora)
+## Problema (verificado no banco)
 
-- O agendamento automático existe e está ativo: job `recurring-card-charges`, todo dia às `0 10 * * *` UTC (07:00 BRT), chamando `/api/public/hooks/recurring-charge`.
-- O endpoint existe e exige a chave pública no header `apikey`.
-- A lógica de cobrança (`chargeDueSubscriptions`) busca assinaturas `active` com `next_charge_at <= hoje`, tenta até 3 vezes (retentativas em 3 e 7 dias) e grava cada tentativa em `recurring_charges`.
-- **Estado atual do banco: 0 produtos recorrentes, 0 cartões salvos, 0 assinaturas, 0 cobranças.** Ou seja: nada foi testado ainda e não há dado nenhum para o cron processar — por isso "não acontece nada" hoje.
+- Leandro (profissional aprovado, `is_professional = true`) está na rede **Nathan → Jorge → Leandro**. A Estação Funcional (Fernando) está em outra ramificação.
+- A função que monta a lista de coprodutores (`listCoproducerCandidates`) filtra os candidatos apenas pela rede MLM do usuário logado (ele + 1 upline + 3 níveis de downline). Por isso o Leandro não aparece: ele está fora dessa janela.
+- O campo "código" hoje **não busca nada**: ele só é validado no momento de enviar o convite. Se o código estiver errado, o usuário só descobre no erro final. O código do Leandro existe (`entity_share_codes`), mas não há nenhuma tela de conferência antes.
+- Bônus encontrado: a política de escrita de `entity_share_codes` compara `profile_id = auth.uid()` (deveria ser o id do perfil do usuário), então o fallback de criação de código quebra para quem ainda não tem código gerado.
 
-Conclusão: o encanamento está no lugar, mas o fluxo precisa ser exercitado ponta a ponta com um caso real de teste.
+## O que vou fazer
 
-## O que vou implementar para permitir testar
+**1. Busca por e-mail/nome (principal)**
+- Nova server function `searchCoproducerCandidates({ query })`: busca por e-mail exato/parcial ou nome, em profissionais aprovados (`coaches.is_professional`) e parceiros aprovados, **sem filtro de rede**.
+- Retorna: nome, tipo (profissional/parceiro), e-mail mascarado (ex.: `lea***@hotmail.com`) para confirmação visual, e o id necessário para o convite. Nenhum dado sensível extra é exposto.
+- Mínimo de 3 caracteres para buscar, limite de 20 resultados.
 
-1. **Botão "Cobrar agora" no painel admin de Recorrências** (`RecurringSubscriptionsPanel`): dispara a rotina de cobrança imediatamente para uma assinatura específica, sem esperar o cron das 07h. Mostra o resultado (aprovado/recusado + motivo do Mercado Pago).
-2. **Botão "Antecipar vencimento"**: define `next_charge_at` para hoje numa assinatura de teste, para simular que o mês virou.
-3. **Aba "Histórico de cobranças"** dentro do painel: lista `recurring_charges` (data, tentativa, valor, status, motivo da recusa), que hoje não é visível em lugar nenhum.
-4. Ambos os botões protegidos por verificação de admin no servidor.
+**2. Código com verificação imediata**
+- Nova server function `resolveCoproducerCode({ code })` que resolve o código e devolve nome + tipo na hora.
+- No modal, ao digitar o código aparece um cartão "Encontrado: Leandro da Silva Amorim — Profissional" antes de confirmar; se não existir, mensagem clara "Código não encontrado".
 
-## Roteiro de teste que você vai seguir depois
+**3. Modal de convite reformulado**
+- Um único campo de busca: aceita **e-mail, nome ou código** — o sistema decide sozinho (se parecer código, resolve por código; senão busca por e-mail/nome).
+- Lista de sugestões da rede continua aparecendo como atalho, mas deixa de ser a única forma.
+- Após escolher, segue o fluxo atual (percentual/valor fixo, custo, base do split).
 
-1. Criar um produto de teste com recorrência ativada e valor baixo (ex.: R$ 1,00 mensal).
-2. Comprar esse produto com cartão real marcando **"Salvar este cartão"**.
-3. Conferir no admin → Recorrências: deve aparecer 1 assinatura `active` com próxima cobrança daqui a 1 mês, e o cartão salvo no perfil do comprador.
-4. Clicar em **"Antecipar vencimento"** e depois em **"Cobrar agora"**.
-5. Resultado esperado: nova linha em Histórico com status `approved`, próxima cobrança empurrada +1 mês, e o pagamento visível no Mercado Pago.
-6. Testar recusa: usar cartão de teste recusado do MP → deve gravar `rejected`, incrementar tentativa e reagendar em 3 dias; após 3 falhas vira `past_due`.
-7. Testar cancelamento: aluno desativa o débito automático no perfil → assinatura vai para `canceled` e deixa de ser cobrada.
+**4. Correção do código próprio**
+- Ajustar a política de `entity_share_codes` para usar o perfil correto do usuário, garantindo que todo parceiro/profissional consiga ver e gerar o próprio código para compartilhar.
 
 ## Detalhes técnicos
 
-- Novas server functions em `src/lib/recurring.functions.ts`: `adminForceCharge`, `adminSetNextChargeDate`, `adminListCharges` — todas com checagem de role admin via `context.supabase`.
-- Reaproveita `chargeOne`/`chargeDueSubscriptions` de `recurring.server.ts` (import dinâmico dentro do handler, sem vazar service role para o bundle do cliente).
-- Nenhuma alteração no cron nem no webhook do Mercado Pago.
+- `src/lib/collab.functions.ts`: adicionar `searchCoproducerCandidates` e `resolveCoproducerCode`; manter `listCoproducerCandidates` (atalho da rede) sem alteração de assinatura.
+- Busca feita no servidor via cliente admin **após** validar que o chamador é dono/parceiro/profissional legítimo, retornando somente campos públicos + e-mail mascarado.
+- `src/components/shared/CoproductionEditor.tsx`: substituir o seletor atual por campo de busca unificado com debounce e cartão de confirmação.
+- Migração pequena para corrigir a policy de `entity_share_codes`.
