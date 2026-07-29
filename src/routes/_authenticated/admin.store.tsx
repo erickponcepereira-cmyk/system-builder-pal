@@ -28,6 +28,7 @@ function StoreAdminPage() {
           Itens da Loja
         </Link>
       </div>
+      <StoreShelfDiagnostics />
       {tab === "sections" ? <StoreManager /> : <StoreItemsManager />}
     </div>
   );
