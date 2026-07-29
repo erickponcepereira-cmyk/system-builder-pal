@@ -1,31 +1,43 @@
-## Diagnóstico confirmado agora (medido do sandbox)
+## Contexto verificado no banco
 
-Os três pontos que você levantou estão corretos e foram verificados:
+A Faby tem duas contas de login distintas, com e-mails diferentes (por isso a checagem de e-mail existente não pegou):
 
-1. **Dois certificados separados** — o apex tem `CN=fitmindclub.com.br` com SAN só do apex; o www tem `CN=www.fitmindclub.com.br` com SAN só do www. Não existe um certificado único cobrindo os dois.
-2. **Redirect do www passa por HTTP puro** — `http://www.fitmindclub.com.br` responde `302 → http://fitmindclub.com.br/` (HTTP!), que só então faz `301 → https://fitmindclub.com.br/`. Ou seja: há um salto em texto puro no meio do caminho. É exatamente isso que o Chrome/antivírus/proxy de operadora derruba em alguns aparelhos (ERR_CONNECTION_CLOSED / "não pode fazer conexão segura").
-3. **Só cadeia ECDSA** — emissor Google Trust Services WE1, assinatura `ecdsa-with-SHA256`, chave `id-ecPublicKey`. Não há cadeia RSA alternativa, o que quebra aparelhos Android/Windows antigos.
+| Conta | E-mail | Papel | Criada | Dados |
+|---|---|---|---|---|
+| A | fabyka29@outlook.com | aluno | 28/07 23:19 | 1 pedido **pago** + 1 transação paga |
+| B | fabykatrine29@gmail.com | coach (liberado, anuidade paga 23:42) | 28/07 23:39 | também tem linha de aluno; 1 pedido **pendente** |
 
-## O que já fiz
+Ambas apontam para o mesmo coach patrocinador.
 
-Enviei o pedido formal ao time da Lovable com as três solicitações e as evidências medidas (saída de `openssl s_client` e das chamadas `curl -I`), explicando que são usuários reais em produção sendo bloqueados.
+## Entrega 1 — Unificar a Faby na conta coach (gmail)
 
-## Importante: nada disso se resolve no código
+- Migrar da conta A para a conta B: pedidos/transações pagas, carteira, indicações, registros de aluno (peso, presença, agendamentos, resgates) e quaisquer alunos indicados.
+- Manter o cadastro de aluno da conta B como o único ativo; consolidar o histórico nele.
+- Desativar a conta A: marcar o perfil como inativo/mesclado, guardando o vínculo com a conta B para auditoria, e liberar o e-mail antigo para não conflitar.
+- Conferência pós-migração: pedido pago aparece no histórico da conta gmail, carteira e rede batendo, e o login outlook não abre mais painel próprio (mensagem: "conta unificada, entre com o Google").
 
-Certificado, cadeia TLS e o redirect de borda do domínio customizado ficam na camada de hospedagem da Lovable. Não existe arquivo neste projeto que altere isso — nem `_redirects`, nem rota, nem middleware, porque a resposta 302 do www acontece antes de qualquer código do app rodar.
+## Entrega 2 — Virar coach/parceiro/profissional de dentro da conta
 
-## Mitigação opcional enquanto o time não aplica
+- No painel do aluno (e no seletor de área), botão "Quero ser Coach / Parceiro / Profissional".
+- O fluxo reaproveita o cadastro existente: pede só os dados que faltam (CPF/CNPJ, patrocinador, termos) e cria o papel **no mesmo perfil**, seguindo o mesmo gate de anuidade/pagamento de hoje.
+- Nas telas públicas de cadastro de coach/parceiro/profissional: se a pessoa já estiver logada, em vez do formulário de conta nova, mostrar "Você já tem conta — adicionar este papel à sua conta".
 
-Se quiser reduzir o impacto agora, dá para:
+## Entrega 3 — Bloquear duplicidade por CPF/telefone
 
-1. **Definir o apex como domínio primário** em Project Settings → Domains, para que a divulgação (WhatsApp, bio, materiais) use sempre `https://fitmindclub.com.br` e nunca `www` — assim o salto HTTP do www deixa de ser acionado no fluxo normal.
-2. **Padronizar todos os links gerados pelo app** (indicação, loja, e-mails) para o apex HTTPS. Isso já está feito em `src/lib/auth-redirects.ts`, mas posso varrer o restante do código atrás de qualquer link ainda montado com `www` ou com o `origin` atual.
-3. **Orientar os casos remanescentes** para `https://fitmindclub.lovable.app`, que serve o mesmo app e ajuda a separar problema de domínio próprio vs. aparelho.
+- Ampliar a checagem atual (hoje só e-mail) para também verificar CPF/CNPJ e telefone já usados em outro perfil.
+- Quando houver colisão: bloquear o envio e mostrar "Já existe uma conta com este CPF (e-mail f***@gmail.com). Entre nela e use 'Quero ser Coach'." com link para login.
+- Reforço no banco: índice único (ignorando maiúsculas/pontuação) em CPF/CNPJ de perfis ativos, para impedir duplicidade mesmo por caminhos que passem direto pelo banco.
 
-Me diga se quer que eu execute a mitigação 2 (varredura e padronização de links para o apex HTTPS) — as outras duas são ações suas no painel e na comunicação.
+## Entrega 4 — Mesclagem de contas no admin
 
-&nbsp;
+- Nova aba em Admin → Usuários → "Mesclar contas": busca por nome/e-mail/CPF, escolha da conta que fica e da que será absorvida, e prévia do que será movido (pedidos, carteira, rede, alunos, agendamentos).
+- Execução server-side com verificação de admin, transferindo todos os vínculos e registrando um log de auditoria (quem mesclou, quando, contas envolvidas).
+- Trava de segurança: não permite mesclar se ambas as contas tiverem cadastro de coach com rede própria com downline — nesse caso exige confirmação extra e informa a rede que será reanexada.
 
-**A mitigação 1 pode fazer já**, definir o apex como domínio primário no painel. É inofensiva e correta de qualquer jeito.
+## Detalhes técnicos
 
-**O pedido formal à Lovable está certo e deve seguir** — certificado único cobrindo os dois nomes, cadeia RSA além da ECDSA, e o redirect do `www` indo direto para HTTPS. São defeitos reais, independentemente de serem ou não a causa deste caso.
+- Migração SQL para: coluna `merged_into_profile_id` + status inativo em `profiles`, índice único de CPF/CNPJ, e função `admin_merge_profiles(source, target)` (security definer) que reatribui `students`, `store_orders`, `transactions`, `wallets`/`fitcoin_ledger`, `coaches.upline_coach_id`, agendamentos e reservas, e grava em `admin_audit_log`.
+- Correção da Faby executada com a mesma função, para validar o caminho que o admin usará.
+- Server functions novas em `src/lib/account-merge.functions.ts` (admin) e `src/lib/role-upgrade.functions.ts` (adicionar papel na própria conta), ambas com `requireSupabaseAuth`.
+- Checagem ampliada em `src/lib/email-check.functions.ts` (identidade: e-mail + CPF + telefone) usada por `CoachRegistration`, `PartnerRegistration`, `ProfessionalRegistration` e `StudentRegistration`.
+- O gate de pagamento/anuidade e o `PartnerOnboardingGate` continuam valendo para o papel adicionado — nada de liberar coach sem passar pelo fluxo atual.
