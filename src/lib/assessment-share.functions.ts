@@ -339,3 +339,57 @@ export const deleteAssessmentShare = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ── Student: get or create a share link for OWN assessment ───────────────────
+// O aluno não consegue ler assessment_shares (RLS é apenas do coach), então
+// esta função valida a posse da avaliação e devolve/gera o token.
+
+export const getOrCreateMyAssessmentShare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { assessmentId: string }) =>
+    z.object({ assessmentId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id,name")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!profile?.id) throw new Error("Perfil não encontrado");
+
+    const { data: students } = await supabaseAdmin
+      .from("students")
+      .select("id")
+      .eq("profile_id", profile.id as string);
+    const studentIds = ((students ?? []) as Array<{ id: string }>).map((s) => s.id);
+    if (studentIds.length === 0) throw new Error("Aluno não encontrado");
+
+    const { data: assessment } = await supabaseAdmin
+      .from("coach_body_assessments" as never)
+      .select("id,coach_id,student_id" as never)
+      .eq("id" as never, data.assessmentId as never)
+      .maybeSingle();
+    const a = assessment as { id: string; coach_id: string; student_id: string | null } | null;
+    if (!a || !a.student_id || !studentIds.includes(a.student_id)) {
+      throw new Error("Avaliação não encontrada");
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("assessment_shares" as never)
+      .select("token" as never)
+      .eq("assessment_id" as never, a.id as never)
+      .maybeSingle();
+    if (existing) return { token: (existing as { token: string }).token };
+
+    const { data: share, error: insertErr } = await supabaseAdmin
+      .from("assessment_shares" as never)
+      .insert({
+        assessment_id: a.id,
+        coach_id: a.coach_id,
+        client_name: ((profile.name as string | null) || "Aluno").slice(0, 120),
+      } as never)
+      .select("token" as never)
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+    return { token: (share as { token: string }).token };
+  });
