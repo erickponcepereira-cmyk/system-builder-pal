@@ -179,9 +179,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function IconBtn({ children, title, onClick }: { children: React.ReactNode; title: string; onClick: () => void }) {
+function IconBtn({ children, title, onClick, disabled }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button title={title} onClick={onClick} className="rounded-lg bg-white/5 p-1.5 text-white/70 hover:bg-white/10 hover:text-white">
+    <button title={title} onClick={onClick} disabled={disabled} className="rounded-lg bg-white/5 p-1.5 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40">
+
       {children}
     </button>
   );
