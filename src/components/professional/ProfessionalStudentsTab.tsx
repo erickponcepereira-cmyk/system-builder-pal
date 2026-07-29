@@ -128,7 +128,7 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
                       <p className="truncate text-xs text-white/45">{s.whatsapp || s.email || "—"}</p>
                       {s.birth_date && (
                         <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-white/55">
-                          <Cake className="h-3 w-3" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}
+                          <Cake className="h-3 w-3" /> {formatDateOnlyBR(s.birth_date)}
                         </p>
                       )}
                     </div>

@@ -53,8 +53,8 @@ type AnamRow = {
 type WeightRow = { id: string; log_date: string; weight: number; waist_cm: number | null; hip_cm: number | null };
 type PhotoRow = { id: string; photo_url: string; photo_date: string; caption: string | null };
 
-const fmtBR = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
-const fmtBRLong = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
+const fmtBR = (d: string | null | undefined) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d) : new Date(d).toLocaleDateString("pt-BR");
+const fmtBRLong = (d: string | null | undefined) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d, { day: "2-digit", month: "long", year: "numeric" }) : new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 const money = (v: number | null | undefined) => v != null ? `R$ ${Number(v).toFixed(2).replace(".", ",")}` : "—";
 
 function calcAge(birth: string | null) {

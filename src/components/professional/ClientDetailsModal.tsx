@@ -17,8 +17,8 @@ type Client = { id: string; name: string; email: string | null; whatsapp: string
 type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; bmi: number | null };
 type Anam = { id: string; updated_at: string; answers: Record<string, unknown> };
 
-const fmtBR = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
-const fmtBRLong = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "—";
+const fmtBR = (d: string | null) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d) : new Date(d).toLocaleDateString("pt-BR");
+const fmtBRLong = (d: string | null) => !d ? "—" : /^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyBR(d, { day: "2-digit", month: "long", year: "numeric" }) : new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
 function calcAge(birth: string | null) {
   return calcAgeFromDateOnly(birth);
