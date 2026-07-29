@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PendingInfo } from "@/components/PendingInfo";
+import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { requestSellerWithdrawal } from "@/lib/withdrawals.functions";
 
 const MIN_WITHDRAWAL = 50;
@@ -188,7 +189,7 @@ function Stat({ icon, label, value, hint, accent, pendingHelp }: { icon: React.R
     <div className="rounded-2xl p-4 w-full" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="flex items-center gap-1.5 text-[11px] text-white/50 mb-1">
         {icon} {label}
-        {pendingHelp && <PendingInfo days={3} />}
+        {pendingHelp && <PendingInfo days={COMMISSION_HOLD_DAYS} />}
       </div>
       <p className={`text-xl font-bold ${accent ? "text-primary" : "text-white"}`}>{value}</p>
       {hint && <p className="text-[10px] text-white/40 mt-0.5">{hint}</p>}
