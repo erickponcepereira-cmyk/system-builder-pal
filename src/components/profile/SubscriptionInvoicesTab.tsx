@@ -211,6 +211,9 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         </div>
       </div>
 
+      <AutoDebitCard />
+
+
       <div className="rounded-2xl border border-white/10 p-5">
         <h3 className="mb-3 text-sm font-bold uppercase text-white/60">Histórico</h3>
         <div className="overflow-x-auto">
