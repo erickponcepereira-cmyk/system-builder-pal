@@ -81,3 +81,11 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
     const { handleGetStatus } = await import("./mercadopago-impl.server");
     return handleGetStatus(data.paymentRowId);
   });
+
+/** Informa se a origem (pedido) corresponde a um produto de assinatura recorrente. */
+export const getSourceRecurrence = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => SourceSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { resolveSourceRecurrence } = await import("./recurrence-source.server");
+    return await resolveSourceRecurrence(data.kind, data.id);
+  });
