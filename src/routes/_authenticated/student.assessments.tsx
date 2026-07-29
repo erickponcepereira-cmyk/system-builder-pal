@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, Activity, ExternalLink, Scale, Droplets, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ChevronLeft, Activity, ExternalLink, Share2, Scale, Droplets, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getOrCreateMyAssessmentShare } from "@/lib/assessment-share.functions";
+import { getShareOrigin } from "@/lib/auth-redirects";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/student/assessments")({
   head: () => ({
@@ -29,13 +33,11 @@ type Row = {
   coach_id: string;
 };
 
-type ShareMap = Record<string, string>;
-
 const fmt = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
 function MyAssessmentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [shares, setShares] = useState<ShareMap>({});
+  const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -64,19 +66,48 @@ function MyAssessmentsPage() {
       if (error) console.error(error);
       const list = (data as any[]) || [];
       setRows(list);
-      if (list.length > 0) {
-        const ids = list.map((r) => r.id);
-        const { data: sh } = await supabase
-          .from("assessment_shares" as never)
-          .select("assessment_id, token")
-          .in("assessment_id" as never, ids as never);
-        const map: ShareMap = {};
-        ((sh as any[]) || []).forEach((s) => { map[s.assessment_id] = s.token; });
-        setShares(map);
-      }
       setLoading(false);
     })();
   }, []);
+
+  const shareFn = useServerFn(getOrCreateMyAssessmentShare);
+
+  const resolveToken = async (assessmentId: string) => {
+    const { token } = await shareFn({ data: { assessmentId } });
+    return `${getShareOrigin()}/resultado/${token}`;
+  };
+
+  const openFull = async (assessmentId: string) => {
+    setBusy(assessmentId);
+    const win = window.open("", "_blank");
+    try {
+      const url = await resolveToken(assessmentId);
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch (e) {
+      win?.close();
+      toast.error((e as Error).message || "Não foi possível abrir a avaliação");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const shareFull = async (assessmentId: string) => {
+    setBusy(assessmentId);
+    try {
+      const url = await resolveToken(assessmentId);
+      if (navigator.share) {
+        try { await navigator.share({ title: "Minha avaliação corporal", url }); } catch { /* cancelado */ }
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado: " + url);
+      }
+    } catch (e) {
+      toast.error((e as Error).message || "Não foi possível gerar o link");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const toggle = (id: string) => {
     setSelected((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
@@ -184,7 +215,6 @@ function MyAssessmentsPage() {
             <div className="space-y-2">
               {rows.map((r) => {
                 const isSel = selected.includes(r.id);
-                const token = shares[r.id];
                 return (
                   <div key={r.id} className={`rounded-2xl border bg-card p-4 ${isSel ? "border-primary" : "border-border"}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -203,15 +233,25 @@ function MyAssessmentsPage() {
                       <div><Heart className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" /><p className="font-bold text-foreground">{r.muscle_mass ?? "—"}</p><p className="text-[10px] text-muted-foreground">músculo</p></div>
                       <div><Droplets className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" /><p className="font-bold text-foreground">{r.body_water ?? "—"}</p><p className="text-[10px] text-muted-foreground">% água</p></div>
                     </div>
-                    {token && (
-                      <a href={`/resultado/${token}`} target="_blank" rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                        <ExternalLink className="h-3 w-3" /> Ver relatório completo
-                      </a>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => openFull(r.id)}
+                        disabled={busy === r.id}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline disabled:opacity-60">
+                        <ExternalLink className="h-3 w-3" />
+                        {busy === r.id ? "Abrindo…" : "Ver avaliação completa"}
+                      </button>
+                      <button
+                        onClick={() => shareFull(r.id)}
+                        disabled={busy === r.id}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-60">
+                        <Share2 className="h-3 w-3" /> Compartilhar
+                      </button>
+                    </div>
                   </div>
                 );
               })}
+
             </div>
           </>
         )}
