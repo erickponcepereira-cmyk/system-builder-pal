@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2, Salad } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { RecurringSubscriptionsPanel } from "@/components/admin/RecurringSubscriptionsPanel";
+
 import { toast } from "sonner";
 import {
   getPayoutsDashboard,
@@ -51,8 +53,9 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
   return (
@@ -70,6 +73,8 @@ function AdminPayments() {
           { k: "student_referrer", l: "Aluno Indicador" },
           { k: "nutritionist", l: "Nutricionistas" },
           { k: "sub_wallet", l: "Mensalidades (carteira)" },
+          { k: "recurring", l: "Recorrentes (cartão)" },
+
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
@@ -94,6 +99,8 @@ function AdminPayments() {
       )}
       {activeTab === "nutritionist" && <NutritionistPanel />}
       {activeTab === "sub_wallet" && <SubscriptionWalletPanel />}
+      {activeTab === "recurring" && <RecurringSubscriptionsPanel />}
+
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
     </>

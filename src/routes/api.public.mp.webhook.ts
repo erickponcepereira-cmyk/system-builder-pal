@@ -60,9 +60,67 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           body?.data?.id || body?.resource || url.searchParams.get("id") || url.searchParams.get("data.id") || ""
         ).replace(/\D/g, "");
 
+        // ── Assinaturas nativas do Mercado Pago (Preapproval) ──
+        if (topic === "subscription_preapproval" || topic === "preapproval") {
+          const preId = String(body?.data?.id || url.searchParams.get("id") || "");
+          if (preId) {
+            try {
+              const { getPreapproval } = await import("@/server/mercadopago.server");
+              const pre = await getPreapproval(preId);
+              const map: Record<string, string> = { authorized: "active", paused: "paused", cancelled: "cancelled", pending: "pending" };
+              await supabaseAdmin
+                .from("recurring_subscriptions" as never)
+                .update({ status: map[pre?.status] || "pending" } as never)
+                .eq("mp_preapproval_id" as never, preId as never);
+            } catch (e) {
+              console.error("[mp webhook] preapproval:", e);
+            }
+          }
+          return Response.json({ ok: true, topic });
+        }
+
+        if (topic === "subscription_authorized_payment") {
+          const authId = String(body?.data?.id || url.searchParams.get("id") || "");
+          if (authId) {
+            try {
+              const { getAuthorizedPayment } = await import("@/server/mercadopago.server");
+              const ap = await getAuthorizedPayment(authId);
+              const { data: sub } = await supabaseAdmin
+                .from("recurring_subscriptions" as never)
+                .select("id" as never)
+                .eq("mp_preapproval_id" as never, String(ap?.preapproval_id || "") as never)
+                .maybeSingle();
+              if ((sub as any)?.id) {
+                const approved = ap?.status === "processed" && ap?.payment?.status === "approved";
+                await supabaseAdmin.from("recurring_charges" as never).upsert({
+                  subscription_id: (sub as any).id,
+                  reference_date: new Date().toISOString().slice(0, 10),
+                  attempt: 1,
+                  amount: Number(ap?.transaction_amount || 0),
+                  status: approved ? "approved" : "rejected",
+                  status_detail: ap?.payment?.status_detail || ap?.status || null,
+                  mp_payment_id: ap?.payment?.id ? String(ap.payment.id) : null,
+                } as never, { onConflict: "subscription_id,reference_date,attempt" } as never);
+                await supabaseAdmin
+                  .from("recurring_subscriptions" as never)
+                  .update({
+                    last_charge_at: approved ? new Date().toISOString() : null,
+                    failure_count: approved ? 0 : 1,
+                    last_failure_reason: approved ? null : (ap?.payment?.status_detail || "recusado"),
+                  } as never)
+                  .eq("id" as never, (sub as any).id as never);
+              }
+            } catch (e) {
+              console.error("[mp webhook] authorized payment:", e);
+            }
+          }
+          return Response.json({ ok: true, topic });
+        }
+
         if (topic && topic !== "payment") {
           return new Response(JSON.stringify({ ignored: true, topic }), { status: 200, headers: { "content-type": "application/json" } });
         }
+
         if (!mpPaymentId) {
           return new Response("missing payment id", { status: 400 });
         }
@@ -84,7 +142,13 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             if (payment.date_of_expiration) pixPayload.pix_expires_at = payment.date_of_expiration;
           }
 
+          // Cobranças recorrentes diretas já são registradas por recurring.server.
+          if (kind === "recurring") {
+            return Response.json({ ok: true, status, recurring: true });
+          }
+
           // ── 1. Idempotência local + gravação bruta sempre ──
+
           const { data: existing } = await supabaseAdmin
             .from("mercadopago_payments")
             .select("id, status, source_kind, source_id, amount")

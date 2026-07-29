@@ -47,3 +47,41 @@ export function resetMPSDK() {
   mpScriptPromise = null;
   mpInstance = null;
 }
+
+// ─────────────────── Device fingerprint (antifraude) ───────────────────
+// O Mercado Pago usa o device_id gerado pelo security.js como principal sinal
+// de risco. Sem ele, boa parte das transações cai em cc_rejected_high_risk.
+let securityScriptPromise: Promise<void> | null = null;
+
+export function loadDeviceFingerprint(view = "checkout"): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if ((window as any).MP_DEVICE_SESSION_ID) return Promise.resolve();
+  if (securityScriptPromise) return securityScriptPromise;
+  securityScriptPromise = new Promise((resolve) => {
+    const existing = document.getElementById("mp-security-js");
+    if (existing) { resolve(); return; }
+    const script = document.createElement("script");
+    script.id = "mp-security-js";
+    script.src = "https://www.mercadopago.com/v2/security.js";
+    script.setAttribute("view", view);
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => { securityScriptPromise = null; resolve(); };
+    document.head.appendChild(script);
+  });
+  return securityScriptPromise;
+}
+
+/** Aguarda até o security.js publicar o device id (com timeout curto). */
+export async function getDeviceId(timeoutMs = 4000): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  await loadDeviceFingerprint();
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const id = (window as any).MP_DEVICE_SESSION_ID;
+    if (id) return String(id);
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return (window as any).MP_DEVICE_SESSION_ID ? String((window as any).MP_DEVICE_SESSION_ID) : null;
+}
+

@@ -7,6 +7,8 @@ import {
   getMyBillingOverview, getInvoiceReceiptData,
 } from "@/lib/subscriptions.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { AutoDebitCard } from "@/components/profile/AutoDebitCard";
+
 import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
 import { openInvoiceReceipt } from "@/lib/invoice-receipt";
 
@@ -179,7 +181,9 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
                 description={`Mensalidade ${fmtMonth(current.reference_month)}`}
                 defaultPayer={state.payer ? { email: state.payer.email || "", name: state.payer.name || "" } : undefined}
                 initialMethod={mpMethod}
+                allowSaveCard
                 onApproved={() => { setMpMethod(null); load(); }}
+
               />
             </div>
           )}
@@ -208,6 +212,9 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
           </label>
         </div>
       </div>
+
+      <AutoDebitCard />
+
 
       <div className="rounded-2xl border border-white/10 p-5">
         <h3 className="mb-3 text-sm font-bold uppercase text-white/60">Histórico</h3>

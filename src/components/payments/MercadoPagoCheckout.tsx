@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
-import { loadMercadoPagoSDK, getMP } from "@/lib/mercadopago";
+import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@/lib/mercadopago";
 import { createPixCheckout, createCardCheckout, getPaymentStatus } from "@/lib/mercadopago.functions";
+
 
 type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
 type Payer = { email: string; name?: string; doc?: string };
@@ -14,8 +15,11 @@ interface Props {
   description: string;
   defaultPayer?: Payer;
   initialMethod?: "pix" | "card";
+  /** Exibe a opção de salvar o cartão para cobranças recorrentes. */
+  allowSaveCard?: boolean;
   onApproved?: () => void;
 }
+
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -30,12 +34,13 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
   return `Pagamento ${status === "rejected" ? "recusado" : status || "não aprovado"}${detail ? `: ${detail}` : ""}`;
 };
 
-export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", onApproved }: Props) {
+export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
-
+  const [saveCard, setSaveCard] = useState(false);
+  const [threeDs, setThreeDs] = useState<{ url: string; creq: string; rowId: string } | null>(null);
 
   // PIX
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string; ticketUrl: string | null; rowId: string } | null>(null);
@@ -47,11 +52,54 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [cardAttempt, setCardAttempt] = useState(0);
   const cardFormRef = useRef<HTMLDivElement>(null);
   const cardBrickRef = useRef<any>(null);
+  const saveCardRef = useRef(false);
   const cardContainerId = `mp-card-form-container-${source.kind}-${source.id}-${cardAttempt}`;
 
   const pixFn = useServerFn(createPixCheckout);
   const cardFn = useServerFn(createCardCheckout);
   const statusFn = useServerFn(getPaymentStatus);
+
+  useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
+
+  // Fingerprint antifraude: precisa estar carregado antes de qualquer pagamento.
+  useEffect(() => { loadDeviceFingerprint("checkout"); }, []);
+
+  // Desafio 3-D Secure do banco emissor
+  useEffect(() => {
+    if (!threeDs) return;
+    const iframe = document.getElementById("mp-3ds-frame") as HTMLIFrameElement | null;
+    if (!iframe) return;
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = threeDs.url;
+    form.target = "mp-3ds-frame";
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "creq";
+    input.value = threeDs.creq;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    const interval = setInterval(async () => {
+      const r = await statusFn({ data: { paymentRowId: threeDs.rowId } });
+      if (r?.status === "approved") {
+        clearInterval(interval);
+        setThreeDs(null);
+        toast.success("Pagamento aprovado!");
+        onApproved?.();
+      } else if (r?.status === "rejected" || r?.status === "cancelled") {
+        clearInterval(interval);
+        setThreeDs(null);
+        const msg = friendlyPaymentMessage(r.status, (r as any).status_detail);
+        setPaymentError(msg);
+        toast.error(msg, { duration: 9000 });
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [threeDs, statusFn, onApproved]);
+
 
   useEffect(() => {
     setTab(initialMethod);
@@ -147,6 +195,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setPaymentError(null);
                 setLastStatusDetail(null);
                 try {
+                  const deviceId = await getDeviceId();
                   const r = await cardFn({
                     data: {
                       source,
@@ -161,10 +210,19 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                         paymentMethodId: cardFormData.payment_method_id,
                         issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
                       },
+                      deviceId,
+                      saveCard: saveCardRef.current,
                     },
                   });
                   console.log("[MP card response]", r);
-                  if (r.status === "approved") {
+                  if ((r as any)?.threeDs?.externalResourceUrl && (r as any)?.threeDs?.creq) {
+                    setThreeDs({
+                      url: (r as any).threeDs.externalResourceUrl,
+                      creq: (r as any).threeDs.creq,
+                      rowId: r.paymentRowId,
+                    });
+                    toast.info("Validação do banco necessária. Conclua na janela de segurança.");
+                  } else if (r.status === "approved") {
                     toast.success("Pagamento aprovado!");
                     onApproved?.();
                   } else if (r.status === "in_process" || r.status === "pending") {
@@ -175,6 +233,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     setLastStatusDetail(String(r.statusDetail || ""));
                     toast.error(msg, { duration: 9000 });
                   }
+
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
                   const msg = friendlyPaymentMessage("rejected", err?.message) || "Falha no pagamento. Verifique os dados do cartão.";
@@ -208,7 +267,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
     if (!payer.email) { toast.error("Informe seu e-mail"); return; }
     setGeneratingPix(true);
     try {
-      const r = await pixFn({ data: { source, payer } });
+      const deviceId = await getDeviceId();
+      const r = await pixFn({ data: { source, payer, deviceId } });
+
       if ((r as any)?._error) throw new Error((r as any)._error.replace(/^HANDLER:\s*/i, ""));
       if (!r.qrCode) throw new Error("QR Code não retornado");
       setPixData({ qr: r.qrCode, qrBase64: r.qrCodeBase64 || "", ticketUrl: r.ticketUrl, rowId: r.paymentRowId });
@@ -296,6 +357,19 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
       {tab === "card" && (
         <div className="space-y-3">
           <div ref={cardFormRef} id={cardContainerId} />
+          {allowSaveCard && (
+            <label className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
+              <input type="checkbox" checked={saveCard} onChange={(e) => setSaveCard(e.target.checked)} className="accent-primary" />
+              Salvar este cartão para cobranças automáticas (mensalidade/assinatura)
+            </label>
+          )}
+          {threeDs && (
+            <div className="rounded-lg border border-border bg-background p-2">
+              <p className="mb-2 text-xs text-muted-foreground">Validação de segurança do seu banco:</p>
+              <iframe id="mp-3ds-frame" name="mp-3ds-frame" title="Validação 3-D Secure" className="h-[420px] w-full rounded-md bg-white" />
+            </div>
+          )}
+
           {paymentError && (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
               <p>{paymentError}</p>
