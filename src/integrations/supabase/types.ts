@@ -12006,6 +12006,7 @@ export type Database = {
         }
         Returns: string
       }
+      store_admin_shelf_report: { Args: never; Returns: Json }
       store_hidden_for_viewer: {
         Args: never
         Returns: {

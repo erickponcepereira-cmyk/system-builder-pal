@@ -208,7 +208,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       const { data: chunk, error: ppErr } = await supabase
         .from("professional_products" as never)
         .select(
-          "id,name,description,image_url,price,original_price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+          "id,name,description,image_url,price,original_price,section_id,category_id,subcategory_id,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
         )
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_professional" as never, true as never)
@@ -364,7 +364,13 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
           description: pp.description,
           price: Number(pp.price || 0),
           originalPrice: pp.original_price ? Number(pp.original_price) : null,
-          category: `Parceiros · ${specLabel}`,
+          // Quando o profissional classificou o produto, ele navega pela mesma
+          // estrutura de seção/subcategoria das demais abas da loja. Sem isso,
+          // cai no agrupamento por especialidade (fallback).
+          sectionId: pp.section_id ?? null,
+          categoryId: pp.category_id ?? null,
+          subcategoryId: pp.subcategory_id ?? null,
+          category: pp.section_id ? sectionName(pp.section_id) : `Parceiros · ${specLabel}`,
           kind: "partner" as const,
           tag: specLabel,
           imageUrl: pp.image_url,

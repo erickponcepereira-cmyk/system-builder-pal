@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, ChevronDown, ChevronRight, FolderTree, CheckCircle2 } from "lucide-react";
 import { StoreImageUpload } from "./StoreImageUpload";
+import { fetchShelfReport } from "./StoreShelfDiagnostics";
 
 interface Section {
   id: string;
@@ -98,6 +99,9 @@ export function StoreManager() {
   const [newSubcategoryFor, setNewSubcategoryFor] = useState<string | null>(null);
   const [newSubcategoryDraft, setNewSubcategoryDraft] = useState<Partial<Subcategory>>({});
 
+  const [sectionCounts, setSectionCounts] = useState<Record<string, number>>({});
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: c }, { data: sc }] = await Promise.all([
@@ -108,6 +112,11 @@ export function StoreManager() {
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
     setSubcategories(((sc as unknown) as Subcategory[]) || []);
+    try {
+      const report = await fetchShelfReport();
+      setSectionCounts(Object.fromEntries(report.section_counts.map((r) => [r.section_id, Number(r.total)])));
+      setCategoryCounts(Object.fromEntries(report.category_counts.map((r) => [r.category_id, Number(r.total)])));
+    } catch { /* diagnóstico é complementar; não bloqueia a tela */ }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -360,7 +369,14 @@ export function StoreManager() {
                         ))}
                         {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
                       </div>
-                      <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>
+                      <div className="text-xs text-white/40">
+                        /{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s) · {sectionCounts[s.id] ?? 0} produto(s)
+                        {!s.is_active && (sectionCounts[s.id] ?? 0) > 0 && (
+                          <span className="ml-2 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">
+                            inativa — {sectionCounts[s.id]} produto(s) ocultos da loja
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {s.pending && (
                       <button onClick={() => approveSection(s.id)} className="flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/25">
@@ -407,7 +423,12 @@ export function StoreManager() {
                               <div className="flex-1 text-sm text-white flex items-center gap-2">
                                 {c.name}
                                 {c.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
-                                <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"} · {subs.length} sub</span>
+                                <span className="text-xs text-white/40">
+                                  /{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"} · {subs.length} sub · {categoryCounts[c.id] ?? 0} produto(s)
+                                  {!c.is_active && (categoryCounts[c.id] ?? 0) > 0 && (
+                                    <span className="ml-1.5 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">ocultos</span>
+                                  )}
+                                </span>
                               </div>
                               {c.pending && (
                                 <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/25">

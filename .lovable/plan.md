@@ -1,41 +1,44 @@
-## Diagnóstico (confirmado no banco)
+## O que eu verifiquei no banco e no código
 
-**1. Fabiana Katrine — R$ 106,40 bloqueados**
-Ela tem 6 comissões `pending` com liberação em 04–05/08: 2× R$ 48,47 ("Comissão do Vendedor"), 2× R$ 2,96 ("Linha 2") e 2× R$ 1,77 ("Linha 3"). Hoje o admin não consegue dar baixa porque a carteira só considera disponível o que tem `available_at <= agora` — e as linhas de rede ainda exigem missão do mês desbloqueada. Não existe hoje nenhuma ferramenta de exceção/adiantamento.
+1. **"Biblioteca de ebooks" não sumiu por bug de código: ela está desativada.**
+   A seção `Biblioteca de ebooks` está com "ativa = não" (alterada hoje, 01:46). Com ela desativada, some da loja a seção inteira, a subcategoria "Relacionamentos" e o produto "Atração Feminina - Termômetro Energético Parte 1", que é o único item ligado a ela.
 
-**2. "Coaches a pagar" (R$ 2.456,90) ≠ Pagamentos**
-Confirmado: R$ 1.496,29 (available) + R$ 960,61 (pending) = exatamente os R$ 2.456,90 do painel. Esse número é o **bruto histórico de comissões**, e por isso nunca vai bater com o que realmente há a pagar:
-- não desconta os R$ 988,26 já sacados/pagos;
-- não desconta saques reservados (solicitado/aprovado/processando);
-- não desconta pagamentos feitos com saldo da carteira;
-- classifica como "coach" comissões de rede gravadas com `level = 0` mas rótulo "Linha 1/2/3" e "Upline 1/2/3" (R$ 205,67 hoje) — a carteira as trata como rede;
-- conta como "disponível" só o status, ignorando `available_at` e o desbloqueio mensal da rede.
-Já o painel Pagamentos lê as carteiras: R$ 601,75 disponível / R$ 1.137,95 bloqueado / R$ 2.727,96 ganho.
+2. **Os ebooks "Nutricionais" existem, mas estão aguardando aprovação.**
+   Na seção `Ebooks` (parceiros/profissionais) existem hoje:
+   - "Manual de Uma Perfumista" → subcategoria **Feminilidade**, status **aprovado** (aparece);
+   - "Guia de Receitas Helton", "Manual do Pré e Pós Treino Helton", "Kit Alimentação Inteligente Helton" → subcategoria **Nutricional**, status **pendente** (não aparecem).
+   Como a loja só mostra subcategorias que tenham pelo menos um produto visível, a subcategoria "Nutricional" desaparece e a seção Ebooks fica parecendo "só Feminilidade". Não há mistura de produtos entre subcategorias — o filtro por subcategoria no código está correto.
 
-**3. Vimark — venda fictícia**
-A cada compra na loja o sistema grava **duas linhas**: o `store_order` e uma `transaction` com `purchase_type = 'store_order'`. O resumo do coach soma as duas tabelas → R$ 719,60 em vez dos R$ 359,80 reais (2 vendas de R$ 179,90: Julia e Tammylis). As comissões dessas vendas **estão corretas e creditadas** (R$ 63,57 vendedor + linhas), apenas ainda pendentes até 04/08 — nenhuma venda paga ficou sem comissão no sistema.
+3. **Produtos sem seção ficam invisíveis para sempre.**
+   Hoje: 4 produtos de profissional e 5 de parceiro aprovados e ativos estão **sem seção/subcategoria**. A navegação da loja é 100% por seção → subcategoria → produto, então esses itens nunca aparecem, e nem o vendedor nem o admin recebem qualquer aviso.
 
-## O que será feito
+4. **Na loja FitMind, produtos de profissional perdem a seção.**
+   Em `StorePage.tsx` os produtos de profissional são carregados sem `section_id`/`category_id`, sendo agrupados apenas por um rótulo "Parceiros · Especialidade". Ou seja, o mesmo produto se comporta diferente conforme a aba da loja — origem de boa parte da sensação de "produto sumiu / mudou de lugar".
 
-### A. Exceção de adiantamento (resolve a Fabiana, sem gambiarra)
-- Nova coluna `commissions.force_released` e tabela de auditoria `commission_release_advances` (quem liberou, quando, motivo, valor).
-- Ajuste mínimo em `recalc_wallets_for_owner`: comissão com `force_released = true` conta como disponível, ignorando carência e trava de missão. Nenhuma outra regra muda.
-- Função `admin_advance_commission_release(perfil, ids, admin, motivo)`: marca as comissões escolhidas, grava a auditoria e recalcula a carteira.
-- Server functions `listBlockedCommissions` e `advanceCommissionRelease` em `admin-payouts.functions.ts`.
-- UI em **Admin → Pagamentos**: botão "Antecipar liberação" na pessoa, modal listando as comissões bloqueadas com checkbox, valor total e campo de motivo. Depois disso o botão de baixa manual já existente funciona normalmente.
+## O que vou fazer
 
-### B. Financeiro passa a bater com Pagamentos
-Em `admin-financial.functions.ts` e no painel `admin.financeiro.tsx`:
-- classificar rede pelo mesmo critério da carteira (`level > 0` **ou** rótulo "Linha N"/"Upline N"), corrigindo os R$ 205,67 hoje jogados em Coaches;
-- "Disponível" passa a respeitar `available_at` e o desbloqueio mensal da rede — mesma regra da carteira;
-- novo card no topo, **"A pagar agora (carteiras)"**, lido direto das carteiras, que é o número que o admin de fato paga e é idêntico ao painel Pagamentos;
-- os cards por bucket ganham rótulo explícito de "ganho acumulado" e passam a mostrar também o já pago, para não serem lidos como "a pagar".
+### 1. Restaurar o que sumiu (imediato)
+- Reativar a seção "Biblioteca de ebooks" (e sua subcategoria), devolvendo o ebook ligado a ela.
+- Deixar visível no admin, na lista de seções, um aviso claro do tipo "inativa — X produto(s) ocultos", para desativar sem perceber nunca mais acontecer em silêncio.
 
-### C. Fim da venda fictícia
-- Em `coach-profile-summary.functions.ts`, ignorar transações com `purchase_type = 'store_order'` ao somar vendas (o pedido da loja já é contado). Vimark volta a exibir R$ 359,80.
-- Varredura nos demais pontos que somam as duas tabelas (`coach-sales`, `coach-reports`, `network-ranking`, `coach-career`) aplicando o mesmo filtro onde houver a mesma duplicação.
+### 2. Tornar visível o que está "pendente" ou "sem lugar"
+- Painel do dono do produto (profissional/parceiro): faixa de alerta listando os próprios produtos **pendentes de aprovação** e os **sem seção/subcategoria**, com link direto para corrigir.
+- Painel admin da loja: novo bloco "Produtos que não aparecem na loja" reunindo, em um só lugar, produtos pendentes, sem seção e produtos presos em seção/subcategoria inativa — com ação de aprovar ou reclassificar.
+
+### 3. Uniformizar as subcategorias na loja
+- Na loja FitMind, passar a carregar `section_id`/`category_id` dos produtos de profissional e usá-los na navegação, com o agrupamento por especialidade só como fallback para quem ainda não tem seção. Assim o mesmo produto fica no mesmo lugar em todas as abas da loja.
+- Mostrar subcategoria vazia com o texto "nenhum produto disponível no momento" em vez de sumir da tela, para não parecer que a categoria foi apagada.
+
+### 4. Conferência final
+- Revisar seção a seção (Ebooks, Nutricionistas, Biblioteca de ebooks, Suplementos, Academias) comparando o que existe no banco com o que a loja mostra, e reportar os produtos que continuarem ocultos e o motivo de cada um.
 
 ## Detalhes técnicos
-- Migração: `ALTER TABLE public.commissions ADD COLUMN force_released boolean NOT NULL DEFAULT false`; `CREATE TABLE public.commission_release_advances` com GRANTs (`service_role` total, `authenticated` leitura via política de admin) e RLS restrita a admin; `CREATE OR REPLACE FUNCTION recalc_wallets_for_owner` reaproveitando o corpo atual com o único ajuste dos filtros `is_released`/rede; `CREATE FUNCTION admin_advance_commission_release` como `SECURITY DEFINER` validando `is_admin(_admin_user_id)`.
-- Nada de UPDATE direto em saldos: tudo continua derivado das comissões pelo recálculo, o que preserva a rastreabilidade.
-- Validação após aplicar: conferir que a carteira da Fabiana sobe R$ 106,40 em disponível e zera o bloqueado dessas 6 linhas; que a soma "A pagar agora" do Financeiro é igual à de Pagamentos; e que o resumo do Vimark mostra R$ 359,80.
+
+- Reativação da seção: alteração de dados (`store_sections.is_active`), não de schema.
+- `src/components/student/StorePage.tsx`: incluir `section_id,category_id,subcategory_id` no select de `professional_products` e mapear para `sectionId/categoryId/subcategoryId`; manter o rótulo por especialidade apenas quando `section_id` for nulo.
+- `src/components/store/PartnerProfessionalStore.tsx`: manter o filtro atual, mas renderizar subcategorias sem itens com estado vazio em vez de removê-las (`visibleCats`).
+- `src/components/admin/StoreManager.tsx`: contagem de produtos por seção/subcategoria e destaque para inativas com produtos vinculados.
+- Novo painel de diagnóstico da loja consultando `professional_products` / `partner_products` / `products` por `status='pending'`, `section_id is null` ou seção/subcategoria inativa.
+
+## Pergunta rápida
+Confirmo a reativação da "Biblioteca de ebooks" — ou ela foi desativada de propósito e os ebooks devem ser movidos para a seção "Ebooks"?
