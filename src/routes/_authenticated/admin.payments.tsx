@@ -495,6 +495,9 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
               <p className="text-[10px] text-white/40 mt-2">Debita automaticamente o saldo disponível e registra no histórico.</p>
             </div>
 
+            <AdvanceReleaseBox profileId={person.profileId} onChanged={() => { load(); onChanged(); }} />
+
+
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex gap-1 rounded-lg bg-white/5 p-1 text-xs">
                 {(["withdrawals", "sales", "commissions"] as const).map((k) => (
