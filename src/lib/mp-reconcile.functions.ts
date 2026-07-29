@@ -177,3 +177,34 @@ export const listPendingMpPayments = createServerFn({ method: "POST" })
       created_at: string;
     }>;
   });
+
+export interface LastMpSweep {
+  checked: number;
+  approved: number;
+  applied: number;
+  failed: number;
+  rescued: number;
+  errors: string[];
+  finishedAt: string;
+}
+
+/** Resumo da última varredura automática de pagamentos MP (cron). */
+export const getLastMpSweep = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }): Promise<LastMpSweep | null> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertAdmin(supabaseAdmin, context.userId);
+    const { data } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "mp_sweep_last_run")
+      .maybeSingle();
+    const raw = (data as { value?: string | null } | null)?.value;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as LastMpSweep;
+    } catch {
+      return null;
+    }
+  });
+
