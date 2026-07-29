@@ -643,8 +643,21 @@ export async function handleCreateCard(data: CardInput) {
 
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);
-    if (data.saveCard && data.card.token) {
-      await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+    if ((data.saveCard || data.subscribe) && data.card.token) {
+      const savedCardId = await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+      if (data.subscribe) {
+        try {
+          const { activateSubscriptionForSource } = await import("./recurrence-source.server");
+          await activateSubscriptionForSource({
+            kind: data.source.kind,
+            id: data.source.id,
+            studentId: src.studentId,
+            savedCardId,
+          });
+        } catch (e) {
+          console.error("[mp subscribe] falha ao criar assinatura:", e);
+        }
+      }
     }
   }
 
