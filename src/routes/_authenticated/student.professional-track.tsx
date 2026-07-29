@@ -53,7 +53,7 @@ function ProfessionalTrackPage() {
         </div>
       </section>
 
-      <Button size="lg" className="w-full gap-2" onClick={() => navigate({ to: "/register", search: { role: "professional" } as never })}>
+      <Button size="lg" className="w-full gap-2" onClick={() => navigate({ to: "/upgrade/$role", params: { role: "professional" } })}>
         Iniciar cadastro como Profissional <ArrowRight className="h-4 w-4" />
       </Button>
     </div>

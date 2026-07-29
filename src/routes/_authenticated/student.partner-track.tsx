@@ -53,7 +53,7 @@ function PartnerTrackPage() {
         </div>
       </section>
 
-      <Button size="lg" className="w-full gap-2" onClick={() => navigate({ to: "/become-partner" })}>
+      <Button size="lg" className="w-full gap-2" onClick={() => navigate({ to: "/upgrade/$role", params: { role: "partner" } })}>
         Iniciar cadastro da empresa <ArrowRight className="h-4 w-4" />
       </Button>
     </div>
