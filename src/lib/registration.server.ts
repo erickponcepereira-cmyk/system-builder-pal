@@ -718,7 +718,12 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
   const nowIso = new Date().toISOString();
-  const activationPatch = input.alreadyPartner
+  const activationPatch: {
+    already_partner: boolean;
+    activation_paid_at?: string;
+    activation_source?: string;
+    activation_note?: string | null;
+  } = input.alreadyPartner
     ? {
         already_partner: true,
         activation_paid_at: nowIso,
