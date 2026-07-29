@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
@@ -39,6 +40,11 @@ interface Item {
   challenge_tokens_amount?: number;
   sort_order: number;
   visibility_audiences?: Audience[] | null;
+  is_recurring?: boolean | null;
+  recurrence_interval?: string | null;
+  recurrence_amount?: number | null;
+  recurrence_trial_days?: number | null;
+  recurrence_allow_one_time?: boolean | null;
 }
 
 function emptyItem(): Partial<Item> {
@@ -74,7 +80,7 @@ export function StoreItemsManager() {
       supabase.from("store_subcategories" as any).select("id,category_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,delivery_days,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,is_recurring,recurrence_interval,recurrence_amount,recurrence_trial_days,recurrence_allow_one_time,stock,delivery_days,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -173,6 +179,11 @@ export function StoreItemsManager() {
         challenge_tokens_amount: editing.has_challenge_access ? Math.max(0, Number(editing.challenge_tokens_amount ?? 1)) : 0,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
+        is_recurring: !!editing.is_recurring,
+        recurrence_interval: editing.is_recurring ? (editing.recurrence_interval || "monthly") : null,
+        recurrence_amount: editing.is_recurring ? Number(editing.recurrence_amount ?? editing.price ?? 0) : null,
+        recurrence_trial_days: editing.is_recurring ? Math.max(0, Number(editing.recurrence_trial_days || 0)) : 0,
+        recurrence_allow_one_time: editing.is_recurring ? editing.recurrence_allow_one_time !== false : true,
         visibility_audiences: (editing.visibility_audiences && editing.visibility_audiences.length > 0) ? editing.visibility_audiences : null,
       };
       if (editing.id) {
@@ -479,6 +490,12 @@ export function StoreItemsManager() {
                 <label className="text-xs text-white/60 mb-1 block">Preço original (de) — opcional</label>
                 <input type="number" step="0.01" className="input-dark w-full" value={editing.original_price ?? ""} onChange={(e) => setEditing({ ...editing, original_price: e.target.value ? Number(e.target.value) : null })} />
               </div>
+
+              <RecurrenceFields
+                value={editing as any}
+                price={editing.price ?? 0}
+                onChange={(patch) => setEditing({ ...(editing as any), ...patch })}
+              />
 
               {editing.kind === "physical" && (
                 <div>

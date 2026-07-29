@@ -1,4 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -1181,6 +1182,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 <PaidPricingEditor
                   product={editing}
                   onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
+                />
+              )}
+
+              {editing.kind === "paid" && !readOnly && (
+                <RecurrenceFields
+                  value={editing as any}
+                  price={Number(editing.price || 0)}
+                  onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } as any : prev)}
                 />
               )}
 

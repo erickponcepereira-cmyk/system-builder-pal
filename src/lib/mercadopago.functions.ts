@@ -61,6 +61,7 @@ export const createCardCheckout = createServerFn({ method: "POST" })
       }),
       deviceId: z.string().max(200).optional().nullable(),
       saveCard: z.boolean().optional(),
+      subscribe: z.boolean().optional(),
     }).parse(input)
   )
   .handler(async ({ data }) => {
@@ -79,4 +80,12 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { handleGetStatus } = await import("./mercadopago-impl.server");
     return handleGetStatus(data.paymentRowId);
+  });
+
+/** Informa se a origem (pedido) corresponde a um produto de assinatura recorrente. */
+export const getSourceRecurrence = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => SourceSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { resolveSourceRecurrence } = await import("./recurrence-source.server");
+    return await resolveSourceRecurrence(data.kind, data.id);
   });

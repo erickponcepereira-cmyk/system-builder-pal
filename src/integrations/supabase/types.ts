@@ -5914,6 +5914,7 @@ export type Database = {
           pix_fee_percentage: number
           price: number | null
           price_input_mode: string
+          recurrence_allow_one_time: boolean
           recurrence_amount: number | null
           recurrence_engine: string
           recurrence_interval: string
@@ -5975,6 +5976,7 @@ export type Database = {
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -6036,6 +6038,7 @@ export type Database = {
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -7123,6 +7126,7 @@ export type Database = {
           product_type: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max: number | null
           profit_percentage_min: number | null
+          recurrence_allow_one_time: boolean
           recurrence_amount: number | null
           recurrence_engine: string
           recurrence_interval: string
@@ -7216,6 +7220,7 @@ export type Database = {
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -7309,6 +7314,7 @@ export type Database = {
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -7728,6 +7734,7 @@ export type Database = {
           price: number
           price_input_mode: string
           professional_net_amount: number | null
+          recurrence_allow_one_time: boolean
           recurrence_amount: number | null
           recurrence_engine: string
           recurrence_interval: string
@@ -7798,6 +7805,7 @@ export type Database = {
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -7868,6 +7876,7 @@ export type Database = {
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -9023,6 +9032,7 @@ export type Database = {
           name: string
           original_price: number | null
           price: number
+          recurrence_allow_one_time: boolean
           recurrence_amount: number | null
           recurrence_engine: string
           recurrence_interval: string
@@ -9045,6 +9055,7 @@ export type Database = {
           name: string
           original_price?: number | null
           price: number
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string
@@ -9067,6 +9078,7 @@ export type Database = {
           name?: string
           original_price?: number | null
           price?: number
+          recurrence_allow_one_time?: boolean
           recurrence_amount?: number | null
           recurrence_engine?: string
           recurrence_interval?: string

@@ -1,32 +1,42 @@
-## Problema (verificado no banco)
+## Situação atual (verificada no código)
 
-- Leandro (profissional aprovado, `is_professional = true`) está na rede **Nathan → Jorge → Leandro**. A Estação Funcional (Fernando) está em outra ramificação.
-- A função que monta a lista de coprodutores (`listCoproducerCandidates`) filtra os candidatos apenas pela rede MLM do usuário logado (ele + 1 upline + 3 níveis de downline). Por isso o Leandro não aparece: ele está fora dessa janela.
-- O campo "código" hoje **não busca nada**: ele só é validado no momento de enviar o convite. Se o código estiver errado, o usuário só descobre no erro final. O código do Leandro existe (`entity_share_codes`), mas não há nenhuma tela de conferência antes.
-- Bônus encontrado: a política de escrita de `entity_share_codes` compara `profile_id = auth.uid()` (deveria ser o id do perfil do usuário), então o fallback de criação de código quebra para quem ainda não tem código gerado.
+- O **banco já tem** os campos de recorrência nas 4 tabelas de produto (`products`, `store_products`, `partner_products`, `professional_products`): `is_recurring`, `recurrence_interval`, `recurrence_amount`, `recurrence_trial_days`, `recurrence_engine`.
+- **Nenhuma tela grava esses campos** — nem o editor da loja do admin (`StoreItemsManager`), nem o de parceiro/profissional. Por isso você não encontra o campo: ele nunca foi colocado no formulário.
+- O **motor de cobrança existe e funciona** (cron diário + hook `/api/public/hooks/recurring-charge`).
+- O painel de teste **já existe**: Admin → Pagamentos → aba **"Recorrentes (cartão)"**, com os botões *Antecipar vencimento* (relógio) e *Cobrar agora* (raio). Eles só aparecem **por assinatura existente** e só no motor "cartão salvo" — como hoje não há nenhuma assinatura criada, a tabela está vazia e nenhum botão aparece.
+- A compra de um produto recorrente **não cria assinatura** hoje: só a mensalidade da plataforma cria, pelo card de débito automático no perfil.
 
-## O que vou fazer
+## O que será feito
 
-**1. Busca por e-mail/nome (principal)**
-- Nova server function `searchCoproducerCandidates({ query })`: busca por e-mail exato/parcial ou nome, em profissionais aprovados (`coaches.is_professional`) e parceiros aprovados, **sem filtro de rede**.
-- Retorna: nome, tipo (profissional/parceiro), e-mail mascarado (ex.: `lea***@hotmail.com`) para confirmação visual, e o id necessário para o convite. Nenhum dado sensível extra é exposto.
-- Mínimo de 3 caracteres para buscar, limite de 20 resultados.
+### 1. Campo de recorrência no cadastro de produto (Admin e demais lojas)
+No formulário de produto, um bloco novo "Cobrança recorrente":
+- Chave **"Este produto é uma assinatura/recorrência"**.
+- Quando ligada: **intervalo** (mensal/anual), **valor da recorrência** (padrão = preço do produto), **dias de teste grátis** (opcional).
+- Chave **"Permitir também pagamento avulso"** (padrão ligada) → é isso que faz uma mensalidade poder ser vendida das duas formas.
+- Aplicado em: `StoreItemsManager` (admin/loja), painel de produtos do **parceiro** e do **profissional**, usando as colunas que já existem.
 
-**2. Código com verificação imediata**
-- Nova server function `resolveCoproducerCode({ code })` que resolve o código e devolve nome + tipo na hora.
-- No modal, ao digitar o código aparece um cartão "Encontrado: Leandro da Silva Amorim — Profissional" antes de confirmar; se não existir, mensagem clara "Código não encontrado".
+### 2. Cliente escolhe: assinar no cartão ou pagar avulso
+No checkout (`MercadoPagoCheckout`), quando o produto for recorrente:
+- Duas opções visíveis: **"Assinar (cobrança automática todo mês)"** e **"Pagar só desta vez"** (PIX ou cartão sem salvar), respeitando a chave de pagamento avulso do produto.
+- Escolhendo assinar, a caixa "Salvar este cartão" fica marcada e obrigatória (assinatura exige cartão salvo); PIX fica indisponível para o modo assinatura.
+- Nada muda para produtos não recorrentes.
 
-**3. Modal de convite reformulado**
-- Um único campo de busca: aceita **e-mail, nome ou código** — o sistema decide sozinho (se parecer código, resolve por código; senão busca por e-mail/nome).
-- Lista de sugestões da rede continua aparecendo como atalho, mas deixa de ser a única forma.
-- Após escolher, segue o fluxo atual (percentual/valor fixo, custo, base do split).
+### 3. Criar a assinatura automaticamente após o pagamento aprovado
+Ao aprovar um pagamento de cartão salvo de produto recorrente, o sistema cria a linha em `recurring_subscriptions` com título, valor, intervalo, dia de cobrança e próxima data (respeitando dias de teste). A partir daí o cron cobra sozinho e a assinatura aparece na aba **Recorrentes (cartão)** com os botões de teste.
 
-**4. Correção do código próprio**
-- Ajustar a política de `entity_share_codes` para usar o perfil correto do usuário, garantindo que todo parceiro/profissional consiga ver e gerar o próprio código para compartilhar.
+### 4. Visibilidade e gestão pelo cliente
+No perfil do usuário, junto do débito automático, listar as assinaturas de produto ativas com valor, próxima cobrança e botão de cancelar (o cancelamento já existe no backend).
+
+## Tutorial (como usar depois de pronto)
+
+1. **Cadastrar**: Admin → Loja → Produtos → *Novo produto* (ou editar um existente) → bloco **"Cobrança recorrente"** → ligar, escolher mensal, valor e se aceita pagamento avulso → Salvar.
+2. **Comprar como cliente**: abrir o produto na loja → Comprar → escolher **Assinar** → pagar no cartão (o cartão é salvo automaticamente) ou escolher **Pagar só desta vez**.
+3. **Conferir**: Admin → **Pagamentos** → aba **"Recorrentes (cartão)"** → a assinatura aparece como *Ativa* com a próxima cobrança.
+4. **Testar sem esperar o mês**: nessa linha, clicar no ícone de **relógio** (antecipar vencimento para hoje) e depois no **raio** (cobrar agora). O resultado aparece em "Últimas cobranças automáticas" como Aprovada ou Recusada com o motivo.
+5. **Cancelar/pausar**: pelos ícones da mesma linha (admin) ou pelo próprio cliente no perfil.
 
 ## Detalhes técnicos
 
-- `src/lib/collab.functions.ts`: adicionar `searchCoproducerCandidates` e `resolveCoproducerCode`; manter `listCoproducerCandidates` (atalho da rede) sem alteração de assinatura.
-- Busca feita no servidor via cliente admin **após** validar que o chamador é dono/parceiro/profissional legítimo, retornando somente campos públicos + e-mail mascarado.
-- `src/components/shared/CoproductionEditor.tsx`: substituir o seletor atual por campo de busca unificado com debounce e cartão de confirmação.
-- Migração pequena para corrigir a policy de `entity_share_codes`.
+- Sem migração nova: as colunas de recorrência já existem nas 4 tabelas; será adicionada apenas uma coluna booleana `allow_one_time` se necessário, ou reaproveitado `recurrence_engine` para indicar o modo.
+- Criação da assinatura no fluxo aprovado de `mercadopago-impl.server.ts` (mesmo ponto onde o cartão é salvo), reutilizando o payload de `enableAutoDebit` com `product_kind` = tipo do produto e `product_id`.
+- `MercadoPagoCheckout` recebe uma prop `recurrence` opcional vinda do modal de produto; sem ela o comportamento atual é preservado.

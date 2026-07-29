@@ -493,6 +493,8 @@ export type CardInput = {
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
   deviceId?: string | null;
   saveCard?: boolean;
+  /** Cliente escolheu assinar (cobrança automática recorrente). */
+  subscribe?: boolean;
 };
 
 /**
@@ -524,13 +526,13 @@ async function persistSavedCard(params: {
   payer: { email: string; name?: string; doc?: string };
   cardToken: string;
   mpResp: any;
-}) {
+}): Promise<string | null> {
   try {
-    if (!params.studentId) return;
+    if (!params.studentId) return null;
     const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
     const customer = await findOrCreateCustomer(params.payer.email, params.payer.name, params.payer.doc);
     const card = await createCustomerCard(String(customer.id), params.cardToken);
-    await supabaseAdmin.from("saved_payment_cards" as never).insert({
+    const { data: saved } = await supabaseAdmin.from("saved_payment_cards" as never).insert({
       student_id: params.studentId,
       mp_customer_id: String(customer.id),
       mp_card_id: String(card.id),
@@ -544,11 +546,14 @@ async function persistSavedCard(params: {
       payment_method_id: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
       issuer_id: card?.issuer?.id ? String(card.issuer.id) : null,
       is_default: true,
-    } as never);
+    } as never).select("id").maybeSingle();
+    return (saved as any)?.id ?? null;
   } catch (e) {
     console.error("[mp save card] falhou (pagamento não é afetado):", e);
+    return null;
   }
 }
+
 
 export async function handleCreateCard(data: CardInput) {
   const src = await loadSource(data.source.kind, data.source.id);
@@ -638,8 +643,21 @@ export async function handleCreateCard(data: CardInput) {
 
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);
-    if (data.saveCard && data.card.token) {
-      await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+    if ((data.saveCard || data.subscribe) && data.card.token) {
+      const savedCardId = await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+      if (data.subscribe) {
+        try {
+          const { activateSubscriptionForSource } = await import("./recurrence-source.server");
+          await activateSubscriptionForSource({
+            kind: data.source.kind,
+            id: data.source.id,
+            studentId: src.studentId,
+            savedCardId,
+          });
+        } catch (e) {
+          console.error("[mp subscribe] falha ao criar assinatura:", e);
+        }
+      }
     }
   }
 
