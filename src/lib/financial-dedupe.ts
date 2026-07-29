@@ -57,3 +57,28 @@ export function dedupePointLogs<T extends PointLogLike>(rows: T[] | null | undef
   }
   return out;
 }
+
+/**
+ * Toda compra na loja grava duas linhas: `store_orders` + uma `transactions`
+ * espelho com `purchase_type = 'store_order'`. Somar as duas fontes dobra o
+ * faturamento. Use este filtro sempre que somar transações junto de pedidos.
+ */
+export const NON_MIRRORED_TX_FILTER = "purchase_type.is.null,purchase_type.neq.store_order";
+
+export function isMirroredStoreOrderTx(purchaseType: string | null | undefined) {
+  return purchaseType === "store_order";
+}
+
+
+/**
+ * Classificação única de "comissão de rede" usada pelo painel Financeiro e
+ * pelos relatórios. Parte das comissões antigas gravou `level = 0` mesmo sendo
+ * Linha/Upline 1-3; sem isso elas apareciam como comissão de coach.
+ * Exceção: rótulos "(sem upline → vendedor)" caem para o próprio vendedor.
+ */
+export function isNetworkCommissionRow(level: unknown, slotLabel: unknown) {
+  if (Number(level || 0) > 0) return true;
+  const s = String(slotLabel || "").toLowerCase();
+  if (s.includes("sem upline")) return false;
+  return /(^|\s)(linha|upline)\s*[0-9]+/.test(s);
+}

@@ -11,13 +11,17 @@ import {
   listPendingWithdrawals,
   registerManualPayout,
   updateWithdrawalStatus,
+  listBlockedCommissions,
+  advanceCommissionRelease,
   type PayoutGroup,
   type SellerRole,
   type PayoutsDashboard,
   type PayoutPersonRow,
   type PayoutDetails,
   type PendingWithdrawalRow,
+  type BlockedCommissionRow,
 } from "@/lib/admin-payouts.functions";
+
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
@@ -491,6 +495,9 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
               <p className="text-[10px] text-white/40 mt-2">Debita automaticamente o saldo disponível e registra no histórico.</p>
             </div>
 
+            <AdvanceReleaseBox profileId={person.profileId} onChanged={() => { load(); onChanged(); }} />
+
+
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex gap-1 rounded-lg bg-white/5 p-1 text-xs">
                 {(["withdrawals", "sales", "commissions"] as const).map((k) => (
@@ -852,6 +859,105 @@ function NutritionistPanel() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Exceção do admin: antecipa a liberação de comissões que ainda estão em
+ * carência (7 dias) ou travadas pela missão da rede. Fica registrado em
+ * auditoria e a carteira é recalculada na hora.
+ */
+function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChanged: () => void }) {
+  const fetchBlocked = useServerFn(listBlockedCommissions);
+  const advance = useServerFn(advanceCommissionRelease);
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<BlockedCommissionRow[] | null>(null);
+  const [sel, setSel] = useState<Record<string, boolean>>({});
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setRows(null);
+    try { setRows(await fetchBlocked({ data: { profileId } })); }
+    catch (e: any) { toast.error(e?.message || "Erro ao carregar comissões bloqueadas"); setRows([]); }
+  };
+
+  useEffect(() => { if (open) load(); /* eslint-disable-next-line */ }, [open, profileId]);
+
+  const selectedIds = Object.keys(sel).filter((k) => sel[k]);
+  const total = (rows || []).filter((r) => sel[r.id]).reduce((s, r) => s + r.amount, 0);
+
+  const submit = async () => {
+    if (!selectedIds.length) return toast.error("Selecione ao menos uma comissão");
+    if (!window.confirm(`Antecipar a liberação de ${fmt(total)}? O valor passa a contar como disponível na carteira.`)) return;
+    setBusy(true);
+    try {
+      await advance({ data: { profileId, commissionIds: selectedIds, reason: reason || undefined } });
+      toast.success("Liberação antecipada registrada");
+      setSel({}); setReason("");
+      await load();
+      onChanged();
+    } catch (e: any) { toast.error(e?.message || "Erro ao antecipar"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="rounded-xl p-4 border border-amber-500/30" style={{ backgroundColor: "rgba(245,158,11,0.05)" }}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-amber-400 font-bold">Antecipar liberação (exceção)</p>
+          <p className="text-[10px] text-white/40 mt-1">
+            Use quando o valor já foi adiantado por fora. Libera comissões em carência ou travadas pela missão da rede.
+          </p>
+        </div>
+        <button onClick={() => setOpen((v) => !v)} className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-bold text-amber-300">
+          {open ? "Fechar" : "Abrir"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {rows === null ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-amber-400" /></div>
+          ) : rows.length === 0 ? (
+            <p className="text-xs text-white/50">Nenhuma comissão bloqueada para esta pessoa.</p>
+          ) : (
+            <div className="max-h-56 overflow-auto rounded-lg border border-white/5 divide-y divide-white/5">
+              {rows.map((r) => (
+                <label key={r.id} className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
+                  <input
+                    type="checkbox"
+                    checked={!!sel[r.id]}
+                    onChange={(e) => setSel((s) => ({ ...s, [r.id]: e.target.checked }))}
+                  />
+                  <span className="flex-1 text-white/80">{r.slotLabel || "Comissão"}{r.isNetwork ? " · rede" : ""}</span>
+                  <span className="text-white/40">
+                    {r.availableAt ? `libera ${new Date(r.availableAt).toLocaleDateString("pt-BR")}` : "—"}
+                  </span>
+                  <span className="font-bold text-white">{fmt(r.amount)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Motivo do adiantamento"
+              className="md:col-span-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
+            />
+            <button
+              disabled={busy || !selectedIds.length}
+              onClick={submit}
+              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Liberar {selectedIds.length ? fmt(total) : ""}
+            </button>
+          </div>
         </div>
       )}
     </div>

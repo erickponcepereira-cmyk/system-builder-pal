@@ -2557,6 +2557,60 @@ export type Database = {
           },
         ]
       }
+      commission_release_advances: {
+        Row: {
+          admin_user_id: string | null
+          amount: number
+          commission_id: string
+          created_at: string
+          id: string
+          original_available_at: string | null
+          original_status: string | null
+          profile_id: string
+          reason: string | null
+          slot_label: string | null
+        }
+        Insert: {
+          admin_user_id?: string | null
+          amount?: number
+          commission_id: string
+          created_at?: string
+          id?: string
+          original_available_at?: string | null
+          original_status?: string | null
+          profile_id: string
+          reason?: string | null
+          slot_label?: string | null
+        }
+        Update: {
+          admin_user_id?: string | null
+          amount?: number
+          commission_id?: string
+          created_at?: string
+          id?: string
+          original_available_at?: string | null
+          original_status?: string | null
+          profile_id?: string
+          reason?: string | null
+          slot_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_release_advances_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_release_advances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commissions: {
         Row: {
           amount: number
@@ -2565,6 +2619,7 @@ export type Database = {
           beneficiary_profile_id: string
           created_at: string | null
           fitcoin_credited: boolean
+          force_released: boolean
           id: string
           is_master_coach_commission: boolean | null
           is_referral: boolean | null
@@ -2585,6 +2640,7 @@ export type Database = {
           beneficiary_profile_id: string
           created_at?: string | null
           fitcoin_credited?: boolean
+          force_released?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
@@ -2605,6 +2661,7 @@ export type Database = {
           beneficiary_profile_id?: string
           created_at?: string | null
           fitcoin_credited?: boolean
+          force_released?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
@@ -11005,6 +11062,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_advance_commission_release: {
+        Args: {
+          _admin_user_id: string
+          _commission_ids: string[]
+          _profile_id: string
+          _reason?: string
+        }
+        Returns: number
+      }
       admin_block_and_transfer_to_upline: {
         Args: {
           _coach_id: string

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { getServerCutoffIso } from "@/lib/test-mode.functions";
-import { dedupeCommissions } from "@/lib/financial-dedupe";
+import { dedupeCommissions, isNetworkCommissionRow } from "@/lib/financial-dedupe";
 
 /** Aplica filtro do Modo de Testes quando ativo: only registros após o marco. */
 function applyCutoff<T>(q: T, col: string, cutoff: string | null): T {
@@ -108,8 +108,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       // Cashback/Fitcoin do aluno indicador é bucket próprio; nunca soma em coach/rede.
       if ((c as any).is_referral || slotLabel.startsWith("aluno indicador")) continue;
 
-      // Network (level 1/2/3)
-      if (level > 0) {
+      // Network: level 1/2/3 OU rótulo Linha/Upline com level 0 (registros antigos).
+      const isNetwork = isNetworkCommissionRow(level, slotLabel);
+      if (isNetwork) {
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
         else if (status === "paid" || status === "withdrawn") networkPaid += amt;
@@ -137,8 +138,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         slotLabel.includes("admin") ||
         (!benefCoachId && !slotLabel);
       if (isSystem) continue;
-      const target = level > 0 ? null : coachesMap;
+      const target = isNetwork ? null : coachesMap;
       if (!target) continue;
+
       const cur = target.get(pid) || {
         profileId: pid,
         name: prof?.name || "—",
@@ -560,7 +562,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       // Comissão de aluno indicador nunca aparece em coaches/rede.
       if (c.is_referral || slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
-      const isNetwork = Number(c.level || 0) > 0;
+      const isNetwork = isNetworkCommissionRow(c.level, c.slot_label);
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
       return !isSystem && !isNetwork;

@@ -299,7 +299,8 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   const studentIds = students.map((s) => s.id);
   if (!studentIds.length) return revenue;
   const [txRes, storeRes, partnerRes] = await Promise.all([
-    supabaseAdmin.from("transactions").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
+    // exclui transações espelho de store_orders (senão a venda conta duas vezes)
+    supabaseAdmin.from("transactions").select("student_id,gross_amount,metadata").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
     supabaseAdmin.from("store_orders").select("student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("updated_at", fromIso).lte("updated_at", toIso),
     supabaseAdmin.from("partner_product_orders").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
   ]);
@@ -308,7 +309,9 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
     if (!coachId) return;
     revenue.set(coachId, (revenue.get(coachId) || 0) + (Number(amount) || 0));
   };
-  ((txRes.data as Array<{ student_id: string; gross_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.gross_amount));
+  ((txRes.data as Array<{ student_id: string; gross_amount: number; metadata: { store_order_id?: string } | null }> | null) || [])
+    .filter((r) => !r.metadata?.store_order_id)
+    .forEach((r) => add(r.student_id, r.gross_amount));
   ((storeRes.data as Array<{ student_id: string; total_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.total_amount));
   ((partnerRes.data as Array<{ student_id: string; gross_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.gross_amount));
   return revenue;

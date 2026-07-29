@@ -1,43 +1,41 @@
-## Diagnóstico (verificado no banco)
+## Diagnóstico (confirmado no banco)
 
-**1. Avaliações da Fabiana sumiram — causa confirmada**
+**1. Fabiana Katrine — R$ 106,40 bloqueados**
+Ela tem 6 comissões `pending` com liberação em 04–05/08: 2× R$ 48,47 ("Comissão do Vendedor"), 2× R$ 2,96 ("Linha 2") e 2× R$ 1,77 ("Linha 3"). Hoje o admin não consegue dar baixa porque a carteira só considera disponível o que tem `available_at <= agora` — e as linhas de rede ainda exigem missão do mês desbloqueada. Não existe hoje nenhuma ferramenta de exceção/adiantamento.
 
-A função de unificação de contas (`admin_merge_profiles`) tem este trecho:
+**2. "Coaches a pagar" (R$ 2.456,90) ≠ Pagamentos**
+Confirmado: R$ 1.496,29 (available) + R$ 960,61 (pending) = exatamente os R$ 2.456,90 do painel. Esse número é o **bruto histórico de comissões**, e por isso nunca vai bater com o que realmente há a pagar:
+- não desconta os R$ 988,26 já sacados/pagos;
+- não desconta saques reservados (solicitado/aprovado/processando);
+- não desconta pagamentos feitos com saldo da carteira;
+- classifica como "coach" comissões de rede gravadas com `level = 0` mas rótulo "Linha 1/2/3" e "Upline 1/2/3" (R$ 205,67 hoje) — a carteira as trata como rede;
+- conta como "disponível" só o status, ignorando `available_at` e o desbloqueio mensal da rede.
+Já o painel Pagamentos lê as carteiras: R$ 601,75 disponível / R$ 1.137,95 bloqueado / R$ 2.727,96 ganho.
 
-```text
-UPDATE tabela SET coluna = alvo WHERE coluna = origem
-EXCEPTION unique_violation -> DELETE FROM tabela WHERE coluna = origem
-```
-
-A tabela `coach_evaluation_clients` tem índice único em `student_id`. A conta principal (Gmail) já tinha uma ficha para o mesmo aluno, então o UPDATE deu conflito e o código **apagou a ficha da conta antiga**. Como `coach_body_assessments.client_id` tem `ON DELETE CASCADE`, as avaliações vinculadas foram removidas junto.
-
-Confirmei: hoje não existe nenhuma linha em `coach_body_assessments` para essa cliente/aluna, e nada em `coach_assessment_deletions` (não foi exclusão pela UI).
-
-A função também faz `DELETE FROM students` da conta antiga — e existem **26 tabelas com cascata a partir de `students`** (protocolos, anamnese, água, janelas, fitcoin, agendamentos, cupons, reservas...). Ou seja: risco de perda em qualquer nova mesclagem.
-
-Sobre recuperar os dados apagados: eles foram removidos fisicamente e não há snapshot dessas linhas no banco. A recuperação depende de backup point-in-time do provedor; caso não exista, a avaliação precisará ser refeita pela coach. Vou verificar essa possibilidade como primeiro passo da execução.
-
-**2 e 3. Link de compartilhamento e "ver avaliação completa" no painel do aluno — mesma causa**
-
-A página pública `/resultado/{token}` funciona (testei e renderizou o relatório completo). O problema está no painel do aluno: `src/routes/_authenticated/student.assessments.tsx` só mostra o botão "Ver relatório completo" se já existir um token em `assessment_shares` — e a única política de acesso dessa tabela é `coach_id = coach logado`. **O aluno nunca consegue ler o token**, então o link nunca aparece e o compartilhamento parece quebrado do lado dele.
+**3. Vimark — venda fictícia**
+A cada compra na loja o sistema grava **duas linhas**: o `store_order` e uma `transaction` com `purchase_type = 'store_order'`. O resumo do coach soma as duas tabelas → R$ 719,60 em vez dos R$ 359,80 reais (2 vendas de R$ 179,90: Julia e Tammylis). As comissões dessas vendas **estão corretas e creditadas** (R$ 63,57 vendedor + linhas), apenas ainda pendentes até 04/08 — nenhuma venda paga ficou sem comissão no sistema.
 
 ## O que será feito
 
-### A. Blindar a unificação de contas (migração)
-- Substituir o `DELETE` em caso de conflito por **manter o registro na conta antiga** e reportá-lo como "não movido" no log de auditoria — a função nunca mais apaga dados.
-- Remover os `DELETE FROM students` / `DELETE FROM coaches`; a conta antiga fica apenas marcada como unificada.
-- Caso especial de fichas de avaliação: quando as duas contas tiverem ficha, **transferir as avaliações da ficha antiga para a ficha da conta principal** e apenas desvincular a ficha antiga (em vez de apagá-la).
-- Registrar no log tanto o que foi movido quanto o que ficou retido por conflito.
+### A. Exceção de adiantamento (resolve a Fabiana, sem gambiarra)
+- Nova coluna `commissions.force_released` e tabela de auditoria `commission_release_advances` (quem liberou, quando, motivo, valor).
+- Ajuste mínimo em `recalc_wallets_for_owner`: comissão com `force_released = true` conta como disponível, ignorando carência e trava de missão. Nenhuma outra regra muda.
+- Função `admin_advance_commission_release(perfil, ids, admin, motivo)`: marca as comissões escolhidas, grava a auditoria e recalcula a carteira.
+- Server functions `listBlockedCommissions` e `advanceCommissionRelease` em `admin-payouts.functions.ts`.
+- UI em **Admin → Pagamentos**: botão "Antecipar liberação" na pessoa, modal listando as comissões bloqueadas com checkbox, valor total e campo de motivo. Depois disso o botão de baixa manual já existente funciona normalmente.
 
-### B. Link completo da avaliação no painel do aluno
-- Nova função de servidor `getOrCreateMyAssessmentShare` (autenticada) em `src/lib/assessment-share.functions.ts`: valida que a avaliação pertence ao aluno logado e devolve/gera o token, sem depender das permissões de leitura da tabela de compartilhamentos.
-- `student.assessments.tsx`: botão **"Ver avaliação completa"** sempre visível em cada avaliação, chamando essa função e abrindo `/resultado/{token}`; e botão **"Compartilhar"** que copia o link canônico (`getShareOrigin()`), útil quando o aparelho não suporta compartilhamento nativo.
-- Remover a consulta direta a `assessment_shares` que hoje retorna vazio para o aluno.
+### B. Financeiro passa a bater com Pagamentos
+Em `admin-financial.functions.ts` e no painel `admin.financeiro.tsx`:
+- classificar rede pelo mesmo critério da carteira (`level > 0` **ou** rótulo "Linha N"/"Upline N"), corrigindo os R$ 205,67 hoje jogados em Coaches;
+- "Disponível" passa a respeitar `available_at` e o desbloqueio mensal da rede — mesma regra da carteira;
+- novo card no topo, **"A pagar agora (carteiras)"**, lido direto das carteiras, que é o número que o admin de fato paga e é idêntico ao painel Pagamentos;
+- os cards por bucket ganham rótulo explícito de "ganho acumulado" e passam a mostrar também o já pago, para não serem lidos como "a pagar".
 
-### C. Verificação
-- Rodar simulação (dry-run) da unificação corrigida em um par de contas de teste e conferir que nada é apagado.
-- Abrir o painel do aluno no navegador e validar que o botão aparece e que a página completa carrega.
+### C. Fim da venda fictícia
+- Em `coach-profile-summary.functions.ts`, ignorar transações com `purchase_type = 'store_order'` ao somar vendas (o pedido da loja já é contado). Vimark volta a exibir R$ 359,80.
+- Varredura nos demais pontos que somam as duas tabelas (`coach-sales`, `coach-reports`, `network-ranking`, `coach-career`) aplicando o mesmo filtro onde houver a mesma duplicação.
 
 ## Detalhes técnicos
-- Migração: `CREATE OR REPLACE FUNCTION public.admin_merge_profiles(uuid, uuid, uuid, boolean)` com o bloco `EXCEPTION` alterado para acumular `skipped` em vez de deletar; grants mantidos para `authenticated`/`service_role`.
-- Nenhuma alteração em `coach_body_assessments`, RLS de coach ou na página pública `/resultado/$token`.
+- Migração: `ALTER TABLE public.commissions ADD COLUMN force_released boolean NOT NULL DEFAULT false`; `CREATE TABLE public.commission_release_advances` com GRANTs (`service_role` total, `authenticated` leitura via política de admin) e RLS restrita a admin; `CREATE OR REPLACE FUNCTION recalc_wallets_for_owner` reaproveitando o corpo atual com o único ajuste dos filtros `is_released`/rede; `CREATE FUNCTION admin_advance_commission_release` como `SECURITY DEFINER` validando `is_admin(_admin_user_id)`.
+- Nada de UPDATE direto em saldos: tudo continua derivado das comissões pelo recálculo, o que preserva a rastreabilidade.
+- Validação após aplicar: conferir que a carteira da Fabiana sobe R$ 106,40 em disponível e zera o bloqueado dessas 6 linhas; que a soma "A pagar agora" do Financeiro é igual à de Pagamentos; e que o resumo do Vimark mostra R$ 359,80.
