@@ -42,13 +42,17 @@ export function CoproductionEditor({
   const cancel = useServerFn(cancelCoproduction);
   const update = useServerFn(updateCoproduction);
   const listCandidates = useServerFn(listCoproducerCandidates);
+  const searchCandidates = useServerFn(searchCoproducerCandidates);
+  const resolveCode = useServerFn(resolveCoproducerCode);
 
   const [items, setItems] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState<{ type: OwnerType; id: string; name: string }[]>([]);
+  const [candidates, setCandidates] = useState<CoproducerHit[]>([]);
+  const [results, setResults] = useState<CoproducerHit[]>([]);
+  const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
-  const [picked, setPicked] = useState<{ type: OwnerType; id: string; name: string } | null>(null);
+  const [picked, setPicked] = useState<CoproducerHit | null>(null);
   const [useCode, setUseCode] = useState(false);
   const [code, setCode] = useState("");
   const [splitKind, setSplitKind] = useState<"percent" | "fixed">("percent");
