@@ -26,7 +26,7 @@ const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 const friendlyPaymentMessage = (status?: string | null, detail?: string | null) => {
   const code = String(detail || status || "").toLowerCase();
   if (code.includes("cc_rejected_high_risk")) {
-    return "Pagamento recusado pela análise de segurança do Mercado Pago. Tente PIX, outro cartão ou gere uma nova tentativa.";
+    return "Pagamento recusado pela análise de segurança do Mercado Pago. Se o cartão for de outra pessoa, preencha nome e documento do titular do cartão; se persistir, tente PIX ou outro cartão.";
   }
   if (code.includes("cc_rejected_insufficient_amount")) return "Pagamento recusado por saldo/limite insuficiente. Tente outro cartão ou PIX.";
   if (code.includes("cc_rejected_bad_filled") || code.includes("bad_filled")) return "Pagamento recusado. Confira os dados do cartão e tente novamente.";
@@ -65,6 +65,33 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const cardFn = useServerFn(createCardCheckout);
   const statusFn = useServerFn(getPaymentStatus);
   const recurrenceFn = useServerFn(getSourceRecurrence);
+
+  const buildCardPayer = (cardFormData: any): Payer => {
+    const rawName =
+      cardFormData?.cardholderName ||
+      cardFormData?.cardholder_name ||
+      cardFormData?.card_holder_name ||
+      cardFormData?.cardholder?.name ||
+      cardFormData?.payer?.name ||
+      cardFormData?.payer?.first_name ||
+      cardFormData?.payer?.firstName ||
+      "";
+    const first = cardFormData?.payer?.first_name || cardFormData?.payer?.firstName || "";
+    const last = cardFormData?.payer?.last_name || cardFormData?.payer?.lastName || "";
+    const holderName = String(rawName || `${first} ${last}`).trim();
+    const holderDoc = String(
+      cardFormData?.payer?.identification?.number ||
+      cardFormData?.cardholder?.identification?.number ||
+      cardFormData?.identification?.number ||
+      ""
+    ).trim();
+
+    return {
+      email: String(cardFormData?.payer?.email || payer.email || "").trim(),
+      name: holderName || undefined,
+      doc: holderDoc || undefined,
+    };
+  };
 
   useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
   useEffect(() => { subscribeRef.current = mode === "subscribe"; }, [mode]);
@@ -186,16 +213,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
         if (!mounted) return;
 
-        const nameParts = (payer.name || "").trim().split(/\s+/).filter(Boolean);
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(" ") || undefined;
-        const docDigits = (payer.doc || "").replace(/\D/g, "");
+        // Não pré-preenche nome/CPF do cadastro no formulário de cartão: o titular
+        // pode ser outra pessoa, e essa divergência aumenta recusas por risco.
         const initPayer: any = payer.email ? { email: payer.email } : undefined;
-        if (initPayer) {
-          if (firstName) initPayer.firstName = firstName;
-          if (lastName) initPayer.lastName = lastName;
-          if (docDigits.length >= 11) initPayer.identification = { type: "CPF", number: docDigits };
-        }
 
         cardBrickRef.current = await bricksBuilder.create("cardPayment", cardContainerId, {
           initialization: { amount, payer: initPayer },
@@ -220,14 +240,11 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setLastStatusDetail(null);
                 try {
                   const deviceId = await getDeviceId();
+                  const cardPayer = buildCardPayer(cardFormData);
                   const r = await cardFn({
                     data: {
                       source,
-                      payer: {
-                        email: cardFormData.payer?.email || payer.email,
-                        name: payer.name,
-                        doc: cardFormData.payer?.identification?.number || payer.doc,
-                      },
+                      payer: cardPayer,
                       card: {
                         token: cardFormData.token,
                         installments: Number(cardFormData.installments || 1),
@@ -410,6 +427,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
       {tab === "card" && (
         <div className="space-y-3">
+          <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Se o cartão for de outra pessoa, preencha no formulário os dados do titular do cartão.
+          </p>
           <div ref={cardFormRef} id={cardContainerId} />
           {recurrence && mode === "subscribe" && (
             <p className="rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
@@ -435,6 +455,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               {lastStatusDetail?.includes("high_risk") && (
                 <p className="text-xs font-normal text-destructive/80">
                   O Mercado Pago bloqueou este cartão por análise de risco. Retentativas com o mesmo cartão tendem a cair de novo — o PIX costuma aprovar na hora.
+                  Se o cartão for de outra pessoa, gere uma nova tentativa preenchendo nome e documento do titular do cartão.
                 </p>
               )}
               <div className="flex flex-wrap gap-2">
