@@ -256,7 +256,10 @@ export function CoproductionEditor({
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
-  const filtered = candidates.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  // Sem busca: sugestões da própria rede. Com busca: resultados globais (e-mail/nome/código).
+  const visibleOptions: CoproducerHit[] = search.trim().length >= 3
+    ? results
+    : candidates.slice(0, 30);
 
   return (
     <div className="space-y-3">
