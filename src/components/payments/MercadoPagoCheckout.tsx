@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
-import { loadMercadoPagoSDK, getMP } from "@/lib/mercadopago";
+import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@/lib/mercadopago";
 import { createPixCheckout, createCardCheckout, getPaymentStatus } from "@/lib/mercadopago.functions";
+
 
 type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
 type Payer = { email: string; name?: string; doc?: string };
