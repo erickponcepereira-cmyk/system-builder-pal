@@ -486,7 +486,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   } else {
     const sectionCats = categories.filter((c) => c.section_id === activeSection);
     const usedCatIds = new Set(visibleCards.filter((c) => c.section_id === activeSection).map((c) => c.category_id).filter(Boolean) as string[]);
-    const visibleCats = sectionCats.filter((c) => usedCatIds.has(c.id));
+    // Mantemos subcategorias sem itens visíveis: sumir da tela dá a impressão
+    // de que a categoria foi apagada. Elas aparecem com aviso de vazio.
+    const visibleCats = sectionCats;
     const currentSection = sections.find((s) => s.id === activeSection);
 
     if (!activeCategory) {
