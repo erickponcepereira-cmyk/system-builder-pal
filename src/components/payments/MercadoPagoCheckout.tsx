@@ -31,6 +31,9 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
   if (code.includes("cc_rejected_insufficient_amount")) return "Pagamento recusado por saldo/limite insuficiente. Tente outro cartão ou PIX.";
   if (code.includes("cc_rejected_bad_filled") || code.includes("bad_filled")) return "Pagamento recusado. Confira os dados do cartão e tente novamente.";
   if (code.includes("cc_rejected_other_reason") || code.includes("rejected")) return "Pagamento recusado. Tente PIX, outro cartão ou uma nova tentativa.";
+  if (code.includes("wrong parameter") || code.includes("three_ds") || code.includes("three_d_secure")) {
+    return "Falha na validação de segurança do cartão. Atualize a página e tente novamente; se persistir, use PIX ou outro cartão.";
+  }
   return `Pagamento ${status === "rejected" ? "recusado" : status || "não aprovado"}${detail ? `: ${detail}` : ""}`;
 };
 

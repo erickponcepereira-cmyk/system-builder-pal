@@ -493,6 +493,8 @@ export type CardInput = {
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
   deviceId?: string | null;
   saveCard?: boolean;
+  /** Desliga 3DS para cobranças off-session com cartão salvo. */
+  threeDs?: boolean;
   /** Cliente escolheu assinar (cobrança automática recorrente). */
   subscribe?: boolean;
 };
@@ -608,7 +610,7 @@ export async function handleCreateCard(data: CardInput) {
       additionalPayer: risk.additionalPayer,
       deviceId: data.deviceId ?? null,
       statementDescriptor: "FITMINDCLUB",
-      threeDs: true,
+      threeDs: data.threeDs !== false,
     },
     idempotencyKey
   );

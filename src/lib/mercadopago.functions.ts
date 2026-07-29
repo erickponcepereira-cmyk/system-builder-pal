@@ -27,6 +27,11 @@ const DeviceIdSchema = z
 
 const cleanCheckoutError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || "Falha ao criar pagamento");
+  if (
+    /three[_-]?ds|three_d_secure|wrong parameters?|name of the following parameters is wrong/i.test(message)
+  ) {
+    return "Falha na validação de segurança do cartão. Atualize a página e tente novamente; se persistir, use PIX ou outro cartão.";
+  }
   return message
     .replace(/^\[DIAG\]\s*/i, "")
     .replace(/^Error:\s*/i, "")
