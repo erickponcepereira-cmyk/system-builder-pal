@@ -713,7 +713,6 @@ export const searchCoproducerCandidates = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const like = `%${term}%`;
 
     const [{ data: profs }, { data: parts }] = await Promise.all([
       admin
@@ -750,7 +749,6 @@ export const searchCoproducerCandidates = createServerFn({ method: "POST" })
     });
 
     items.sort((a, b) => a.name.localeCompare(b.name));
-    void like;
     return { items: items.slice(0, 20) };
   });
 
