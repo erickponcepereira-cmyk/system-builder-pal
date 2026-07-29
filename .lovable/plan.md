@@ -1,29 +1,48 @@
-## Diagnóstico (verificado no banco)
+## O que eu confirmei no banco antes de planejar
 
-**O que está certo:**
-- O prazo configurado é de 7 dias, tanto para comissão de venda quanto para indicação de aluno.
-- A rotina automática de liberação roda todo dia às 03:00, rodou hoje e concluiu com sucesso.
-- Não existe nenhuma comissão com data de liberação vencida ainda marcada como pendente, nem comissão sem data de liberação. Ou seja: o mecanismo de liberação funciona.
+- Hoje **não existe** nenhuma linha com `level > 0` e rótulo "sem upline" — mas existem **~200 comissões de retorno sem nenhuma marca no rótulo**: linhas com `slot_label = 'Linha 1/2/3'` (e `Upline N`) em que o **beneficiário é o próprio coach vendedor** da venda. Total afetado: R$ 200+ (ex.: Linha 3 → 33 linhas, R$ 61,57; Linha 2 → 29 linhas, R$ 88,05; Linha 1 → 9 linhas, R$ 49,07), parte já `available`, parte `pending`.
+- Isso confirma o diagnóstico e mostra que a "correção mínima" (mover a checagem do texto para antes do nível) **não resolve**: esses casos não têm "sem upline" no rótulo. Só a comparação estrutural resolve.
+- A mesma regra frágil está duplicada no SQL, dentro de `recalc_wallets_for_owner`:
+  `level > 0 OR (label ~ 'linha|upline N' AND label !~ 'sem upline')`. É ela que joga o retorno no bloqueio de rede.
+- `listBlockedCommissions` já inclui os dois tipos de bloqueio (prazo e rede), mas usa `isNetworkCommissionRow` — ou seja, hoje ele classifica errado junto com o resto; corrigindo o classificador, ele passa a acertar.
+- Textos: `PendingInfo days={3}` em `WalletTab.tsx:265` e `MyNetworkPanel.tsx:191`; o banco usa 7 dias.
 
-**O que está errado:**
-A data de liberação é gravada como "agora + 7 dias" no instante em que a venda é processada, e não como "data do pagamento + 7 dias". Sempre que uma venda é reprocessada (o que fizemos várias vezes nas correções financeiras recentes), o relógio dos 7 dias **recomeça do zero**.
+## Abordagem
 
-Efeito hoje: **28 comissões, somando R$ 542,71**, de vendas pagas entre 22/06 e 22/07, estão com liberação remarcada para 04 e 05/08 — algumas com mais de 40 dias de atraso em relação ao que a regra deveria ter dado. Atinge, entre outros, Nathan, Erick, Ana Flávia, Vitória, Jorge, Delma, Vimark e Valdenici.
+Em vez de manter duas regras de texto (SQL + TS) que sempre divergem, gravo a classificação **uma vez, no banco**, e todo mundo lê o mesmo campo.
 
-## Correção proposta
+### 1. Coluna canônica `is_network` em `commissions`
 
-**1. Regra passa a contar da data do pagamento**
-Ajustar o motor financeiro (`process_paid_transaction`) para gravar a liberação como *data do pagamento da venda + 7 dias* (com recuo para a data de criação da venda quando o pagamento não tiver data registrada). Assim, reprocessar uma venda deixa de empurrar o dinheiro para frente — o reprocessamento passa a ser seguro do ponto de vista de prazo.
+- Migration adiciona `is_network boolean not null default false`.
+- Função `public.commission_is_network(...)`: é rede quando a comissão é fatia de linha/upline **e** o beneficiário **não é o coach vendedor** daquela venda. O vendedor é resolvido pela origem (`partner_product_orders.selling_coach_id` / coach vendedor do pedido de loja) e, como reserva, pela linha "Comissão do Vendedor" da mesma venda.
+- Trigger `BEFORE INSERT/UPDATE` preenche a coluna, para nenhum caminho novo (loja, parceiro, profissional, recorrência) depender de rótulo.
 
-**2. Acerto das 28 comissões afetadas**
-Recalcular a data de liberação dessas comissões pendentes com base na data real do pagamento. As que já passaram dos 7 dias são liberadas na hora e as carteiras dos beneficiários são recalculadas, para o painel de Pagamentos e as carteiras baterem imediatamente.
+### 2. Padronizar a gravação do retorno
 
-**3. Conferência final**
-Depois do acerto, rodar uma verificação mostrando: quantas comissões ficaram disponíveis, o valor total liberado por pessoa e a confirmação de que não sobrou nenhuma pendente com prazo já vencido.
+Nas funções que geram comissão sem upline, gravar sempre `level = 0` e `slot_label = 'Comissão Direta (sem upline N<n>)'` — a convenção já correta. O valor das fatias **não muda**, só o rótulo/nível/destino.
 
-## Detalhes técnicos
+### 3. Consumo único da classificação
 
-- Alteração de banco (migração) na função `process_paid_transaction`: trocar `NOW() + commission_release_days` por `COALESCE(tx.paid_at, tx.created_at, NOW()) + commission_release_days` nos três pontos onde a comissão é inserida (slots configurados, fluxo de indicação e fluxo padrão). Mesmo tratamento para `commission_release_referral_days`.
-- Correção das linhas históricas entra como operação de dados (não migração), seguida de `recalc_wallets_for_owner` para cada beneficiário atingido.
-- A rotina `release_due_commissions_cron` não muda — ela já libera corretamente tudo que tem `available_at <= now()`.
-- Nenhuma mudança de interface.
+- `recalc_wallets_for_owner`: trocar a expressão de texto por `c.is_network`.
+- `src/lib/financial-dedupe.ts`: `isNetworkCommissionRow` passa a ler o campo da linha (com o texto só como fallback para dados antigos), e os chamadores (`admin-financial.functions.ts`, `admin-payouts.functions.ts`, `network-unlock.functions.ts`) passam a selecionar `is_network`.
+
+### 4. Backfill com revisão antes do UPDATE
+
+- Primeiro rodo o SELECT (mesma condição estrutural) e te mostro **a lista de pessoas, quantidade e valores**.
+- Só depois da sua conferência aplico a migration que normaliza `level`/`slot_label`/`is_network` e roda `admin_reconcile_all_wallets`.
+
+### 5. Prazo 7 dias
+
+Constante única `COMMISSION_HOLD_DAYS = 7` (em `src/lib/financial-dedupe.ts`), importada em `WalletTab.tsx` e `MyNetworkPanel.tsx`.
+
+### 6. Verificação da antecipação pelo admin
+
+Depois da correção, testo `listBlockedCommissions` com um coach que tenha saldo de rede bloqueado e confirmo que aparecem os dois tipos (prazo e meta de rede) e que `advanceCommissionRelease` libera.
+
+## Aceite verificado ao final
+
+Coach sem upline vê a fatia de retorno em **direta e desbloqueada**; rede mostra só downline; Ana Flávia, Nathan e Vimark consistentes; textos com 7 dias; admin antecipa nos dois bloqueios.
+
+## Não faço
+
+Não mexo na regra dos 7 dias no banco, não altero cálculo de valores, e nenhum `UPDATE` em `commissions` sem você revisar o SELECT antes.
