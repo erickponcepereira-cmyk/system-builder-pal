@@ -491,7 +491,64 @@ export type CardInput = {
   source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
+  deviceId?: string | null;
+  saveCard?: boolean;
 };
+
+/**
+ * O Mercado Pago endurece a análise a cada nova tentativa no mesmo pedido logo
+ * após uma recusa por risco. Bloqueamos por alguns minutos e sugerimos PIX.
+ */
+async function assertNotRecentlyHighRisk(kind: SourceKind, id: string) {
+  const since = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data } = await supabaseAdmin
+    .from("mercadopago_payments")
+    .select("id, status_detail, created_at")
+    .eq("source_kind", kind)
+    .eq("source_id", id)
+    .eq("payment_method", "credit_card")
+    .eq("status", "rejected")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data && String(data.status_detail || "").includes("high_risk")) {
+    throw new Error(
+      "O Mercado Pago recusou a última tentativa por análise de risco. Aguarde 5 minutos antes de tentar outro cartão, ou pague via PIX (aprovação imediata)."
+    );
+  }
+}
+
+async function persistSavedCard(params: {
+  studentId: string | null;
+  payer: { email: string; name?: string; doc?: string };
+  cardToken: string;
+  mpResp: any;
+}) {
+  try {
+    if (!params.studentId) return;
+    const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
+    const customer = await findOrCreateCustomer(params.payer.email, params.payer.name, params.payer.doc);
+    const card = await createCustomerCard(String(customer.id), params.cardToken);
+    await supabaseAdmin.from("saved_payment_cards" as never).insert({
+      student_id: params.studentId,
+      mp_customer_id: String(customer.id),
+      mp_card_id: String(card.id),
+      payer_email: params.payer.email,
+      cardholder_name: card?.cardholder?.name || params.payer.name || null,
+      brand: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
+      last_four: card?.last_four_digits || null,
+      first_six: card?.first_six_digits || null,
+      expiration_month: card?.expiration_month || null,
+      expiration_year: card?.expiration_year || null,
+      payment_method_id: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
+      issuer_id: card?.issuer?.id ? String(card.issuer.id) : null,
+      is_default: true,
+    } as never);
+  } catch (e) {
+    console.error("[mp save card] falhou (pagamento não é afetado):", e);
+  }
+}
 
 export async function handleCreateCard(data: CardInput) {
   const src = await loadSource(data.source.kind, data.source.id);
@@ -516,11 +573,18 @@ export async function handleCreateCard(data: CardInput) {
     };
   }
 
+  await assertNotRecentlyHighRisk(data.source.kind, data.source.id);
+
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
   // Cada submissão de cartão precisa ser uma tentativa nova. Quando o Mercado Pago
   // recusa por risco, reutilizar a mesma chave prende a fatura no mesmo pagamento.
   const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
+
+  const risk = await buildRiskContext(data.source.kind, data.source.id, data.payer, {
+    amount: src.amount,
+    description: src.description,
+  });
 
   const mpResp = await createCardPayment(
     {
@@ -535,6 +599,11 @@ export async function handleCreateCard(data: CardInput) {
       payerDoc: data.payer.doc,
       externalReference: externalRef,
       notificationUrl,
+      items: risk.items,
+      additionalPayer: risk.additionalPayer,
+      deviceId: data.deviceId ?? null,
+      statementDescriptor: "FITMINDCLUB",
+      threeDs: true,
     },
     idempotencyKey
   );
@@ -569,15 +638,24 @@ export async function handleCreateCard(data: CardInput) {
 
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);
+    if (data.saveCard && data.card.token) {
+      await persistSavedCard({ studentId: src.studentId, payer: data.payer, cardToken: data.card.token, mpResp });
+    }
   }
+
+  // 3-D Secure: quando o emissor pede desafio, devolvemos a URL para o
+  // frontend exibir o iframe do banco.
+  const threeDs = (mpResp as any)?.three_ds_info || null;
 
   return {
     paymentRowId: row.id,
     mpPaymentId: String(mpResp.id),
     status: mpResp.status as string,
     statusDetail: (mpResp.status_detail as string | null) ?? null,
+    threeDs: threeDs ? { externalResourceUrl: threeDs.external_resource_url, creq: threeDs.creq } : null,
   };
 }
+
 
 export async function handleGetStatus(paymentRowId: string) {
   const { data: row } = await supabaseAdmin
