@@ -1038,7 +1038,27 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
                 Reprocessar aprovados pendentes
               </button>
             </div>
+            <div className="mb-5 rounded-lg border border-white/10 bg-white/5 p-3">
+              <p className="text-[11px] uppercase tracking-wider text-white/40">Varredura automática (a cada 15 min)</p>
+              {lastSweep ? (
+                <p className="mt-1 text-xs text-white/70">
+                  Última: {new Date(lastSweep.finishedAt).toLocaleString("pt-BR")} • {lastSweep.checked} verificado(s),{" "}
+                  {lastSweep.approved} aprovado(s), {lastSweep.applied + lastSweep.rescued} processado(s),{" "}
+                  <span className={lastSweep.failed > 0 ? "text-red-300" : ""}>{lastSweep.failed} falha(s)</span>
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-white/40">Nenhuma varredura registrada ainda.</p>
+              )}
+              {lastSweep && lastSweep.errors.length > 0 && (
+                <ul className="mt-2 space-y-0.5 text-[11px] text-red-300/80">
+                  {lastSweep.errors.slice(0, 3).map((e, i) => (
+                    <li key={i}>• {e}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <h3 className="mb-2 text-xs uppercase tracking-wider text-white/40">Pendentes há mais de 5 min</h3>
+
 
             {pending === null ? (
               <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
