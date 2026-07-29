@@ -74,8 +74,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         const r: any = await recurrenceFn({ data: source });
         if (!alive || !r) return;
         setRecurrence(r);
-        setMode(r.allowOneTime === false ? "subscribe" : "subscribe");
-        if (r.allowOneTime === false) setTab("card");
+        setMode("subscribe");
+        setTab("card");
       } catch { /* ignore */ }
     })();
     return () => { alive = false; };
