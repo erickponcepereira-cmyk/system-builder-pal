@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Cake, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseDateOnly, daysUntilBirthday, ageOnNextBirthday, todayLocal } from "@/lib/date-only";
 
 type Person = {
   id: string;
@@ -20,29 +21,6 @@ interface Props {
   title?: string;
 }
 
-function parseBd(b: string | null) {
-  if (!b) return null;
-  const d = new Date(b);
-  if (isNaN(d.getTime())) return null;
-  return d;
-}
-
-function daysUntilBirthday(bd: Date, today = new Date()) {
-  const y = today.getFullYear();
-  let next = new Date(y, bd.getMonth(), bd.getDate());
-  if (next < new Date(y, today.getMonth(), today.getDate())) {
-    next = new Date(y + 1, bd.getMonth(), bd.getDate());
-  }
-  const ms = next.getTime() - new Date(y, today.getMonth(), today.getDate()).getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
-
-function ageOn(bd: Date, when: Date) {
-  let a = when.getFullYear() - bd.getFullYear();
-  const m = when.getMonth() - bd.getMonth();
-  if (m < 0 || (m === 0 && when.getDate() < bd.getDate())) a--;
-  return a;
-}
 
 export function BirthdaysCard({ scope, coachId, title }: Props) {
   const [people, setPeople] = useState<Person[]>([]);
