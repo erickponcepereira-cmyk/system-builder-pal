@@ -71,6 +71,8 @@ function AdminPayments() {
           { k: "student_referrer", l: "Aluno Indicador" },
           { k: "nutritionist", l: "Nutricionistas" },
           { k: "sub_wallet", l: "Mensalidades (carteira)" },
+          { k: "recurring", l: "Recorrentes (cartão)" },
+
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
