@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/become-partner")({
@@ -11,7 +10,6 @@ export const Route = createFileRoute("/become-partner")({
 
 function BecomePartnerPage() {
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -25,13 +23,10 @@ function BecomePartnerPage() {
     })();
   }, [navigate]);
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}>
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return <PartnerRegistration mode="existing" onBack={() => window.history.back()} />;
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
 }
+
