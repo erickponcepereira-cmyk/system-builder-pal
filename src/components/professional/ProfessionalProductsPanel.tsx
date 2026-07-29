@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown, Eye, Users } from "lucide-react";
@@ -840,6 +841,15 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 </div>
               )}
             </fieldset>
+            {editing.kind === "paid" && !readOnly && (
+              <div className="mt-4 grid gap-3">
+                <RecurrenceFields
+                  value={editing as any}
+                  price={Number(editing.price || 0)}
+                  onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } as any : prev)}
+                />
+              </div>
+            )}
             {editing.id && editing.kind === "paid" && !readOnly && (
               <div className="mt-4 border-t border-white/10 pt-4">
                 <CoproductionEditor
