@@ -20,7 +20,8 @@ function BecomePartnerPage() {
         navigate({ to: "/register", search: { role: "partner" } });
         return;
       }
-      setChecking(false);
+      // Conta existente: nunca cria novo cadastro — envia para o upgrade in-app.
+      navigate({ to: "/upgrade/$role", params: { role: "partner" } });
     })();
   }, [navigate]);
 
