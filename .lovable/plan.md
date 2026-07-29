@@ -1,34 +1,31 @@
-## Diagnóstico (verificado no banco)
+## Problema 1 — "Something went wrong" ao entrar em Coach / Parceiro / Profissional
 
-Consultei os pagamentos recentes em `mercadopago_payments`:
+**Causa confirmada:** os componentes novos do sistema de recorrência usam TanStack Query (`useQuery`/`useMutation`/`useQueryClient`), mas o app **nunca teve um `QueryClientProvider` montado** — não existe nenhum no projeto. Assim que o componente entra em tela, ele lança o erro "No QueryClient set" e a tela de erro do router aparece.
 
-- **Nenhum pagamento de cartão ficou realmente "em análise"**. Os dois testes de hoje (05:30 e 05:35, R$ 1,00) estão gravados como `rejected / cc_rejected_high_risk`. A mensagem "Pagamento em análise. Você será notificado." que apareceu na tela veio do fluxo PIX pendente do mesmo pedido (linha PIX `pending_waiting_transfer` criada às 05:29), não do cartão — ou seja, o usuário vê um aviso que não corresponde ao resultado real do cartão.
-- Nesses dois testes o campo `payer_name` está **nulo** (antes das últimas mudanças vinha preenchido). O Brick `cardPayment` não devolve o nome do titular no `onSubmit` (só `payer.email` e `payer.identification`), então, ao parar de usar o nome do cadastro, o pagamento passou a ser enviado ao Mercado Pago **sem nome do titular** — o que piora ainda mais o score antifraude e mantém o `cc_rejected_high_risk`.
+Arquivos que quebram hoje:
+- `src/components/profile/AutoDebitCard.tsx` (renderizado por `SubscriptionInvoicesTab` → `SubscriptionGuard`, que é usado por coach.tsx, partner.tsx e professional.tsx — por isso Aluno não quebra)
+- `src/components/admin/RecurringSubscriptionsPanel.tsx` (aba Recorrências do admin)
+- `src/routes/_authenticated/student.downloads.tsx` (aba de arquivos do aluno)
 
-## O que fazer
+**Correção:**
+1. Criar o `QueryClient` dentro da fábrica do router (`src/router.tsx`) e expor no contexto, e envolver o `<Outlet />` do `src/routes/__root.tsx` com `<QueryClientProvider>` — assim todo o app passa a ter Query disponível, sem mexer na lógica de negócio.
+2. Endurecer o `defaultErrorComponent` em `src/router.tsx` para mostrar a mensagem real do erro (e um botão "Copiar detalhes"), de modo que uma próxima quebra apareça identificada em vez de "Something went wrong".
+3. Validar abrindo os painéis Coach, Parceiro, Profissional, Admin → Recorrências e Aluno → Arquivos, conferindo o console sem exceções.
 
-1. **Recuperar o nome real do titular do cartão (servidor)**
-   - No fluxo de cartão, consultar o token no Mercado Pago (`GET /v1/card_tokens/{token}`), que devolve `cardholder.name` e `cardholder.identification`.
-   - Usar esses dados como `payer` do pagamento (nome + CPF do titular), com fallback para o que veio do formulário e, por último, para o e-mail da conta.
-   - Assim o pagamento volta a ir completo (nome + documento coerentes com o cartão), sem reintroduzir os dados do cadastro de quem está logado.
+## Problema 2 — Venda sem comissão para quem vendeu (carteira da Vitória)
 
-2. **Coerência do e-mail do pagador**
-   - Manter o e-mail da conta (obrigatório para o MP), mas garantir que nome/documento venham sempre do titular do cartão.
+**Causa confirmada no banco:** a função `process_paid_transaction` define o "vendedor" como `students.coach_id` do comprador. Quando o próprio coach compra (auto-compra), o registro de aluno dele aponta para o **upline**, não para ele. Resultado: a "Comissão do Vendedor" e os níveis 1/2/3 sobem um degrau.
 
-3. **Mensagens corretas no checkout**
-   - Separar o estado do PIX do estado do cartão: só mostrar "Pagamento em análise" quando o próprio cartão retornar `in_process`/`pending`.
-   - Ao gerar um cartão novo em um pedido que já tem PIX pendente, limpar o aviso do PIX para não confundir o resultado.
-   - Exibir sempre o motivo real da recusa (já traduzido) logo abaixo do formulário.
+Escala: de 75 alunos que também são coaches, **74** estão com o `coach_id` apontando para o upline. A venda de R$ 179,90 da Vitória (06/07) pagou o vendedor ao Erick e nada a ela.
 
-4. **Diagnóstico rápido de risco**
-   - Registrar no `raw_response`/log qual origem do nome do titular foi usada (token, formulário ou vazio), para conseguir confirmar em produção que o payload está completo.
+**Correção:**
+1. Ajustar `process_paid_transaction`: se o perfil do comprador possui registro de coach aprovado, esse coach passa a ser o vendedor (`coach_row`), e a rede L1/L2/L3 passa a ser calculada a partir dos uplines **dele** — mantendo o comportamento atual para alunos comuns.
+2. Ajustar `ensure_self_student_for_coach` para que o aluno-espelho de um coach aponte para o próprio coach, sem alterar vínculos de alunos reais.
+3. Corrigir os dados existentes: reprocessar apenas as transações pagas de auto-compra de coaches (recriando comissões via o próprio fluxo já usado no reprocessamento), começando pela venda da Vitória, e rodar a reconciliação de carteiras.
+4. Conferir no painel: carteira da Vitória com a comissão da venda de R$ 179,90 e o total de "Coaches a pagar" no admin batendo com as carteiras.
 
-## Observação importante
+## Detalhes técnicos
 
-`cc_rejected_high_risk` é decisão do antifraude do Mercado Pago. Enviar nome/CPF do titular, device fingerprint e itens (tudo isso já existe ou volta com esta correção) maximiza a chance de aprovação, mas se os cartões testados continuarem recusados pode ser necessário abrir chamado no Mercado Pago para revisão do perfil da conta vendedora — vou indicar isso caso o próximo teste ainda recuse com payload completo.
-
-## Arquivos afetados
-
-- `src/server/mercadopago.server.ts` — nova função para ler o card token.
-- `src/lib/mercadopago-impl.server.ts` — montar o payer a partir do titular do cartão.
-- `src/components/payments/MercadoPagoCheckout.tsx` — mensagens/estado por método de pagamento.
+- Provider: `QueryClient` criado por request na fábrica do router (evita vazamento de cache entre requisições no SSR), `defaultPreloadStaleTime: 0`.
+- Nenhuma mudança visual nos painéis além da tela de erro mais informativa.
+- Alterações no banco entram como migração (funções `process_paid_transaction` e `ensure_self_student_for_coach`); a correção de linhas históricas é feita como operação de dados, não migração.
