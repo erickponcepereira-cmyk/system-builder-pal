@@ -92,6 +92,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const router = useRouter();
+  const [fallbackQueryClient] = useState(() => new QueryClient());
+  const queryClient =
+    ((router.options.context as { queryClient?: QueryClient } | undefined)?.queryClient) ??
+    fallbackQueryClient;
   useEffect(() => {
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
