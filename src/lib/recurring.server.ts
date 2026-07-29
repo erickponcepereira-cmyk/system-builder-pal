@@ -110,6 +110,7 @@ async function chargeOne(sub: Sub) {
         paymentMethodId: cardRow.payment_method_id || "master",
         issuerId: cardRow.issuer_id || undefined,
       },
+      threeDs: false,
     });
     const approved = res.status === "approved";
     await registerCharge(sub.id, attempt, Number(invoice.amount), {

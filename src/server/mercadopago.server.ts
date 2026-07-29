@@ -178,8 +178,9 @@ export async function createCardPayment(input: MpCardInput, idempotencyKey: stri
   if (input.token) body.token = input.token;
   if (input.statementDescriptor) body.statement_descriptor = input.statementDescriptor.slice(0, 22);
   // 3-D Secure: transfere a validação ao banco emissor e reduz muito a recusa
-  // por análise de risco. "optional" só desafia quando o emissor pedir.
-  if (input.threeDs) body.three_ds_mode = "optional";
+  // por análise de risco. O parâmetro atual da API é three_d_secure_mode.
+  // "optional" só desafia quando o emissor pedir.
+  if (input.threeDs) body.three_d_secure_mode = "optional";
 
   return mpFetch("/v1/payments", {
     method: "POST",
