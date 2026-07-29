@@ -80,7 +80,7 @@ async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | nu
   if (!profileIds.length) return map;
   let q = supabaseAdmin
     .from("commissions")
-    .select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at")
+    .select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,is_network,status,slot_label,is_referral,created_at")
     .in("beneficiary_profile_id", profileIds);
   if (cutoff) q = q.gte("created_at", cutoff);
   // Separa estritamente: carteira de aluno indicador = is_referral=true;
@@ -1123,7 +1123,8 @@ export interface BlockedCommissionRow {
   isNetwork: boolean;
 }
 
-const isNetworkCommission = (level: number | null, slotLabel: string | null) => isNetworkCommissionRow(level, slotLabel);
+const isNetworkCommission = (level: number | null, slotLabel: string | null, isNetwork?: boolean | null) =>
+  isNetworkCommissionRow(level, slotLabel, typeof isNetwork === "boolean" ? isNetwork : undefined);
 
 /** Lista as comissões que ainda não entraram no disponível da carteira (carência ou missão). */
 export const listBlockedCommissions = createServerFn({ method: "POST" })
@@ -1133,7 +1134,7 @@ export const listBlockedCommissions = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     const { data: rows, error } = await supabaseAdmin
       .from("commissions")
-      .select("id, amount, status, slot_label, level, created_at, available_at, is_referral, force_released")
+      .select("id, amount, status, slot_label, level, is_network, created_at, available_at, is_referral, force_released")
       .eq("beneficiary_profile_id", data.profileId)
       .in("status", ["pending", "available"])
       .order("created_at", { ascending: false });
@@ -1142,6 +1143,7 @@ export const listBlockedCommissions = createServerFn({ method: "POST" })
     const now = Date.now();
     return ((rows as unknown as Array<{
       id: string; amount: number; status: string | null; slot_label: string | null; level: number | null;
+      is_network: boolean | null;
       created_at: string | null; available_at: string | null; is_referral: boolean | null; force_released: boolean | null;
     }>) || [])
       .filter((r) => {
@@ -1153,7 +1155,7 @@ export const listBlockedCommissions = createServerFn({ method: "POST" })
           : !!r.available_at && new Date(r.available_at).getTime() <= now;
         // Rede só entra no disponível quando a missão do mês está batida —
         // por isso continua elegível a adiantamento mesmo já vencida.
-        return !released || isNetworkCommission(r.level, r.slot_label);
+        return !released || isNetworkCommission(r.level, r.slot_label, r.is_network);
       })
       .map((r) => ({
         id: r.id,

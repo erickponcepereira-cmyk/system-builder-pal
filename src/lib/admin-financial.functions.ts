@@ -85,7 +85,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     const _cutoffComm = await getServerCutoffIso();
     let _commQ = supabaseAdmin
       .from("commissions")
-      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, is_referral, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
+      .select("amount, status, slot_label, level, is_network, beneficiary_profile_id, beneficiary_coach_id, is_referral, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
     if (_cutoffComm) _commQ = _commQ.gte("created_at", _cutoffComm);
     const { data: commissions, error: cErr } = await _commQ;
     if (cErr) throw new Error(cErr.message);
@@ -109,7 +109,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       if ((c as any).is_referral || slotLabel.startsWith("aluno indicador")) continue;
 
       // Network: level 1/2/3 OU rótulo Linha/Upline com level 0 (registros antigos).
-      const isNetwork = isNetworkCommissionRow(level, slotLabel);
+      const isNetwork = isNetworkCommissionRow(level, slotLabel, (c as any).is_network);
       if (isNetwork) {
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
@@ -550,7 +550,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     const { data: rows, error } = await applyCutoff(supabaseAdmin
       .from("commissions")
       .select(
-        "id, transaction_id, partner_order_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, is_referral, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
+        "id, transaction_id, partner_order_id, slot_label, level, is_network, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, is_referral, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
       )
       .in("status", statuses)
       .order("created_at", { ascending: false })
@@ -562,7 +562,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       // Comissão de aluno indicador nunca aparece em coaches/rede.
       if (c.is_referral || slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
-      const isNetwork = isNetworkCommissionRow(c.level, c.slot_label);
+      const isNetwork = isNetworkCommissionRow(c.level, c.slot_label, c.is_network);
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
       return !isSystem && !isNetwork;

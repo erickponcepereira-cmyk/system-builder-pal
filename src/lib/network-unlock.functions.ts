@@ -93,7 +93,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
     const cutoff = await getServerCutoffIso();
     let commQ = supabaseAdmin
-      .from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,available_at,created_at,slot_label,is_referral")
+      .from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,is_network,status,available_at,created_at,slot_label,is_referral")
       .eq("beneficiary_profile_id", profile.id)
       .or("is_referral.is.null,is_referral.eq.false");
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
@@ -131,7 +131,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     dedupeCommissions((comms as Array<any> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
       const label = String(c.slot_label || "");
-      const isNetwork = Number(c.level || 0) > 0 || (/(^|\s)(linha|upline)\s*\d+/i.test(label) && !/sem\s+upline/i.test(label));
+      const isNetwork = isNetworkCommissionRow(c.level, label, (c as any).is_network);
       const released = c.status === "available" || (c.status === "pending" && c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
       const created = new Date(c.created_at);
       const monthUnlocked = !Number.isNaN(created.getTime())
