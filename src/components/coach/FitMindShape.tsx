@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly } from "@/lib/date-only";
 // ============================================================
 // FITMIND SHAPE — Script para colar no Lovable
 // Cole este conteúdo como prompt no Lovable OU use o código
