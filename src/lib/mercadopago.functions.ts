@@ -43,7 +43,7 @@ export const createPixCheckout = createServerFn({ method: "POST" })
         data: z.object({
           source: SourceSchema,
           payer: PayerSchema,
-          deviceId: z.string().max(200).optional().nullable(),
+          deviceId: DeviceIdSchema,
         }).parse(input),
       };
     } catch (e: any) {
