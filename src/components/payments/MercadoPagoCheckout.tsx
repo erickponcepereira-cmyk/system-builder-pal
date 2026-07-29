@@ -455,6 +455,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
             </div>
           )}
 
+          {cardNotice && (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">{cardNotice}</p>
+          )}
+
           {paymentError && (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
               <p>{paymentError}</p>
