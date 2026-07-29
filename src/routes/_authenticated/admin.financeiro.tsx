@@ -45,6 +45,7 @@ const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 function AdminFinanceiro() {
   const navigate = useNavigate();
   const fetchOverview = useServerFn(getAdminFinancialOverview);
+  const fetchPayouts = useServerFn(getPayoutsDashboard);
   const fetchHistory = useServerFn(listPayoutHistory);
   const fetchBucket = useServerFn(listBucketCommissions);
   const fetchFees = useServerFn(getFeesAndTaxesBreakdown);
@@ -56,6 +57,7 @@ function AdminFinanceiro() {
   const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
   const [fees, setFees] = useState<FeesAndTaxesOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [payouts, setPayouts] = useState<PayoutsDashboard | null>(null);
 
   const [bucketOpen, setBucketOpen] = useState<{ kind: BucketKind; title: string } | null>(null);
   const [bucketRows, setBucketRows] = useState<BucketCommissionRow[] | null>(null);
@@ -99,6 +101,7 @@ function AdminFinanceiro() {
   }, [creatorOpen]);
 
   const reload = () => {
+    fetchPayouts().then(setPayouts).catch(() => {});
     Promise.all([fetchOverview(), fetchHistory(), fetchFees()])
       .then(([ov, hi, fe]) => { setData(ov); setHistory(hi); setFees(fe); })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
@@ -179,10 +182,36 @@ function AdminFinanceiro() {
         </div>
       </div>
 
+      {payouts && (
+        <div className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">A pagar agora (carteiras)</p>
+              <p className="text-[11px] text-white/50">
+                Saldo realmente disponível hoje nas carteiras — é este número que bate com o painel Pagamentos.
+                Os buckets abaixo mostram o bruto histórico de comissões (inclui o que já foi sacado ou usado em compras internas).
+              </p>
+            </div>
+            <p className="text-2xl font-bold text-emerald-300">
+              {money(Object.values(payouts.groups).reduce((s, g) => s + g.availableTotal, 0))}
+            </p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+            {Object.entries(payouts.groups).map(([k, g]) => (
+              <div key={k} className="rounded-lg bg-white/5 px-3 py-2">
+                <p className="text-white/50">{g.label}</p>
+                <p className="font-bold text-white">{money(g.availableTotal)}</p>
+                <p className="text-[10px] text-amber-300/70">bloqueado {money(g.blockedTotal)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
         <BucketCard
           title="Coaches a pagar"
-          subtitle="Comissões diretas dos vendedores"
+          subtitle="Bruto histórico das comissões diretas dos vendedores"
           icon={Wallet}
           pending={data.coaches.pending}
           available={data.coaches.available}
