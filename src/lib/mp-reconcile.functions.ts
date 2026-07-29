@@ -117,7 +117,15 @@ export const reconcileMpPayment = createServerFn({ method: "POST" })
 
     let applied = false;
     let message = `Status sincronizado: ${localStatus}`;
-    if (localStatus === "approved" && kind && sourceId && (kind === "store_order" || kind === "transaction" || kind === "partner_product_order")) {
+    if (
+      localStatus === "approved" &&
+      kind &&
+      sourceId &&
+      (kind === "store_order" ||
+        kind === "transaction" ||
+        kind === "partner_product_order" ||
+        kind === "subscription_invoice")
+    ) {
       try {
         await applyApproval(kind as any, sourceId);
         applied = true;
