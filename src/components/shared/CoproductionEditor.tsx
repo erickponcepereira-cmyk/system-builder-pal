@@ -204,10 +204,6 @@ export function CoproductionEditor({
       toast.error("Busque e selecione o coprodutor por e-mail, nome ou código.");
       return;
     }
-    if (false && !useCode && !code) {
-      toast.error("Selecione um coprodutor ou informe o código.");
-      return;
-    }
     if (splitKind === "percent") {
       const p = Number(percent);
       if (!p || p <= 0 || p > 100) { toast.error("Informe um % entre 0 e 100."); return; }
