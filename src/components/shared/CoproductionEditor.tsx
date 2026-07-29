@@ -56,8 +56,6 @@ export function CoproductionEditor({
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<CoproducerHit | null>(null);
-  const [useCode, setUseCode] = useState(false);
-  const [code, setCode] = useState("");
   const [splitKind, setSplitKind] = useState<"percent" | "fixed">("percent");
   const [percent, setPercent] = useState("");
   const [amount, setAmount] = useState("");
@@ -87,7 +85,7 @@ export function CoproductionEditor({
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [productId]);
 
   const resetForm = () => {
-    setPicked(null); setCode(""); setUseCode(false); setSearch(""); setResults([]);
+    setPicked(null); setSearch(""); setResults([]);
     setSplitKind("percent"); setPercent(""); setAmount("");
     setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
     setEditingId(null);
@@ -137,7 +135,6 @@ export function CoproductionEditor({
   const openEdit = (it: any) => {
     setEditingId(it.id);
     setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName, emailMasked: null, code: null });
-    setUseCode(false); setCode("");
     setSplitKind(it.split_kind === "fixed" ? "fixed" : "percent");
     setPercent(it.split_kind === "percent" ? String(Number(it.percent_of_net || 0)) : "");
     setAmount(it.split_kind === "fixed" ? String(Number(it.fixed_amount_brl || 0)) : "");
@@ -238,7 +235,7 @@ export function CoproductionEditor({
             productType, productId, creatorType, creatorId,
             collaboratorType: picked?.type,
             collaboratorId: picked?.id,
-            collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
+            collaboratorCode: picked?.code || undefined,
             splitKind,
             percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
             fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
