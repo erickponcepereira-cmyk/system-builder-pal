@@ -2622,6 +2622,7 @@ export type Database = {
           force_released: boolean
           id: string
           is_master_coach_commission: boolean | null
+          is_network: boolean
           is_referral: boolean | null
           is_test: boolean
           level: number
@@ -2643,6 +2644,7 @@ export type Database = {
           force_released?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
+          is_network?: boolean
           is_referral?: boolean | null
           is_test?: boolean
           level: number
@@ -2664,6 +2666,7 @@ export type Database = {
           force_released?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
+          is_network?: boolean
           is_referral?: boolean | null
           is_test?: boolean
           level?: number
@@ -11460,6 +11463,10 @@ export type Database = {
           _target_type: string
         }
         Returns: undefined
+      }
+      commission_seller_profile_id: {
+        Args: { _partner_order_id: string; _transaction_id: string }
+        Returns: string
       }
       compute_partner_product_benefits: {
         Args: { _price: number }
