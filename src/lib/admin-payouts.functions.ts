@@ -1109,3 +1109,84 @@ export const updateWithdrawalStatus = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+// ============= Antecipação de liberação (exceção do admin) =============
+
+export interface BlockedCommissionRow {
+  id: string;
+  amount: number;
+  status: string | null;
+  slotLabel: string | null;
+  level: number | null;
+  createdAt: string | null;
+  availableAt: string | null;
+  isNetwork: boolean;
+}
+
+const NETWORK_LABEL_RE = /(^|\s)(linha|upline)\s*[0-9]+/i;
+const NO_UPLINE_RE = /sem\s+upline/i;
+
+function isNetworkCommission(level: number | null, slotLabel: string | null) {
+  if ((level || 0) > 0) return true;
+  const s = slotLabel || "";
+  return NETWORK_LABEL_RE.test(s) && !NO_UPLINE_RE.test(s);
+}
+
+/** Lista as comissões que ainda não entraram no disponível da carteira (carência ou missão). */
+export const listBlockedCommissions = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((data: { profileId: string }) => data)
+  .handler(async ({ context, data }): Promise<BlockedCommissionRow[]> => {
+    await assertAdmin(context.userId);
+    const { data: rows, error } = await supabaseAdmin
+      .from("commissions")
+      .select("id, amount, status, slot_label, level, created_at, available_at, is_referral, force_released")
+      .eq("beneficiary_profile_id", data.profileId)
+      .in("status", ["pending", "available"])
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const now = Date.now();
+    return ((rows as unknown as Array<{
+      id: string; amount: number; status: string | null; slot_label: string | null; level: number | null;
+      created_at: string | null; available_at: string | null; is_referral: boolean | null; force_released: boolean | null;
+    }>) || [])
+      .filter((r) => {
+        if (r.force_released) return false;
+        if (r.is_referral) return false;
+        if (/^(sistema|admin|nutri)/i.test(r.slot_label || "")) return false;
+        const released = r.status === "available"
+          ? true
+          : !!r.available_at && new Date(r.available_at).getTime() <= now;
+        // Rede só entra no disponível quando a missão do mês está batida —
+        // por isso continua elegível a adiantamento mesmo já vencida.
+        return !released || isNetworkCommission(r.level, r.slot_label);
+      })
+      .map((r) => ({
+        id: r.id,
+        amount: n(r.amount),
+        status: r.status,
+        slotLabel: r.slot_label,
+        level: r.level,
+        createdAt: r.created_at,
+        availableAt: r.available_at,
+        isNetwork: isNetworkCommission(r.level, r.slot_label),
+      }));
+  });
+
+/** Libera antecipadamente as comissões escolhidas (registra auditoria e recalcula a carteira). */
+export const advanceCommissionRelease = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((data: { profileId: string; commissionIds: string[]; reason?: string }) => data)
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    if (!data.commissionIds?.length) throw new Error("Selecione ao menos uma comissão");
+    const { data: total, error } = await supabaseAdmin.rpc("admin_advance_commission_release" as never, {
+      _profile_id: data.profileId,
+      _commission_ids: data.commissionIds,
+      _admin_user_id: context.userId,
+      _reason: data.reason || null,
+    } as never);
+    if (error) throw new Error(error.message);
+    return { ok: true, total: n(total as unknown as number) };
+  });
