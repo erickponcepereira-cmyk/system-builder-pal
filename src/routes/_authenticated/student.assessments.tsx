@@ -184,7 +184,6 @@ function MyAssessmentsPage() {
             <div className="space-y-2">
               {rows.map((r) => {
                 const isSel = selected.includes(r.id);
-                const token = shares[r.id];
                 return (
                   <div key={r.id} className={`rounded-2xl border bg-card p-4 ${isSel ? "border-primary" : "border-border"}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -203,15 +202,25 @@ function MyAssessmentsPage() {
                       <div><Heart className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" /><p className="font-bold text-foreground">{r.muscle_mass ?? "—"}</p><p className="text-[10px] text-muted-foreground">músculo</p></div>
                       <div><Droplets className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" /><p className="font-bold text-foreground">{r.body_water ?? "—"}</p><p className="text-[10px] text-muted-foreground">% água</p></div>
                     </div>
-                    {token && (
-                      <a href={`/resultado/${token}`} target="_blank" rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                        <ExternalLink className="h-3 w-3" /> Ver relatório completo
-                      </a>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => openFull(r.id)}
+                        disabled={busy === r.id}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline disabled:opacity-60">
+                        <ExternalLink className="h-3 w-3" />
+                        {busy === r.id ? "Abrindo…" : "Ver avaliação completa"}
+                      </button>
+                      <button
+                        onClick={() => shareFull(r.id)}
+                        disabled={busy === r.id}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-60">
+                        <Share2 className="h-3 w-3" /> Compartilhar
+                      </button>
+                    </div>
                   </div>
                 );
               })}
+
             </div>
           </>
         )}
