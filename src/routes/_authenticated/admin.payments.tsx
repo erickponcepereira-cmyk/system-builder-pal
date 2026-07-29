@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2, Salad } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { RecurringSubscriptionsPanel } from "@/components/admin/RecurringSubscriptionsPanel";
+
 import { toast } from "sonner";
 import {
   getPayoutsDashboard,
