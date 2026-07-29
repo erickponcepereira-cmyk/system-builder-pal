@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { adminListRecurring, adminSetRecurringStatus } from "@/lib/recurring.functions";
+import { adminListRecurring, adminSetRecurringStatus, adminForceCharge, adminSetNextChargeDate } from "@/lib/recurring.functions";
 import { toast } from "sonner";
-import { RefreshCw, Pause, Play, XCircle, CreditCard } from "lucide-react";
+import { RefreshCw, Pause, Play, XCircle, CreditCard, Zap, CalendarClock } from "lucide-react";
 
 const money = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const date = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
@@ -19,8 +19,11 @@ const STATUS_LABEL: Record<string, string> = {
 export function RecurringSubscriptionsPanel() {
   const list = useServerFn(adminListRecurring);
   const setStatus = useServerFn(adminSetRecurringStatus);
+  const forceCharge = useServerFn(adminForceCharge);
+  const setNextDate = useServerFn(adminSetNextChargeDate);
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
+  const [busy, setBusy] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["admin-recurring"], queryFn: () => list({}) });
 
@@ -29,6 +32,30 @@ export function RecurringSubscriptionsPanel() {
     onSuccess: () => { toast.success("Assinatura atualizada"); qc.invalidateQueries({ queryKey: ["admin-recurring"] }); },
     onError: (e: any) => toast.error(e?.message || "Erro ao atualizar"),
   });
+
+  const anticipate = async (id: string) => {
+    setBusy(id);
+    try {
+      await setNextDate({ data: { id } });
+      toast.success("Vencimento antecipado para hoje");
+      qc.invalidateQueries({ queryKey: ["admin-recurring"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao antecipar");
+    } finally { setBusy(null); }
+  };
+
+  const chargeNow = async (id: string) => {
+    setBusy(id);
+    try {
+      const res: any = await forceCharge({ data: { id } });
+      if (res?.ok) toast.success("Cobrança aprovada!");
+      else toast.error(`Cobrança recusada: ${res?.error || "motivo não informado"}`);
+      qc.invalidateQueries({ queryKey: ["admin-recurring"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao cobrar");
+    } finally { setBusy(null); }
+  };
+
 
   const subs = (data?.subscriptions || []).filter((s: any) => filter === "all" || s.status === filter);
   const charges = data?.charges || [];
