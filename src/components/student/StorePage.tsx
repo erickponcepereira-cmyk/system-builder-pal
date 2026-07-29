@@ -364,7 +364,13 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
           description: pp.description,
           price: Number(pp.price || 0),
           originalPrice: pp.original_price ? Number(pp.original_price) : null,
-          category: `Parceiros · ${specLabel}`,
+          // Quando o profissional classificou o produto, ele navega pela mesma
+          // estrutura de seção/subcategoria das demais abas da loja. Sem isso,
+          // cai no agrupamento por especialidade (fallback).
+          sectionId: pp.section_id ?? null,
+          categoryId: pp.category_id ?? null,
+          subcategoryId: pp.subcategory_id ?? null,
+          category: pp.section_id ? sectionName(pp.section_id) : `Parceiros · ${specLabel}`,
           kind: "partner" as const,
           tag: specLabel,
           imageUrl: pp.image_url,
