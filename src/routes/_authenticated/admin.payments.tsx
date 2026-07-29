@@ -97,6 +97,8 @@ function AdminPayments() {
       )}
       {activeTab === "nutritionist" && <NutritionistPanel />}
       {activeTab === "sub_wallet" && <SubscriptionWalletPanel />}
+      {activeTab === "recurring" && <RecurringSubscriptionsPanel />}
+
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
     </>
