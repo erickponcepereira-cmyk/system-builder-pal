@@ -100,3 +100,47 @@ export const upgradeExistingToProfessionalFn = createServerFn({ method: "POST" }
     const { upgradeExistingToProfessional } = await import("./registration.server");
     return upgradeExistingToProfessional(data);
   });
+
+const upgradeCoachSchema = z.object({
+  userId: z.string().uuid(),
+  uplineCoachId: z.string().uuid(),
+  pixKey: z.string().max(200).optional().nullable(),
+  pixKeyType: z.string().max(40).optional().nullable(),
+  bankName: z.string().max(120).optional().nullable(),
+  bankAgency: z.string().max(40).optional().nullable(),
+  bankAccount: z.string().max(40).optional().nullable(),
+  bankAccountType: z.string().max(40).optional().nullable(),
+  completedCoachCourse: z.boolean().optional(),
+  coachCourseNotes: z.string().max(500).optional().nullable(),
+  alreadyCoach: z.boolean().optional(),
+  activationNote: z.string().max(500).optional().nullable(),
+});
+
+export const upgradeExistingToCoachFn = createServerFn({ method: "POST" })
+  .inputValidator((data) => upgradeCoachSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { upgradeExistingToCoach } = await import("./registration.server");
+    return upgradeExistingToCoach(data);
+  });
+
+const upgradePartnerSchema = z.object({
+  userId: z.string().uuid(),
+  fantasyName: z.string().min(2),
+  document: z.string().min(11),
+  documentType: z.enum(["cnpj", "cpf"]),
+  whatsapp: z.string().min(10),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  businessArea: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  uplineCoachId: z.string().uuid(),
+  alreadyPartner: z.boolean().optional(),
+  activationNote: z.string().max(500).optional().nullable(),
+});
+
+export const upgradeExistingToPartnerFn = createServerFn({ method: "POST" })
+  .inputValidator((data) => upgradePartnerSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { upgradeExistingToPartner } = await import("./registration.server");
+    return upgradeExistingToPartner(data);
+  });
