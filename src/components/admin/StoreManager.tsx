@@ -423,7 +423,12 @@ export function StoreManager() {
                               <div className="flex-1 text-sm text-white flex items-center gap-2">
                                 {c.name}
                                 {c.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
-                                <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"} · {subs.length} sub</span>
+                                <span className="text-xs text-white/40">
+                                  /{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"} · {subs.length} sub · {categoryCounts[c.id] ?? 0} produto(s)
+                                  {!c.is_active && (categoryCounts[c.id] ?? 0) > 0 && (
+                                    <span className="ml-1.5 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-400">ocultos</span>
+                                  )}
+                                </span>
                               </div>
                               {c.pending && (
                                 <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
