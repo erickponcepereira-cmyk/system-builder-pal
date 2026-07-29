@@ -77,7 +77,8 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
       // espelho com purchase_type = 'store_order'. Somar as duas dobrava as vendas.
       let txq = supabaseAdmin
         .from("transactions").select("gross_amount,paid_at,purchase_type").in("student_id", studentIds).eq("status", "paid")
-        .neq("purchase_type", "store_order");
+        .or("purchase_type.is.null,purchase_type.neq.store_order");
+
       if (cutoff) txq = txq.gte("paid_at", cutoff);
       const { data: txs } = await txq;
       ((txs || []) as Array<{ gross_amount: number }>).forEach((t) => { totalSales += Number(t.gross_amount) || 0; });
