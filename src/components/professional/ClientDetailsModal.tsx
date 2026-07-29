@@ -1,3 +1,4 @@
+import { calcAgeFromDateOnly, formatDateOnlyBR } from "@/lib/date-only";
 import { useEffect, useState } from "react";
 import { X, Cake, ExternalLink, Loader2, Activity, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
