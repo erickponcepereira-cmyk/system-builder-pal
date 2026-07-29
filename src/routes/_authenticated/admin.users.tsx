@@ -3,9 +3,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, MailCheck } from "lucide-react";
+import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, MailCheck, Merge } from "lucide-react";
 import { ADMIN_PERMISSIONS, type AdminPerms } from "@/lib/admin-permissions";
 import { confirmUserEmailByProfileId } from "@/lib/admin-users.functions";
+import { MergeAccountsPanel } from "@/components/admin/MergeAccountsPanel";
+
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "Administradores — FitMind Club" }] }),
@@ -37,7 +39,7 @@ interface AuditRow {
 
 function AdminUsersPage() {
   const confirmEmailFn = useServerFn(confirmUserEmailByProfileId);
-  const [tab, setTab] = useState<"users" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "merge" | "audit">("users");
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,8 +143,12 @@ function AdminUsersPage() {
 
       <div className="flex gap-2 border-b border-white/5">
         <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<ShieldCheck className="h-4 w-4" />}>Usuários</TabBtn>
+        <TabBtn active={tab === "merge"} onClick={() => setTab("merge")} icon={<Merge className="h-4 w-4" />}>Mesclar contas</TabBtn>
         <TabBtn active={tab === "audit"} onClick={() => setTab("audit")} icon={<History className="h-4 w-4" />}>Auditoria</TabBtn>
       </div>
+
+      {tab === "merge" && <MergeAccountsPanel />}
+
 
       {tab === "users" && (
         <>

@@ -190,12 +190,29 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
       .from("profiles")
       .select("id, user_id, email")
       .eq("cpf", cpfDigits)
+      .is("merged_into_profile_id", null)
       .neq("user_id", userId)
       .maybeSingle();
     if (cpfClash) {
-      throw new Error("Já existe uma conta cadastrada com este CPF.");
+      throw new Error("Já existe uma conta cadastrada com este CPF. Entre com a conta existente ou fale com o suporte.");
     }
   }
+
+  // Telefone duplicado normalmente indica cadastro repetido da mesma pessoa.
+  const phoneDigits = digits(input.phone);
+  if (phoneDigits && phoneDigits.length >= 10) {
+    const { data: phoneClash } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("phone", phoneDigits)
+      .is("merged_into_profile_id", null)
+      .neq("user_id", userId)
+      .maybeSingle();
+    if (phoneClash) {
+      throw new Error("Já existe uma conta cadastrada com este telefone. Entre com a conta existente ou fale com o suporte.");
+    }
+  }
+
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
