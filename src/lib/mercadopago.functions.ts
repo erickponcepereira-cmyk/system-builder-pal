@@ -27,7 +27,11 @@ export const createPixCheckout = createServerFn({ method: "POST" })
     try {
       return {
         ok: true as const,
-        data: z.object({ source: SourceSchema, payer: PayerSchema }).parse(input),
+        data: z.object({
+          source: SourceSchema,
+          payer: PayerSchema,
+          deviceId: z.string().max(200).optional().nullable(),
+        }).parse(input),
       };
     } catch (e: any) {
       return { ok: false as const, error: `VALIDATION: ${e?.message || String(e)}` };
@@ -55,6 +59,8 @@ export const createCardCheckout = createServerFn({ method: "POST" })
         paymentMethodId: z.string(),
         issuerId: z.string().optional(),
       }),
+      deviceId: z.string().max(200).optional().nullable(),
+      saveCard: z.boolean().optional(),
     }).parse(input)
   )
   .handler(async ({ data }) => {
@@ -65,6 +71,7 @@ export const createCardCheckout = createServerFn({ method: "POST" })
       throw new Error(cleanCheckoutError(e));
     }
   });
+
 
 /** Consulta status atual do pagamento (para polling no frontend). */
 export const getPaymentStatus = createServerFn({ method: "GET" })
