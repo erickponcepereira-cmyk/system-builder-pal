@@ -141,8 +141,12 @@ function AdminUsersPage() {
 
       <div className="flex gap-2 border-b border-white/5">
         <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<ShieldCheck className="h-4 w-4" />}>Usuários</TabBtn>
+        <TabBtn active={tab === "merge"} onClick={() => setTab("merge")} icon={<Merge className="h-4 w-4" />}>Mesclar contas</TabBtn>
         <TabBtn active={tab === "audit"} onClick={() => setTab("audit")} icon={<History className="h-4 w-4" />}>Auditoria</TabBtn>
       </div>
+
+      {tab === "merge" && <MergeAccountsPanel />}
+
 
       {tab === "users" && (
         <>
