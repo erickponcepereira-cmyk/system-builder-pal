@@ -241,6 +241,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setCardNotice(null);
                 setLastStatusDetail(null);
                 toast.dismiss();
+                try {
                   const deviceId = await getDeviceId();
                   const cardPayer = buildCardPayer(cardFormData);
                   const r = await cardFn({
