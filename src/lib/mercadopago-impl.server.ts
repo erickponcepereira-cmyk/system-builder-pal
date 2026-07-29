@@ -528,11 +528,11 @@ async function persistSavedCard(params: {
   mpResp: any;
 }) {
   try {
-    if (!params.studentId) return;
+    if (!params.studentId) return null;
     const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
     const customer = await findOrCreateCustomer(params.payer.email, params.payer.name, params.payer.doc);
     const card = await createCustomerCard(String(customer.id), params.cardToken);
-    await supabaseAdmin.from("saved_payment_cards" as never).insert({
+    const { data: saved } = await supabaseAdmin.from("saved_payment_cards" as never).insert({
       student_id: params.studentId,
       mp_customer_id: String(customer.id),
       mp_card_id: String(card.id),
@@ -546,11 +546,14 @@ async function persistSavedCard(params: {
       payment_method_id: card?.payment_method?.id || params.mpResp?.payment_method_id || null,
       issuer_id: card?.issuer?.id ? String(card.issuer.id) : null,
       is_default: true,
-    } as never);
+    } as never).select("id").maybeSingle();
+    return (saved as any)?.id ?? null;
   } catch (e) {
     console.error("[mp save card] falhou (pagamento não é afetado):", e);
+    return null;
   }
 }
+
 
 export async function handleCreateCard(data: CardInput) {
   const src = await loadSource(data.source.kind, data.source.id);
