@@ -108,8 +108,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       // Cashback/Fitcoin do aluno indicador é bucket próprio; nunca soma em coach/rede.
       if ((c as any).is_referral || slotLabel.startsWith("aluno indicador")) continue;
 
-      // Network (level 1/2/3)
-      if (level > 0) {
+      // Network: level 1/2/3 OU rótulo Linha/Upline com level 0 (registros antigos).
+      const isNetwork = isNetworkCommissionRow(level, slotLabel);
+      if (isNetwork) {
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
         else if (status === "paid" || status === "withdrawn") networkPaid += amt;
@@ -137,8 +138,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         slotLabel.includes("admin") ||
         (!benefCoachId && !slotLabel);
       if (isSystem) continue;
-      const target = level > 0 ? null : coachesMap;
+      const target = isNetwork ? null : coachesMap;
       if (!target) continue;
+
       const cur = target.get(pid) || {
         profileId: pid,
         name: prof?.name || "—",
