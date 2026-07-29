@@ -142,7 +142,13 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             if (payment.date_of_expiration) pixPayload.pix_expires_at = payment.date_of_expiration;
           }
 
+          // Cobranças recorrentes diretas já são registradas por recurring.server.
+          if (kind === "recurring") {
+            return Response.json({ ok: true, status, recurring: true });
+          }
+
           // ── 1. Idempotência local + gravação bruta sempre ──
+
           const { data: existing } = await supabaseAdmin
             .from("mercadopago_payments")
             .select("id, status, source_kind, source_id, amount")
