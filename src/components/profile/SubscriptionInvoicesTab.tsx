@@ -7,6 +7,8 @@ import {
   getMyBillingOverview, getInvoiceReceiptData,
 } from "@/lib/subscriptions.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { AutoDebitCard } from "@/components/profile/AutoDebitCard";
+
 import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
 import { openInvoiceReceipt } from "@/lib/invoice-receipt";
 
