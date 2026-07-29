@@ -107,6 +107,7 @@ export async function buildRiskContext(
   id: string,
   payer: { email: string; name?: string; doc?: string },
   fallback: { amount: number; description: string },
+  options: { includeProfilePayer?: boolean } = {},
 ) {
   let items: Array<{ id: string; title: string; quantity: number; unitPrice: number; categoryId?: string }> = [];
   try {
@@ -130,32 +131,34 @@ export async function buildRiskContext(
   }
 
   let additionalPayer: any = undefined;
-  try {
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("name, phone, created_at, zip_code, street, number")
-      .eq("email", payer.email)
-      .maybeSingle();
-    if (prof) {
-      const parts = String(prof.name || payer.name || "").trim().split(/\s+/).filter(Boolean);
-      const phoneDigits = String((prof as any).phone || "").replace(/\D/g, "");
-      additionalPayer = {
-        firstName: parts[0],
-        lastName: parts.slice(1).join(" ") || undefined,
-        phoneAreaCode: phoneDigits.length >= 10 ? phoneDigits.slice(0, 2) : undefined,
-        phoneNumber: phoneDigits.length >= 10 ? phoneDigits.slice(2) : undefined,
-        registrationDate: (prof as any).created_at || null,
-        address: (prof as any).zip_code
-          ? {
-              zipCode: String((prof as any).zip_code).replace(/\D/g, ""),
-              streetName: (prof as any).street || "",
-              streetNumber: String((prof as any).number || ""),
-            }
-          : null,
-      };
+  if (options.includeProfilePayer !== false) {
+    try {
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("name, phone, created_at, zip_code, street, number")
+        .eq("email", payer.email)
+        .maybeSingle();
+      if (prof) {
+        const parts = String(prof.name || payer.name || "").trim().split(/\s+/).filter(Boolean);
+        const phoneDigits = String((prof as any).phone || "").replace(/\D/g, "");
+        additionalPayer = {
+          firstName: parts[0],
+          lastName: parts.slice(1).join(" ") || undefined,
+          phoneAreaCode: phoneDigits.length >= 10 ? phoneDigits.slice(0, 2) : undefined,
+          phoneNumber: phoneDigits.length >= 10 ? phoneDigits.slice(2) : undefined,
+          registrationDate: (prof as any).created_at || null,
+          address: (prof as any).zip_code
+            ? {
+                zipCode: String((prof as any).zip_code).replace(/\D/g, ""),
+                streetName: (prof as any).street || "",
+                streetNumber: String((prof as any).number || ""),
+              }
+            : null,
+        };
+      }
+    } catch (e) {
+      console.warn("[mp risk] failed to load payer profile:", e);
     }
-  } catch (e) {
-    console.warn("[mp risk] failed to load payer profile:", e);
   }
 
   return { items, additionalPayer };
@@ -410,7 +413,7 @@ export async function handleCreatePix(data: PixInput) {
   const risk = await buildRiskContext(data.source.kind, data.source.id, data.payer, {
     amount: src.amount,
     description: src.description,
-  });
+  }, { includeProfilePayer: false });
 
   let mpResp: any;
   try {
