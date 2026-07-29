@@ -70,15 +70,20 @@ export function isMirroredStoreOrderTx(purchaseType: string | null | undefined) 
 }
 
 
+/** Carência padrão (em dias) até a comissão virar saldo disponível. */
+export const COMMISSION_HOLD_DAYS = 7;
+
 /**
- * Classificação única de "comissão de rede" usada pelo painel Financeiro e
- * pelos relatórios. Parte das comissões antigas gravou `level = 0` mesmo sendo
- * Linha/Upline 1-3; sem isso elas apareciam como comissão de coach.
- * Exceção: rótulos "(sem upline → vendedor)" caem para o próprio vendedor.
+ * Classificação única de "comissão de rede".
+ * A fonte de verdade é a coluna `commissions.is_network`, gravada por trigger
+ * a partir da ESTRUTURA da venda (fatia de linha cujo beneficiário NÃO é o
+ * vendedor). O parsing de rótulo fica só como fallback para linhas antigas.
  */
-export function isNetworkCommissionRow(level: unknown, slotLabel: unknown) {
-  if (Number(level || 0) > 0) return true;
+export function isNetworkCommissionRow(level: unknown, slotLabel: unknown, isNetwork?: unknown) {
+  if (typeof isNetwork === "boolean") return isNetwork;
   const s = String(slotLabel || "").toLowerCase();
   if (s.includes("sem upline")) return false;
+  if (Number(level || 0) > 0) return true;
   return /(^|\s)(linha|upline)\s*[0-9]+/.test(s);
 }
+

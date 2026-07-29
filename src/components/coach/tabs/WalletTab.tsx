@@ -11,6 +11,7 @@ import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/li
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
+import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal, type WithdrawalRequestKind } from "@/lib/withdrawals.functions";
 
 const MIN_WITHDRAWAL = 50;
@@ -262,7 +263,7 @@ export function WalletTab() {
         <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(directAvail)}</p>
         <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
           + {mask(split?.direct.pending ?? 0)} pendente
-          <PendingInfo days={3} />
+          <PendingInfo days={COMMISSION_HOLD_DAYS} />
         </p>
       </div>
       <div className="grid gap-3 grid-cols-2">
