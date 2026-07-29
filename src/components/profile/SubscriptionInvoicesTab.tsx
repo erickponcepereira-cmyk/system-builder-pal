@@ -179,7 +179,9 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
                 description={`Mensalidade ${fmtMonth(current.reference_month)}`}
                 defaultPayer={state.payer ? { email: state.payer.email || "", name: state.payer.name || "" } : undefined}
                 initialMethod={mpMethod}
+                allowSaveCard
                 onApproved={() => { setMpMethod(null); load(); }}
+
               />
             </div>
           )}
