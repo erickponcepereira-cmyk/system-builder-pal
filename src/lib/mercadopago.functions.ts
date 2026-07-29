@@ -62,25 +62,33 @@ export const createPixCheckout = createServerFn({ method: "POST" })
 
 /** Cria pagamento com cartão (token gerado no frontend). */
 export const createCardCheckout = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({
-      source: SourceSchema,
-      payer: PayerSchema,
-      card: z.object({
-        token: z.string(),
-        installments: z.number().int().min(1).max(12),
-        paymentMethodId: z.string(),
-        issuerId: z.string().optional(),
-      }),
-      deviceId: z.string().max(200).optional().nullable(),
-      saveCard: z.boolean().optional(),
-      subscribe: z.boolean().optional(),
-    }).parse(input)
-  )
+  .inputValidator((input: unknown) => {
+    try {
+      return {
+        ok: true as const,
+        data: z.object({
+          source: SourceSchema,
+          payer: PayerSchema,
+          card: z.object({
+            token: z.string(),
+            installments: z.number().int().min(1).max(12),
+            paymentMethodId: z.string(),
+            issuerId: z.string().optional(),
+          }),
+          deviceId: DeviceIdSchema,
+          saveCard: z.boolean().optional(),
+          subscribe: z.boolean().optional(),
+        }).parse(input),
+      };
+    } catch (e: any) {
+      return { ok: false as const, error: "Não foi possível validar os dados do cartão. Tente novamente." };
+    }
+  })
   .handler(async ({ data }) => {
+    if (!data.ok) throw new Error(data.error);
     try {
       const { handleCreateCard } = await import("./mercadopago-impl.server");
-      return await handleCreateCard(data);
+      return await handleCreateCard(data.data);
     } catch (e) {
       throw new Error(cleanCheckoutError(e));
     }
