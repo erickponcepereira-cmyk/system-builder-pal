@@ -497,8 +497,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           <button onClick={backToSections} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {visibleCats.map((c) => (
-              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
+            {visibleCats.map((c) => {
+              const empty = !usedCatIds.has(c.id);
+              return (
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`rounded-2xl border border-white/5 text-left ${empty ? "opacity-60" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                 <div className="aspect-square w-full bg-white/5">
                   {c.image_url ? (
                     <img src={c.image_url} alt={c.name} loading="lazy" decoding="async" className="h-full w-full rounded-t-2xl object-cover" />
@@ -507,8 +509,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   )}
                 </div>
                 <p className="px-3 py-2 text-sm font-bold text-white">{c.name}</p>
+                {empty && <p className="px-3 pb-2 text-[10px] text-white/40">Nenhum produto disponível no momento</p>}
               </button>
-            ))}
+              );
+            })}
+            {visibleCats.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhuma subcategoria cadastrada nesta seção.</p>}
           </div>
         </div>
       );
