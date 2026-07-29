@@ -97,7 +97,72 @@ export async function loadSource(kind: SourceKind, id: string) {
   };
 }
 
+/**
+ * Monta os sinais antifraude exigidos pelo Mercado Pago (itens da compra +
+ * dados completos do pagador). Payload pobre é a principal causa de
+ * `cc_rejected_high_risk`.
+ */
+export async function buildRiskContext(
+  kind: SourceKind,
+  id: string,
+  payer: { email: string; name?: string; doc?: string },
+  fallback: { amount: number; description: string },
+) {
+  let items: Array<{ id: string; title: string; quantity: number; unitPrice: number; categoryId?: string }> = [];
+  try {
+    if (kind === "store_order") {
+      const { data } = await supabaseAdmin
+        .from("store_order_items")
+        .select("id, title, quantity, unit_price")
+        .eq("order_id", id);
+      items = (data || []).map((it: any) => ({
+        id: String(it.id),
+        title: String(it.title || fallback.description),
+        quantity: Number(it.quantity || 1),
+        unitPrice: Number(it.unit_price || 0),
+      }));
+    }
+  } catch (e) {
+    console.warn("[mp risk] failed to load items:", e);
+  }
+  if (!items.length) {
+    items = [{ id, title: fallback.description, quantity: 1, unitPrice: fallback.amount }];
+  }
+
+  let additionalPayer: any = undefined;
+  try {
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("name, phone, created_at, zip_code, street, number")
+      .eq("email", payer.email)
+      .maybeSingle();
+    if (prof) {
+      const parts = String(prof.name || payer.name || "").trim().split(/\s+/).filter(Boolean);
+      const phoneDigits = String((prof as any).phone || "").replace(/\D/g, "");
+      additionalPayer = {
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" ") || undefined,
+        phoneAreaCode: phoneDigits.length >= 10 ? phoneDigits.slice(0, 2) : undefined,
+        phoneNumber: phoneDigits.length >= 10 ? phoneDigits.slice(2) : undefined,
+        registrationDate: (prof as any).created_at || null,
+        address: (prof as any).zip_code
+          ? {
+              zipCode: String((prof as any).zip_code).replace(/\D/g, ""),
+              streetName: (prof as any).street || "",
+              streetNumber: String((prof as any).number || ""),
+            }
+          : null,
+      };
+    }
+  } catch (e) {
+    console.warn("[mp risk] failed to load payer profile:", e);
+  }
+
+  return { items, additionalPayer };
+}
+
 export async function attachPaymentToSource(
+
   kind: SourceKind,
   id: string,
   mpRowId: string
