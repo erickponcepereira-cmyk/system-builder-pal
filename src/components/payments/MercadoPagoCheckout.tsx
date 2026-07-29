@@ -41,6 +41,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [cardNotice, setCardNotice] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
   const [saveCard, setSaveCard] = useState(false);
   const [recurrence, setRecurrence] = useState<{ title: string; amount: number; intervalType: string; trialDays: number; allowOneTime: boolean } | null>(null);
