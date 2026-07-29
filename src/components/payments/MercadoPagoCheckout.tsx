@@ -34,12 +34,13 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
   return `Pagamento ${status === "rejected" ? "recusado" : status || "não aprovado"}${detail ? `: ${detail}` : ""}`;
 };
 
-export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", onApproved }: Props) {
+export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
-
+  const [saveCard, setSaveCard] = useState(false);
+  const [threeDs, setThreeDs] = useState<{ url: string; creq: string; rowId: string } | null>(null);
 
   // PIX
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string; ticketUrl: string | null; rowId: string } | null>(null);
@@ -51,11 +52,54 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [cardAttempt, setCardAttempt] = useState(0);
   const cardFormRef = useRef<HTMLDivElement>(null);
   const cardBrickRef = useRef<any>(null);
+  const saveCardRef = useRef(false);
   const cardContainerId = `mp-card-form-container-${source.kind}-${source.id}-${cardAttempt}`;
 
   const pixFn = useServerFn(createPixCheckout);
   const cardFn = useServerFn(createCardCheckout);
   const statusFn = useServerFn(getPaymentStatus);
+
+  useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
+
+  // Fingerprint antifraude: precisa estar carregado antes de qualquer pagamento.
+  useEffect(() => { loadDeviceFingerprint("checkout"); }, []);
+
+  // Desafio 3-D Secure do banco emissor
+  useEffect(() => {
+    if (!threeDs) return;
+    const iframe = document.getElementById("mp-3ds-frame") as HTMLIFrameElement | null;
+    if (!iframe) return;
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = threeDs.url;
+    form.target = "mp-3ds-frame";
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "creq";
+    input.value = threeDs.creq;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    const interval = setInterval(async () => {
+      const r = await statusFn({ data: { paymentRowId: threeDs.rowId } });
+      if (r?.status === "approved") {
+        clearInterval(interval);
+        setThreeDs(null);
+        toast.success("Pagamento aprovado!");
+        onApproved?.();
+      } else if (r?.status === "rejected" || r?.status === "cancelled") {
+        clearInterval(interval);
+        setThreeDs(null);
+        const msg = friendlyPaymentMessage(r.status, (r as any).status_detail);
+        setPaymentError(msg);
+        toast.error(msg, { duration: 9000 });
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [threeDs, statusFn, onApproved]);
+
 
   useEffect(() => {
     setTab(initialMethod);
