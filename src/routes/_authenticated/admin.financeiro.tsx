@@ -938,13 +938,18 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
   const fetchPending = useServerFn(listPendingMpPayments);
   const runBulk = useServerFn(reconcileApprovedPendingPayments);
   const runAnnual = useServerFn(reconcileAnnualActivations);
+  const fetchLastSweep = useServerFn(getLastMpSweep);
   const [open, setOpen] = useState(false);
   const [mpId, setMpId] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyBulk, setBusyBulk] = useState(false);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchPending>> | null>(null);
+  const [lastSweep, setLastSweep] = useState<Awaited<ReturnType<typeof fetchLastSweep>> | null>(null);
 
-  const loadPending = () => fetchPending().then(setPending).catch(() => setPending([]));
+  const loadPending = () => {
+    fetchLastSweep().then(setLastSweep).catch(() => setLastSweep(null));
+    return fetchPending().then(setPending).catch(() => setPending([]));
+  };
 
   const run = async (id: string) => {
     setBusy(true);
