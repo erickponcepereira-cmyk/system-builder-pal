@@ -163,9 +163,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
     setPaymentError(null);
   }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
 
-  // Polling do PIX
+  // Polling do PIX — pausa enquanto o usuário está na aba de cartão para não
+  // misturar o status do PIX pendente com o resultado do cartão.
   useEffect(() => {
-    if (!pixData || pixApproved) return;
+    if (!pixData || pixApproved || tab === "card") return;
     const interval = setInterval(async () => {
       const r = await statusFn({ data: { paymentRowId: pixData.rowId } });
       if (r?.status === "approved") {
@@ -174,12 +175,12 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         onApproved?.();
         clearInterval(interval);
       } else if (r?.status === "rejected" || r?.status === "cancelled") {
-        toast.error("Pagamento não aprovado. Tente novamente.");
+        toast.error("Pagamento PIX não aprovado. Tente novamente.");
         clearInterval(interval);
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [pixData, pixApproved, statusFn, onApproved]);
+  }, [pixData, pixApproved, tab, statusFn, onApproved]);
 
   // Inicializa SDK MP para o cartão quando troca pra aba cartão
   useEffect(() => {
