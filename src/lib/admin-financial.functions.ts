@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { getServerCutoffIso } from "@/lib/test-mode.functions";
-import { dedupeCommissions } from "@/lib/financial-dedupe";
+import { dedupeCommissions, isNetworkCommissionRow } from "@/lib/financial-dedupe";
 
 /** Aplica filtro do Modo de Testes quando ativo: only registros após o marco. */
 function applyCutoff<T>(q: T, col: string, cutoff: string | null): T {
@@ -562,7 +562,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       // Comissão de aluno indicador nunca aparece em coaches/rede.
       if (c.is_referral || slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
-      const isNetwork = Number(c.level || 0) > 0;
+      const isNetwork = isNetworkCommissionRow(c.level, c.slot_label);
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
       return !isSystem && !isNetwork;

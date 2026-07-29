@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
-import { dedupeCommissions } from "@/lib/financial-dedupe";
+import { dedupeCommissions, isNetworkCommissionRow } from "@/lib/financial-dedupe";
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -1123,14 +1123,7 @@ export interface BlockedCommissionRow {
   isNetwork: boolean;
 }
 
-const NETWORK_LABEL_RE = /(^|\s)(linha|upline)\s*[0-9]+/i;
-const NO_UPLINE_RE = /sem\s+upline/i;
-
-function isNetworkCommission(level: number | null, slotLabel: string | null) {
-  if ((level || 0) > 0) return true;
-  const s = slotLabel || "";
-  return NETWORK_LABEL_RE.test(s) && !NO_UPLINE_RE.test(s);
-}
+const isNetworkCommission = (level: number | null, slotLabel: string | null) => isNetworkCommissionRow(level, slotLabel);
 
 /** Lista as comissões que ainda não entraram no disponível da carteira (carência ou missão). */
 export const listBlockedCommissions = createServerFn({ method: "POST" })
