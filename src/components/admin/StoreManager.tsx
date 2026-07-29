@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, ChevronDown, ChevronRight, FolderTree, CheckCircle2 } from "lucide-react";
 import { StoreImageUpload } from "./StoreImageUpload";
+import { fetchShelfReport } from "./StoreShelfDiagnostics";
 
 interface Section {
   id: string;
