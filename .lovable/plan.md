@@ -1,43 +1,43 @@
-## Contexto verificado no banco
+## Diagnóstico (verificado no banco)
 
-A Faby tem duas contas de login distintas, com e-mails diferentes (por isso a checagem de e-mail existente não pegou):
+**1. Avaliações da Fabiana sumiram — causa confirmada**
 
-| Conta | E-mail | Papel | Criada | Dados |
-|---|---|---|---|---|
-| A | fabyka29@outlook.com | aluno | 28/07 23:19 | 1 pedido **pago** + 1 transação paga |
-| B | fabykatrine29@gmail.com | coach (liberado, anuidade paga 23:42) | 28/07 23:39 | também tem linha de aluno; 1 pedido **pendente** |
+A função de unificação de contas (`admin_merge_profiles`) tem este trecho:
 
-Ambas apontam para o mesmo coach patrocinador.
+```text
+UPDATE tabela SET coluna = alvo WHERE coluna = origem
+EXCEPTION unique_violation -> DELETE FROM tabela WHERE coluna = origem
+```
 
-## Entrega 1 — Unificar a Faby na conta coach (gmail)
+A tabela `coach_evaluation_clients` tem índice único em `student_id`. A conta principal (Gmail) já tinha uma ficha para o mesmo aluno, então o UPDATE deu conflito e o código **apagou a ficha da conta antiga**. Como `coach_body_assessments.client_id` tem `ON DELETE CASCADE`, as avaliações vinculadas foram removidas junto.
 
-- Migrar da conta A para a conta B: pedidos/transações pagas, carteira, indicações, registros de aluno (peso, presença, agendamentos, resgates) e quaisquer alunos indicados.
-- Manter o cadastro de aluno da conta B como o único ativo; consolidar o histórico nele.
-- Desativar a conta A: marcar o perfil como inativo/mesclado, guardando o vínculo com a conta B para auditoria, e liberar o e-mail antigo para não conflitar.
-- Conferência pós-migração: pedido pago aparece no histórico da conta gmail, carteira e rede batendo, e o login outlook não abre mais painel próprio (mensagem: "conta unificada, entre com o Google").
+Confirmei: hoje não existe nenhuma linha em `coach_body_assessments` para essa cliente/aluna, e nada em `coach_assessment_deletions` (não foi exclusão pela UI).
 
-## Entrega 2 — Virar coach/parceiro/profissional de dentro da conta
+A função também faz `DELETE FROM students` da conta antiga — e existem **26 tabelas com cascata a partir de `students`** (protocolos, anamnese, água, janelas, fitcoin, agendamentos, cupons, reservas...). Ou seja: risco de perda em qualquer nova mesclagem.
 
-- No painel do aluno (e no seletor de área), botão "Quero ser Coach / Parceiro / Profissional".
-- O fluxo reaproveita o cadastro existente: pede só os dados que faltam (CPF/CNPJ, patrocinador, termos) e cria o papel **no mesmo perfil**, seguindo o mesmo gate de anuidade/pagamento de hoje.
-- Nas telas públicas de cadastro de coach/parceiro/profissional: se a pessoa já estiver logada, em vez do formulário de conta nova, mostrar "Você já tem conta — adicionar este papel à sua conta".
+Sobre recuperar os dados apagados: eles foram removidos fisicamente e não há snapshot dessas linhas no banco. A recuperação depende de backup point-in-time do provedor; caso não exista, a avaliação precisará ser refeita pela coach. Vou verificar essa possibilidade como primeiro passo da execução.
 
-## Entrega 3 — Bloquear duplicidade por CPF/telefone
+**2 e 3. Link de compartilhamento e "ver avaliação completa" no painel do aluno — mesma causa**
 
-- Ampliar a checagem atual (hoje só e-mail) para também verificar CPF/CNPJ e telefone já usados em outro perfil.
-- Quando houver colisão: bloquear o envio e mostrar "Já existe uma conta com este CPF (e-mail f***@gmail.com). Entre nela e use 'Quero ser Coach'." com link para login.
-- Reforço no banco: índice único (ignorando maiúsculas/pontuação) em CPF/CNPJ de perfis ativos, para impedir duplicidade mesmo por caminhos que passem direto pelo banco.
+A página pública `/resultado/{token}` funciona (testei e renderizou o relatório completo). O problema está no painel do aluno: `src/routes/_authenticated/student.assessments.tsx` só mostra o botão "Ver relatório completo" se já existir um token em `assessment_shares` — e a única política de acesso dessa tabela é `coach_id = coach logado`. **O aluno nunca consegue ler o token**, então o link nunca aparece e o compartilhamento parece quebrado do lado dele.
 
-## Entrega 4 — Mesclagem de contas no admin
+## O que será feito
 
-- Nova aba em Admin → Usuários → "Mesclar contas": busca por nome/e-mail/CPF, escolha da conta que fica e da que será absorvida, e prévia do que será movido (pedidos, carteira, rede, alunos, agendamentos).
-- Execução server-side com verificação de admin, transferindo todos os vínculos e registrando um log de auditoria (quem mesclou, quando, contas envolvidas).
-- Trava de segurança: não permite mesclar se ambas as contas tiverem cadastro de coach com rede própria com downline — nesse caso exige confirmação extra e informa a rede que será reanexada.
+### A. Blindar a unificação de contas (migração)
+- Substituir o `DELETE` em caso de conflito por **manter o registro na conta antiga** e reportá-lo como "não movido" no log de auditoria — a função nunca mais apaga dados.
+- Remover os `DELETE FROM students` / `DELETE FROM coaches`; a conta antiga fica apenas marcada como unificada.
+- Caso especial de fichas de avaliação: quando as duas contas tiverem ficha, **transferir as avaliações da ficha antiga para a ficha da conta principal** e apenas desvincular a ficha antiga (em vez de apagá-la).
+- Registrar no log tanto o que foi movido quanto o que ficou retido por conflito.
+
+### B. Link completo da avaliação no painel do aluno
+- Nova função de servidor `getOrCreateMyAssessmentShare` (autenticada) em `src/lib/assessment-share.functions.ts`: valida que a avaliação pertence ao aluno logado e devolve/gera o token, sem depender das permissões de leitura da tabela de compartilhamentos.
+- `student.assessments.tsx`: botão **"Ver avaliação completa"** sempre visível em cada avaliação, chamando essa função e abrindo `/resultado/{token}`; e botão **"Compartilhar"** que copia o link canônico (`getShareOrigin()`), útil quando o aparelho não suporta compartilhamento nativo.
+- Remover a consulta direta a `assessment_shares` que hoje retorna vazio para o aluno.
+
+### C. Verificação
+- Rodar simulação (dry-run) da unificação corrigida em um par de contas de teste e conferir que nada é apagado.
+- Abrir o painel do aluno no navegador e validar que o botão aparece e que a página completa carrega.
 
 ## Detalhes técnicos
-
-- Migração SQL para: coluna `merged_into_profile_id` + status inativo em `profiles`, índice único de CPF/CNPJ, e função `admin_merge_profiles(source, target)` (security definer) que reatribui `students`, `store_orders`, `transactions`, `wallets`/`fitcoin_ledger`, `coaches.upline_coach_id`, agendamentos e reservas, e grava em `admin_audit_log`.
-- Correção da Faby executada com a mesma função, para validar o caminho que o admin usará.
-- Server functions novas em `src/lib/account-merge.functions.ts` (admin) e `src/lib/role-upgrade.functions.ts` (adicionar papel na própria conta), ambas com `requireSupabaseAuth`.
-- Checagem ampliada em `src/lib/email-check.functions.ts` (identidade: e-mail + CPF + telefone) usada por `CoachRegistration`, `PartnerRegistration`, `ProfessionalRegistration` e `StudentRegistration`.
-- O gate de pagamento/anuidade e o `PartnerOnboardingGate` continuam valendo para o papel adicionado — nada de liberar coach sem passar pelo fluxo atual.
+- Migração: `CREATE OR REPLACE FUNCTION public.admin_merge_profiles(uuid, uuid, uuid, boolean)` com o bloco `EXCEPTION` alterado para acumular `skipped` em vez de deletar; grants mantidos para `authenticated`/`service_role`.
+- Nenhuma alteração em `coach_body_assessments`, RLS de coach ou na página pública `/resultado/$token`.
