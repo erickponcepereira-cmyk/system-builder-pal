@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@/lib/mercadopago";
-import { createPixCheckout, createCardCheckout, getPaymentStatus } from "@/lib/mercadopago.functions";
+import { createPixCheckout, createCardCheckout, getPaymentStatus, getSourceRecurrence } from "@/lib/mercadopago.functions";
 
 
 type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
@@ -40,6 +40,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
   const [saveCard, setSaveCard] = useState(false);
+  const [recurrence, setRecurrence] = useState<{ title: string; amount: number; intervalType: string; trialDays: number; allowOneTime: boolean } | null>(null);
+  const [mode, setMode] = useState<"subscribe" | "one_time">("one_time");
   const [threeDs, setThreeDs] = useState<{ url: string; creq: string; rowId: string } | null>(null);
 
   // PIX
@@ -53,13 +55,32 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const cardFormRef = useRef<HTMLDivElement>(null);
   const cardBrickRef = useRef<any>(null);
   const saveCardRef = useRef(false);
+  const subscribeRef = useRef(false);
   const cardContainerId = `mp-card-form-container-${source.kind}-${source.id}-${cardAttempt}`;
 
   const pixFn = useServerFn(createPixCheckout);
   const cardFn = useServerFn(createCardCheckout);
   const statusFn = useServerFn(getPaymentStatus);
+  const recurrenceFn = useServerFn(getSourceRecurrence);
 
   useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
+  useEffect(() => { subscribeRef.current = mode === "subscribe"; }, [mode]);
+
+  // Produto de assinatura? Oferece as duas formas de pagamento ao cliente.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r: any = await recurrenceFn({ data: source });
+        if (!alive || !r) return;
+        setRecurrence(r);
+        setMode(r.allowOneTime === false ? "subscribe" : "subscribe");
+        if (r.allowOneTime === false) setTab("card");
+      } catch { /* ignore */ }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source.kind, source.id]);
 
   // Fingerprint antifraude: precisa estar carregado antes de qualquer pagamento.
   useEffect(() => { loadDeviceFingerprint("checkout"); }, []);
@@ -211,7 +232,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                         issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
                       },
                       deviceId,
-                      saveCard: saveCardRef.current,
+                      saveCard: saveCardRef.current || subscribeRef.current,
+                      subscribe: subscribeRef.current,
                     },
                   });
                   console.log("[MP card response]", r);
@@ -293,8 +315,37 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         <p className="text-2xl font-bold text-primary">{money(amount)}</p>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <button onClick={() => setTab("pix")} className={`rounded-lg px-3 py-2 text-sm font-bold ${tab === "pix" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>PIX</button>
+      {recurrence && (
+        <div className="mb-4 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <p className="text-xs font-bold text-primary">Este produto é uma assinatura {recurrence.intervalType === "yearly" ? "anual" : "mensal"}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => { setMode("subscribe"); setTab("card"); }}
+              className={`rounded-lg border p-2 text-left text-xs ${mode === "subscribe" ? "border-primary bg-primary/15 text-foreground" : "border-border text-muted-foreground"}`}
+            >
+              <span className="block font-bold">Assinar (cobrança automática)</span>
+              <span className="block">{money(recurrence.amount)} por {recurrence.intervalType === "yearly" ? "ano" : "mês"} no cartão salvo{recurrence.trialDays > 0 ? ` · ${recurrence.trialDays} dias grátis` : ""}</span>
+            </button>
+            {recurrence.allowOneTime !== false && (
+              <button
+                type="button"
+                onClick={() => setMode("one_time")}
+                className={`rounded-lg border p-2 text-left text-xs ${mode === "one_time" ? "border-primary bg-primary/15 text-foreground" : "border-border text-muted-foreground"}`}
+              >
+                <span className="block font-bold">Pagar só desta vez</span>
+                <span className="block">PIX ou cartão, sem cobrança automática</span>
+              </button>
+            )}
+          </div>
+          {mode === "subscribe" && (
+            <p className="text-[11px] text-muted-foreground">O cartão fica salvo e a próxima cobrança é automática. Você pode cancelar quando quiser em Perfil → Assinaturas.</p>
+          )}
+        </div>
+      )}
+
+      <div className={`mb-4 grid gap-2 ${recurrence && mode === "subscribe" ? "grid-cols-1" : "grid-cols-2"}`}>
+        {!(recurrence && mode === "subscribe") && <button onClick={() => setTab("pix")} className={`rounded-lg px-3 py-2 text-sm font-bold ${tab === "pix" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>PIX</button>}
         <button onClick={() => setTab("card")} className={`rounded-lg px-3 py-2 text-sm font-bold ${tab === "card" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Cartão</button>
       </div>
 
@@ -357,7 +408,12 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
       {tab === "card" && (
         <div className="space-y-3">
           <div ref={cardFormRef} id={cardContainerId} />
-          {allowSaveCard && (
+          {recurrence && mode === "subscribe" && (
+            <p className="rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
+              Cartão será salvo para a cobrança automática de {money(recurrence.amount)} / {recurrence.intervalType === "yearly" ? "ano" : "mês"}.
+            </p>
+          )}
+          {allowSaveCard && !(recurrence && mode === "subscribe") && (
             <label className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
               <input type="checkbox" checked={saveCard} onChange={(e) => setSaveCard(e.target.checked)} className="accent-primary" />
               Salvar este cartão para cobranças automáticas (mensalidade/assinatura)
