@@ -51,8 +51,9 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
   return (
