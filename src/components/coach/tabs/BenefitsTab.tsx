@@ -9,6 +9,7 @@ import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
+import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { getShareOrigin } from "@/lib/auth-redirects";
 
 type PartnerFreeProduct = {
@@ -364,6 +365,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                                 )}
                               </div>
                             )}
+                            <FreebieLimitTags weekly={p.weekly_limit_per_student} monthly={p.monthly_redeem_limit} compact />
                             {p.redemption_instructions && <p className="text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                             {p.stock !== null && <p className="text-[10px] text-white/40">Estoque: {p.stock}</p>}
                           </div>
