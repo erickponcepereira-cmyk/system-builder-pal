@@ -44,8 +44,11 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
   const [usedThisWeek, setUsedThisWeek] = useState(0);
   const [cursor, setCursor] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [reserved, setReserved] = useState<{ slotLabel: string } | null>(null);
+  const [buyerName, setBuyerName] = useState<string | null>(null);
 
   const limit = product.weekly_limit_per_student ?? 1;
+
 
   useEffect(() => {
     (async () => {
