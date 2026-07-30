@@ -517,7 +517,13 @@ function StudentFreebies() {
                                     <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                                   </p>
                                 )}
-                                <FreebieLimitTags weekly={p.weekly_limit_per_student} monthly={p.monthly_redeem_limit} compact />
+                                <FreebieLimitTags
+                                  weekly={p.weekly_limit_per_student}
+                                  monthly={p.monthly_redeem_limit}
+                                  usedWeekly={usage.get(p.id)?.week ?? 0}
+                                  usedMonthly={usage.get(p.id)?.month ?? 0}
+                                  compact
+                                />
                                 {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                                 {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
                                 <div className="mt-3 grid grid-cols-2 gap-2">
