@@ -794,7 +794,7 @@ function StudentFreebies() {
             partner_address: bookingProduct.partners?.address ?? null,
           }}
           onClose={() => setBookingProduct(null)}
-          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); refetchUsage(); }}
         />
       )}
       {selectedPro && (
