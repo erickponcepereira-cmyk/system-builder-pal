@@ -11849,6 +11849,10 @@ export type Database = {
         }[]
       }
       partner_preview_student: { Args: { _student_id: string }; Returns: Json }
+      partner_product_used_slots: {
+        Args: { _product_id: string }
+        Returns: number
+      }
       partner_products_stock_status: {
         Args: { _ids: string[] }
         Returns: {
