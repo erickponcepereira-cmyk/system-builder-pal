@@ -440,12 +440,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
   useEffect(() => {
     if (coachMode) return;
-    let pendingId: string | null = null;
-    let pendingKind: string | null = null;
-    try {
-      pendingId = sessionStorage.getItem("fitmind_pending_product");
-      pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
-    } catch { /* ignore */ }
+    const { id: pendingId, kind: pendingKind } = getPendingProduct();
     if (!pendingId) return;
     if ((pendingKind === "partner" || pendingKind === "professional") && storeTab !== "market") { setStoreTab("market"); return; }
     if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
@@ -453,10 +448,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       const match = items.find((it) => it.sourceId === pendingId);
       if (match) {
         setDetailProduct(match);
-        try {
-          sessionStorage.removeItem("fitmind_pending_product");
-          sessionStorage.removeItem("fitmind_pending_product_kind");
-        } catch { /* ignore */ }
+        clearPendingProduct();
       }
     }
   }, [items, coachMode, storeTab]);
