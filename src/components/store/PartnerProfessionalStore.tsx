@@ -15,6 +15,7 @@ import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping
 import { useServerFn } from "@tanstack/react-start";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { PurchaseSuccessModal } from "@/components/store/PurchaseSuccessModal";
 
 function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
   const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
@@ -111,7 +112,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
+  const [purchased, setPurchased] = useState<{ productId: string; productName: string; price: number; kind: CardKind; buyerName?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
   const [shippingValid, setShippingValid] = useState(false);
   // Estoque real dos produtos de parceiro (vagas restantes).
@@ -406,6 +408,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         number: o?.order_number || "pedido",
         email: userData.user?.email || "",
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
+        productId: selected.id,
+        productName: selected.name,
+        productPrice: selected.price,
+        productKind: selected.kind,
       });
       setSelected(null);
       setSlot(null);
@@ -750,7 +756,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 orderId={payOrder.id}
                 amount={payOrder.total}
                 kind="partner"
-                onPaid={() => setPayOrder(null)}
+                onPaid={() => {
+                  setPurchased({ productId: payOrder.productId, productName: payOrder.productName, price: payOrder.productPrice, kind: payOrder.productKind, buyerName: payOrder.name });
+                  setPayOrder(null);
+                }}
               />
             </div>
             <MercadoPagoCheckout
@@ -758,11 +767,26 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               amount={payOrder.total}
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
-              onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); }}
+              onApproved={() => {
+                toast.success("Pagamento aprovado!");
+                setPurchased({ productId: payOrder.productId, productName: payOrder.productName, price: payOrder.productPrice, kind: payOrder.productKind, buyerName: payOrder.name });
+                setPayOrder(null);
+              }}
             />
             <PayLinkShare orderNumber={payOrder.number} clientName={resellerStudent?.name} />
           </div>
         </div>
+      )}
+
+      {purchased && (
+        <PurchaseSuccessModal
+          productId={purchased.productId}
+          productName={purchased.productName}
+          price={purchased.price}
+          kind={purchased.kind}
+          buyerName={purchased.buyerName}
+          onClose={() => setPurchased(null)}
+        />
       )}
     </>
   );
