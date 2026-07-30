@@ -14,7 +14,6 @@ import { greeting, firstName } from "@/lib/purchase-messages";
  */
 export function SupportCoachFab() {
   const [sponsor, setSponsor] = useState<SponsorContact | null>(null);
-  const [visible, setVisible] = useState(true);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
@@ -32,11 +31,19 @@ export function SupportCoachFab() {
     };
   }, []);
 
-  if (!visible || !sponsor?.phone) return null;
+  // Recolhe o balão automaticamente após alguns segundos.
+  useEffect(() => {
+    if (!expanded) return;
+    const t = setTimeout(() => setExpanded(false), 6000);
+    return () => clearTimeout(t);
+  }, [expanded]);
+
+  if (!sponsor?.phone) return null;
 
   const msg = `${greeting()}, me chamo ${firstName(sponsor.myName) || "aluno(a)"}, sou da FitMind Club e tenho uma dúvida.`;
   const url = whatsappUrl(sponsor.phone, msg);
   if (!url) return null;
+
 
   return (
     <div className="fixed bottom-20 right-3 z-50 flex items-end gap-2 sm:bottom-6 sm:right-6">
@@ -49,8 +56,8 @@ export function SupportCoachFab() {
             </span>
             <button
               type="button"
-              aria-label="Fechar contato do coach"
-              onClick={() => setVisible(false)}
+              aria-label="Fechar mensagem"
+              onClick={() => setExpanded(false)}
               className="shrink-0 rounded-full bg-white/10 p-1 text-foreground/70 transition hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
