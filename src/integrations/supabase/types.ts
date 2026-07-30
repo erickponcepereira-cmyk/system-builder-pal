@@ -11493,24 +11493,15 @@ export type Database = {
           total: number
         }[]
       }
-      create_partner_company_order:
-        | {
-            Args: {
-              _partner_product_id: string
-              _payment_method?: string
-              _student_id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _partner_product_id: string
-              _payment_method: string
-              _referred_by_student_id?: string
-              _student_id: string
-            }
-            Returns: string
-          }
+      create_partner_company_order: {
+        Args: {
+          _partner_product_id: string
+          _payment_method: string
+          _referred_by_student_id?: string
+          _student_id: string
+        }
+        Returns: string
+      }
       create_partner_product_order: {
         Args: {
           _buyer_student_id?: string
@@ -11858,6 +11849,15 @@ export type Database = {
         }[]
       }
       partner_preview_student: { Args: { _student_id: string }; Returns: Json }
+      partner_products_stock_status: {
+        Args: { _ids: string[] }
+        Returns: {
+          product_id: string
+          remaining: number
+          stock: number
+          used: number
+        }[]
+      }
       partner_redeem_coupon: { Args: { p_token: string }; Returns: string }
       partner_scan_student: { Args: { _student_id: string }; Returns: Json }
       pay_coach_available: {

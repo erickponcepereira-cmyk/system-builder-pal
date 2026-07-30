@@ -11,6 +11,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
+import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
@@ -440,12 +441,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
   useEffect(() => {
     if (coachMode) return;
-    let pendingId: string | null = null;
-    let pendingKind: string | null = null;
-    try {
-      pendingId = sessionStorage.getItem("fitmind_pending_product");
-      pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
-    } catch { /* ignore */ }
+    const { id: pendingId, kind: pendingKind } = getPendingProduct();
     if (!pendingId) return;
     if ((pendingKind === "partner" || pendingKind === "professional") && storeTab !== "market") { setStoreTab("market"); return; }
     if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
@@ -453,10 +449,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       const match = items.find((it) => it.sourceId === pendingId);
       if (match) {
         setDetailProduct(match);
-        try {
-          sessionStorage.removeItem("fitmind_pending_product");
-          sessionStorage.removeItem("fitmind_pending_product_kind");
-        } catch { /* ignore */ }
+        clearPendingProduct();
       }
     }
   }, [items, coachMode, storeTab]);
@@ -743,6 +736,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
             _partner_product_id: pp.sourceId,
             _student_id: selectedClient.id,
             _payment_method: partnerRpcPaymentMethod(),
+            // Explícito: evita ambiguidade de assinatura no Postgres.
+            _referred_by_student_id: null,
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;

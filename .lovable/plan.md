@@ -1,47 +1,43 @@
-## Objetivo
+## O que foi verificado
 
-Garantir que uma venda que ficou "pendente" no Mercado Pago e depois foi aprovada gere a comissão do coach mesmo que o webhook não chegue — sem depender de alguém clicar em "reconciliar" no admin.
+1. **Erro na venda coach → aluno** — confirmado no banco: existem **duas versões** da função `create_partner_company_order`, ambas com parâmetros opcionais:
+   - `(_partner_product_id, _student_id, _payment_method)` (antiga)
+   - `(_partner_product_id, _student_id, _payment_method, _referred_by_student_id)` (atual, mais completa: indicação por aluno, FitCoin, cross-sale Master)
+   
+   Quando a tela do coach chama com apenas 3 parâmetros, o Postgres não consegue escolher entre as duas e devolve exatamente a mensagem do print. A venda pelo painel do aluno funciona porque envia os 4.
 
-## Como funciona hoje (verificado no código)
+2. **Estoque** — o produto "Aulão de Jump" tem `estoque = 25` e `capacidade do evento = 25`, mas **nenhuma das duas funções lê ou desconta o estoque**, e não há nenhum gatilho de estoque na tabela de pedidos de parceiro. Ou seja: hoje o estoque é só um número exibido; é possível vender além dele. Não é um bug de tela, é regra que nunca existiu para produtos de parceiro.
 
-- `src/routes/api.public.mp.webhook.ts`: o MP reenvia notificação quando o status muda. Ao virar `approved`, o webhook busca o pagamento na API do MP, valida `source_kind`, existência do pedido e o valor (tolerância R$ 0,05) e chama `applyApproval(kind, sourceId)` — é esse passo que grava as comissões. Idempotente: se o registro local já está `approved`, não reprocessa.
-- `src/lib/mp-reconcile.functions.ts`: `listPendingMpPayments` (pendentes/in_process há mais de 5 min) e `reconcileMpPayment` (consulta o MP e aplica) — **manuais**, exigem um admin logado.
-- `src/lib/admin-reconcile.functions.ts`: `reconcileApprovedPendingPayments` varre pagamentos aprovados cuja origem continua pendente — também manual.
+3. **Link `/r/T93FNN?p=...`** — a rota resolve o código e guarda o produto, mas:
+   - Se o usuário **já está logado como aluno**, ela navega para a loja **ignorando o produto**.
+   - Na loja, a abertura automática do produto só acontece para produtos FitMind; para produto de **parceiro/profissional** ela apenas troca de aba e nunca abre o detalhe.
+   - Depois do **cadastro/login**, o fluxo cai em `/portal-selector` e o produto pendente se perde.
 
-Lacunas: (a) nada roda sozinho; (b) `reconcileMpPayment` só aplica aprovação para `store_order`, `transaction` e `partner_product_order` — `subscription_invoice` fica de fora, ao contrário do webhook.
+## Correções propostas
 
-## O que fazer
+### 1. Venda coach → aluno (uma migration só)
+Remover a função antiga de 3 parâmetros (`DROP FUNCTION public.create_partner_company_order(uuid, uuid, text)`), deixando apenas a versão completa. Ela já cobre todos os casos, pois o 4º parâmetro tem valor padrão.
+Além disso, no frontend, passar `_referred_by_student_id` explicitamente na chamada da venda do coach (`StorePage.tsx`), para que nunca mais dependa de resolução por assinatura.
 
-### 1. Rota pública de varredura (cron)
+### 2. Estoque funcionando e comprovável
+Migration própria, alterando somente a função atual (mesma assinatura e mesmo retorno):
+- Antes de criar o pedido: se o produto tem estoque definido, contar pedidos já existentes (pendentes + pagos) daquele produto e **recusar a venda com mensagem clara** quando o limite for atingido ("Produto esgotado — restam 0 de 25 vagas").
+- Bloqueio com `SELECT ... FOR UPDATE` na linha do produto, para dois coaches não venderem a última vaga ao mesmo tempo.
+- Sem alterar nenhum cálculo financeiro.
 
-Nova rota `src/routes/api/public/hooks/mp-sweep.ts`, no mesmo padrão das rotas de hooks já existentes:
+Na tela: mostrar "X de 25 restantes" no card e no modal do produto de parceiro (loja do aluno, loja pública e venda do coach) e desabilitar o botão quando zerar.
 
-- `POST`, protegida por segredo no header (comparação timing-safe), igual às outras rotas de hook do projeto.
-- Busca em `mercadopago_payments` os registros com status `pending`/`in_process` criados nos últimos 7 dias (limite ~200, mais antigos primeiro).
-- Para cada um: consulta a API do MP (`getPayment`), atualiza status local e, se estiver aprovado, chama `applyApproval` — reaproveitando exatamente o mesmo caminho do webhook, com a mesma checagem de idempotência (não reaplica se a origem já está paga).
-- Em seguida, executa a mesma varredura de `reconcileApprovedPendingPayments`: aprovados no MP cuja origem continua pendente.
-- Retorna um resumo (`verificados`, `aprovados`, `aplicados`, `falhas`) e registra falhas no log, uma a uma, sem abortar o lote.
+Como comprovar: painel do parceiro/admin passa a mostrar vagas usadas x total, e uma venda além do limite é recusada com a mensagem acima.
 
-### 2. Agendar
+### 3. Link do produto sobreviver ao login e ao cadastro
+- Em `/r/{code}`: se o link tem `?p=`, o produto vira o destino em todos os casos — inclusive para quem já está logado (hoje só vai para a loja).
+- Guardar o produto pendente em `localStorage` (junto da atribuição durável, que já existe), não só em `sessionStorage`, para sobreviver ao cadastro, à confirmação de e-mail e ao redirect do Google.
+- Após login/cadastro, quando houver produto pendente, mandar direto para a loja do aluno com aquele produto aberto, em vez de `/portal-selector`.
+- Na loja: abrir o modal de detalhe também para produtos de **parceiro e profissional** (hoje só troca de aba), e limpar o pendente depois de abrir.
+- Loja pública `/loja?produto=`: manter o produto marcado, e depois do cadastro reabrir esse mesmo produto já logado, pronto para comprar.
 
-Agendar a rota via `pg_cron` (mesmo mecanismo já usado pela cobrança recorrente), a cada 15 minutos, apontando para a URL estável de produção.
-
-### 3. Corrigir a assimetria do reconcile manual
-
-Em `reconcileMpPayment`, incluir `subscription_invoice` na lista de tipos que disparam `applyApproval`, igualando ao webhook.
-
-### 4. Visibilidade no admin
-
-No painel de pagamentos, mostrar a data/resultado da última varredura automática, para não parecer que "não aconteceu nada".
-
-## Restrições
-
-- **Nenhuma alteração** em `src/server/mercadopago.server.ts`, `src/lib/mercadopago-impl.server.ts` ou no webhook. A varredura apenas reutiliza `getPayment` e `applyApproval`.
-- Nenhuma mudança em cálculo ou valor de comissão.
-- Sem `EXCEPTION WHEN OTHERS THEN NULL`: toda falha é logada com o id do pagamento.
-
-## Aceite
-
-- Um pagamento aprovado no MP com webhook perdido é processado em no máximo 15 minutos e gera a comissão.
-- Rodar a varredura duas vezes seguidas não duplica comissão.
-- A invariante das carteiras continua zerada.
+## Ordem de execução
+1. Migration A: remover a função duplicada → venda do coach volta a funcionar (teste imediato).
+2. Ajuste de frontend da chamada.
+3. Migration B: regra de estoque + telas mostrando vagas restantes.
+4. Ajustes de link/atribuição e abertura automática do produto.

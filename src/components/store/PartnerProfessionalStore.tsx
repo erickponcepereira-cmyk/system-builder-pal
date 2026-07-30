@@ -10,6 +10,7 @@ import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
+import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
 import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
 import { useServerFn } from "@tanstack/react-start";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
@@ -113,6 +114,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
   const [shippingValid, setShippingValid] = useState(false);
+  // Estoque real dos produtos de parceiro (vagas restantes).
+  const [stockById, setStockById] = useState<Record<string, { stock: number; remaining: number }>>({});
   const attachShipping = useServerFn(attachShippingToOrder);
   const myReferralCode = useMyReferralCode();
   const vis = useStoreVisibility(mode === "reseller");
@@ -264,26 +267,38 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     })();
   }, [kind, mode]);
 
-  // Auto-abre o produto vindo do link de indicação (/r/{code}?p=…) quando a aba bate com o kind.
+  // Busca vagas restantes dos produtos de parceiro com estoque configurado.
+  useEffect(() => {
+    const ids = cards.filter((c) => c.kind === "partner").map((c) => c.id);
+    if (!ids.length) { setStockById({}); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("partner_products_stock_status" as never, { _ids: ids } as never);
+      if (error || !alive) return;
+      const map: Record<string, { stock: number; remaining: number }> = {};
+      ((data as unknown as Array<{ product_id: string; stock: number; remaining: number }>) || []).forEach((r) => {
+        map[r.product_id] = { stock: Number(r.stock), remaining: Number(r.remaining) };
+      });
+      setStockById(map);
+    })();
+    return () => { alive = false; };
+  }, [cards]);
+
+  // Auto-abre o produto vindo do link de indicação (/r/{code}?p=…).
+  // Casamos pelo ID presente nesta vitrine — o `kind` do link ("partner"/
+  // "professional") não corresponde ao valor da aba, então comparar os dois
+  // impedia o modal de abrir para quem já estava logado.
   useEffect(() => {
     if (mode !== "student") return;
     if (!cards.length) return;
-    let pendingId: string | null = null;
-    let pendingKind: string | null = null;
-    try {
-      pendingId = sessionStorage.getItem("fitmind_pending_product");
-      pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
-    } catch { /* ignore */ }
-    if (!pendingId || pendingKind !== kind) return;
+    const { id: pendingId } = getPendingProduct();
+    if (!pendingId) return;
     const match = cards.find((c) => c.id === pendingId);
     if (match) {
       setActiveSection(match.section_id);
       setActiveCategory(match.category_id);
       setSelected(match);
-      try {
-        sessionStorage.removeItem("fitmind_pending_product");
-        sessionStorage.removeItem("fitmind_pending_product_kind");
-      } catch { /* ignore */ }
+      clearPendingProduct();
     }
   }, [cards, kind, mode]);
 
@@ -541,6 +556,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
                   <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
                    <PricePair price={p.price} originalPrice={p.originalPrice} compact />
+                   {stockById[p.id] && (
+                     <p className={`mt-1 text-[10px] font-bold ${stockById[p.id].remaining === 0 ? "text-destructive" : "text-white/60"}`}>
+                       {stockById[p.id].remaining === 0
+                         ? "Esgotado"
+                         : `${stockById[p.id].remaining} de ${stockById[p.id].stock} vagas restantes`}
+                     </p>
+                   )}
                    <BenefitsBadges price={p.price} compact />
                  </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
@@ -619,6 +641,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
                 <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
                 <PricePair price={selected.price} originalPrice={selected.originalPrice} />
+                {stockById[selected.id] && (
+                  <p className={`mt-1 text-xs font-bold ${stockById[selected.id].remaining === 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {stockById[selected.id].remaining === 0
+                      ? "Esgotado — sem vagas disponíveis"
+                      : `${stockById[selected.id].remaining} de ${stockById[selected.id].stock} vagas restantes`}
+                  </p>
+                )}
                 <BenefitsBadges price={selected.price} />
               </div>
               {selected.description && (
@@ -672,7 +701,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   )}
                 </div>
               )}
-              {onAddToCart ? (
+              {stockById[selected.id]?.remaining === 0 ? (
+                <button disabled className="w-full rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground">
+                  Esgotado
+                </button>
+              ) : onAddToCart ? (
                 <button
                   onClick={handleAddToCart}
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
