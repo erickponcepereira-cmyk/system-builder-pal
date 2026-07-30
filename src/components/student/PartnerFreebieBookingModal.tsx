@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { FreebieReservedModal } from "@/components/student/FreebieReservedModal";
+import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
@@ -10,6 +12,8 @@ interface Props {
     id: string;
     name: string;
     weekly_limit_per_student: number | null;
+    monthly_redeem_limit?: number | null;
+    partner_whatsapp?: string | null;
     redemption_location_name?: string | null;
     redemption_location_url?: string | null;
     partner_address?: string | null;
@@ -17,6 +21,7 @@ interface Props {
   onClose: () => void;
   onReserved: (reservation: { id: string; qr_token: string; slot_end: string }) => void;
 }
+
 
 const WEEK_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MONTH_LABELS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -113,9 +118,10 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
     if (error) { toast.error(error.message); return; }
     const r = (data as unknown as Array<{ reservation_id: string; qr_token: string; slot_end: string }>)?.[0];
     if (!r) { toast.error("Falha ao reservar."); return; }
-    toast.success("Reserva confirmada! O QR libera no horário escolhido.");
+    setReserved({ slotLabel: fmtTime(s.slot_start) });
     onReserved({ id: r.reservation_id, qr_token: r.qr_token, slot_end: r.slot_end });
   };
+
 
   // Month grid
   const year = cursor.getFullYear();
