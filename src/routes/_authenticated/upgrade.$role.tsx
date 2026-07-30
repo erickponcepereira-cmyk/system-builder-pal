@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { toast } from "sonner";
+import { readReferralSignup } from "@/lib/referral-signup";
 
 export const Route = createFileRoute("/_authenticated/upgrade/$role")({
   component: UpgradePage,
@@ -31,6 +32,7 @@ function UpgradePage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [upline, setUpline] = useState<CoachOption | null>(null);
+  const [uplineLocked, setUplineLocked] = useState(false);
 
   // coach
   const [pixKey, setPixKey] = useState("");
@@ -61,6 +63,13 @@ function UpgradePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id ?? null);
     })();
+
+    // Indicação vinda do link /r/{code} (inclusive via loja pública e Google).
+    const ref = readReferralSignup();
+    if (ref.coachId) {
+      setUpline({ id: ref.coachId, profileId: "", name: ref.sponsorName || "Coach indicador" });
+      setUplineLocked(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -284,7 +293,7 @@ function UpgradePage() {
           </>
         )}
 
-        <CoachSelector value={upline} onChange={setUpline} />
+        <CoachSelector value={upline} onChange={setUpline} locked={uplineLocked} />
       </div>
 
       <Button size="lg" className="w-full gap-2" disabled={loading} onClick={submit}>
