@@ -3,6 +3,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
+import { persistReferralForOAuth } from "@/lib/referral-signup";
+
 
 /** Ícone oficial do Google (SVG inline, cores da marca). */
 function GoogleIcon({ className }: { className?: string }) {
