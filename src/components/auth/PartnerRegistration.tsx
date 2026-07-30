@@ -16,6 +16,7 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
+import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
 
 type ReferralContext = {
   code: string;
@@ -315,6 +316,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
         </div>
 
         <div className="rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
+          <GoogleSignupTop role="partner" />
           {referral && (
             <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
               <p className="font-semibold text-primary">Convite válido</p>
