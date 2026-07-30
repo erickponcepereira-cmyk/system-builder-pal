@@ -19,6 +19,8 @@ import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { useBranding } from "@/components/theme-provider";
 import { resolveBrandTheme } from "@/lib/branding";
 import { isTestEmailClient, markSelfAsTest } from "@/lib/test-accounts.functions";
+import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
+import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
 
 // ============================================================
@@ -67,7 +69,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("fitmind_referral");
+      const raw = JSON.stringify(readReferralSignup());
       if (!raw) return;
       const parsed = JSON.parse(raw) as ReferralContext;
       if (!parsed?.code) return;
@@ -152,7 +154,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
         console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
       }
 
-      sessionStorage.removeItem("fitmind_referral");
+      clearReferralSignup();
       sessionStorage.removeItem("fitmind_selected_area");
 
       if (isTestEmailClient(email)) {
@@ -195,6 +197,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8 bg-card border border-border">
+          <GoogleSignupTop role="student" />
           {referral && (
             <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-card-foreground">
               <p className="font-semibold text-primary">

@@ -3,6 +3,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
+import { persistReferralForOAuth } from "@/lib/referral-signup";
+
 
 /** Ícone oficial do Google (SVG inline, cores da marca). */
 function GoogleIcon({ className }: { className?: string }) {
@@ -20,22 +22,34 @@ function GoogleIcon({ className }: { className?: string }) {
  * Botão "Continuar com Google".
  * Sempre volta para /auth/callback (rota pública) — nunca direto para um painel
  * protegido, senão a sessão ainda não estaria hidratada no retorno.
+ *
+ * `role` guarda a intenção de cadastro (coach/parceiro/profissional): depois do
+ * Google, o callback leva a pessoa para completar só o que o Google não dá.
  */
 export function GoogleSignInButton({
   label = "Continuar com Google",
   nextPath,
+  role,
 }: {
   label?: string;
   nextPath?: string | null;
+  role?: "student" | "coach" | "partner" | "professional";
 }) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      if (nextPath && typeof window !== "undefined") {
-        sessionStorage.setItem("fitmind:auth-next", nextPath);
+      if (typeof window !== "undefined") {
+        if (nextPath) sessionStorage.setItem("fitmind:auth-next", nextPath);
+        if (role) sessionStorage.setItem("fitmind:auth-role", role);
+        else sessionStorage.removeItem("fitmind:auth-role");
+        if (role) localStorage.setItem("fitmind:auth-role", role);
+        else localStorage.removeItem("fitmind:auth-role");
       }
+      // Indicação precisa sobreviver ao redirect do OAuth.
+      persistReferralForOAuth();
+
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: getAuthRedirectUrl("/auth/callback"),
       });
@@ -55,6 +69,7 @@ export function GoogleSignInButton({
       setLoading(false);
     }
   };
+
 
   return (
     <button

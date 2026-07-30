@@ -19,6 +19,8 @@ import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
+import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
 type Specialty = { key: string; label: string; description: string | null; requires_admin_setup: boolean };
 
@@ -55,7 +57,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   // Captura referral da sessão (link /r/:code) — trava o coach indicador
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("fitmind_referral");
+      const raw = JSON.stringify(readReferralSignup());
       if (!raw) return;
       const parsed = JSON.parse(raw) as { coachId?: string; sponsorName?: string };
       if (!parsed?.coachId) return;
@@ -316,6 +318,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          {step === 1 && <GoogleSignupTop role="professional" />}
           {formError && (
             <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{formError}</div>
           )}

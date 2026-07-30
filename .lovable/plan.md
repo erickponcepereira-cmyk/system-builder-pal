@@ -1,39 +1,45 @@
-## Diagnóstico (confirmado nos dados)
 
-A venda do **Aulão de Jump** (pedido `PP-7DF68F18`, pago em 30/07 16:28, bruto R$ 25,00, líquido R$ 19,89) **gerou sim o crédito de co-produção** do Leandro: existe um registro em `product_coproduction_credits` de **R$ 9,95** (50% do líquido), vinculado à co-produção aceita entre o parceiro criador e o profissional Leandro da Silva Amorim.
+## 1. Botão flutuante "Dúvidas? Fale com seu coach"
 
-O problema é na etapa seguinte: a função que recalcula todas as carteiras (`recalc_wallets_for_owner`) **não lê a tabela `product_coproduction_credits` em momento nenhum**. Ela só soma comissões e o `partner_net_amount` dos pedidos. Como ela sobrescreve os saldos, o crédito do Leandro simplesmente desaparece — a carteira dele hoje mostra R$ 0,00 disponível e R$ 2,10 pendente (valor de outra origem).
+Botão fixo (canto inferior direito, acima da bottom-nav no mobile) em todos os painéis autenticados, com o texto "Dúvidas? Entre em contato com seu coach" e link do WhatsApp do patrocinador.
 
-Consequência dupla:
-- O co-produtor nunca recebe.
-- O criador do produto (parceiro) continua recebendo 100% do líquido, sem desconto da parte repassada.
+- Nova função de servidor `getMySponsorContact` (autenticada): resolve, para o usuário logado, o coach patrocinador e devolve nome + telefone.
+  - Aluno → coach do `students.coach_id`.
+  - Coach → coach de upline (`sponsor/upline`).
+  - Parceiro/Profissional → coach indicador vinculado ao cadastro.
+  - Sem patrocinador (ou admin) → cai no contato oficial FitMind, ou o botão não aparece (definido por ausência de telefone).
+- Novo componente `SupportCoachFab.tsx` usando `whatsappUrl()` já existente, com mensagem pré-preenchida ("{saudação}, me chamo {primeiro nome}, sou aluno(a) da FitMind e tenho uma dúvida.").
+- Montado uma única vez no layout `_authenticated/route.tsx` para valer em todos os painéis.
 
-## O que será feito
+## 2. Indicação (coach) perdida no cadastro via Google
 
-1. **Incluir os créditos de co-produção no cálculo das carteiras**
-   Alterar `recalc_wallets_for_owner` para, além do que já faz:
-   - **Somar** os créditos onde a pessoa é a colaboradora (`is_cost = false`), na carteira correta conforme o tipo (parceiro → carteira de parceiro; profissional/coach → carteira profissional).
-   - **Somar** os reembolsos de custo (`is_cost = true`) para quem arcou com o custo.
-   - **Descontar** do criador do produto o total repassado aos co-produtores naquele pedido, para o líquido não ser contado duas vezes.
-   - Aplicar a mesma regra de liberação já usada nos pedidos de parceiro: fica **pendente por 7 dias** a partir do pagamento e depois vira disponível.
-   - Considerar apenas créditos de pedidos com status pago (créditos de pedidos cancelados/estornados são ignorados).
+Causa confirmada na leitura do código:
 
-2. **Reprocessar retroativamente**
-   Rodar o recálculo para todos os envolvidos em co-produções já existentes (Leandro e o parceiro do Aulão de Jump, além da co-produção do produto profissional de 23/07), para os saldos ficarem corretos imediatamente.
+- `/r/{code}` grava a atribuição em `localStorage` (`fitmind_atribuicao`) e `sessionStorage` (`fitmind_referral`) — isso funciona.
+- **`/complete-signup` nunca lê essa atribuição**: ele renderiza o `CoachSelector` vazio e envia apenas `coachId` escolhido à mão, sem `referralCode`, `referredByStudentId` nem `partnerId`. Ou seja, quem entra por link de coach + Google escolhe outro coach (ou o Master) e a indicação some.
+- Pela loja pública o efeito é o mesmo: a loja lê a indicação, mas os CTAs de cadastro/login levam ao fluxo Google que termina no `/complete-signup` sem indicação.
 
-3. **Visibilidade nos extratos**
-   Fazer os lançamentos de co-produção aparecerem no histórico da carteira do co-produtor e no relatório do criador, identificados como "Co-produção — {nome do produto}" e "Repasse de co-produção", com o número do pedido.
+Correções:
+
+- `/complete-signup` passa a ler `lerAtribuicao()` + `fitmind_referral` e pré-selecionar o coach indicador, **travado** (`CoachSelector locked`), com aviso "Você foi indicado por X". Só mostra seleção livre se não houver indicação.
+- Enviar `referralCode`, `referredByStudentId` e `partnerId` no `completeGoogleStudentSignup` (o backend já aceita esses campos e hoje eles chegam nulos).
+- `GoogleSignInButton` grava a atribuição vigente também em `localStorage` antes de sair para o Google (o `sessionStorage` não sobrevive ao redirect em alguns navegadores/WebView do APK).
+- Garantir que todos os CTAs da loja pública para cadastro/login preservem a indicação (`comAtribuicao()`).
+- Teste ponta a ponta com Playwright: abrir `/r/{code}?to=loja`, navegar até o cadastro, simular retorno do OAuth e conferir que o coach chega travado em `/complete-signup`.
+
+## 3. "Entrar com o Google" em todos os painéis de cadastro
+
+- O botão Google passa a aparecer **no topo** de cada formulário: Aluno, Coach, Parceiro e Profissional (hoje só existe na tela de escolha de perfil e no login), com separador "ou preencha os dados abaixo".
+- O botão leva o papel escolhido (`role`) e a indicação para o retorno do OAuth, via `sessionStorage`.
+- Após o retorno:
+  - **Aluno**: fluxo atual de `/complete-signup` (nome, telefone, sexo, nascimento) — nome e e-mail já vêm do Google e ficam pré-preenchidos.
+  - **Coach / Parceiro / Profissional**: `/complete-signup?role=...` renderiza o mesmo formulário de cadastro já existente, em "modo Google": sem os campos de e-mail e senha (a conta já existe) e com o nome pré-preenchido; pede apenas o que o Google não fornece (telefone, CPF/CNPJ, endereço, dados profissionais, aceite de termos, etc.).
+  - Coach indicador aparece travado quando houver indicação.
+- `resolveGoogleAccount` passa a considerar completude por papel (hoje só valida aluno), para não liberar o painel de um coach/parceiro/profissional com cadastro pela metade.
 
 ## Detalhes técnicos
 
-- Migração alterando `recalc_wallets_for_owner` (função central; todos os gatilhos já existentes passam a propagar a mudança).
-- Junção de `product_coproduction_credits` com `partner_product_orders` para filtrar por `status = 'paid'` e usar `paid_at` como base da janela de 7 dias.
-- O desconto no criador usa `creator_type`/`creator_id` de `product_coproductions`, limitado ao líquido do próprio pedido (nunca negativo).
-- Nenhuma mudança no gatilho `apply_coproduction_credits_on_order` — ele já está correto.
-- Ajustes de leitura nas funções de extrato/carteira do front (co-produtor e criador) para exibir os lançamentos.
-
-## Validação
-
-- Conferir que a carteira do Leandro passa a mostrar R$ 9,95 (pendente até 06/08, depois disponível).
-- Conferir que a carteira do parceiro do Aulão de Jump cai de R$ 19,89 para R$ 9,94 referente a esse pedido.
-- Rodar o recálculo geral e verificar que nenhum outro saldo muda indevidamente.
+- Arquivos principais: `src/routes/complete-signup.tsx`, `src/routes/auth.callback.tsx`, `src/components/auth/GoogleSignInButton.tsx`, `src/components/auth/{Student,Coach,Partner,Professional}Registration.tsx`, `src/lib/google-signup.functions.ts`, `src/lib/atribuicao.ts`, `src/routes/loja.tsx`, `src/routes/_authenticated/route.tsx`.
+- Novos: `src/components/support/SupportCoachFab.tsx`, `src/lib/sponsor-contact.functions.ts`.
+- Novas funções de servidor de conclusão por papel (`completeGoogleCoachSignup`, `...Partner...`, `...Professional...`) reutilizando `registration.server.ts`, sem duplicar regra de negócio nem criar perfil duplicado (mantendo a blindagem por e-mail já existente).
+- Sem migração de banco prevista; se a resolução do patrocinador exigir join pesado, será encapsulada numa função SQL `security definer` de leitura.

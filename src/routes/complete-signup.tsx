@@ -10,8 +10,15 @@ import { Label } from "@/components/ui/label";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { maskPhone } from "@/lib/masks";
 import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-signup.functions";
+import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
+
+type SearchParams = { role?: "coach" | "partner" | "professional" };
 
 export const Route = createFileRoute("/complete-signup")({
+  validateSearch: (search: Record<string, unknown>): SearchParams => {
+    const r = search.role;
+    return r === "coach" || r === "partner" || r === "professional" ? { role: r } : {};
+  },
   head: () => ({
     meta: [
       { title: "Completar Cadastro — FitMind Club" },
@@ -23,6 +30,8 @@ export const Route = createFileRoute("/complete-signup")({
 
 function CompleteSignupPage() {
   const navigate = useNavigate();
+  const { role: intendedRole } = Route.useSearch();
+  const [referral, setReferral] = useState<ReferralSignup | null>(null);
   const [checking, setChecking] = useState(true);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState("");
@@ -43,7 +52,11 @@ function CompleteSignupPage() {
       try {
         const state = await resolveGoogleAccount({ data: undefined as never });
         if (state.status !== "needs_profile") {
-          navigate({ to: "/portal-selector", replace: true });
+          if (intendedRole) {
+            navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
+          } else {
+            navigate({ to: "/portal-selector", replace: true });
+          }
           return;
         }
         setEmail(state.email || "");
@@ -51,9 +64,21 @@ function CompleteSignupPage() {
       } catch {
         setEmail(data.session.user.email || "");
       }
+
+      // Indicação (link /r/{code} ou loja pública) — sobrevive ao OAuth.
+      const ref = readReferralSignup();
+      setReferral(ref);
+      if (ref.coachId) {
+        setCoach({
+          id: ref.coachId,
+          profileId: "",
+          name: ref.sponsorName || "Coach indicador",
+        });
+      }
+
       setChecking(false);
     })();
-  }, [navigate]);
+  }, [navigate, intendedRole]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +98,18 @@ function CompleteSignupPage() {
           gender,
           birthdate,
           coachId: coach.id,
+          referredByStudentId: referral?.referredByStudentId ?? null,
+          referralCode: referral?.code ?? null,
+          partnerId: referral?.partnerId ?? null,
         },
       });
+      clearReferralSignup();
       toast.success("Cadastro concluído! Bem-vindo à FitMind Club.");
-      navigate({ to: "/portal-selector", replace: true });
+      if (intendedRole) {
+        navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
+      } else {
+        navigate({ to: "/portal-selector", replace: true });
+      }
     } catch (err) {
       const msg = (err as Error)?.message || "Não foi possível concluir o cadastro.";
       setError(msg);
@@ -145,7 +178,15 @@ function CompleteSignupPage() {
               <Input id="birthdate" type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
             </div>
 
-            <CoachSelector value={coach} onChange={setCoach} />
+            {referral?.coachId ? (
+              <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-white/80">
+                Você foi indicado(a) por{" "}
+                <span className="font-semibold text-white">{referral.sponsorName || "seu coach"}</span> — essa
+                indicação fica registrada na sua conta.
+              </div>
+            ) : (
+              <CoachSelector value={coach} onChange={setCoach} />
+            )}
 
             {error && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>

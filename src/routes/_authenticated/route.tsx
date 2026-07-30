@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { SupportCoachFab } from "@/components/support/SupportCoachFab";
+
 
 /**
  * Pathless layout para todas as áreas autenticadas (admin, coach,
@@ -29,5 +31,11 @@ export const Route = createFileRoute("/_authenticated")({
     }
     return { user: data.session.user };
   },
-  component: () => <Outlet />,
+  component: () => (
+    <>
+      <Outlet />
+      <SupportCoachFab />
+    </>
+  ),
 });
+
