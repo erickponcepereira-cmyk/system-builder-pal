@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { FreebieReservedModal } from "@/components/student/FreebieReservedModal";
+import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
@@ -10,6 +12,8 @@ interface Props {
     id: string;
     name: string;
     weekly_limit_per_student: number | null;
+    monthly_redeem_limit?: number | null;
+    partner_whatsapp?: string | null;
     redemption_location_name?: string | null;
     redemption_location_url?: string | null;
     partner_address?: string | null;
@@ -17,6 +21,7 @@ interface Props {
   onClose: () => void;
   onReserved: (reservation: { id: string; qr_token: string; slot_end: string }) => void;
 }
+
 
 const WEEK_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MONTH_LABELS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -39,8 +44,11 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
   const [usedThisWeek, setUsedThisWeek] = useState(0);
   const [cursor, setCursor] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [reserved, setReserved] = useState<{ slotLabel: string } | null>(null);
+  const [buyerName, setBuyerName] = useState<string | null>(null);
 
   const limit = product.weekly_limit_per_student ?? 1;
+
 
   useEffect(() => {
     (async () => {
@@ -60,11 +68,13 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
       if (u.user) {
         const { data: prof } = await supabase
           .from("profiles" as never)
-          .select("id" as never)
+          .select("id,name" as never)
           .eq("user_id" as never, u.user.id as never)
           .maybeSingle();
         const profileId = (prof as { id?: string } | null)?.id;
+        setBuyerName((prof as { name?: string } | null)?.name || null);
         if (profileId) {
+
           const { count } = await supabase
             .from("partner_freebie_reservations" as never)
             .select("id", { count: "exact", head: true })
@@ -113,9 +123,10 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
     if (error) { toast.error(error.message); return; }
     const r = (data as unknown as Array<{ reservation_id: string; qr_token: string; slot_end: string }>)?.[0];
     if (!r) { toast.error("Falha ao reservar."); return; }
-    toast.success("Reserva confirmada! O QR libera no horário escolhido.");
+    setReserved({ slotLabel: fmtTime(s.slot_start) });
     onReserved({ id: r.reservation_id, qr_token: r.qr_token, slot_end: r.slot_end });
   };
+
 
   // Month grid
   const year = cursor.getFullYear();
@@ -137,7 +148,9 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           <div>
             <h3 className="text-base font-bold text-white">Reservar horário</h3>
             <p className="text-xs text-white/60">{product.name}</p>
+            <FreebieLimitTags weekly={product.weekly_limit_per_student} monthly={product.monthly_redeem_limit} compact />
           </div>
+
           <button onClick={onClose}><X className="h-5 w-5 text-white/60" /></button>
         </div>
 
@@ -248,6 +261,16 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           </>
         )}
       </div>
+      {reserved && (
+        <FreebieReservedModal
+          productName={product.name}
+          whatsapp={product.partner_whatsapp}
+          buyerName={buyerName}
+          slotLabel={reserved.slotLabel}
+          onClose={() => { setReserved(null); onClose(); }}
+        />
+      )}
     </div>
   );
+
 }

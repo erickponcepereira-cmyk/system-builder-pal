@@ -114,6 +114,24 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [uploading, setUploading] = useState(false);
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
+  // Blocos da agenda do profissional: duração dos produtos precisa ser múltipla deles.
+  const [agenda, setAgenda] = useState<{ slotMinutes: number; maxWindow: number }>({ slotMinutes: 30, maxWindow: 0 });
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("professional_availability" as never)
+        .select("start_time,end_time,slot_minutes,is_active")
+        .eq("professional_coach_id" as never, coachId as never);
+      const rows = ((data as unknown) as Array<{ start_time: string; end_time: string; slot_minutes: number | null; is_active: boolean | null }>) || [];
+      const active = rows.filter((r) => r.is_active !== false);
+      if (!active.length) return;
+      const toMin = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
+      const slotMinutes = Math.min(...active.map((r) => Number(r.slot_minutes || 30)));
+      const maxWindow = Math.max(...active.map((r) => toMin(r.end_time) - toMin(r.start_time)));
+      setAgenda({ slotMinutes: slotMinutes > 0 ? slotMinutes : 30, maxWindow });
+    })();
+  }, [coachId]);
 
   const load = async () => {
     setLoading(true);
@@ -207,6 +225,18 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       uses_scheduling: !!editing.uses_scheduling,
       weekly_limit_per_student: Math.max(1, Number(editing.weekly_limit_per_student || 1)),
     };
+
+    if (editing.is_schedulable) {
+      const dur = Number(editing.default_duration_minutes || 0);
+      if (!dur || dur % agenda.slotMinutes !== 0) {
+        return toast.error(
+          `A duração precisa ser múltipla dos blocos da sua agenda (${agenda.slotMinutes} min). Ex.: ${agenda.slotMinutes}, ${agenda.slotMinutes * 2}, ${agenda.slotMinutes * 3} min.`,
+        );
+      }
+      if (agenda.maxWindow > 0 && dur > agenda.maxWindow) {
+        toast.warning(`Atenção: sua maior janela contínua tem ${agenda.maxWindow} min — ninguém conseguirá agendar ${dur} min.`);
+      }
+    }
 
     if (isFree) {
       payload = {
@@ -778,23 +808,24 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   </label>
                   {editing.is_schedulable && (
                     <div className="grid grid-cols-2 gap-2">
-                      <Field label="Duração (min)">
-                        <input
-                          type="number"
-                          min={5}
-                          max={240}
-                          step={5}
-                          value={editing.default_duration_minutes ?? ""}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setEditing({ ...editing, default_duration_minutes: v === "" ? undefined : Number(v) });
-                          }}
-                          onBlur={(e) => {
-                            const n = Number(e.target.value);
-                            if (!n || n < 5) setEditing({ ...editing, default_duration_minutes: 30 });
-                          }}
+                      <Field label={`Duração (blocos de ${agenda.slotMinutes} min)`}>
+                        <select
+                          value={String(editing.default_duration_minutes ?? agenda.slotMinutes)}
+                          onChange={(e) => setEditing({ ...editing, default_duration_minutes: Number(e.target.value) })}
                           className="field-input"
-                        />
+                        >
+                          {Array.from({ length: 8 }, (_, i) => (i + 1) * agenda.slotMinutes).map((m) => (
+                            <option key={m} value={m}>
+                              {m} min ({m / agenda.slotMinutes} bloco{m / agenda.slotMinutes > 1 ? "s" : ""})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-[10px] text-white/40">Sua agenda usa blocos de {agenda.slotMinutes} min.</p>
+                        {agenda.maxWindow > 0 && Number(editing.default_duration_minutes || agenda.slotMinutes) > agenda.maxWindow && (
+                          <p className="mt-1 text-[10px] font-bold text-amber-400">
+                            Sua maior janela contínua tem {agenda.maxWindow} min — ninguém conseguirá agendar esta duração.
+                          </p>
+                        )}
                       </Field>
                       <Field label="Janela cancelar (h)">
                         <input
