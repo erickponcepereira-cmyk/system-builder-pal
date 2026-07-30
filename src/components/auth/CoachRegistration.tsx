@@ -19,6 +19,7 @@ import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
+import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
 // ============================================================
 // COACH MULTI-STEP REGISTRATION
@@ -60,7 +61,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
   // Prefill upline from referral link (lock if present)
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("fitmind_referral");
+      const raw = JSON.stringify(readReferralSignup());
       if (!raw) return;
       const ref = JSON.parse(raw) as { kind?: string; coachId?: string; sponsorName?: string };
       if (ref.kind === "coach" && ref.coachId) {

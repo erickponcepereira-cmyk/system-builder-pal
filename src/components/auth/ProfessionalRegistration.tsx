@@ -20,6 +20,7 @@ import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
+import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
 type Specialty = { key: string; label: string; description: string | null; requires_admin_setup: boolean };
 
@@ -56,7 +57,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   // Captura referral da sessão (link /r/:code) — trava o coach indicador
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("fitmind_referral");
+      const raw = JSON.stringify(readReferralSignup());
       if (!raw) return;
       const parsed = JSON.parse(raw) as { coachId?: string; sponsorName?: string };
       if (!parsed?.coachId) return;

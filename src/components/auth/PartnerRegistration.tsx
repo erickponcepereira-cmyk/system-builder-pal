@@ -17,6 +17,7 @@ import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
+import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
 type ReferralContext = {
   code: string;
@@ -86,7 +87,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   // Captura referral (mesmo fluxo de aluno/coach)
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem("fitmind_referral");
+      const raw = JSON.stringify(readReferralSignup());
       if (!raw) return;
       const parsed = JSON.parse(raw) as ReferralContext;
       if (!parsed?.code || !parsed.coachId) return;
@@ -270,7 +271,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
         console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
       }
 
-      sessionStorage.removeItem("fitmind_referral");
+      clearReferralSignup();
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
       toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
