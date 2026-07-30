@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users,
 import { toast } from "sonner";
 import { FreebieReservedModal } from "@/components/student/FreebieReservedModal";
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
+import { useFreebieUsage } from "@/lib/useFreebieUsage";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
