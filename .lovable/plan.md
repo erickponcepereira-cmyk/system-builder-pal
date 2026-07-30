@@ -1,44 +1,39 @@
-## 1. Duração do produto x blocos da agenda
+## Diagnóstico (confirmado nos dados)
 
-Hoje a agenda do Helton é toda em blocos de 30 min (sex, 14:00–17:00) e ele tem 2 produtos com 60 min ("Consulta" e "Acompanhamento Nutricional"). O gerador de horários já junta blocos contíguos, então 60 min funciona — mas nada garante que a duração seja compatível com o bloco.
+A venda do **Aulão de Jump** (pedido `PP-7DF68F18`, pago em 30/07 16:28, bruto R$ 25,00, líquido R$ 19,89) **gerou sim o crédito de co-produção** do Leandro: existe um registro em `product_coproduction_credits` de **R$ 9,95** (50% do líquido), vinculado à co-produção aceita entre o parceiro criador e o profissional Leandro da Silva Amorim.
 
-- No editor de produtos do profissional (e do parceiro, quando agendável): a duração passa a ser escolhida em múltiplos do bloco da agenda (30, 60, 90…), com o texto "sua agenda usa blocos de 30 min".
-- Bloqueio de salvamento quando a duração não for múltiplo do bloco, com mensagem explicando o ajuste.
-- Aviso quando a duração exigir mais blocos seguidos do que a maior janela contínua disponível (ex.: 90 min numa agenda com janelas de 60 min) — o produto salva, mas o profissional é avisado de que ninguém conseguirá agendar.
-- Validação equivalente no servidor, ao criar/editar produto agendável.
-- Os dois produtos de 60 min do Helton permanecem válidos (2 blocos de 30) — nada é alterado à força.
+O problema é na etapa seguinte: a função que recalcula todas as carteiras (`recalc_wallets_for_owner`) **não lê a tabela `product_coproduction_credits` em momento nenhum**. Ela só soma comissões e o `partner_net_amount` dos pedidos. Como ela sobrescreve os saldos, o crédito do Leandro simplesmente desaparece — a carteira dele hoje mostra R$ 0,00 disponível e R$ 2,10 pendente (valor de outra origem).
 
-## 2. Mensagem de parabéns após a compra
+Consequência dupla:
+- O co-produtor nunca recebe.
+- O criador do produto (parceiro) continua recebendo 100% do líquido, sem desconto da parte repassada.
 
-Ao concluir uma compra (cartão, PIX aprovado ou pagamento por carteira), aparece um modal de sucesso com, na ordem:
+## O que será feito
 
-- "Parabéns, você acabou de receber **X dias** de benefícios gratuitos, venha conferir!" + botão para a aba **Gratuitos** (X vem das regras já existentes de carteirinha por faixa de preço).
-- Se o produto gerar ticket de desafio: "Você agora pode participar dos nossos desafios! Venha concorrer a R$ 1.000 no PIX!" + botão para a aba **Desafios**.
-- "Converse com a empresa pelo WhatsApp e confira se está tudo certo!" + botão abrindo o WhatsApp do parceiro/profissional dono do produto (com fallback para o número oficial FitMind) já com a mensagem pré-preenchida:
-  "Bom dia/Boa tarde/Boa noite, me chamo {primeiro nome}, acabei de comprar {nome do produto} pela FitMind, gostaria de saber se está tudo certo."
+1. **Incluir os créditos de co-produção no cálculo das carteiras**
+   Alterar `recalc_wallets_for_owner` para, além do que já faz:
+   - **Somar** os créditos onde a pessoa é a colaboradora (`is_cost = false`), na carteira correta conforme o tipo (parceiro → carteira de parceiro; profissional/coach → carteira profissional).
+   - **Somar** os reembolsos de custo (`is_cost = true`) para quem arcou com o custo.
+   - **Descontar** do criador do produto o total repassado aos co-produtores naquele pedido, para o líquido não ser contado duas vezes.
+   - Aplicar a mesma regra de liberação já usada nos pedidos de parceiro: fica **pendente por 7 dias** a partir do pagamento e depois vira disponível.
+   - Considerar apenas créditos de pedidos com status pago (créditos de pedidos cancelados/estornados são ignorados).
 
-Cada bloco só aparece quando se aplica (sem dias de benefício → não mostra; sem ticket → não mostra; sem WhatsApp em lugar nenhum → não mostra o botão).
+2. **Reprocessar retroativamente**
+   Rodar o recálculo para todos os envolvidos em co-produções já existentes (Leandro e o parceiro do Aulão de Jump, além da co-produção do produto profissional de 23/07), para os saldos ficarem corretos imediatamente.
 
-## 3. Tags de limite nos benefícios gratuitos
-
-Nos cards de gratuitos (aba Gratuitos do aluno/coach, página pública `/gratuitos` e modal de detalhe), incluir as tags no mesmo estilo das tags de ticket da loja:
-
-- "{n}x por semana" (weekly_limit_per_student)
-- "{n}x por mês" (monthly_redeem_limit) — omitida quando ilimitado
-
-## 4. Confirmação após reservar um gratuito
-
-Ao concluir a reserva, substituir o toast simples por um modal:
-
-"Parabéns por adquirir o produto **{nome}** gratuitamente! Converse com a empresa e veja se está tudo certo: **{número}**" + botão WhatsApp com a mensagem:
-"Bom dia/Boa tarde/Boa noite, me chamo {primeiro nome}, acabei de comprar {nome do produto} para as {horário da reserva} pela FitMind, gostaria de saber se está tudo certo."
-
-O trecho "para as {horário}" só entra quando a reserva tiver horário marcado.
+3. **Visibilidade nos extratos**
+   Fazer os lançamentos de co-produção aparecerem no histórico da carteira do co-produtor e no relatório do criador, identificados como "Co-produção — {nome do produto}" e "Repasse de co-produção", com o número do pedido.
 
 ## Detalhes técnicos
 
-- Novo util `src/lib/purchase-messages.ts`: saudação por horário (America/Sao_Paulo), primeiro nome, montagem do texto e do link `wa.me` (reaproveitando `whatsappUrl`).
-- Novo componente `PurchaseSuccessModal` usado por `MercadoPagoCheckout.tsx`, `WalletPayButton.tsx` e pelos fluxos de pedido de loja; dias/tickets vindos de `computePartnerProductBenefits`.
-- Novo componente `FreebieReservedModal` usado por `PartnerFreebieBookingModal.tsx` / `FreebieDetailModal.tsx`.
-- WhatsApp resolvido a partir de `partners.public_whatsapp` / `professional_public_profile.public_whatsapp`, com fallback num ajuste em `app_settings` (`fitmind_whatsapp`).
-- Alterações de duração ficam em `ProfessionalProductsPanel.tsx`, no editor de produtos do parceiro e na validação do server function correspondente; sem mudança de schema.
+- Migração alterando `recalc_wallets_for_owner` (função central; todos os gatilhos já existentes passam a propagar a mudança).
+- Junção de `product_coproduction_credits` com `partner_product_orders` para filtrar por `status = 'paid'` e usar `paid_at` como base da janela de 7 dias.
+- O desconto no criador usa `creator_type`/`creator_id` de `product_coproductions`, limitado ao líquido do próprio pedido (nunca negativo).
+- Nenhuma mudança no gatilho `apply_coproduction_credits_on_order` — ele já está correto.
+- Ajustes de leitura nas funções de extrato/carteira do front (co-produtor e criador) para exibir os lançamentos.
+
+## Validação
+
+- Conferir que a carteira do Leandro passa a mostrar R$ 9,95 (pendente até 06/08, depois disponível).
+- Conferir que a carteira do parceiro do Aulão de Jump cai de R$ 19,89 para R$ 9,94 referente a esse pedido.
+- Rodar o recálculo geral e verificar que nenhum outro saldo muda indevidamente.
