@@ -148,7 +148,9 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           <div>
             <h3 className="text-base font-bold text-white">Reservar horário</h3>
             <p className="text-xs text-white/60">{product.name}</p>
+            <FreebieLimitTags weekly={product.weekly_limit_per_student} monthly={product.monthly_redeem_limit} compact />
           </div>
+
           <button onClick={onClose}><X className="h-5 w-5 text-white/60" /></button>
         </div>
 
