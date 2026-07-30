@@ -11,6 +11,7 @@ import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
+import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
