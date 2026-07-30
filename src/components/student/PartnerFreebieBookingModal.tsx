@@ -68,11 +68,13 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
       if (u.user) {
         const { data: prof } = await supabase
           .from("profiles" as never)
-          .select("id" as never)
+          .select("id,name" as never)
           .eq("user_id" as never, u.user.id as never)
           .maybeSingle();
         const profileId = (prof as { id?: string } | null)?.id;
+        setBuyerName((prof as { name?: string } | null)?.name || null);
         if (profileId) {
+
           const { count } = await supabase
             .from("partner_freebie_reservations" as never)
             .select("id", { count: "exact", head: true })
