@@ -12169,6 +12169,15 @@ export type Database = {
         }
         Returns: number
       }
+      my_freebie_usage: {
+        Args: never
+        Returns: {
+          kind: string
+          product_id: string
+          used_month: number
+          used_week: number
+        }[]
+      }
       notify_admin_pending_specialty: {
         Args: { _coach_id: string }
         Returns: undefined

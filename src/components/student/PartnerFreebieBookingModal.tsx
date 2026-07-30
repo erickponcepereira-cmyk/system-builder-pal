@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users,
 import { toast } from "sonner";
 import { FreebieReservedModal } from "@/components/student/FreebieReservedModal";
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
+import { useFreebieUsage } from "@/lib/useFreebieUsage";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
@@ -48,6 +49,7 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
   const [buyerName, setBuyerName] = useState<string | null>(null);
 
   const limit = product.weekly_limit_per_student ?? 1;
+  const { usage } = useFreebieUsage();
 
 
   useEffect(() => {
@@ -148,7 +150,13 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           <div>
             <h3 className="text-base font-bold text-white">Reservar horário</h3>
             <p className="text-xs text-white/60">{product.name}</p>
-            <FreebieLimitTags weekly={product.weekly_limit_per_student} monthly={product.monthly_redeem_limit} compact />
+            <FreebieLimitTags
+              weekly={product.weekly_limit_per_student}
+              monthly={product.monthly_redeem_limit}
+              usedWeekly={usage.get(product.id)?.week ?? usedThisWeek}
+              usedMonthly={usage.get(product.id)?.month ?? 0}
+              compact
+            />
           </div>
 
           <button onClick={onClose}><X className="h-5 w-5 text-white/60" /></button>

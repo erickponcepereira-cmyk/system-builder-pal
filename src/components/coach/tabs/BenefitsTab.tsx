@@ -10,6 +10,7 @@ import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
+import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
 
 type PartnerFreeProduct = {
@@ -77,6 +78,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
+  const { usage, refetchUsage } = useFreebieUsage();
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -163,6 +165,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
     setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: p.redemption_location_name, locationUrl: p.redemption_location_url });
+    refetchUsage();
   };
 
   const handleScan = (decoded: string) => {
@@ -365,7 +368,13 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                                 )}
                               </div>
                             )}
-                            <FreebieLimitTags weekly={p.weekly_limit_per_student} monthly={p.monthly_redeem_limit} compact />
+                            <FreebieLimitTags
+                              weekly={p.weekly_limit_per_student}
+                              monthly={p.monthly_redeem_limit}
+                              usedWeekly={usage.get(p.id)?.week ?? 0}
+                              usedMonthly={usage.get(p.id)?.month ?? 0}
+                              compact
+                            />
                             {p.redemption_instructions && <p className="text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                             {p.stock !== null && <p className="text-[10px] text-white/40">Estoque: {p.stock}</p>}
                           </div>
@@ -566,7 +575,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             partner_address: bookingProduct.partners?.address ?? null,
           }}
           onClose={() => setBookingProduct(null)}
-          onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); refetchUsage(); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
         />
       )}
     </>

@@ -11,6 +11,7 @@ import { CouponModal } from "@/components/student/CouponModal";
 import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
+import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
@@ -131,6 +132,7 @@ function StudentFreebies() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
+  const { usage, refetchUsage } = useFreebieUsage();
 
   const generateCoupon = async (p: PartnerFreeProduct) => {
     setGenerating(p.id);
@@ -140,6 +142,7 @@ function StudentFreebies() {
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
     setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: p.redemption_location_name, locationUrl: p.redemption_location_url });
+    refetchUsage();
   };
 
   const generateProCoupon = async (p: ProfessionalFreeProduct) => {
@@ -150,6 +153,7 @@ function StudentFreebies() {
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
     setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: null, locationUrl: null });
+    refetchUsage();
   };
 
   // Carteirinha gate
@@ -513,7 +517,13 @@ function StudentFreebies() {
                                     <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                                   </p>
                                 )}
-                                <FreebieLimitTags weekly={p.weekly_limit_per_student} monthly={p.monthly_redeem_limit} compact />
+                                <FreebieLimitTags
+                                  weekly={p.weekly_limit_per_student}
+                                  monthly={p.monthly_redeem_limit}
+                                  usedWeekly={usage.get(p.id)?.week ?? 0}
+                                  usedMonthly={usage.get(p.id)?.month ?? 0}
+                                  compact
+                                />
                                 {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                                 {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
                                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -784,7 +794,7 @@ function StudentFreebies() {
             partner_address: bookingProduct.partners?.address ?? null,
           }}
           onClose={() => setBookingProduct(null)}
-          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); refetchUsage(); }}
         />
       )}
       {selectedPro && (
