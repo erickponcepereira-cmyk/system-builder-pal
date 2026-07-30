@@ -49,6 +49,7 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
   const [buyerName, setBuyerName] = useState<string | null>(null);
 
   const limit = product.weekly_limit_per_student ?? 1;
+  const { usage } = useFreebieUsage();
 
 
   useEffect(() => {
