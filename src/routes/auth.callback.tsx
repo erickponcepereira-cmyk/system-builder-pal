@@ -16,6 +16,16 @@ export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
 });
 
+function pendingRole(): "coach" | "partner" | "professional" | "student" | null {
+  if (typeof window === "undefined") return null;
+  const raw =
+    sessionStorage.getItem("fitmind:auth-role") || localStorage.getItem("fitmind:auth-role");
+  sessionStorage.removeItem("fitmind:auth-role");
+  localStorage.removeItem("fitmind:auth-role");
+  if (raw === "coach" || raw === "partner" || raw === "professional" || raw === "student") return raw;
+  return null;
+}
+
 function safeNext(): string | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem("fitmind:auth-next");
@@ -49,13 +59,18 @@ function AuthCallbackPage() {
       }
 
       const next = safeNext();
+      const role = pendingRole();
 
       try {
         setMessage("Verificando seu cadastro...");
         const state = await resolveGoogleAccount({ data: undefined as never });
 
         if (state.status === "needs_profile") {
-          navigate({ to: "/complete-signup", replace: true });
+          navigate({
+            to: "/complete-signup",
+            search: role && role !== "student" ? { role } : {},
+            replace: true,
+          });
           return;
         }
 
@@ -63,11 +78,16 @@ function AuthCallbackPage() {
           toast.success("Conta Google vinculada ao seu cadastro existente.");
         }
 
+        if (role && role !== "student") {
+          navigate({ to: "/upgrade/$role", params: { role }, replace: true });
+          return;
+        }
+
         if (next) { window.location.replace(next); return; }
         navigate({ to: "/portal-selector", replace: true });
       } catch (e) {
         toast.error((e as Error)?.message || "Falha ao verificar o cadastro.");
-        navigate({ to: "/complete-signup", replace: true });
+        navigate({ to: "/complete-signup", search: {}, replace: true });
       }
     })();
   }, [navigate]);
