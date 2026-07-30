@@ -10,6 +10,7 @@ import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
+import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
 import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
 import { useServerFn } from "@tanstack/react-start";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
