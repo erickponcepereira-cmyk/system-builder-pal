@@ -3149,6 +3149,340 @@ export type Database = {
           },
         ]
       }
+      crm_atividades: {
+        Row: {
+          cartao_id: string
+          corpo: string | null
+          created_at: string
+          criado_por: string | null
+          de_coluna_id: string | null
+          id: string
+          meta: Json | null
+          para_coluna_id: string | null
+          tipo: string
+        }
+        Insert: {
+          cartao_id: string
+          corpo?: string | null
+          created_at?: string
+          criado_por?: string | null
+          de_coluna_id?: string | null
+          id?: string
+          meta?: Json | null
+          para_coluna_id?: string | null
+          tipo: string
+        }
+        Update: {
+          cartao_id?: string
+          corpo?: string | null
+          created_at?: string
+          criado_por?: string | null
+          de_coluna_id?: string | null
+          id?: string
+          meta?: Json | null
+          para_coluna_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_atividades_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_atividades_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_atividades_de_coluna_id_fkey"
+            columns: ["de_coluna_id"]
+            isOneToOne: false
+            referencedRelation: "crm_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_atividades_para_coluna_id_fkey"
+            columns: ["para_coluna_id"]
+            isOneToOne: false
+            referencedRelation: "crm_colunas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_cartao_etiquetas: {
+        Row: {
+          cartao_id: string
+          etiqueta_id: string
+        }
+        Insert: {
+          cartao_id: string
+          etiqueta_id: string
+        }
+        Update: {
+          cartao_id?: string
+          etiqueta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_cartao_etiquetas_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartao_etiquetas_etiqueta_id_fkey"
+            columns: ["etiqueta_id"]
+            isOneToOne: false
+            referencedRelation: "crm_etiquetas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_cartoes: {
+        Row: {
+          arquivado_em: string | null
+          coluna_id: string
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          id: string
+          lead_id: string | null
+          posicao: number
+          prioridade: string
+          profile_id: string | null
+          quadro_id: string
+          responsavel_id: string | null
+          titulo: string
+          updated_at: string
+          vence_em: string | null
+        }
+        Insert: {
+          arquivado_em?: string | null
+          coluna_id: string
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          posicao?: number
+          prioridade?: string
+          profile_id?: string | null
+          quadro_id: string
+          responsavel_id?: string | null
+          titulo: string
+          updated_at?: string
+          vence_em?: string | null
+        }
+        Update: {
+          arquivado_em?: string | null
+          coluna_id?: string
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          posicao?: number
+          prioridade?: string
+          profile_id?: string | null
+          quadro_id?: string
+          responsavel_id?: string | null
+          titulo?: string
+          updated_at?: string
+          vence_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_cartoes_coluna_id_fkey"
+            columns: ["coluna_id"]
+            isOneToOne: false
+            referencedRelation: "crm_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartoes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartoes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartoes_quadro_id_fkey"
+            columns: ["quadro_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quadros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_cartoes_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_colunas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          id: string
+          limite_cartoes: number | null
+          nome: string
+          posicao: number
+          quadro_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          limite_cartoes?: number | null
+          nome: string
+          posicao?: number
+          quadro_id: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          limite_cartoes?: number | null
+          nome?: string
+          posicao?: number
+          quadro_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_colunas_quadro_id_fkey"
+            columns: ["quadro_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quadros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_etiquetas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          id: string
+          nome: string
+          quadro_id: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          quadro_id: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          quadro_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_etiquetas_quadro_id_fkey"
+            columns: ["quadro_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quadros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_quadros: {
+        Row: {
+          arquivado_em: string | null
+          clonado_de: string | null
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          escopo: string
+          id: string
+          modelo: boolean
+          nome: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          arquivado_em?: string | null
+          clonado_de?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo: string
+          id?: string
+          modelo?: boolean
+          nome: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arquivado_em?: string | null
+          clonado_de?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          modelo?: boolean
+          nome?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_quadros_clonado_de_fkey"
+            columns: ["clonado_de"]
+            isOneToOne: false
+            referencedRelation: "crm_quadros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_quadros_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_quote_delivery: {
         Row: {
           delivered_date: string
@@ -11538,6 +11872,16 @@ export type Database = {
           _payment_method?: Database["public"]["Enums"]["payment_method"]
           _referrer_student_id?: string
           _shipping?: Json
+        }
+        Returns: string
+      }
+      crm_acesso_quadro: { Args: { _quadro_id: string }; Returns: boolean }
+      crm_clonar_quadro: {
+        Args: {
+          _escopo: string
+          _nome?: string
+          _origem_id: string
+          _owner_id: string
         }
         Returns: string
       }
