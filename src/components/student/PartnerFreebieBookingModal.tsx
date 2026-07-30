@@ -259,6 +259,16 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           </>
         )}
       </div>
+      {reserved && (
+        <FreebieReservedModal
+          productName={product.name}
+          whatsapp={product.partner_whatsapp}
+          buyerName={buyerName}
+          slotLabel={reserved.slotLabel}
+          onClose={() => { setReserved(null); onClose(); }}
+        />
+      )}
     </div>
   );
+
 }
