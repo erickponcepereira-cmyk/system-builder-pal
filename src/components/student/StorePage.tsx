@@ -743,6 +743,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
             _partner_product_id: pp.sourceId,
             _student_id: selectedClient.id,
             _payment_method: partnerRpcPaymentMethod(),
+            // Explícito: evita ambiguidade de assinatura no Postgres.
+            _referred_by_student_id: null,
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;

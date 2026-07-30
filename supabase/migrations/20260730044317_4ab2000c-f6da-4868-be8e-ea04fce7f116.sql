@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.create_partner_company_order(uuid, uuid, text);

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { gravarAtribuicao } from "@/lib/atribuicao";
+import { setPendingProduct } from "@/lib/pending-product";
 import { z } from "zod";
 
 /**
@@ -80,7 +81,7 @@ function ReferralLandingPage() {
       });
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
-        sessionStorage.setItem("fitmind_pending_product", productId);
+        setPendingProduct(productId, null);
         const [chRes, ppRes, prRes] = await Promise.all([
           // `products` fechou para anon em 28/07. Ler a tabela direto aqui
           // devolvia 401 e o link do coach parava de resolver o produto
@@ -95,9 +96,7 @@ function ReferralLandingPage() {
         if (ch.length) productKind = "challenge";
         else if ((pp as any)?.id) productKind = "partner";
         else if ((pr as any)?.id) productKind = "professional";
-        if (productKind) {
-          sessionStorage.setItem("fitmind_pending_product_kind", productKind);
-        }
+        setPendingProduct(productId, productKind);
       }
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
