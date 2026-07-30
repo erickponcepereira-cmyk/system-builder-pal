@@ -24,11 +24,12 @@ type PartnerFreeProduct = {
   benefit_start_time: string | null;
   benefit_end_time: string | null;
   weekly_limit_per_student: number | null;
+  monthly_redeem_limit: number | null;
   uses_scheduling: boolean | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
   partner_id: string;
-  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string; address: string | null } | null;
+  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string; address: string | null; whatsapp?: string | null; public_whatsapp?: string | null } | null;
 };
 
 type ScheduleRow = { partner_product_id: string; weekday: number; start_time: string; end_time: string };
@@ -109,7 +110,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address,whatsapp,public_whatsapp)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -556,6 +557,8 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             id: bookingProduct.id,
             name: bookingProduct.name,
             weekly_limit_per_student: bookingProduct.weekly_limit_per_student,
+            monthly_redeem_limit: bookingProduct.monthly_redeem_limit,
+            partner_whatsapp: bookingProduct.partners?.public_whatsapp || bookingProduct.partners?.whatsapp || null,
             redemption_location_name: bookingProduct.redemption_location_name,
             redemption_location_url: bookingProduct.redemption_location_url,
             partner_address: bookingProduct.partners?.address ?? null,

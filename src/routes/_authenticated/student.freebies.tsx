@@ -63,12 +63,13 @@ type PartnerFreeProduct = {
   benefit_end_time: string | null;
   uses_scheduling: boolean | null;
   weekly_limit_per_student: number | null;
+  monthly_redeem_limit: number | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
   section_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
-  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null } | null;
+  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null; whatsapp?: string | null; public_whatsapp?: string | null } | null;
 };
 
 type ProfessionalFreeProduct = {
@@ -181,7 +182,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id,partners(fantasy_name,photo_url,status,business_area,address)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id,partners(fantasy_name,photo_url,status,business_area,address,whatsapp,public_whatsapp)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -774,6 +775,8 @@ function StudentFreebies() {
             id: bookingProduct.id,
             name: bookingProduct.name,
             weekly_limit_per_student: bookingProduct.weekly_limit_per_student,
+            monthly_redeem_limit: bookingProduct.monthly_redeem_limit,
+            partner_whatsapp: bookingProduct.partners?.public_whatsapp || bookingProduct.partners?.whatsapp || null,
             redemption_location_name: bookingProduct.redemption_location_name,
             redemption_location_url: bookingProduct.redemption_location_url,
             partner_address: bookingProduct.partners?.address ?? null,
