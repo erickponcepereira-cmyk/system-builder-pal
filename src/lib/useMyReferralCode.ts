@@ -43,7 +43,8 @@ export async function shareReferralProduct(
   title = "Indicação FitMind Club",
 ): Promise<boolean> {
   if (!referralCode) return false;
-  const url = `${getShareOrigin()}/r/${referralCode}?p=${productId}`;
+  // Permalink próprio do produto (com Open Graph) + atribuição do indicador.
+  const url = `${getShareOrigin()}/produto/${productId}?ref=${referralCode}`;
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({ title, url });
