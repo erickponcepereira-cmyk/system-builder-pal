@@ -95,6 +95,21 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       }
     }
 
+    // Guarda de consistência: ninguém pode estar em etapa avançada sem a
+    // ativação paga (ou isenção registrada / já-coach / já aprovado).
+    const hasActivation =
+      !!coach.activation_paid_at ||
+      Boolean((coach as { already_coach?: boolean }).already_coach) ||
+      !!coach.approved_at;
+    if (!hasActivation && (stage === "awaiting_quiz_result" || stage === "awaiting_upline_release")) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("coaches")
+        .update({ onboarding_stage: "awaiting_payment" })
+        .eq("id", coach.id);
+      stage = "awaiting_payment";
+    }
+
     // Quiz comportamental não é mais etapa obrigatória do onboarding.
     // Qualquer coach preso em "awaiting_quiz_result" avança automaticamente
     // para "awaiting_upline_release" (aguardando liberação do ID/admin).
