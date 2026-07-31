@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
+import { takePostAuthIntent } from "@/lib/post-auth-intent";
+
 import { useBranding } from "@/components/theme-provider";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
@@ -39,10 +41,12 @@ function LoginPage() {
   const getNextParam = (): string | null => {
     if (typeof window === "undefined") return null;
     const raw = new URLSearchParams(window.location.search).get("next");
-    if (!raw) return null;
     // Only allow same-origin relative paths.
-    return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+    if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+    // Sem ?next: usa o destino guardado antes do login (loja/produto).
+    return takePostAuthIntent();
   };
+
 
   useEffect(() => {
     let active = true;

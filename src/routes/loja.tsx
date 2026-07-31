@@ -9,6 +9,8 @@ import {
   type PublicTaxonomyCard,
 } from "@/lib/public-store";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 
 /**
  * Loja pública — mesma navegação da loja logada (`StorePage`), porém sem
@@ -428,6 +430,8 @@ function PublicStorePage() {
         </p>
         <Link
           to="/register"
+          onClick={() => setStoreIntent(null)}
+
           className="mt-3 block rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
         >
           Criar conta

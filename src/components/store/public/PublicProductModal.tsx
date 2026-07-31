@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Lock, ShoppingBag, X } from "lucide-react";
 import type { PublicProduct } from "@/lib/public-store";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -85,6 +87,8 @@ export function PublicProductModal({
           </button>
           <Link
             to="/register"
+            onClick={() => setStoreIntent(p.id)}
+
             className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
           >
             Criar conta

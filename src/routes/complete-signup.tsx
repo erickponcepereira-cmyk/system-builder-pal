@@ -11,6 +11,19 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { maskPhone } from "@/lib/masks";
 import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
+import { takePostAuthIntent } from "@/lib/post-auth-intent";
+
+/** Destino guardado antes do login (loja/produto) — consumido uma vez. */
+function goAfterSignup(navigate: ReturnType<typeof useNavigate>) {
+  const next = takePostAuthIntent();
+  if (next) {
+    if (next.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
+    window.location.replace(next);
+    return;
+  }
+  navigate({ to: "/portal-selector", replace: true });
+}
+
 
 type SearchParams = { role?: "coach" | "partner" | "professional" };
 
@@ -55,7 +68,8 @@ function CompleteSignupPage() {
           if (intendedRole) {
             navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
           } else {
-            navigate({ to: "/portal-selector", replace: true });
+            goAfterSignup(navigate);
+
           }
           return;
         }
@@ -108,7 +122,8 @@ function CompleteSignupPage() {
       if (intendedRole) {
         navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
       } else {
-        navigate({ to: "/portal-selector", replace: true });
+        goAfterSignup(navigate);
+
       }
     } catch (err) {
       const msg = (err as Error)?.message || "Não foi possível concluir o cadastro.";

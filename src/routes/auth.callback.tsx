@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { Logo } from "@/components/Logo";
+import { clearPostAuthIntent, setPostAuthIntent, takePostAuthIntent } from "@/lib/post-auth-intent";
+
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
@@ -30,9 +32,15 @@ function safeNext(): string | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem("fitmind:auth-next");
   sessionStorage.removeItem("fitmind:auth-next");
-  if (!raw) return null;
-  return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+    clearPostAuthIntent();
+    return raw;
+  }
+  // O sessionStorage não sobrevive ao OAuth em alguns aparelhos: usa o
+  // destino durável guardado antes de sair para o Google.
+  return takePostAuthIntent();
 }
+
 
 function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -66,6 +74,8 @@ function AuthCallbackPage() {
         const state = await resolveGoogleAccount({ data: undefined as never });
 
         if (state.status === "needs_profile") {
+          // Ainda falta completar o cadastro: devolve o destino para depois.
+          if (next) setPostAuthIntent(next);
           navigate({
             to: "/complete-signup",
             search: role && role !== "student" ? { role } : {},
@@ -73,6 +83,7 @@ function AuthCallbackPage() {
           });
           return;
         }
+
 
         if (state.status === "linked") {
           toast.success("Conta Google vinculada ao seu cadastro existente.");
@@ -83,7 +94,12 @@ function AuthCallbackPage() {
           return;
         }
 
-        if (next) { window.location.replace(next); return; }
+        if (next) {
+          if (next.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
+          window.location.replace(next);
+          return;
+        }
+
         navigate({ to: "/portal-selector", replace: true });
       } catch (e) {
         toast.error((e as Error)?.message || "Falha ao verificar o cadastro.");

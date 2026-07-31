@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { gravarAtribuicao } from "@/lib/atribuicao";
 import { setPendingProduct } from "@/lib/pending-product";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 import { z } from "zod";
 
 /**
@@ -100,6 +102,13 @@ function ReferralLandingPage() {
       }
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
+
+      // Destino pretendido: se o link é de loja ou de produto, a pessoa deve
+      // voltar para a loja logada depois de entrar/cadastrar.
+      if (productId || destinoPedido === "loja") {
+        setStoreIntent(productId ?? null);
+      }
+
 
       // Se já está logado: verifica se tem registro de aluno (mesmo que role seja admin/coach/partner).
       // - tem registro de aluno → entra na loja como aluno (mantém sessão, troca área)

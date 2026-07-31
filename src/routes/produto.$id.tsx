@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 import {
   fetchPublicProduct,
   readPublicCart,
@@ -285,6 +287,8 @@ function ProdutoPublico() {
           </button>
           <Link
             to="/register"
+            onClick={() => setStoreIntent(produto.id)}
+
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
           >
             <UserPlus className="h-4 w-4" />
@@ -294,7 +298,9 @@ function ProdutoPublico() {
         <Link
           to="/student/store"
           search={{ produto: produto.id }}
+          onClick={() => setStoreIntent(produto.id)}
           className="mt-2 block text-center text-[11px] font-medium text-white/50 underline"
+
         >
           Já tenho conta — ver no app
         </Link>
