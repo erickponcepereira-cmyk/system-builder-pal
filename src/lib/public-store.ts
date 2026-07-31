@@ -111,7 +111,13 @@ export function readReferralContext(): PublicStoreContext {
 
   // captura ?ref= se houver; senão devolve o que já estava gravado
   const a = capturarAtribuicaoDaUrl() ?? lerAtribuicao();
-  if (a) return { referralCode: a.codigo, sponsorName: a.coachNome };
+  if (a) {
+    // `?ref=` grava só o código: resolve o coach em segundo plano para que a
+    // indicação sobreviva ao login com Google.
+    if (!a.coachId) void enriquecerAtribuicao();
+    return { referralCode: a.codigo, sponsorName: a.coachNome };
+  }
+
 
   // retrocompatibilidade: links antigos que só gravaram em sessionStorage
   try {
