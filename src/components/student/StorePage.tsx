@@ -145,16 +145,10 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       toast.error("Seu código de indicação ainda não está disponível.");
       return;
     }
-    // `challenge` e `item` vivem na tabela `products`, que é a única com
-    // permalink público hoje (`/produto/{id}`, com Open Graph — o link
-    // ganha preview no WhatsApp). Os outros tipos continuam passando por
-    // `/r/{code}?p=`, que agora resolve o destino em vez de despejar no
-    // cadastro. Quando partner/professional ganharem página própria,
-    // basta incluí-los aqui.
-    const temPermalink = kind === "challenge" || kind === "item";
-    const url = temPermalink
-      ? `${getShareOrigin()}/produto/${productSourceId}?ref=${myReferralCode}`
-      : `${getShareOrigin()}/r/${myReferralCode}?p=${productSourceId}`;
+    // Todo produto tem permalink próprio (`/produto/{id}`), com Open Graph e
+    // atribuição pelo `?ref=`. Vale para FitMind, parceiro e profissional.
+    void kind;
+    const url = `${getShareOrigin()}/produto/${productSourceId}?ref=${myReferralCode}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Indicação FitMind Club", url });
