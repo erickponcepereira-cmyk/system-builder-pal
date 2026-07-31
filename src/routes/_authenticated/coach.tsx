@@ -133,6 +133,7 @@ function CoachDashboard() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  const [studentsSort, setStudentsSort] = useState<"recent" | "no_bioimpedance">("recent");
   const [coachName, setCoachName] = useState("Coach");
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [isPending, setIsPending] = useState(false);
@@ -502,11 +503,17 @@ function CoachDashboard() {
           )}
           <div className={isPending ? "pointer-events-none select-none opacity-50" : ""} aria-disabled={isPending}>
           {activeTab === "overview" && (
-            <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} coachId={coachContext?.coachId || ""} />
+            <OverviewTab
+              coachName={coachName}
+              referralLink={referralLink}
+              onCopy={copyReferral}
+              coachId={coachContext?.coachId || ""}
+              onOpenStudents={(sort) => { setStudentsSort(sort); setActiveTab("students"); }}
+            />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
           {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
-          {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
+          {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} initialSort={studentsSort} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
           {activeTab === "networkRanking" && <NetworkRankingTab />}
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}

@@ -17,7 +17,16 @@ const NO_ASSESSMENT_DAYS = 7;
 // Avoid re-toasting on every mount/re-render in the same session
 const notifiedKey = (coachId: string) => `fitmind_coach_alerts_${coachId}`;
 
-export function CoachAlertsCard({ coachId, variant = "default" }: { coachId: string; variant?: "default" | "compact" }) {
+export function CoachAlertsCard({
+  coachId,
+  variant = "default",
+  onOpenStudents,
+}: {
+  coachId: string;
+  variant?: "default" | "compact";
+  /** Leva para a Base de Alunos já filtrada pelo alerta clicado. */
+  onOpenStudents?: (sort: "recent" | "no_bioimpedance") => void;
+}) {
   const [newStudents, setNewStudents] = useState<StudentRow[]>([]);
   const [noAssess, setNoAssess] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +104,13 @@ export function CoachAlertsCard({ coachId, variant = "default" }: { coachId: str
       </div>
       <div className="space-y-2">
         {newStudents.length > 0 && (
-          <div className="flex items-start gap-2 rounded-lg bg-emerald-500/10 p-2.5">
+          <div
+            role={onOpenStudents ? "button" : undefined}
+            tabIndex={onOpenStudents ? 0 : undefined}
+            onClick={() => onOpenStudents?.("recent")}
+            onKeyDown={(e) => { if (onOpenStudents && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenStudents("recent"); } }}
+            className={`flex items-start gap-2 rounded-lg bg-emerald-500/10 p-2.5 ${onOpenStudents ? "cursor-pointer transition hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-400/50" : ""}`}
+          >
             <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-emerald-200">
@@ -109,7 +124,13 @@ export function CoachAlertsCard({ coachId, variant = "default" }: { coachId: str
           </div>
         )}
         {noAssess.length > 0 && (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-2.5">
+          <div
+            role={onOpenStudents ? "button" : undefined}
+            tabIndex={onOpenStudents ? 0 : undefined}
+            onClick={() => onOpenStudents?.("no_bioimpedance")}
+            onKeyDown={(e) => { if (onOpenStudents && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenStudents("no_bioimpedance"); } }}
+            className={`flex items-start gap-2 rounded-lg bg-amber-500/10 p-2.5 ${onOpenStudents ? "cursor-pointer transition hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-400/50" : ""}`}
+          >
             <Activity className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-amber-200">

@@ -38,7 +38,7 @@ const CLASS_CHIP: Record<StudentClassification, string> = {
   aluno_parceiro: "bg-amber-500/20 text-amber-300 border-amber-500/40",
 };
 
-export function CoachStudentsTab({ coachId }: { coachId: string }) {
+export function CoachStudentsTab({ coachId, initialSort = "recent" }: { coachId: string; initialSort?: SortKey }) {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [extras, setExtras] = useState<Record<string, ExtraInfo>>({});
   const [classifications, setClassifications] = useState<Record<string, StudentClassification>>({});
@@ -46,7 +46,8 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [sort, setSort] = useState<SortKey>("recent");
+  const [sort, setSort] = useState<SortKey>(initialSort);
+  useEffect(() => { setSort(initialSort); }, [initialSort]);
   const fetchTokens = useServerFn(getCoachStudentsTokens);
 
   useEffect(() => {
@@ -179,7 +180,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
           {loading ? "Carregando..." : `${students.length} aluno${students.length === 1 ? "" : "s"} ligado${students.length === 1 ? "" : "s"} diretamente ao seu perfil.`}
         </p>
       </div>
-      <CoachAlertsCard coachId={coachId} />
+      <CoachAlertsCard coachId={coachId} onOpenStudents={(s) => setSort(s)} />
 
       {/* Busca + filtros */}
       <div className="mb-4 space-y-3">
