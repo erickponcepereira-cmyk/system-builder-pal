@@ -137,6 +137,31 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
     const email = (authUser?.user?.email || "").trim().toLowerCase();
     if (!email) throw new Error("Conta Google sem e-mail. Não foi possível concluir o cadastro.");
 
+    // Rede de segurança: o código de indicação manda. Se o link trouxe um
+    // código válido, o coach vem do banco — nunca do que a tela enviou.
+    let coachId = data.coachId;
+    let referredByStudentId = data.referredByStudentId ?? null;
+    let partnerId = data.partnerId ?? null;
+    if (data.referralCode) {
+      const { data: rows } = await supabaseAdmin.rpc(
+        "validate_referral_code" as never,
+        { _code: data.referralCode } as never,
+      );
+      const row = (Array.isArray(rows) ? (rows[0] as {
+        valid: boolean;
+        sponsor_name: string | null;
+        coach_id: string | null;
+        referred_by_student_id: string | null;
+        partner_id: string | null;
+      } | undefined) : undefined);
+      if (row?.valid && row.coach_id) {
+        coachId = row.coach_id;
+        referredByStudentId = row.referred_by_student_id ?? referredByStudentId;
+        partnerId = row.partner_id ?? partnerId;
+      }
+    }
+
+
     // Blindagem: se já existe profile (por user_id ou e-mail), não cria outro —
     // apenas completa os dados e garante a linha de aluno.
     const { data: existing } = await supabaseAdmin
@@ -160,7 +185,7 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         .eq("id", existing.id);
 
       if (!existing.role || existing.role === "student") {
-        await ensureStudentForProfile(existing.id as string, data.coachId, data.partnerId ?? null);
+        await ensureStudentForProfile(existing.id as string, coachId, partnerId);
       }
       return { ok: true, alreadyExisted: true };
     }
@@ -175,11 +200,12 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
       gender: data.gender,
       birthdate: data.birthdate,
       student: {
-        coachId: data.coachId,
-        referredByStudentId: data.referredByStudentId ?? null,
+        coachId,
+        referredByStudentId,
         referralCode: data.referralCode ?? null,
-        partnerId: data.partnerId ?? null,
+        partnerId,
       },
+
     } as never);
 
     // Garante gravação de sexo e nascimento mesmo que finalizeRegistration ignore campos.

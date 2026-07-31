@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
+import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
 
 
@@ -51,8 +52,12 @@ export function GoogleSignInButton({
         if (role) localStorage.setItem("fitmind:auth-role", role);
         else localStorage.removeItem("fitmind:auth-role");
       }
-      // Indicação precisa sobreviver ao redirect do OAuth.
+      // Indicação precisa sobreviver ao redirect do OAuth. Se o link trouxe só
+      // `?ref={codigo}`, resolve o coach antes de sair — depois do Google não
+      // há mais querystring para consultar.
+      await enriquecerAtribuicao();
       persistReferralForOAuth();
+
 
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: getAuthRedirectUrl("/auth/callback"),

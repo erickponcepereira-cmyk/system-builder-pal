@@ -85,6 +85,78 @@ export function gravarAtribuicao(nova: Omit<Atribuicao, "em">): Atribuicao | nul
   return registro;
 }
 
+/** Espelho no formato legado lido pelos formulários de cadastro. */
+function espelharSessao(a: Atribuicao, extras?: { referredByStudentId?: string | null; kind?: string | null }) {
+  try {
+    window.sessionStorage.setItem(
+      CHAVE_LEGADA,
+      JSON.stringify({
+        code: a.codigo,
+        kind: extras?.kind ?? null,
+        coachId: a.coachId,
+        sponsorName: a.coachNome,
+        partnerId: a.parceiroId,
+        referredByStudentId: extras?.referredByStudentId ?? null,
+      }),
+    );
+  } catch { /* storage indisponivel */ }
+}
+
+export type CodigoResolvido = {
+  valid: boolean;
+  kind: "coach" | "student" | "partner" | null;
+  sponsor_name: string | null;
+  coach_id: string | null;
+  referred_by_student_id: string | null;
+  partner_id: string | null;
+};
+
+/** Consulta o banco para saber QUEM é o dono do código de indicação. */
+export async function resolverCodigo(codigo: string): Promise<CodigoResolvido | null> {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data, error } = await supabase.rpc(
+      "validate_referral_code" as never,
+      { _code: codigo } as never,
+    );
+    if (error) return null;
+    const row = (Array.isArray(data) ? (data[0] as CodigoResolvido | undefined) : null) ?? null;
+    return row?.valid ? row : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Links `?ref={codigo}` gravam só o texto do código. Sem o coach resolvido,
+ * o retorno do Google cai no seletor vazio e a indicação se perde.
+ * Esta função completa o registro com id/nome do indicador.
+ */
+export async function enriquecerAtribuicao(): Promise<Atribuicao | null> {
+  if (typeof window === "undefined") return null;
+  const a = lerAtribuicao();
+  if (!a || a.coachId) return a;
+
+  const row = await resolverCodigo(a.codigo);
+  if (!row) return a;
+
+  const atualizado: Atribuicao = {
+    ...a,
+    coachId: row.coach_id,
+    coachNome: row.sponsor_name,
+    parceiroId: row.partner_id,
+  };
+  try {
+    window.localStorage.setItem(CHAVE, JSON.stringify(atualizado));
+  } catch { /* ignora */ }
+  espelharSessao(atualizado, {
+    referredByStudentId: row.referred_by_student_id,
+    kind: row.kind,
+  });
+  return atualizado;
+}
+
+
 /**
  * Extrai ?ref= da URL e grava. Chamar no topo de qualquer rota publica.
  * Devolve a atribuicao vigente depois da tentativa.
