@@ -1,35 +1,25 @@
-## O que aconteceu com a Amanda
+# Corrigir anuidade "isenta" fantasma (caso Gabi Litran)
 
-Verifiquei no banco:
+## O que realmente aconteceu
 
-- Cadastro criado em 30/07 23:16 como coach comum (`is_professional = false`, `already_coach = false`), corretamente na etapa `awaiting_payment`.
-- Ela **não tem nenhum pedido** da Ativação Coach e `activation_paid_at` está vazio.
-- No log de auditoria existe **um único evento**: `coach_quiz_approved` em 31/07 02:01, feito por um admin na aba "Liberar Coaches".
+Verifiquei o cadastro da Gabi Litran no banco:
 
-Ou seja: o botão **"Aprovar quiz"** foi clicado. Esse botão (`adminApproveQuiz`) move o coach direto para `awaiting_upline_release` **sem checar se a ativação foi paga**. Como a etapa de quiz não é mais obrigatória no fluxo, apertar esse botão hoje significa, na prática, "pular o pagamento". Depois disso ela caiu na tela de "Liberar ID", que também não valida pagamento — e o `unlockCoachWithId` liberaria o painel só com o número do coach.
+- Parceira `Litran moda esportiva`, status `pending`, `activation_paid_at` vazio (nunca pagou).
+- Também tem ficha de coach na etapa `awaiting_payment`.
+- Ela tem 3 tentativas de pagamento da anuidade: duas `rejected` e uma `cancelled` (PIX de R$ 179,90), e o pedido continua `pending`.
 
-Não houve bug de cadastro/Google: foi uma porta aberta no painel admin + falta de validação nas etapas seguintes.
+Ou seja: no banco ela **não** pagou. O que a fez "passar de fase" no app é uma regra de fallback no cálculo da anuidade: quando existe ficha de coach e o perfil está `active`, o sistema considera a anuidade como **"Ativa (isenta)"** por 1 ano contando da criação da ficha — mesmo sem nenhum pagamento. Isso vale tanto na tela do usuário quanto na listagem de anuidades do admin.
 
-## Correções propostas
+Hoje 26 contas caem nessa regra; 14 delas ainda estão em `awaiting_payment` (ou seja, aparecem como isentas sem nunca ter pago).
 
-### 1. Retornar a Amanda para a ativação
-Atualizar o registro dela para `onboarding_stage = 'awaiting_payment'`, limpando `quiz_result_submitted_at`/`quiz_result_url` e mantendo `activation_paid_at` nulo. Ela volta a ver a tela de pagamento da Ativação (R$ 179,90) no próximo acesso.
+## Correção proposta
 
-### 2. Blindar o backend (server functions)
-- `adminApproveQuiz`: bloquear quando `activation_paid_at` for nulo e `already_coach` for falso — erro claro: "Ativação não paga. Use 'Marcar ativação paga' com justificativa antes de avançar."
-- `unlockCoachWithId` (liberação por ID pelo próprio coach): recusar se `activation_paid_at` estiver nulo e não for `already_coach`, devolvendo o coach para `awaiting_payment`.
-- `adminAssignCoachIdAndRelease`: mesma checagem, com opção explícita do admin de isentar (aí grava `activation_source = 'admin_grant'` + nota, como já existe hoje).
-- `getMyOnboardingStage`: guarda de consistência — se o coach está em `awaiting_quiz_result`/`awaiting_upline_release`, não é `already_coach`, não tem `approved_at` e não tem `activation_paid_at`, volta automaticamente para `awaiting_payment`. Isso conserta qualquer outro caso igual que exista hoje.
-
-### 3. Ajustar o painel admin (`admin.coach-releases`)
-- Desabilitar "Aprovar quiz" enquanto a ativação não estiver paga/isenta, com tooltip explicando o motivo.
-- Desabilitar "ID + liberar" na mesma condição.
-- Manter "Marcar ativação paga" (com justificativa obrigatória) como o único caminho de isenção — ele já registra auditoria.
-
-### 4. Varredura
-Rodar uma checagem para listar qualquer outro coach em etapa avançada sem ativação paga e sem isenção registrada, e devolvê-los para `awaiting_payment` (hoje, pela consulta que fiz, só a Amanda está nessa condição; a regra do item 2 cobre os futuros).
+1. **Restringir a isenção automática**: só considerar "isenta" contas antigas — ficha de coach criada antes do início do fluxo de anuidade (15/06/2026) e já liberada/aprovada. Quem foi criado depois disso, ou ainda não foi liberado, passa a aparecer como **"Não iniciada"** e volta a ver o botão de pagar anuidade. Mesma regra aplicada na listagem do admin, para os dois ficarem consistentes.
+2. **Gabi**: com a regra corrigida ela volta automaticamente para a aba de pagar anuidade. Além disso, limpo o vínculo do pagamento cancelado no pedido pendente dela, para que um novo PIX/cartão possa ser gerado sem erro de "pagamento já existente".
+3. **Varredura**: listar (e corrigir) as demais contas que hoje estão marcadas como isentas indevidamente, aplicando o mesmo critério — nenhuma conta legítima já paga é afetada, porque essas têm `activation_paid_at` preenchido.
 
 ## Detalhes técnicos
-- Arquivos: `src/lib/coach-onboarding.functions.ts` (validações), `src/routes/_authenticated/admin.coach-releases.tsx` (botões condicionais).
-- Ajuste de dados da Amanda e a varredura via operação de dados (não migração de schema).
-- Sem mudança de schema; nenhuma alteração no fluxo de profissional/parceiro (`awaiting_admin`) além da guarda de consistência, que ignora quem tem `approved_at` ou isenção registrada.
+
+- `src/lib/annual-activation.functions.ts`: no `getMyAnnualActivation`, trocar o fallback `coach?.id && profile.status === 'active'` por um critério com cutoff (`coaches.created_at < 2026-06-15`) **e** coach liberado (`onboarding_stage = 'released'` ou `approved_at` preenchido). Aplicar o mesmo em `listAllAnnualActivationsAdmin`.
+- Dados: `UPDATE store_orders SET mp_payment_id = NULL` no pedido pendente de ativação da Gabi (`894d74ce…`), já que o pagamento vinculado está `cancelled`.
+- Nenhuma mudança de schema é necessária; nenhuma alteração em `partners`/`coaches` da Gabi, pois os campos de pagamento já estão corretamente vazios.
