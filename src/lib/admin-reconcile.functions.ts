@@ -25,6 +25,61 @@ const SOURCE_TABLE: Record<string, { table: string; statusPaid: string }> = {
   transaction: { table: "transactions", statusPaid: "paid" },
 };
 
+export interface StuckApprovedPayment {
+  mpPaymentId: string | null;
+  sourceKind: string;
+  sourceId: string;
+  amount: number;
+  createdAt: string;
+}
+
+/** Lista pagamentos aprovados no Mercado Pago cuja origem continua pendente. */
+export const listStuckApprovedPayments = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StuckApprovedPayment[]> => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Acesso negado");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: payments, error } = await supabaseAdmin
+      .from("mercadopago_payments")
+      .select("mp_payment_id, source_kind, source_id, amount, created_at")
+      .eq("status", "approved")
+      .lte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) throw new Error(error.message);
+
+    const out: StuckApprovedPayment[] = [];
+    for (const p of (payments || []) as Array<{
+      mp_payment_id: string | null;
+      source_kind: string;
+      source_id: string;
+      amount: number;
+      created_at: string;
+    }>) {
+      const meta = SOURCE_TABLE[p.source_kind];
+      if (!meta || !p.source_id) continue;
+      const { data: srcRow } = await supabaseAdmin
+        .from(meta.table as never)
+        .select("id, status" as never)
+        .eq("id" as never, p.source_id as never)
+        .maybeSingle();
+      const status = (srcRow as unknown as { status?: string } | null)?.status;
+      if (!srcRow || status === meta.statusPaid || status === "cancelled") continue;
+      out.push({
+        mpPaymentId: p.mp_payment_id,
+        sourceKind: p.source_kind,
+        sourceId: p.source_id,
+        amount: Number(p.amount || 0),
+        createdAt: p.created_at,
+      });
+    }
+    return out;
+  });
+
+
 /**
  * Reprocessa pagamentos que o Mercado Pago já aprovou mas cuja origem
  * (pedido / fatura) continua pendente — tipicamente quando o webhook chegou

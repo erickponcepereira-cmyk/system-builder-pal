@@ -27,6 +27,7 @@ import {
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
+import { StuckPaymentsAlert } from "@/components/admin/StuckPaymentsAlert";
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
@@ -61,6 +62,7 @@ function AdminPayments() {
   return (
     <>
       <TestModeBanner hiddenLabel="Pagamentos/transações" />
+      <StuckPaymentsAlert />
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">Pagamentos</h1>
         <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais, nutricionistas e alunos indicadores.</p>
