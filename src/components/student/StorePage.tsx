@@ -17,6 +17,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -89,6 +90,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
 
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [legacyPendingProductId, setLegacyPendingProductId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
@@ -434,20 +436,31 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
+  useEffect(() => {
+    if (coachMode || requestedProductId) return;
+    setLegacyPendingProductId(getPendingProduct().id);
+  }, [coachMode, requestedProductId]);
+
+  const effectiveProductId = requestedProductId ?? legacyPendingProductId ?? undefined;
+
   // A rota é a fonte única do deep link. Só decide a aba depois que o catálogo
   // terminou, evitando apagar o parâmetro ou alternar de aba durante a carga.
   useEffect(() => {
-    if (coachMode || !catalogLoaded || !requestedProductId) return;
+    if (coachMode || !catalogLoaded || !effectiveProductId) return;
     const fitmindMatch = items.find(
-      (it) => it.sourceId === requestedProductId && it.kind !== "partner" && it.kind !== "partner_company",
+      (it) => it.sourceId === effectiveProductId && it.kind !== "partner" && it.kind !== "partner_company",
     );
     if (fitmindMatch) {
       if (storeTab !== "fitmind") setStoreTab("fitmind");
       setDetailProduct(fitmindMatch);
+      if (!requestedProductId) {
+        clearPendingProduct();
+        setLegacyPendingProductId(null);
+      }
       return;
     }
     if (storeTab !== "market") setStoreTab("market");
-  }, [items, catalogLoaded, coachMode, requestedProductId, storeTab]);
+  }, [items, catalogLoaded, coachMode, effectiveProductId, requestedProductId, storeTab]);
 
   const clearRequestedProduct = () => {
     if (!requestedProductId || coachMode) return;
@@ -940,7 +953,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           mode={coachMode ? "reseller" : "student"}
           resellerStudent={coachMode && selectedClient ? { id: selectedClient.id, name: selectedClient.name, email: selectedClient.email } : null}
           onAddToCart={addPartnerProductToCart}
-          requestedProductId={requestedProductId}
+          requestedProductId={effectiveProductId}
           onRequestedProductClose={clearRequestedProduct}
         />
         {clientPickerOpen && (
