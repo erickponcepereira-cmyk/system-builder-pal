@@ -219,9 +219,23 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             return new Response(JSON.stringify({ ok: true, status }), { status: 200, headers: { "content-type": "application/json" } });
           }
 
-          // ── 3. Idempotência: se já estava approved, não reprocessa. ──
+          // ── 3. Idempotência baseada na ORIGEM, não no pagamento. ──
+          // Se o pagamento já constava aprovado mas o pedido/fatura continua
+          // pendente (falha no meio do processamento anterior), reprocessa.
           if (alreadyApproved) {
-            return new Response(JSON.stringify({ ok: true, status, alreadyProcessed: true }), { status: 200, headers: { "content-type": "application/json" } });
+            let sourceAlreadyPaid = true;
+            if (sourceId && ALLOWED_KINDS.has(kind as SourceKind)) {
+              try {
+                const src = await loadSource(kind as SourceKind, sourceId);
+                sourceAlreadyPaid = !!src.alreadyPaid;
+              } catch (e) {
+                console.error("[mp webhook] loadSource falhou na verificação de idempotência:", e);
+              }
+            }
+            if (sourceAlreadyPaid) {
+              return new Response(JSON.stringify({ ok: true, status, alreadyProcessed: true }), { status: 200, headers: { "content-type": "application/json" } });
+            }
+            console.warn("[mp webhook] pagamento aprovado com origem pendente — reprocessando", kind, sourceId);
           }
 
           // ── 4. Valida source_kind permitido ──
