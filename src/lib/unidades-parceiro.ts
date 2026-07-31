@@ -15,7 +15,8 @@ export type Permissao =
   | "collab.ver"
   | "network.ver"
   | "store.ver"
-  | "subscription.ver";
+  | "subscription.ver"
+  | "crm";
 
 export const PERMISSOES: Permissao[] = [
   "overview.ver",
@@ -33,6 +34,7 @@ export const PERMISSOES: Permissao[] = [
   "network.ver",
   "store.ver",
   "subscription.ver",
+  "crm",
 ];
 
 export const ROTULOS_PERMISSAO: Record<Permissao, string> = {
@@ -51,6 +53,7 @@ export const ROTULOS_PERMISSAO: Record<Permissao, string> = {
   "network.ver": "Ver a rede",
   "store.ver": "Ver a loja",
   "subscription.ver": "Ver mensalidade e anuidade",
+  "crm": "Usar o CRM da unidade",
 };
 
 export type PapelUnidade = "owner" | "manager" | "staff";
