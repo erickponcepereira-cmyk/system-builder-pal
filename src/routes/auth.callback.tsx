@@ -94,7 +94,12 @@ function AuthCallbackPage() {
           return;
         }
 
-        if (next) { window.location.replace(next); return; }
+        if (next) {
+          if (next.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
+          window.location.replace(next);
+          return;
+        }
+
         navigate({ to: "/portal-selector", replace: true });
       } catch (e) {
         toast.error((e as Error)?.message || "Falha ao verificar o cadastro.");
