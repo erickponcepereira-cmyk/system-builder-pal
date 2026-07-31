@@ -434,7 +434,8 @@ function CoachReleasesPage() {
                     })()}
                     <div className="ml-auto">
                       <button
-                        disabled={!quizDone || (busy?.id === r.id && busy?.step === "release")}
+                        disabled={!quizDone || (!paymentDone && !r.already_coach) || (busy?.id === r.id && busy?.step === "release")}
+                        title={!paymentDone && !r.already_coach ? "Ativação não paga. Use 'Marcar ativação paga' com justificativa antes de liberar." : undefined}
                         onClick={() => {
                           const n = Number(draftId || r.coach_number || 0);
                           if (!n) { toast.error("Informe um ID numérico válido."); return; }
