@@ -87,6 +87,8 @@ export function PublicProductModal({
           </button>
           <Link
             to="/register"
+            onClick={() => setStoreIntent(p.id)}
+
             className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
           >
             Criar conta
