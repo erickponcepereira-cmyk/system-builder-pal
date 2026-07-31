@@ -12,6 +12,7 @@ import { maskPhone } from "@/lib/masks";
 import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
 import { takePostAuthIntent } from "@/lib/post-auth-intent";
+import { resolverCodigo } from "@/lib/atribuicao";
 
 /** Destino guardado antes do login (loja/produto) — consumido uma vez. */
 function goAfterSignup(navigate: ReturnType<typeof useNavigate>) {
