@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
+import { takePostAuthIntent } from "@/lib/post-auth-intent";
+
 import { useBranding } from "@/components/theme-provider";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
