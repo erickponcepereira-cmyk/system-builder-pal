@@ -68,7 +68,8 @@ function CompleteSignupPage() {
           if (intendedRole) {
             navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
           } else {
-            navigate({ to: "/portal-selector", replace: true });
+            goAfterSignup(navigate);
+
           }
           return;
         }
@@ -121,7 +122,8 @@ function CompleteSignupPage() {
       if (intendedRole) {
         navigate({ to: "/upgrade/$role", params: { role: intendedRole }, replace: true });
       } else {
-        navigate({ to: "/portal-selector", replace: true });
+        goAfterSignup(navigate);
+
       }
     } catch (err) {
       const msg = (err as Error)?.message || "Não foi possível concluir o cadastro.";
