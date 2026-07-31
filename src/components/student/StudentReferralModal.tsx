@@ -175,7 +175,7 @@ export function StudentReferralModal({
   const baseUrl =
     typeof window !== "undefined" ? getShareOrigin() : "https://fitmindclub.lovable.app";
 
-  const shareUrl = selected ? `${baseUrl}/r/${referralCode}?p=${selected.id}` : "";
+  const shareUrl = selected ? `${baseUrl}/produto/${selected.id}?ref=${referralCode}` : "";
 
   const copy = async () => {
     await navigator.clipboard.writeText(shareUrl);
