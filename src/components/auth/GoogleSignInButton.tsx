@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
+import { peekPostAuthIntent } from "@/lib/post-auth-intent";
+
 
 
 /** Ícone oficial do Google (SVG inline, cores da marca). */
@@ -41,9 +43,11 @@ export function GoogleSignInButton({
     setLoading(true);
     try {
       if (typeof window !== "undefined") {
-        if (nextPath) sessionStorage.setItem("fitmind:auth-next", nextPath);
+        const intent = nextPath ?? peekPostAuthIntent();
+        if (intent) sessionStorage.setItem("fitmind:auth-next", intent);
         if (role) sessionStorage.setItem("fitmind:auth-role", role);
         else sessionStorage.removeItem("fitmind:auth-role");
+
         if (role) localStorage.setItem("fitmind:auth-role", role);
         else localStorage.removeItem("fitmind:auth-role");
       }

@@ -298,7 +298,9 @@ function ProdutoPublico() {
         <Link
           to="/student/store"
           search={{ produto: produto.id }}
+          onClick={() => setStoreIntent(produto.id)}
           className="mt-2 block text-center text-[11px] font-medium text-white/50 underline"
+
         >
           Já tenho conta — ver no app
         </Link>
