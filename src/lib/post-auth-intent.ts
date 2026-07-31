@@ -15,11 +15,18 @@ function isSafePath(path: string | null | undefined): path is string {
   return !!path && path.startsWith("/") && !path.startsWith("//");
 }
 
+/** Validade: destino antigo não pode sequestrar um login futuro. */
+const TTL_MS = 2 * 60 * 60 * 1000;
+const TS_KEY = `${KEY}:ts`;
+
 export function setPostAuthIntent(path: string) {
   if (typeof window === "undefined" || !isSafePath(path)) return;
+  const now = String(Date.now());
   try {
     localStorage.setItem(KEY, path);
+    localStorage.setItem(TS_KEY, now);
     sessionStorage.setItem(KEY, path);
+    sessionStorage.setItem(TS_KEY, now);
   } catch { /* storage indisponível */ }
 }
 
@@ -28,11 +35,18 @@ export function peekPostAuthIntent(): string | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(KEY) ?? localStorage.getItem(KEY);
-    return isSafePath(raw) ? raw : null;
+    if (!isSafePath(raw)) return null;
+    const ts = Number(sessionStorage.getItem(TS_KEY) ?? localStorage.getItem(TS_KEY) ?? 0);
+    if (!ts || Date.now() - ts > TTL_MS) {
+      clearPostAuthIntent();
+      return null;
+    }
+    return raw;
   } catch {
     return null;
   }
 }
+
 
 /** Lê e limpa — usar no destino final. */
 export function takePostAuthIntent(): string | null {
