@@ -297,6 +297,15 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
       throw new Error("Conclua as etapas anteriores antes de liberar o ID.");
     }
 
+    // Sem ativação paga (ou isenção registrada) não há liberação de ID.
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      await supabaseAdmin
+        .from("coaches")
+        .update({ onboarding_stage: "awaiting_payment" })
+        .eq("id", coach.id);
+      throw new Error("A ativação anual ainda não foi paga. Conclua o pagamento para liberar seu ID.");
+    }
+
     const attempts = (coach as { unlock_attempts?: number }).unlock_attempts ?? 0;
     if (attempts >= 10) {
       throw new Error(
