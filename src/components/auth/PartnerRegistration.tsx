@@ -49,8 +49,6 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [alreadyPartner, setAlreadyPartner] = useState<"yes" | "no" | "">("");
-  const [alreadyPartnerNote, setAlreadyPartnerNote] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [existingEmailMode, setExistingEmailMode] = useState(false); // e-mail já existe; pedimos a senha p/ vincular
 
@@ -145,19 +143,10 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
-    if (!alreadyPartner) return setErr("Informe se você já é parceiro FitMind.");
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
-    const isAlreadyPartner = alreadyPartner === "yes";
-    const nowIso = new Date().toISOString();
-    const activationPatch = isAlreadyPartner
-      ? {
-          already_partner: true,
-          activation_paid_at: nowIso,
-          activation_source: "already_partner",
-          activation_note: alreadyPartnerNote.trim() || null,
-        }
-      : { already_partner: false };
+    const isAlreadyPartner = false;
+    const activationPatch = { already_partner: false };
 
     setLoading(true);
     setFormError(null);
@@ -254,7 +243,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
           specialty: specialty.trim() || null,
           uplineCoachId,
           alreadyPartner: isAlreadyPartner,
-          activationNote: alreadyPartnerNote.trim() || null,
+          activationNote: null,
         },
       });
 
@@ -440,36 +429,6 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
               </div>
             )}
 
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <Label className="text-white/80 text-sm">Você já é parceiro FitMind? *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAlreadyPartner("yes")}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyPartner === "yes" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
-                >Sim, já sou</button>
-                <button
-                  type="button"
-                  onClick={() => setAlreadyPartner("no")}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyPartner === "no" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
-                >Ainda não</button>
-              </div>
-              {alreadyPartner === "yes" && (
-                <Input
-                  value={alreadyPartnerNote}
-                  onChange={(e) => setAlreadyPartnerNote(e.target.value)}
-                  placeholder="Ex: parceiro desde 2024, contrato nº 1234"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
-              )}
-              <p className="text-[11px] text-white/40">
-                {alreadyPartner === "yes"
-                  ? "A anuidade (R$ 179,90) será marcada como já paga e ficará registrada para o admin."
-                  : alreadyPartner === "no"
-                  ? "Após o cadastro, a anuidade da empresa (R$ 179,90) será cobrada antes da liberação do painel."
-                  : "Esta informação determina se a anuidade será cobrada."}
-              </p>
-            </div>
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
               <span className="text-xs text-white/60">

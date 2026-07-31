@@ -10,11 +10,27 @@ export type ActivationSource =
   | "exempt"        // perfil ativo sem registro de ativação (legado/isento)
   | "none";         // sem ativação
 
+// Início do fluxo obrigatório de anuidade. Fichas criadas a partir daqui
+// NUNCA são consideradas isentas automaticamente — precisam pagar ou receber
+// isenção manual do admin.
+const ACTIVATION_FLOW_START = new Date("2026-06-15T00:00:00Z");
+
+function isLegacyExempt(c: {
+  created_at?: string | null;
+  onboarding_stage?: string | null;
+  approved_at?: string | null;
+}): boolean {
+  const created = c.created_at ? new Date(c.created_at) : null;
+  if (!created || created >= ACTIVATION_FLOW_START) return false;
+  return c.onboarding_stage === "released" || Boolean(c.approved_at);
+}
+
 function addOneYear(d: Date): Date {
   const n = new Date(d);
   n.setFullYear(n.getFullYear() + 1);
   return n;
 }
+
 
 function resolveSource(c: {
   activation_paid_at: string | null;
@@ -55,7 +71,7 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
     const [{ data: coach }, { data: partner }] = await Promise.all([
       supabase
         .from("coaches")
-        .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at")
+        .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at, onboarding_stage, approved_at")
         .eq("profile_id", profile?.id ?? "")
         .maybeSingle(),
       supabase
@@ -96,10 +112,11 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
       paidAt = candidates[0].paidAt;
       source = candidates[0].source;
       note = candidates[0].note;
-    } else if (coach?.id && profile?.status === "active") {
-      paidAt = new Date(coach.created_at ?? profile.created_at ?? Date.now());
+    } else if (coach?.id && isLegacyExempt(coach as never)) {
+      paidAt = new Date(coach.created_at ?? profile?.created_at ?? Date.now());
       source = "exempt";
     }
+
 
     const validUntil = paidAt ? addOneYear(paidAt) : null;
     const active = validUntil ? validUntil >= today : false;
@@ -136,7 +153,7 @@ export const listAllAnnualActivationsAdmin = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at, onboarding_stage, profile:profiles!coaches_profile_id_fkey(user_id, status)");
+      .select("id, profile_id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at, onboarding_stage, approved_at, profile:profiles!coaches_profile_id_fkey(user_id, status)");
 
     const today = new Date();
     type Row = {
@@ -156,6 +173,7 @@ export const listAllAnnualActivationsAdmin = createServerFn({ method: "GET" })
       already_coach: boolean | null;
       created_at: string;
       onboarding_stage: string | null;
+      approved_at: string | null;
       profile?: { user_id?: string; status?: string } | null;
     }>) {
       const uid = c.profile?.user_id;
@@ -167,10 +185,11 @@ export const listAllAnnualActivationsAdmin = createServerFn({ method: "GET" })
         paidAt = new Date(c.activation_paid_at);
         source = resolveSource(c);
         note = c.activation_note;
-      } else if (c.profile?.status === "active") {
+      } else if (isLegacyExempt(c)) {
         paidAt = new Date(c.created_at);
         source = "exempt";
       }
+
       const validUntil = paidAt ? addOneYear(paidAt) : null;
       rows.push({
         user_id: uid,

@@ -5,8 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
@@ -37,8 +35,6 @@ function UpgradePage() {
   // coach
   const [pixKey, setPixKey] = useState("");
   const [pixKeyType, setPixKeyType] = useState("cpf");
-  const [alreadyCoach, setAlreadyCoach] = useState(false);
-  const [activationNote, setActivationNote] = useState("");
 
   // professional
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
@@ -100,8 +96,8 @@ function UpgradePage() {
             uplineCoachId: upline.id,
             pixKey: pixKey.trim() || null,
             pixKeyType: pixKey.trim() ? pixKeyType : null,
-            alreadyCoach,
-            activationNote: activationNote.trim() || null,
+            alreadyCoach: false,
+            activationNote: null,
           },
         });
         toast.success("Cadastro de coach enviado! Acompanhe a liberação no seu painel.");
@@ -193,18 +189,6 @@ function UpgradePage() {
                 <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} className="bg-white/5 border-white/10 text-white" />
               </div>
             </div>
-            <label className="flex items-start gap-2 text-xs text-white/70">
-              <Checkbox checked={alreadyCoach} onCheckedChange={(v) => setAlreadyCoach(!!v)} />
-              <span>Já sou coach FitMind Club (ativação já paga)</span>
-            </label>
-            {alreadyCoach && (
-              <Textarea
-                value={activationNote}
-                onChange={(e) => setActivationNote(e.target.value.slice(0, 500))}
-                placeholder="Conte quando e como você se tornou coach"
-                className="bg-white/5 border-white/10 text-white"
-              />
-            )}
           </>
         )}
 

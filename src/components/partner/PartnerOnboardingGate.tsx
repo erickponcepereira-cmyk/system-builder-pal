@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, Clock, Loader2, LogOut, UserCheck, Building2 } from "lucide-react";
+import { CreditCard, Clock, Loader2, LogOut, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyPartnerOnboarding, markAlreadyPartner } from "@/lib/partner-approvals.functions";
+import { getMyPartnerOnboarding } from "@/lib/partner-approvals.functions";
 import { getOrCreateActivationOrder } from "@/lib/activation-order.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
@@ -187,7 +187,6 @@ function ActivationStep({ info, onPaid }: { info: Info; onPaid: () => void }) {
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
             Pagar Anuidade Parceiro (R$ 179,90)
           </Button>
-          <AlreadyPartnerButton onDone={onPaid} />
         </>
       ) : (
         <MercadoPagoCheckout
@@ -200,35 +199,6 @@ function ActivationStep({ info, onPaid }: { info: Info; onPaid: () => void }) {
         />
       )}
     </div>
-  );
-}
-
-function AlreadyPartnerButton({ onDone }: { onDone: () => void }) {
-  const mark = useServerFn(markAlreadyPartner);
-  const [busy, setBusy] = useState(false);
-  const handle = async () => {
-    if (!confirm("Confirmar que você já é parceiro e já pagou a anuidade por fora? O admin será notificado para validar.")) return;
-    setBusy(true);
-    try {
-      await mark();
-      toast.success("Solicitação enviada ao admin!");
-      onDone();
-    } catch (e) {
-      toast.error((e as Error).message || "Falha ao enviar solicitação");
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Button
-      onClick={handle}
-      disabled={busy}
-      variant="outline"
-      className="h-12 w-full gap-2 border-white/15 bg-white/5 text-white hover:bg-white/10"
-    >
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
-      Já sou parceiro (avisar o admin)
-    </Button>
   );
 }
 

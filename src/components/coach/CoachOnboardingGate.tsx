@@ -1,14 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, ClipboardCheck, Clock, ExternalLink, KeyRound, Loader2, LogOut, UserCheck } from "lucide-react";
+import { CreditCard, ClipboardCheck, Clock, ExternalLink, KeyRound, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyOnboardingStage,
   submitQuizResult,
   unlockCoachWithId,
-  markAlreadyCoach,
   QUIZ_URL,
 } from "@/lib/coach-onboarding.functions";
 import { getOrCreateActivationOrder } from "@/lib/activation-order.functions";
@@ -235,7 +234,6 @@ function PaymentStep({
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Pagar Ativação Coach (R$ 179,90)
           </Button>
-          <AlreadyCoachButton onDone={onPaid} />
         </>
       ) : (
         <MercadoPagoCheckout
@@ -248,35 +246,6 @@ function PaymentStep({
         />
       )}
     </div>
-  );
-}
-
-function AlreadyCoachButton({ onDone }: { onDone: () => void }) {
-  const mark = useServerFn(markAlreadyCoach);
-  const [busy, setBusy] = useState(false);
-  const handle = async () => {
-    if (!confirm("Confirmar que você já fez o curso e já pagou a ativação? O admin será notificado para liberar seu acesso.")) return;
-    setBusy(true);
-    try {
-      await mark();
-      toast.success("Solicitação enviada ao admin!");
-      onDone();
-    } catch (e) {
-      toast.error((e as Error).message || "Falha ao enviar solicitação");
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Button
-      onClick={handle}
-      disabled={busy}
-      variant="outline"
-      className="w-full h-12 border-white/15 bg-white/5 text-white hover:bg-white/10 gap-2"
-    >
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
-      Já sou coach (já fiz o curso e paguei)
-    </Button>
   );
 }
 

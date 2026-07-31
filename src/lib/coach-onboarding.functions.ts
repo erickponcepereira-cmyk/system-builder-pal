@@ -139,37 +139,16 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
     };
   });
 
+// DESATIVADO: a autodeclaração "já sou coach" foi removida. Todos precisam
+// pagar a anuidade ou receber isenção manual do admin.
 export const markAlreadyCoach = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profile } = await supabaseAdmin
-      .from("profiles").select("id, name").eq("user_id", userId).maybeSingle();
-    if (!profile) throw new Error("Perfil não encontrado");
-    const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, onboarding_stage").eq("profile_id", profile.id).maybeSingle();
-    if (!coach) throw new Error("Coach não encontrado");
-    if (coach.onboarding_stage !== "awaiting_payment") {
-      throw new Error("Esta opção só está disponível antes do pagamento da ativação.");
-    }
-    await supabaseAdmin
-      .from("coaches")
-      .update({
-        already_coach: true,
-        onboarding_stage: "awaiting_quiz_result",
-        activation_paid_at: new Date().toISOString(),
-        activation_source: "already_coach",
-      } as never)
-      .eq("id", coach.id);
-
-    const { notifyAdmins } = await import("./coach-onboarding.server");
-    await notifyAdmins(
-      "Coach já formado solicitou liberação",
-      `${profile.name} declarou que já fez o curso e já pagou a ativação. Avalie e libere o painel manualmente.`
+  .handler(async () => {
+    throw new Error(
+      "Opção desativada. A anuidade precisa ser paga ou isentada manualmente pelo admin."
     );
-    return { ok: true };
   });
+
 
 // Verifica se o aluno (ainda não-coach) já comprou a Ativação Coach.
 export const hasPurchasedActivation = createServerFn({ method: "GET" })
