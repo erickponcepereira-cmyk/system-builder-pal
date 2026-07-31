@@ -18,11 +18,13 @@ export function OverviewTab({
   referralLink,
   onCopy,
   coachId,
+  onOpenStudents,
 }: {
   coachName: string;
   referralLink: string;
   onCopy: () => void;
   coachId: string;
+  onOpenStudents?: (sort: "recent" | "no_bioimpedance") => void;
 }) {
   const [data, setData] = useState({ students: 0, salesMonth: 0, commissionsMonth: 0, balance: 0 });
 
@@ -116,7 +118,7 @@ export function OverviewTab({
           </button>
         </div>
       </div>
-      {coachId && <CoachAlertsCard coachId={coachId} />}
+      {coachId && <CoachAlertsCard coachId={coachId} onOpenStudents={onOpenStudents} />}
 
       <div className="mb-4"><WhatsAppGroupCard /></div>
 

@@ -11,7 +11,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
-import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
+import { getPendingProduct, clearPendingProduct, setPendingProduct } from "@/lib/pending-product";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
@@ -145,16 +145,10 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       toast.error("Seu código de indicação ainda não está disponível.");
       return;
     }
-    // `challenge` e `item` vivem na tabela `products`, que é a única com
-    // permalink público hoje (`/produto/{id}`, com Open Graph — o link
-    // ganha preview no WhatsApp). Os outros tipos continuam passando por
-    // `/r/{code}?p=`, que agora resolve o destino em vez de despejar no
-    // cadastro. Quando partner/professional ganharem página própria,
-    // basta incluí-los aqui.
-    const temPermalink = kind === "challenge" || kind === "item";
-    const url = temPermalink
-      ? `${getShareOrigin()}/produto/${productSourceId}?ref=${myReferralCode}`
-      : `${getShareOrigin()}/r/${myReferralCode}?p=${productSourceId}`;
+    // Todo produto tem permalink próprio (`/produto/{id}`), com Open Graph e
+    // atribuição pelo `?ref=`. Vale para FitMind, parceiro e profissional.
+    void kind;
+    const url = `${getShareOrigin()}/produto/${productSourceId}?ref=${myReferralCode}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "Indicação FitMind Club", url });
@@ -437,7 +431,17 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
-  // Abre automaticamente o produto vindo do link de indicação (/r/{code}?p=…)
+  // Deep link direto: /student/store?produto={id} (ou permalink /produto/{id}
+  // que manda a pessoa para cá depois do login). Reaproveita o mesmo canal
+  // do link de indicação.
+  useEffect(() => {
+    if (coachMode) return;
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("produto");
+    if (id) setPendingProduct(id, null);
+  }, [coachMode]);
+
+  // Abre automaticamente o produto vindo do link de indicação/permalink.
   // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
   useEffect(() => {
     if (coachMode) return;
@@ -450,9 +454,22 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       if (match) {
         setDetailProduct(match);
         clearPendingProduct();
+      } else if (!pendingKind) {
+        // não é produto FitMind: a vitrine de parceiro/profissional resolve
+        setStoreTab("market");
       }
     }
   }, [items, coachMode, storeTab]);
+
+  // A URL passa a refletir o produto aberto, para que copiar da barra funcione.
+  useEffect(() => {
+    if (coachMode) return;
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (detailProduct?.sourceId) url.searchParams.set("produto", detailProduct.sourceId);
+    else url.searchParams.delete("produto");
+    window.history.replaceState(null, "", url.toString());
+  }, [detailProduct, coachMode]);
 
 
   useEffect(() => {

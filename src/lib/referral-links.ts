@@ -30,5 +30,5 @@ export function linkLoja(code: string | null | undefined): string {
 /** Link direto de um produto, mantendo a atribuição do indicador. */
 export function linkProduto(code: string | null | undefined, productId: string): string {
   if (!code) return `${origin()}/produto/${productId}`;
-  return `${origin()}/r/${code}?p=${productId}`;
+  return `${origin()}/produto/${productId}?ref=${code}`;
 }
