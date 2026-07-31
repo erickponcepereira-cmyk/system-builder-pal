@@ -37,9 +37,8 @@ export const Route = createFileRoute("/loja")({
    * diferente de "challenge", escapavam das duas condições de destino e
    * batiam no `/register` que era o padrão da cadeia.
    */
-  validateSearch: (search: Record<string, unknown>) => ({
-    produto: typeof search.produto === "string" ? search.produto : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { produto?: string } =>
+    typeof search.produto === "string" ? { produto: search.produto } : {},
   component: PublicStorePage,
 });
 
