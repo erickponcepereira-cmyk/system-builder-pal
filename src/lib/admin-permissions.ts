@@ -3,7 +3,7 @@ export type AdminPermKey =
   | "orders" | "digital_products" | "coach_applications"
   | "payments" | "financeiro" | "financial_summary" | "reports" | "patents" | "settings" | "calendars" | "store" | "freebies" | "store_reports" | "products"
   | "product_orders" | "partner_orders" | "nutritionist_wallet" | "admin_wallet" | "career" | "library" | "partners" | "professionals" | "assessment_deletions"
-  | "fitmind_events" | "challenge";
+  | "fitmind_events" | "challenge" | "crm";
 
 
 export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
@@ -38,6 +38,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "career", label: "Carreira" },
   { key: "library", label: "Biblioteca" },
   { key: "partners", label: "Empresas Parceiras" },
+  { key: "crm", label: "CRM" },
   { key: "professionals", label: "Profissionais" },
   { key: "assessment_deletions", label: "Exclusões de Avaliações" },
   { key: "settings", label: "Configurações" },

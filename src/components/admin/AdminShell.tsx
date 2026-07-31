@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
-  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette,
+  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare,
 
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -52,6 +52,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/network-unlock-history", label: "Histórico Liberação", icon: BarChart3, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },
   { to: "/admin/partners", label: "Empresas Parceiras", icon: Store, perm: "partners" },
+  { to: "/admin/crm", label: "CRM", icon: KanbanSquare, perm: "crm" },
   { to: "/admin/partner-releases", label: "Liberar Parceiros", icon: UserCheck, perm: "partners" },
   { to: "/admin/professionals", label: "Profissionais da Saúde", icon: Stethoscope, perm: "professionals" },
   { to: "/admin/professional-releases", label: "Liberar Profissionais", icon: UserCheck, perm: "professionals" },
