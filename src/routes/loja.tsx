@@ -9,6 +9,8 @@ import {
   type PublicTaxonomyCard,
 } from "@/lib/public-store";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 
 /**
  * Loja pública — mesma navegação da loja logada (`StorePage`), porém sem
