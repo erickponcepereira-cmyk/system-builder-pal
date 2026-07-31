@@ -8,6 +8,7 @@ import {
   type PublicBenefit, type PublicProduct, type PublicTaxonomy,
   type PublicTaxonomyCard,
 } from "@/lib/public-store";
+import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 
 /**
  * Loja pública — mesma navegação da loja logada (`StorePage`), porém sem
@@ -65,6 +66,8 @@ function PublicStorePage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<StoreTab>("fitmind");
+
+  useRedirectLoggedStore(produtoDoLink ?? null);
 
   const [activeSection, setActiveSection] = useState<PublicTaxonomyCard | null>(null);
   const [activeCategory, setActiveCategory] = useState<PublicTaxonomyCard | null>(null);
