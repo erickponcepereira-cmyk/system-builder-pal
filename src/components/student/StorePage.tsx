@@ -431,7 +431,17 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
-  // Abre automaticamente o produto vindo do link de indicação (/r/{code}?p=…)
+  // Deep link direto: /student/store?produto={id} (ou permalink /produto/{id}
+  // que manda a pessoa para cá depois do login). Reaproveita o mesmo canal
+  // do link de indicação.
+  useEffect(() => {
+    if (coachMode) return;
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("produto");
+    if (id) setPendingProduct(id, null);
+  }, [coachMode]);
+
+  // Abre automaticamente o produto vindo do link de indicação/permalink.
   // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
   useEffect(() => {
     if (coachMode) return;
@@ -444,9 +454,22 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       if (match) {
         setDetailProduct(match);
         clearPendingProduct();
+      } else if (!pendingKind) {
+        // não é produto FitMind: a vitrine de parceiro/profissional resolve
+        setStoreTab("market");
       }
     }
   }, [items, coachMode, storeTab]);
+
+  // A URL passa a refletir o produto aberto, para que copiar da barra funcione.
+  useEffect(() => {
+    if (coachMode) return;
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (detailProduct?.sourceId) url.searchParams.set("produto", detailProduct.sourceId);
+    else url.searchParams.delete("produto");
+    window.history.replaceState(null, "", url.toString());
+  }, [detailProduct, coachMode]);
 
 
   useEffect(() => {
