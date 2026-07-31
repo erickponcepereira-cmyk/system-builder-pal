@@ -27,6 +27,7 @@ import {
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
+import { StuckPaymentsAlert } from "@/components/admin/StuckPaymentsAlert";
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
