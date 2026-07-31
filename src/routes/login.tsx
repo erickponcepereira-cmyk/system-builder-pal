@@ -39,10 +39,12 @@ function LoginPage() {
   const getNextParam = (): string | null => {
     if (typeof window === "undefined") return null;
     const raw = new URLSearchParams(window.location.search).get("next");
-    if (!raw) return null;
     // Only allow same-origin relative paths.
-    return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+    if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+    // Sem ?next: usa o destino guardado antes do login (loja/produto).
+    return takePostAuthIntent();
   };
+
 
   useEffect(() => {
     let active = true;
