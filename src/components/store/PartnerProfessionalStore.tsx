@@ -99,9 +99,11 @@ interface Props {
   resellerStudent?: { id: string; name: string; email?: string | null } | null;
   /** Quando informado, o componente delega a compra ao carrinho da página pai. */
   onAddToCart?: (item: PartnerStoreCard) => void;
+  requestedProductId?: string;
+  onRequestedProductClose?: () => void;
 }
 
-export function PartnerProfessionalStore({ kind, mode = "student", resellerStudent, onAddToCart }: Props) {
+export function PartnerProfessionalStore({ kind, mode = "student", resellerStudent, onAddToCart, requestedProductId, onRequestedProductClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -286,23 +288,22 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     return () => { alive = false; };
   }, [cards]);
 
-  // Auto-abre o produto vindo do link de indicação (/r/{code}?p=…).
-  // Casamos pelo ID presente nesta vitrine — o `kind` do link ("partner"/
-  // "professional") não corresponde ao valor da aba, então comparar os dois
-  // impedia o modal de abrir para quem já estava logado.
+  // Abre o produto solicitado diretamente pela rota. O armazenamento pendente
+  // permanece apenas como compatibilidade para fluxos que atravessam login/OAuth.
   useEffect(() => {
     if (mode !== "student") return;
     if (!cards.length) return;
-    const { id: pendingId } = getPendingProduct();
+    const { id: storedPendingId } = getPendingProduct();
+    const pendingId = requestedProductId ?? storedPendingId;
     if (!pendingId) return;
     const match = cards.find((c) => c.id === pendingId);
     if (match) {
       setActiveSection(match.section_id);
       setActiveCategory(match.category_id);
       setSelected(match);
-      clearPendingProduct();
+      if (!requestedProductId) clearPendingProduct();
     }
-  }, [cards, kind, mode]);
+  }, [cards, kind, mode, requestedProductId]);
 
   const handleAddToCart = () => {
     if (!selected) return;
@@ -636,7 +637,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 </div>
               )}
               <button
-                onClick={() => { setSelected(null); setSlot(null); }}
+                onClick={() => {
+                  const closingRequestedProduct = selected.id === requestedProductId;
+                  setSelected(null);
+                  setSlot(null);
+                  if (closingRequestedProduct) onRequestedProductClose?.();
+                }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />

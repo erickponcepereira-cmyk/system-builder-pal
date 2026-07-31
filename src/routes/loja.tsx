@@ -60,14 +60,13 @@ const TAXONOMIA_VAZIA: PublicTaxonomy = { sections: [], categories: [], subcateg
 
 function PublicStorePage() {
   const { produto: produtoDoLink } = Route.useSearch();
+  const redirectStatus = useRedirectLoggedStore(produtoDoLink ?? null);
   const [products, setProducts] = useState<PublicProduct[]>([]);
   const [benefits, setBenefits] = useState<PublicBenefit[]>([]);
   const [taxonomy, setTaxonomy] = useState<PublicTaxonomy>(TAXONOMIA_VAZIA);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<StoreTab>("fitmind");
-
-  useRedirectLoggedStore(produtoDoLink ?? null);
 
   const [activeSection, setActiveSection] = useState<PublicTaxonomyCard | null>(null);
   const [activeCategory, setActiveCategory] = useState<PublicTaxonomyCard | null>(null);
@@ -182,6 +181,14 @@ function PublicStorePage() {
     (!!activeSection &&
       (catsOfActive.length === 0 ||
         (!!activeCategory && (subcatsOfActive.length === 0 || !!activeSubcategory))));
+
+  if (redirectStatus !== "public") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Abrindo sua loja...</p>
+      </main>
+    );
+  }
 
   const cardStyle = (c: PublicTaxonomyCard) => ({
     width: c.cardWidth ? `${c.cardWidth}px` : undefined,
