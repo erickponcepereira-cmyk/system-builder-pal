@@ -185,7 +185,7 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         .eq("id", existing.id);
 
       if (!existing.role || existing.role === "student") {
-        await ensureStudentForProfile(existing.id as string, data.coachId, data.partnerId ?? null);
+        await ensureStudentForProfile(existing.id as string, coachId, partnerId);
       }
       return { ok: true, alreadyExisted: true };
     }
