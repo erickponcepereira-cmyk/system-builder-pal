@@ -30,9 +30,15 @@ function safeNext(): string | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem("fitmind:auth-next");
   sessionStorage.removeItem("fitmind:auth-next");
-  if (!raw) return null;
-  return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+    clearPostAuthIntent();
+    return raw;
+  }
+  // O sessionStorage não sobrevive ao OAuth em alguns aparelhos: usa o
+  // destino durável guardado antes de sair para o Google.
+  return takePostAuthIntent();
 }
+
 
 function AuthCallbackPage() {
   const navigate = useNavigate();
