@@ -95,6 +95,21 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       }
     }
 
+    // Guarda de consistência: ninguém pode estar em etapa avançada sem a
+    // ativação paga (ou isenção registrada / já-coach / já aprovado).
+    const hasActivation =
+      !!coach.activation_paid_at ||
+      Boolean((coach as { already_coach?: boolean }).already_coach) ||
+      !!coach.approved_at;
+    if (!hasActivation && (stage === "awaiting_quiz_result" || stage === "awaiting_upline_release")) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("coaches")
+        .update({ onboarding_stage: "awaiting_payment" })
+        .eq("id", coach.id);
+      stage = "awaiting_payment";
+    }
+
     // Quiz comportamental não é mais etapa obrigatória do onboarding.
     // Qualquer coach preso em "awaiting_quiz_result" avança automaticamente
     // para "awaiting_upline_release" (aguardando liberação do ID/admin).
@@ -265,7 +280,7 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
     if (!profile) throw new Error("Perfil não encontrado");
     const { data: coach } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, coach_number, onboarding_stage, unlock_attempts, approved_at")
+      .select("id, profile_id, coach_number, onboarding_stage, unlock_attempts, approved_at, activation_paid_at, already_coach")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
@@ -280,6 +295,15 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
     }
     if (coach.onboarding_stage !== "awaiting_upline_release") {
       throw new Error("Conclua as etapas anteriores antes de liberar o ID.");
+    }
+
+    // Sem ativação paga (ou isenção registrada) não há liberação de ID.
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      await supabaseAdmin
+        .from("coaches")
+        .update({ onboarding_stage: "awaiting_payment" })
+        .eq("id", coach.id);
+      throw new Error("A ativação anual ainda não foi paga. Conclua o pagamento para liberar seu ID.");
     }
 
     const attempts = (coach as { unlock_attempts?: number }).unlock_attempts ?? 0;
@@ -685,9 +709,12 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
     const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at")
+      .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at, activation_paid_at, already_coach")
       .eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      throw new Error("Ativação não paga. Use 'Marcar ativação paga' com justificativa antes de avançar.");
+    }
     const nowIso = new Date().toISOString();
     await supabaseAdmin.from("coaches").update({
       onboarding_stage: "awaiting_upline_release",
@@ -716,9 +743,12 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
     const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, profile_id, coach_number, onboarding_stage")
+      .from("coaches").select("id, profile_id, coach_number, onboarding_stage, activation_paid_at, already_coach")
       .eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      throw new Error("Ativação não paga. Use 'Marcar ativação paga' (com justificativa) antes de liberar o painel.");
+    }
 
     let nextNumber = coach.coach_number as number | null;
     if (data.coachNumber) {
