@@ -13,6 +13,8 @@ import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions"
 import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
+import { takePostAuthIntent } from "@/lib/post-auth-intent";
+
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
