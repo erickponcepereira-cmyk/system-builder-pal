@@ -51,8 +51,6 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [coachLocked, setCoachLocked] = useState(false);
-  const [alreadyProfessional, setAlreadyProfessional] = useState<"yes" | "no" | "">("");
-  const [alreadyProfessionalNote, setAlreadyProfessionalNote] = useState("");
 
   // Captura referral da sessão (link /r/:code) — trava o coach indicador
   useEffect(() => {
@@ -160,15 +158,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!acceptTerms) return fail("Aceite os Termos de Uso para continuar.");
-    if (!alreadyProfessional) return fail("Informe se você já é coach/profissional FitMind.");
-
-    const isAlreadyPro = alreadyProfessional === "yes";
-    const activationExtras = isAlreadyPro
-      ? {
-          already_coach: true,
-          activation_note: alreadyProfessionalNote.trim() || null,
-        }
-      : {};
+    const isAlreadyPro = false;
+    const activationExtras = {};
 
     setLoading(true); setFormError(null);
     try {
@@ -222,7 +213,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
             councilNumber: councilNumber || null,
             specialtyPendingSetup: !!selectedSpecLocal?.requires_admin_setup,
             alreadyProfessional: isAlreadyPro,
-            activationNote: alreadyProfessionalNote.trim() || null,
+            activationNote: null,
           },
         });
 
@@ -258,7 +249,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
             referralLink: `${getShareOrigin()}/r/${referralCode}`,
             completedCoachCourse: false,
             alreadyCoach: isAlreadyPro,
-            activationNote: alreadyProfessionalNote.trim() || null,
+            activationNote: null,
             isProfessional: true,
             specialtyKey,
             specialtyCustomDescription: selectedSpecLocal?.requires_admin_setup ? specialtyCustom.trim() : null,
@@ -465,37 +456,6 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                 <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
               )}
 
-
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <Label className="text-white/80 text-sm">Você já é coach/profissional FitMind? *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAlreadyProfessional("yes")}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyProfessional === "yes" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
-                  >Sim, já sou</button>
-                  <button
-                    type="button"
-                    onClick={() => setAlreadyProfessional("no")}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyProfessional === "no" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
-                  >Ainda não</button>
-                </div>
-                {alreadyProfessional === "yes" && (
-                  <Input
-                    value={alreadyProfessionalNote}
-                    onChange={(e) => setAlreadyProfessionalNote(e.target.value)}
-                    placeholder="Ex: já fiz curso de coach em 2024"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                  />
-                )}
-                <p className="text-[11px] text-white/40">
-                  {alreadyProfessional === "yes"
-                    ? "A anuidade (R$ 179,90) será marcada como já paga e ficará registrada para o admin."
-                    : alreadyProfessional === "no"
-                    ? "Após o cadastro, a anuidade (R$ 179,90) será cobrada antes da liberação completa."
-                    : "Esta informação determina se a anuidade será cobrada."}
-                </p>
-              </div>
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />

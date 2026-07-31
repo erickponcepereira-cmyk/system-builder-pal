@@ -557,35 +557,14 @@ export const getMyPartnerOnboarding = createServerFn({ method: "GET" })
   });
 
 
+// DESATIVADO: autodeclaração "já sou parceiro" removida — a anuidade precisa
+// ser paga ou isentada manualmente pelo admin.
 export const markAlreadyPartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles").select("id, name").eq("user_id", context.userId).maybeSingle();
-    if (!profile) throw new Error("Perfil não encontrado");
-    const p = profile as { id: string; name?: string };
-    const { data: partner } = await supabaseAdmin
-      .from("partners").select("id, activation_paid_at").eq("profile_id", p.id).maybeSingle();
-    if (!partner) throw new Error("Parceiro não encontrado");
-    const pt = partner as { id: string; activation_paid_at: string | null };
-    if (pt.activation_paid_at) throw new Error("Ativação já registrada.");
-    const nowIso = new Date().toISOString();
-    await supabaseAdmin
-      .from("partners")
-      .update({
-        already_partner: true,
-        activation_paid_at: nowIso,
-        activation_source: "already_partner",
-      } as never)
-      .eq("id", pt.id);
-
-    const { notifyAdmins } = await import("./coach-onboarding.server");
-    await notifyAdmins(
-      "Parceiro já existente solicitou liberação",
-      `${p.name || "Parceiro"} declarou que já é parceiro e pediu para pular a cobrança da anuidade. Avalie e libere o painel manualmente.`,
-      "/admin/partner-releases",
+  .handler(async () => {
+    throw new Error(
+      "Opção desativada. A anuidade precisa ser paga ou isentada manualmente pelo admin."
     );
-    await logPartnerAudit(p.id, p.id, "partner_activation_paid", "Auto-declaração: já é parceiro (aguarda validação do admin)");
-    return { ok: true };
   });
+
 
