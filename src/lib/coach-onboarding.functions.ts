@@ -709,9 +709,12 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
     const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at")
+      .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at, activation_paid_at, already_coach")
       .eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      throw new Error("Ativação não paga. Use 'Marcar ativação paga' com justificativa antes de avançar.");
+    }
     const nowIso = new Date().toISOString();
     await supabaseAdmin.from("coaches").update({
       onboarding_stage: "awaiting_upline_release",
