@@ -1,112 +1,88 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Loader2, Plus, Power, ArrowLeft, KanbanSquare } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { Search, Loader2, Plus, Power, ArrowLeft, KanbanSquare, Building2, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
-import { CrmBoard, COLUNAS_PADRAO } from "@/components/crm/CrmBoard";
+import { CrmBoard } from "@/components/crm/CrmBoard";
+import { listCrmTargets, ativarCrm, alternarCrm, type CrmTarget } from "@/lib/admin-crm.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/crm")({
   component: AdminCrm,
 });
 
-// crm_* ainda não está no types.ts gerado — ver docs/REGISTRO-MIGRATIONS.md
-const db = supabase as unknown as {
-  from: (t: string) => any;
-  rpc: (fn: string, args?: Record<string, unknown>) => any;
-};
-
-interface Parceiro {
-  id: string;
-  fantasy_name: string;
-  city: string | null;
-  state: string | null;
-  status: string;
-  business_area: string | null;
-}
-
-interface Quadro {
-  id: string;
-  nome: string;
-  owner_id: string | null;
-  escopo: string;
-  arquivado_em: string | null;
-}
+type Escopo = "parceiro" | "profissional";
 
 function AdminCrm() {
-  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
-  const [quadros, setQuadros] = useState<Quadro[]>([]);
+  const carregarAlvos = useServerFn(listCrmTargets);
+  const ativarFn = useServerFn(ativarCrm);
+  const alternarFn = useServerFn(alternarCrm);
+
+  const [escopo, setEscopo] = useState<Escopo>("parceiro");
+  const [parceiros, setParceiros] = useState<CrmTarget[]>([]);
+  const [profissionais, setProfissionais] = useState<CrmTarget[]>([]);
   const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
-  const [ativando, setAtivando] = useState<string | null>(null);
+  const [agindo, setAgindo] = useState<string | null>(null);
   const [abertoId, setAbertoId] = useState<string | null>(null);
+  const [abertoNome, setAbertoNome] = useState<string>("");
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const [pRes, qRes] = await Promise.all([
-      supabase.from("partners").select("id, fantasy_name, city, state, status, business_area").order("fantasy_name"),
-      db.from("crm_quadros").select("id, nome, owner_id, escopo, arquivado_em").eq("escopo", "parceiro"),
-    ]);
-    if (pRes.error) toast.error("Não foi possível carregar os parceiros");
-    if (qRes.error) toast.error("Não foi possível carregar os quadros — a migration já foi aplicada?");
-    setParceiros((pRes.data || []) as Parceiro[]);
-    setQuadros((qRes.data || []) as Quadro[]);
+    try {
+      const r = await carregarAlvos({});
+      setParceiros(r.parceiros);
+      setProfissionais(r.profissionais);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível carregar a lista");
+    }
     setCarregando(false);
-  }, []);
+  }, [carregarAlvos]);
 
   useEffect(() => { void carregar(); }, [carregar]);
 
-  const quadroDe = useCallback(
-    (parceiroId: string) => quadros.find((q) => q.owner_id === parceiroId) || null,
-    [quadros],
-  );
+  const lista = escopo === "parceiro" ? parceiros : profissionais;
 
   const filtrados = useMemo(() => {
     const t = busca.trim().toLowerCase();
-    if (!t) return parceiros;
-    return parceiros.filter((p) =>
-      [p.fantasy_name, p.city, p.state, p.business_area].filter(Boolean).join(" ").toLowerCase().includes(t),
-    );
-  }, [parceiros, busca]);
+    if (!t) return lista;
+    return lista.filter((p) => [p.nome, p.subtitulo].filter(Boolean).join(" ").toLowerCase().includes(t));
+  }, [lista, busca]);
 
-  const ativos = quadros.filter((q) => !q.arquivado_em).length;
+  const ativos = [...parceiros, ...profissionais].filter((p) => p.quadroId && !p.arquivadoEm).length;
 
-  async function ativar(p: Parceiro) {
-    setAtivando(p.id);
-    const { data, error } = await db
-      .from("crm_quadros")
-      .insert({ escopo: "parceiro", owner_id: p.id, nome: `CRM — ${p.fantasy_name}` })
-      .select()
-      .single();
-    if (error) {
-      setAtivando(null);
-      toast.error("Não deu para ativar o CRM");
-      return;
-    }
-    const quadro = data as Quadro;
-    const { error: erroColunas } = await db.from("crm_colunas").insert(
-      COLUNAS_PADRAO.map((c, i) => ({ quadro_id: quadro.id, nome: c.nome, tipo: c.tipo, posicao: (i + 1) * 1000 })),
-    );
-    setAtivando(null);
-    if (erroColunas) {
-      toast.error("Quadro criado, mas as etapas falharam. Abra o quadro para criar o funil.");
-    } else {
-      toast.success(`CRM ativado para ${p.fantasy_name}`);
-    }
-    setQuadros((q) => [...q, quadro]);
+  function aplicar(alvo: CrmTarget, patch: Partial<CrmTarget>) {
+    const setter = alvo.escopo === "parceiro" ? setParceiros : setProfissionais;
+    setter((prev) => prev.map((p) => (p.id === alvo.id ? { ...p, ...patch } : p)));
   }
 
-  async function alternar(quadro: Quadro) {
-    const desativando = !quadro.arquivado_em;
-    const arquivado_em = desativando ? new Date().toISOString() : null;
-    const { error } = await db.from("crm_quadros").update({ arquivado_em }).eq("id", quadro.id);
-    if (error) { toast.error("Não deu para mudar o estado"); return; }
-    setQuadros((qs) => qs.map((q) => (q.id === quadro.id ? { ...q, arquivado_em } : q)));
-    toast.success(desativando ? "CRM desativado" : "CRM reativado");
+  async function ativar(alvo: CrmTarget) {
+    setAgindo(alvo.id);
+    try {
+      const r = await ativarFn({ data: { escopo: alvo.escopo, ownerId: alvo.id, nome: alvo.nome } });
+      aplicar(alvo, { quadroId: r.quadroId, arquivadoEm: null });
+      toast.success(`CRM ativado para ${alvo.nome}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para ativar o CRM");
+    }
+    setAgindo(null);
+  }
+
+  async function alternar(alvo: CrmTarget) {
+    if (!alvo.quadroId) return;
+    const ativando = !!alvo.arquivadoEm;
+    setAgindo(alvo.id);
+    try {
+      const r = await alternarFn({ data: { quadroId: alvo.quadroId, ativar: ativando } });
+      aplicar(alvo, { arquivadoEm: r.arquivadoEm });
+      toast.success(ativando ? "CRM reativado" : "CRM desativado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para mudar o estado");
+    }
+    setAgindo(null);
   }
 
   // ---- quadro aberto ----
   if (abertoId) {
-    const quadro = quadros.find((q) => q.id === abertoId);
     return (
       <>
         <div className="mb-6 flex items-center gap-3">
@@ -118,7 +94,7 @@ function AdminCrm() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-white">{quadro?.nome || "Quadro"}</h1>
+            <h1 className="truncate text-2xl font-bold text-white">CRM — {abertoNome}</h1>
             <p className="text-sm text-white/50">Arraste os cartões entre as etapas</p>
           </div>
         </div>
@@ -127,18 +103,18 @@ function AdminCrm() {
     );
   }
 
-  // ---- lista de academias ----
+  // ---- lista ----
   return (
     <>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">CRM</h1>
-        <p className="text-sm text-white/50">Escolha quem recebe o painel de CRM e acompanhe os funis</p>
+        <p className="text-sm text-white/50">Libere o painel de CRM para parceiros e profissionais</p>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="mb-3 flex items-start justify-between">
-            <p className="text-xs text-white/50">Parceiros com CRM ativo</p>
+            <p className="text-xs text-white/50">CRMs ativos</p>
             <KanbanSquare className="h-5 w-5 text-primary" />
           </div>
           <p className="text-2xl font-bold text-white">{carregando ? "—" : ativos}</p>
@@ -146,10 +122,34 @@ function AdminCrm() {
         <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="mb-3 flex items-start justify-between">
             <p className="text-xs text-white/50">Parceiros cadastrados</p>
-            <Power className="h-5 w-5 text-white/40" />
+            <Building2 className="h-5 w-5 text-white/40" />
           </div>
           <p className="text-2xl font-bold text-white">{carregando ? "—" : parceiros.length}</p>
         </div>
+        <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-start justify-between">
+            <p className="text-xs text-white/50">Profissionais cadastrados</p>
+            <Stethoscope className="h-5 w-5 text-white/40" />
+          </div>
+          <p className="text-2xl font-bold text-white">{carregando ? "—" : profissionais.length}</p>
+        </div>
+      </div>
+
+      <div className="mb-4 flex gap-2">
+        {([
+          { key: "parceiro" as const, label: "Parceiros", icon: Building2 },
+          { key: "profissional" as const, label: "Profissionais", icon: Stethoscope },
+        ]).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setEscopo(t.key)}
+            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+              escopo === t.key ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+            }`}
+          >
+            <t.icon className="h-3.5 w-3.5" /> {t.label}
+          </button>
+        ))}
       </div>
 
       <div className="relative mb-4">
@@ -157,7 +157,7 @@ function AdminCrm() {
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome, cidade ou ramo"
+          placeholder="Buscar por nome, cidade ou área"
           className="w-full rounded-xl border border-white/10 bg-black/40 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/30 focus:border-primary/50 focus:outline-none"
         />
       </div>
@@ -168,19 +168,15 @@ function AdminCrm() {
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
           </div>
         ) : !filtrados.length ? (
-          <p className="py-12 text-center text-sm text-white/40">Nenhum parceiro encontrado.</p>
+          <p className="py-12 text-center text-sm text-white/40">Nenhum registro encontrado.</p>
         ) : (
           filtrados.map((p) => {
-            const quadro = quadroDe(p.id);
-            const ativo = quadro && !quadro.arquivado_em;
+            const ativo = !!p.quadroId && !p.arquivadoEm;
             return (
-              <div key={p.id} className="flex items-center gap-4 border-b border-white/5 p-4 last:border-b-0">
+              <div key={`${p.escopo}-${p.id}`} className="flex items-center gap-4 border-b border-white/5 p-4 last:border-b-0">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{p.fantasy_name}</p>
-                  <p className="truncate text-xs text-white/40">
-                    {[p.city, p.state].filter(Boolean).join(" · ") || "sem endereço"}
-                    {p.business_area ? ` · ${p.business_area}` : ""}
-                  </p>
+                  <p className="truncate text-sm font-medium text-white">{p.nome}</p>
+                  <p className="truncate text-xs text-white/40">{p.subtitulo || "—"}</p>
                 </div>
 
                 <span
@@ -188,20 +184,21 @@ function AdminCrm() {
                     ativo ? "bg-emerald-400/10 text-emerald-400" : "bg-white/5 text-white/40"
                   }`}
                 >
-                  {ativo ? "ativo" : quadro ? "desativado" : "sem CRM"}
+                  {ativo ? "ativo" : p.quadroId ? "desativado" : "sem CRM"}
                 </span>
 
-                {quadro ? (
+                {p.quadroId ? (
                   <div className="flex shrink-0 items-center gap-2">
                     <button
-                      onClick={() => setAbertoId(quadro.id)}
+                      onClick={() => { setAbertoId(p.quadroId); setAbertoNome(p.nome); }}
                       className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/5"
                     >
                       Abrir quadro
                     </button>
                     <button
-                      onClick={() => void alternar(quadro)}
-                      className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white/60 hover:text-white"
+                      onClick={() => void alternar(p)}
+                      disabled={agindo === p.id}
+                      className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white/60 hover:text-white disabled:opacity-50"
                     >
                       {ativo ? "Desativar" : "Reativar"}
                     </button>
@@ -209,10 +206,10 @@ function AdminCrm() {
                 ) : (
                   <button
                     onClick={() => void ativar(p)}
-                    disabled={ativando === p.id}
+                    disabled={agindo === p.id}
                     className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                   >
-                    {ativando === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    {agindo === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                     Ativar CRM
                   </button>
                 )}
@@ -222,9 +219,10 @@ function AdminCrm() {
         )}
       </div>
 
-      <p className="mt-4 text-xs text-white/30">
-        Ativar cria o quadro já com o funil padrão. O dono do parceiro entra direto;
-        para liberar um funcionário, inclua a permissão <code className="text-white/50">crm</code> no cadastro da equipe dele.
+      <p className="mt-4 flex items-center gap-2 text-xs text-white/30">
+        <Power className="h-3.5 w-3.5" />
+        Ativar cria o quadro já com o funil padrão. O dono vê a aba CRM no painel dele;
+        para liberar um funcionário do parceiro, inclua a permissão <code className="text-white/50">crm</code> nos membros da unidade.
       </p>
     </>
   );

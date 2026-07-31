@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2 } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2, KanbanSquare } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts } from "@/lib/collab.functions";
@@ -28,6 +28,8 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { CrmBoard } from "@/components/crm/CrmBoard";
+import { meuQuadroCrm } from "@/lib/admin-crm.functions";
 
 
 
@@ -91,6 +93,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   subscription: { label: "Mensalidade", icon: Wallet },
   collab: { label: "Colaboração", icon: Share2 },
   collaborators: { label: "Colaboradores", icon: Users },
+  crm: { label: "CRM", icon: KanbanSquare },
 };
 
 function ProfessionalPanel() {
@@ -100,7 +103,9 @@ function ProfessionalPanel() {
   const [tab, setTab] = useState<string>("students");
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [collabPending, setCollabPending] = useState(0);
+  const [crmQuadroId, setCrmQuadroId] = useState<string | null>(null);
   const getCollabCounts = useServerFn(getCollabPendingCounts);
+  const buscarQuadroCrm = useServerFn(meuQuadroCrm);
 
   useEffect(() => {
     if (!info?.coachId) return;
@@ -112,6 +117,16 @@ function ProfessionalPanel() {
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [info?.coachId]);
+
+  useEffect(() => {
+    if (!info?.profileId) return;
+    let alive = true;
+    buscarQuadroCrm({ data: { escopo: "profissional", ownerId: info.profileId } })
+      .then((r) => { if (alive) setCrmQuadroId(r.quadroId); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [info?.profileId]);
+
 
 
   useEffect(() => {
@@ -189,7 +204,7 @@ function ProfessionalPanel() {
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
   const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collaborators", "collab", "settings", "fitmind_calendar"];
-  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription"])).filter((t) => t !== "network" && t !== "overview")];
+  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription", ...(crmQuadroId ? ["crm"] : [])])).filter((t) => t !== "network" && t !== "overview")];
 
 
   return (
@@ -280,7 +295,7 @@ function ProfessionalPanel() {
           })}
         </div>
 
-        <TabContent tab={tab} info={info} assignments={assignments} />
+        <TabContent tab={tab} info={info} assignments={assignments} crmQuadroId={crmQuadroId} />
 
       </div>
     </div>
@@ -288,7 +303,8 @@ function ProfessionalPanel() {
   );
 }
 
-function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
+function TabContent({ tab, info, assignments, crmQuadroId }: { tab: string; info: ProInfo; assignments: AssignmentRow[]; crmQuadroId: string | null }) {
+  if (tab === "crm" && crmQuadroId) return <CrmBoard quadroId={crmQuadroId} />;
   if (tab === "overview") return <OverviewTab coachId={info.coachId} profileId={info.profileId} coachName={info.name} />;
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <ProfessionalWalletTab />;
