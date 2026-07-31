@@ -59,9 +59,12 @@ export function clearPostAuthIntent() {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(TS_KEY);
     sessionStorage.removeItem(KEY);
+    sessionStorage.removeItem(TS_KEY);
   } catch { /* storage indisponível */ }
 }
+
 
 /** Atalho: destino da loja logada, com o produto do link quando houver. */
 export function setStoreIntent(productId?: string | null) {
