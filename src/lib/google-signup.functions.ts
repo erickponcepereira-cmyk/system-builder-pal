@@ -200,11 +200,12 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
       gender: data.gender,
       birthdate: data.birthdate,
       student: {
-        coachId: data.coachId,
-        referredByStudentId: data.referredByStudentId ?? null,
+        coachId,
+        referredByStudentId,
         referralCode: data.referralCode ?? null,
-        partnerId: data.partnerId ?? null,
+        partnerId,
       },
+
     } as never);
 
     // Garante gravação de sexo e nascimento mesmo que finalizeRegistration ignore campos.
