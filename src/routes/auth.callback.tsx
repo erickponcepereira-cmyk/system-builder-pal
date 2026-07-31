@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { Logo } from "@/components/Logo";
+import { clearPostAuthIntent, setPostAuthIntent, takePostAuthIntent } from "@/lib/post-auth-intent";
+
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
