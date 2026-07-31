@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { gravarAtribuicao } from "@/lib/atribuicao";
 import { setPendingProduct } from "@/lib/pending-product";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 import { z } from "zod";
 
 /**
