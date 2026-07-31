@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import {
   fetchPublicProduct,
   readPublicCart,
@@ -105,6 +106,8 @@ function ProdutoPublico() {
   const [cart, setCart] = useState<PublicCartLine[]>([]);
   const [indicacao, setIndicacao] = useState<string | null>(null);
 
+  useRedirectLoggedStore(produto?.id ?? null);
+
   useEffect(() => {
     setCart(readPublicCart());
     setIndicacao(readReferralContext().sponsorName);
@@ -165,7 +168,7 @@ function ProdutoPublico() {
 
   return (
     <div className="min-h-screen bg-background pb-28">
-      <header className="flex items-center gap-3 border-b border-white/10 p-4">
+      <header className="flex items-center gap-3 border-b border-white/10 p-4 md:px-6">
         <Link to="/loja" aria-label="Voltar para a loja">
           <ArrowLeft className="h-5 w-5 text-white/70" />
         </Link>
@@ -178,7 +181,8 @@ function ProdutoPublico() {
         </p>
       )}
 
-      <div className="aspect-square w-full bg-white/5">
+      <div className="mx-auto grid w-full max-w-5xl gap-6 px-0 md:grid-cols-2 md:px-6 md:py-8">
+      <div className="aspect-square w-full overflow-hidden bg-white/5 md:sticky md:top-6 md:self-start md:rounded-2xl md:border md:border-white/10">
         {produto.imageUrl ? (
           <img
             src={produto.imageUrl}
@@ -192,7 +196,7 @@ function ProdutoPublico() {
         )}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 md:p-0">
         {produto.sectionName && (
           <p className="text-[11px] uppercase tracking-wide text-white/45">
             {produto.sectionName}
@@ -255,9 +259,11 @@ function ProdutoPublico() {
           </li>
         </ul>
       </div>
+      </div>
 
       {/* Barra fixa: carrinho funciona deslogado, mesma chave da loja logada. */}
       <div className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-background/95 p-3 backdrop-blur">
+        <div className="mx-auto max-w-5xl">
         <div className="flex gap-2">
           <button
             onClick={adicionar}
@@ -285,6 +291,7 @@ function ProdutoPublico() {
         >
           Já tenho conta — ver no app
         </Link>
+        </div>
       </div>
     </div>
   );
