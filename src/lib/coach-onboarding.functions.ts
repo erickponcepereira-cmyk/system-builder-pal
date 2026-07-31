@@ -743,9 +743,12 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
     const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, profile_id, coach_number, onboarding_stage")
+      .from("coaches").select("id, profile_id, coach_number, onboarding_stage, activation_paid_at, already_coach")
       .eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
+    if (!coach.activation_paid_at && !(coach as { already_coach?: boolean }).already_coach) {
+      throw new Error("Ativação não paga. Use 'Marcar ativação paga' (com justificativa) antes de liberar o painel.");
+    }
 
     let nextNumber = coach.coach_number as number | null;
     if (data.coachNumber) {
