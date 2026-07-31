@@ -280,7 +280,7 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
     if (!profile) throw new Error("Perfil não encontrado");
     const { data: coach } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, coach_number, onboarding_stage, unlock_attempts, approved_at")
+      .select("id, profile_id, coach_number, onboarding_stage, unlock_attempts, approved_at, activation_paid_at, already_coach")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
