@@ -129,6 +129,17 @@ function ReferralLandingPage() {
         }
       }
       setTimeout(() => {
+        // Link de produto SEMPRE abre o produto — inclusive para quem já
+        // está logado. Antes, aluno logado caía em /student/store e o
+        // produto se perdia.
+        if (productId) {
+          if (nextAction === "store") {
+            navigate({ to: "/student/store", search: { produto: productId } });
+          } else {
+            navigate({ to: "/produto/$id", params: { id: productId } });
+          }
+          return;
+        }
         // aluno já logado: segue para a loja logada, como antes
         if (nextAction === "store") {
           navigate({ to: "/student/store" });
@@ -137,20 +148,6 @@ function ReferralLandingPage() {
         // intenção explícita de cadastro
         if (destinoPedido === "cadastro") {
           navigate({ to: "/register" });
-          return;
-        }
-        // Produto FitMind: permalink próprio, com Open Graph.
-        if (productId && productKind === "challenge") {
-          navigate({ to: "/produto/$id", params: { id: productId } });
-          return;
-        }
-        // QUALQUER outro link com produto vai para a vitrine com o produto
-        // aberto. Antes, parceiro e profissional tinham `productKind`
-        // preenchido e diferente de "challenge": escapavam das condições
-        // acima e caíam no `/register` do final da cadeia. Era esse o bug
-        // de "link de produto volta para o cadastro".
-        if (productId) {
-          navigate({ to: "/loja", search: { produto: productId } });
           return;
         }
         // link explícito da loja vinculada ao indicador
