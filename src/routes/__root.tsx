@@ -180,13 +180,25 @@ function RootComponent() {
     window.addEventListener("vite:preloadError", onPreloadError);
     window.addEventListener("error", onChunkError);
 
+    // Registro de "último acesso": no máximo 1x a cada 12h por dispositivo.
+    // Antes isso gravava a cada sessão detectada e a cada renovação de token,
+    // gerando dezenas de milhares de escritas e travando o banco.
+    const PING_KEY = "fitmind_last_login_ping";
+    const PING_TTL = 12 * 60 * 60 * 1000;
     let done = false;
     const ping = async () => {
       if (done) return;
+      try {
+        const last = Number(localStorage.getItem(PING_KEY) || 0);
+        if (Date.now() - last < PING_TTL) { done = true; return; }
+      } catch { /* storage indisponível */ }
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         done = true;
-        try { await touchLastLogin(); } catch { /* ignore */ }
+        try {
+          await touchLastLogin();
+          try { localStorage.setItem(PING_KEY, String(Date.now())); } catch { /* ignore */ }
+        } catch { /* ignore */ }
       }
     };
     ping();
@@ -196,10 +208,12 @@ function RootComponent() {
     // da navegação para /portal-selector quando já existe sessão válida.
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED acontece a cada ~1h e em todo foco de aba: não registra acesso.
+      if (event === "SIGNED_IN") {
         done = false; ping();
       }
     });
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("vite:preloadError", onPreloadError);
