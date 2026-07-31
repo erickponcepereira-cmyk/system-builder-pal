@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 import {
   fetchPublicProduct,
   readPublicCart,

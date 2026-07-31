@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Lock, ShoppingBag, X } from "lucide-react";
 import type { PublicProduct } from "@/lib/public-store";
+import { setStoreIntent } from "@/lib/post-auth-intent";
+
 
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
