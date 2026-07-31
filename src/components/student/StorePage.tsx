@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2, History, UserRound, ChevronDown,
@@ -11,13 +11,13 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
-import { getPendingProduct, clearPendingProduct, setPendingProduct } from "@/lib/pending-product";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -82,11 +82,15 @@ interface StorePageProps {
   hasUpline?: boolean;
   /** Audiência do visualizador para filtro de visibility_audiences. */
   audience?: "student" | "coach" | "partner" | "professional";
+  requestedProductId?: string;
 }
 
-export function StorePage({ coachMode = false, hasUpline = false, audience }: StorePageProps = {}) {
+export function StorePage({ coachMode = false, hasUpline = false, audience, requestedProductId }: StorePageProps = {}) {
+  const navigate = useNavigate();
 
   const [items, setItems] = useState<StoreProduct[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [legacyPendingProductId, setLegacyPendingProductId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
@@ -376,6 +380,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         };
       })),
     ]);
+    setCatalogLoaded(true);
   };
 
 
@@ -431,45 +436,36 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
-  // Deep link direto: /student/store?produto={id} (ou permalink /produto/{id}
-  // que manda a pessoa para cá depois do login). Reaproveita o mesmo canal
-  // do link de indicação.
   useEffect(() => {
-    if (coachMode) return;
-    if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("produto");
-    if (id) setPendingProduct(id, null);
-  }, [coachMode]);
+    if (coachMode || requestedProductId) return;
+    setLegacyPendingProductId(getPendingProduct().id);
+  }, [coachMode, requestedProductId]);
 
-  // Abre automaticamente o produto vindo do link de indicação/permalink.
-  // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
+  const effectiveProductId = requestedProductId ?? legacyPendingProductId ?? undefined;
+
+  // A rota é a fonte única do deep link. Só decide a aba depois que o catálogo
+  // terminou, evitando apagar o parâmetro ou alternar de aba durante a carga.
   useEffect(() => {
-    if (coachMode) return;
-    const { id: pendingId, kind: pendingKind } = getPendingProduct();
-    if (!pendingId) return;
-    if ((pendingKind === "partner" || pendingKind === "professional") && storeTab !== "market") { setStoreTab("market"); return; }
-    if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
-    if (storeTab === "fitmind" && items.length) {
-      const match = items.find((it) => it.sourceId === pendingId);
-      if (match) {
-        setDetailProduct(match);
+    if (coachMode || !catalogLoaded || !effectiveProductId) return;
+    const fitmindMatch = items.find(
+      (it) => it.sourceId === effectiveProductId && it.kind !== "partner" && it.kind !== "partner_company",
+    );
+    if (fitmindMatch) {
+      if (storeTab !== "fitmind") setStoreTab("fitmind");
+      setDetailProduct(fitmindMatch);
+      if (!requestedProductId) {
         clearPendingProduct();
-      } else if (!pendingKind) {
-        // não é produto FitMind: a vitrine de parceiro/profissional resolve
-        setStoreTab("market");
+        setLegacyPendingProductId(null);
       }
+      return;
     }
-  }, [items, coachMode, storeTab]);
+    if (storeTab !== "market") setStoreTab("market");
+  }, [items, catalogLoaded, coachMode, effectiveProductId, requestedProductId, storeTab]);
 
-  // A URL passa a refletir o produto aberto, para que copiar da barra funcione.
-  useEffect(() => {
-    if (coachMode) return;
-    if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    if (detailProduct?.sourceId) url.searchParams.set("produto", detailProduct.sourceId);
-    else url.searchParams.delete("produto");
-    window.history.replaceState(null, "", url.toString());
-  }, [detailProduct, coachMode]);
+  const clearRequestedProduct = () => {
+    if (!requestedProductId || coachMode) return;
+    void navigate({ to: "/student/store", search: {}, replace: true });
+  };
 
 
   useEffect(() => {
@@ -957,6 +953,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
           mode={coachMode ? "reseller" : "student"}
           resellerStudent={coachMode && selectedClient ? { id: selectedClient.id, name: selectedClient.name, email: selectedClient.email } : null}
           onAddToCart={addPartnerProductToCart}
+          requestedProductId={effectiveProductId}
+          onRequestedProductClose={clearRequestedProduct}
         />
         {clientPickerOpen && (
           <ClientPickerModal
@@ -1425,7 +1423,11 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       {detailProduct && (
         <ProductDetailModal
           product={detailProduct}
-          onClose={() => { setDetailProduct(null); setDetailProfessional(null); }}
+          onClose={() => {
+            setDetailProduct(null);
+            setDetailProfessional(null);
+            clearRequestedProduct();
+          }}
           onAdd={(p) => addToCart(p as StoreProduct)}
           showCommissions={coachMode}
           hasUpline={hasUpline}

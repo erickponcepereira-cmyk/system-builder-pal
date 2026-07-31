@@ -95,6 +95,7 @@ function Preco({ p }: { p: PublicProduct }) {
 
 function ProdutoPublico() {
   const { produto } = Route.useLoaderData();
+  const redirectStatus = useRedirectLoggedStore(produto?.id ?? null);
 
   /**
    * `montado` evita divergência de hidratação: o servidor não tem
@@ -105,8 +106,6 @@ function ProdutoPublico() {
   const [montado, setMontado] = useState(false);
   const [cart, setCart] = useState<PublicCartLine[]>([]);
   const [indicacao, setIndicacao] = useState<string | null>(null);
-
-  useRedirectLoggedStore(produto?.id ?? null);
 
   useEffect(() => {
     setCart(readPublicCart());
@@ -122,6 +121,14 @@ function ProdutoPublico() {
     () => (produto ? cart.find((l) => l.id === produto.id) : undefined),
     [cart, produto],
   );
+
+  if (redirectStatus !== "public") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Abrindo sua loja...</p>
+      </div>
+    );
+  }
 
   function adicionar() {
     if (!produto) return;
