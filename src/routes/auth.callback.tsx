@@ -74,6 +74,8 @@ function AuthCallbackPage() {
         const state = await resolveGoogleAccount({ data: undefined as never });
 
         if (state.status === "needs_profile") {
+          // Ainda falta completar o cadastro: devolve o destino para depois.
+          if (next) setPostAuthIntent(next);
           navigate({
             to: "/complete-signup",
             search: role && role !== "student" ? { role } : {},
@@ -81,6 +83,7 @@ function AuthCallbackPage() {
           });
           return;
         }
+
 
         if (state.status === "linked") {
           toast.success("Conta Google vinculada ao seu cadastro existente.");
