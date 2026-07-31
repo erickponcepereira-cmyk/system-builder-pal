@@ -19,7 +19,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { capturarAtribuicaoDaUrl, lerAtribuicao } from "@/lib/atribuicao";
+import { capturarAtribuicaoDaUrl, enriquecerAtribuicao, lerAtribuicao } from "@/lib/atribuicao";
 
 export type PublicProductKind =
   | "challenge"
