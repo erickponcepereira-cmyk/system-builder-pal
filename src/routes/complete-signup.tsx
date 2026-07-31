@@ -80,7 +80,21 @@ function CompleteSignupPage() {
       }
 
       // Indicação (link /r/{code} ou loja pública) — sobrevive ao OAuth.
-      const ref = readReferralSignup();
+      let ref = readReferralSignup();
+      // Link `?ref=` grava só o código: resolve aqui quem é o coach, senão o
+      // seletor aparece vazio e a indicação se perde.
+      if (ref.code && !ref.coachId) {
+        const row = await resolverCodigo(ref.code);
+        if (row) {
+          ref = {
+            ...ref,
+            coachId: row.coach_id,
+            sponsorName: row.sponsor_name,
+            partnerId: row.partner_id ?? ref.partnerId,
+            referredByStudentId: row.referred_by_student_id ?? ref.referredByStudentId,
+          };
+        }
+      }
       setReferral(ref);
       if (ref.coachId) {
         setCoach({
@@ -89,6 +103,7 @@ function CompleteSignupPage() {
           name: ref.sponsorName || "Coach indicador",
         });
       }
+
 
       setChecking(false);
     })();
