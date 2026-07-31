@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
+import { CrmBoard } from "@/components/crm/CrmBoard";
+import { meuQuadroCrm } from "@/lib/admin-crm.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
 
@@ -53,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm";
 
 
 interface Partner {
@@ -138,7 +140,18 @@ function PartnerPanel() {
   const [coachCtx, setCoachCtx] = useState<CoachContext | null>(null);
 
   const [collabPending, setCollabPending] = useState(0);
+  const [crmQuadroId, setCrmQuadroId] = useState<string | null>(null);
   const getCollabCounts = useServerFn(getCollabPendingCounts);
+  const buscarQuadroCrm = useServerFn(meuQuadroCrm);
+
+  useEffect(() => {
+    if (!partner?.id) return;
+    let alive = true;
+    buscarQuadroCrm({ data: { escopo: "parceiro", ownerId: partner.id } })
+      .then((r) => { if (alive) setCrmQuadroId(r.quadroId); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [partner?.id]);
 
   useEffect(() => {
     if (!partner?.id) return;
@@ -244,6 +257,7 @@ function PartnerPanel() {
     fitmind_calendar: "agenda.ver",
     collaborators: "members.gerenciar",
     collab: "collab.ver",
+    crm: "crm",
     profile: "profile.editar",
     members: "members.gerenciar",
   };
@@ -270,6 +284,7 @@ function PartnerPanel() {
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
+    ...(crmQuadroId ? [{ key: "crm" as Tab, label: "CRM", icon: KanbanSquare }] : []),
     { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
@@ -414,6 +429,7 @@ function PartnerPanel() {
         {abaAtiva === "reports" && <PartnerReports />}
         {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+        {abaAtiva === "crm" && crmQuadroId && <CrmBoard quadroId={crmQuadroId} />}
         {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
 
 
