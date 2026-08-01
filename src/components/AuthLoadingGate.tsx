@@ -53,6 +53,17 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    // PWA (ícone na tela de início): sem storage persistente o sistema pode
+    // descartar o localStorage ao fechar o app — e a sessão do Google some.
+    void (async () => {
+      try {
+        if (navigator.storage?.persist && !(await navigator.storage.persisted())) {
+          await navigator.storage.persist();
+        }
+      } catch { /* best-effort */ }
+    })();
+
+
     const getSessionTimeout = setTimeout(() => {
       if (!active) return;
       console.warn("[AUTH_GATE] getSession timeout, liberando splash");
