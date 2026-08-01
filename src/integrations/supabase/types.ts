@@ -11666,6 +11666,10 @@ export type Database = {
       }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_reconcile_all_wallets: { Args: never; Returns: number }
+      admin_release_user_subscription: {
+        Args: { _reason?: string; _user_id: string }
+        Returns: number
+      }
       admin_reprocess_partner_order: {
         Args: { _order_id: string }
         Returns: undefined
