@@ -94,11 +94,12 @@ function PortalSelectorPage() {
           }
           return r.value.data;
         });
-        const [coach, student, partner] = rows as [
+        const [coach, student, partnerRows] = rows as [
           { id: string; approved_at: string | null; blocked_at: string | null; is_professional: boolean } | null,
           { id: string } | null,
-          { id: string } | null,
+          Array<{ id: string }> | null,
         ];
+        const partner = (partnerRows && partnerRows.length > 0) ? partnerRows[0] : null;
 
         console.log("[PORTAL] rows", { coach, student, partner, hadQueryError });
 
