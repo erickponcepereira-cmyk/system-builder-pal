@@ -144,7 +144,7 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
   const prevDisabled = year === today.getFullYear() && month <= today.getMonth();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-start sm:items-center justify-center bg-black/80 p-2 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 p-2 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl p-4 max-h-[92vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div>

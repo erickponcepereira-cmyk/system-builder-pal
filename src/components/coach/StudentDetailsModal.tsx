@@ -217,7 +217,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   }, [tab, attData, attLoading, fetchAttendance, studentId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-3 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-3 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-white/10 max-h-[92vh] overflow-hidden" style={{ backgroundColor: "#141414" }} onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 border-b border-white/5 p-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -259,7 +259,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
           <button onClick={onClose} className="rounded-lg p-1 text-white/60 hover:bg-white/5"><X className="h-4 w-4" /></button>
         </header>
         {photoZoom && (profile?.photo_url || profile?.avatar_url) && (
-          <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center bg-black/90 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setPhotoZoom(false)}>
+          <div className="fixed inset-0 z-[60] flex justify-center bg-black/90 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={() => setPhotoZoom(false)}>
             <button className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"><X className="h-5 w-5" /></button>
             <img src={profile?.photo_url || profile?.avatar_url || ""} alt={profile?.name || "Aluno"} className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain" onClick={(e) => e.stopPropagation()} />
           </div>

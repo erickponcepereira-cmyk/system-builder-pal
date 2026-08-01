@@ -238,7 +238,7 @@ function NutriWalletPage() {
       </section>
 
       {assignFor && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setAssignFor(null)}>
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={() => setAssignFor(null)}>
           <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold text-white">Atribuir nutricionista</h2>

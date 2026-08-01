@@ -516,7 +516,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:items-center justify-center bg-black/70 p-2 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-2 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base font-bold text-white">{readOnly ? "Visualizar" : (editing.id ? "Editar" : "Novo")} produto</h3>

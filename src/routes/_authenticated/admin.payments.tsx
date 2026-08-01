@@ -459,7 +459,7 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div className="w-full max-w-4xl rounded-2xl my-8" style={{ backgroundColor: "#0F0F0F" }} onClick={(e) => e.stopPropagation()}>
         <div className="p-5 border-b border-white/10 flex items-start justify-between gap-3">
           <div>

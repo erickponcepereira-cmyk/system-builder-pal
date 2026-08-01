@@ -47,7 +47,7 @@ export function AchievementMembersModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start sm:items-start sm:items-center justify-center bg-black/70 p-3 sm:p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe"
+      className="fixed inset-0 z-50 flex justify-center bg-black/70 p-3 sm:p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center"
       onClick={onClose}
     >
       <div

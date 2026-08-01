@@ -28,7 +28,7 @@ export function PublicProductModal({
       : fmt(p.price);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-0 backdrop-blur-sm sm:items-start sm:items-center sm:justify-center sm:p-4 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-50 flex bg-background/80 p-0 backdrop-blur-sm sm:justify-center sm:p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-card p-4 sm:rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

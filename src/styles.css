@@ -517,8 +517,12 @@ select option {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Cartões internos não podem ultrapassar a altura útil da tela */
+/* Teto de altura: o cartão nunca ultrapassa a tela útil e rola por dentro,
+   mas qualquer max-h menor definido no próprio componente continua valendo. */
 .modal-safe > *:not(script):not(style) {
-  max-height: none;
-  flex-shrink: 0;
+  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+
+

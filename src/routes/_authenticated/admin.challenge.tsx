@@ -804,7 +804,7 @@ function AdminChallengePage() {
 
       {/* Modal: Adicionar/Editar Turma */}
       {groupModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/60 p-4 overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-md my-8 rounded-2xl border border-border bg-card p-6 space-y-3">
             <h3 className="font-bold text-foreground">{groupModal.form.id ? "Editar Turma" : "Nova Turma"}</h3>
             <div>
@@ -868,7 +868,7 @@ function AdminChallengePage() {
 
       {/* Modal: Inscrever Aluno */}
       {enrollModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
             <h3 className="font-bold text-foreground">Inscrever Aluno</h3>
             <div>
@@ -907,7 +907,7 @@ function AdminChallengePage() {
 
       {/* Modal: Pesagem (bioimpedância) */}
       {weighModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/60 p-4 overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-md my-8 rounded-2xl border border-border bg-card p-6 space-y-3">
             <h3 className="font-bold text-foreground">
               Pesagem {weighModal.type === "initial" ? "Inicial" : "Final"} — {weighModal.studentName}
@@ -982,7 +982,7 @@ function AdminChallengePage() {
           </div>
         );
         return (
-          <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe">
+          <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/60 p-4 overscroll-contain modal-safe items-start sm:items-center">
             <div className="w-full max-w-3xl my-8 rounded-2xl border border-border bg-card p-6 space-y-4">
               <div>
                 <h3 className="text-lg font-bold text-foreground flex items-center gap-2">

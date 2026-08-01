@@ -563,7 +563,7 @@ export function ChallengeTab({ coachId }: Props) {
 
       {/* Modal: Registrar Peso */}
       {weightModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
 
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
             <h3 className="font-bold text-foreground">
@@ -613,7 +613,7 @@ export function ChallengeTab({ coachId }: Props) {
 
       {/* Modal: Reagendar */}
       {reschedModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/60 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-2">
               <CalendarPlus className="h-5 w-5 text-blue-400" />

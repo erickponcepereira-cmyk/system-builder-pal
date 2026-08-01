@@ -256,7 +256,7 @@ export function UpcomingAppointments() {
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => !busy && setEditing(null)}>
+        <div className="fixed inset-0 z-50 bg-black/70 flex justify-center p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={() => !busy && setEditing(null)}>
           <div className="w-full max-w-md rounded-2xl bg-[#1A1A1A] border border-white/10 p-5" onClick={(e) => e.stopPropagation()}>
             <h4 className="text-sm font-bold text-white uppercase mb-4">Editar evento</h4>
             <div className="space-y-3">

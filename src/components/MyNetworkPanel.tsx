@@ -225,7 +225,7 @@ function WithdrawModal({ available, onClose }: { profileId: string; available: n
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex justify-center p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl p-5 space-y-3" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-white">Solicitar saque PIX</h3>
@@ -293,7 +293,7 @@ function NetworkPeopleModal({ coachId, partnerId, onClose }: { coachId: string |
   }, [coachId, partnerId]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex justify-center p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl p-5 space-y-3" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-white">Pessoas na sua rede</h3>

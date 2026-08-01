@@ -42,7 +42,7 @@ export function ChallengeTicketAcceptModal({
 
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-[60] flex justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4">

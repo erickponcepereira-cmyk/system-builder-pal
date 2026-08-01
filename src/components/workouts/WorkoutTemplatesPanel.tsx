@@ -198,7 +198,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
       )}
 
       {viewing && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setViewing(null)}>
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={() => setViewing(null)}>
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
@@ -251,7 +251,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
       )}
 
       {showForm && !readOnly && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">{editing ? "Editar treino" : "Novo treino"}</h2>

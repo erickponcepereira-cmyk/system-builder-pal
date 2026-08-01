@@ -137,7 +137,7 @@ function RewardDetailsModal({ planId, initial, onClose }: { planId: string; init
   const pct = Math.round(plan.pctComplete);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-start sm:items-center sm:p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex justify-center bg-black/70 p-0 backdrop-blur-sm sm:p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl sm:rounded-2xl border border-white/10" style={{ backgroundColor: "#0F0F0F" }}>
         <div className="relative p-5">
           <button onClick={onClose} className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20">

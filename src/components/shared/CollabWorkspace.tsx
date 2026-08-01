@@ -114,7 +114,7 @@ function ExternalModal({ ownerType, ownerId, onClose, onSaved }: Props & { onClo
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <form onSubmit={submit} className="w-full max-w-md rounded-2xl p-5 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
         <h3 className="text-sm font-bold text-white">Bloquear horário externo</h3>
         <Input label="Nome do produto *" value={productName} onChange={setProductName} />
