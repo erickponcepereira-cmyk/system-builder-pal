@@ -18,8 +18,10 @@ async function getHolderForUser(userId: string): Promise<Holder> {
     .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
   if (coach?.id) return { kind: "coach", id: coach.id };
 
-  const { data: partner } = await supabaseAdmin
-    .from("partners").select("id").eq("profile_id", profile.id).maybeSingle();
+  const { data: partnerRows } = await supabaseAdmin
+    .from("partners").select("id,status,created_at").eq("profile_id", profile.id).order("created_at", { ascending: true });
+  const plist = partnerRows ?? [];
+  const partner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
   if (partner?.id) return { kind: "partner", id: partner.id };
 
   return null;

@@ -534,13 +534,16 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const cutoff = await getServerCutoffIso();
     const fromDate = cutoff && (!data.fromDate || cutoff > data.fromDate) ? cutoff : data.fromDate;
 
-    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRow }, { data: coachRow }] = await Promise.all([
+    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRows }, { data: coachRow }] = await Promise.all([
       supabaseAdmin.from("wallets").select("available_balance,total_withdrawn").eq("profile_id", data.profileId).maybeSingle(),
       supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle(),
       sid ? supabaseAdmin.from("student_wallets").select("available_balance,total_withdrawn").eq("student_id", sid).maybeSingle() : Promise.resolve({ data: null }),
-      supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, data.profileId as never).maybeSingle(),
+      supabaseAdmin.from("partners" as never).select("id,status,created_at" as never).eq("profile_id" as never, data.profileId as never),
       supabaseAdmin.from("coaches").select("id").eq("profile_id", data.profileId).maybeSingle(),
     ]);
+    const plist = ((partnerRows as unknown as Array<{ id: string; status: string | null; created_at: string }>) || [])
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+    const partnerRow = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
     const partnerId = (partnerRow as unknown as { id?: string } | null)?.id ?? null;
     const coachId = (coachRow as { id?: string } | null)?.id ?? null;
     const [{ data: pw }, { data: profw }] = await Promise.all([

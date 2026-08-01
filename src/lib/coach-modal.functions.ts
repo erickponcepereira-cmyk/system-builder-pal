@@ -122,13 +122,13 @@ export const getCoachModalData = createServerFn({ method: "GET" })
     // categories meta
     const [{ data: master }, { data: partner }, { data: spec }] = await Promise.all([
       supabaseAdmin.from("master_coaches").select("status").eq("coach_id", coachId).maybeSingle(),
-      supabaseAdmin.from("partners").select("id").eq("profile_id", profileId).maybeSingle(),
+      supabaseAdmin.from("partners").select("id").eq("profile_id", profileId).limit(1),
       (coach as any).specialty_key
         ? supabaseAdmin.from("professional_specialties").select("label").eq("key", (coach as any).specialty_key).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
     const isMaster = !!master && ((master as any).status || "active") === "active";
-    const isPartner = !!partner;
+    const isPartner = Array.isArray(partner) ? partner.length > 0 : !!partner;
     const isHbl = !!((coach as any).herbalife_portal_url && String((coach as any).herbalife_portal_url).trim());
     const specialtyLabel = (spec as any)?.label || null;
     const categories: string[] = [];

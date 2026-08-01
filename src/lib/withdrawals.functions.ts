@@ -83,10 +83,13 @@ export const requestSellerWithdrawal = createServerFn({ method: "POST" })
       .filter(Boolean);
 
     if (data.source === "partner") {
-      let q = supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id as never);
+      let q = supabaseAdmin.from("partners" as never).select("id,status,created_at" as never).eq("profile_id" as never, profile.id as never);
       if (data.entityId) q = q.eq("id" as never, data.entityId as never);
-      const { data: partner, error } = await q.maybeSingle();
+      const { data: rows, error } = await q;
       if (error) throw new Error(error.message);
+      const plist = ((rows as unknown as Array<{ id: string; status: string | null; created_at: string }>) || [])
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+      const partner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
       if (!(partner as any)?.id) throw new Error("Parceiro não encontrado para este perfil");
       partnerId = (partner as any).id;
       const { data: wallet } = await supabaseAdmin

@@ -27,11 +27,14 @@ export const getMySubscription = createServerFn({ method: "GET" })
 
     const wallets: Record<string, number> = { coach: 0, partner: 0, professional: 0 };
     if (profile?.id) {
-      const [{ data: cw }, { data: partner }, { data: coach }] = await Promise.all([
+      const [{ data: cw }, { data: partnerRows }, { data: coach }] = await Promise.all([
         supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
-        supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partners").select("id,status,created_at").eq("profile_id", profile.id).order("created_at", { ascending: true }),
         supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
       ]);
+      // Unidade principal (aprovada mais antiga) — o login pode ter filiais.
+      const pl = partnerRows ?? [];
+      const partner = pl.find((r) => r.status === "approved") ?? pl[0] ?? null;
       wallets.coach = Number(cw?.available_balance || 0);
       if (partner?.id) {
         const { data: pw } = await supabase.from("partner_wallets").select("available_balance").eq("partner_id", partner.id).maybeSingle();

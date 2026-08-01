@@ -44,11 +44,13 @@ export const listMyHerbalifeSales = createServerFn({ method: "GET" })
     ]);
     if (!profile) return [];
 
-    const [{ data: partner }, { data: coach }] = await Promise.all([
-      supabase.from("partners").select("id").eq("profile_id", (profile as any).id).maybeSingle(),
+    const [{ data: partnerRows }, { data: coach }] = await Promise.all([
+      supabase.from("partners").select("id,status,created_at").eq("profile_id", (profile as any).id).order("created_at", { ascending: true }),
       supabase.from("coaches").select("id").eq("profile_id", (profile as any).id).maybeSingle(),
     ]);
 
+    const plist = (partnerRows as Array<{ id: string; status: string | null }> | null) ?? [];
+    const partner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
     const partnerId = (partner as any)?.id ?? null;
     const coachId = (coach as any)?.id ?? null;
     if (!partnerId && !coachId) return [];

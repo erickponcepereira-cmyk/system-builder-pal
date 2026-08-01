@@ -43,8 +43,10 @@ export const getPartnerReports = createServerFn({ method: "POST" })
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
     if (!profile) throw new Error("Perfil não encontrado");
 
-    const { data: partner } = await supabaseAdmin
-      .from("partners").select("id").eq("profile_id", profile.id).maybeSingle();
+    const { data: partnerRows } = await supabaseAdmin
+      .from("partners").select("id,status,created_at").eq("profile_id", profile.id).order("created_at", { ascending: true });
+    const plist = partnerRows ?? [];
+    const partner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
     if (!partner) throw new Error("Empresa parceira não encontrada");
 
     const partnerId = partner.id as string;

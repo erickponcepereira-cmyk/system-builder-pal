@@ -39,10 +39,11 @@ async function resolveStudentByUser(userId: string) {
 
   // Verifica se o aluno também é coach/profissional/parceiro (não pode participar do desafio,
   // exceto quando challenge_override_allowed = true — uso administrativo para demos).
-  const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+  const [{ data: coachRow }, { data: partnerRows }] = await Promise.all([
     supabaseAdmin.from("coaches").select("id, is_professional").eq("profile_id", p.id).maybeSingle(),
-    supabaseAdmin.from("partners").select("id").eq("profile_id", p.id).maybeSingle(),
+    supabaseAdmin.from("partners").select("id").eq("profile_id", p.id).limit(1),
   ]);
+  const partnerRow = (partnerRows ?? [])[0] ?? null;
   const cr = coachRow as unknown as { id: string; is_professional: boolean | null } | null;
   const roleFlags: StudentRoleFlags = override
     ? { isCoach: false, isProfessional: false, isPartner: false }

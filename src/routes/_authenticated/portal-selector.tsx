@@ -75,7 +75,8 @@ function PortalSelectorPage() {
         const settled = await Promise.allSettled([
           supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
           supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-          supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
+          // Um login pode ser dono de várias unidades — nunca maybeSingle.
+          supabase.from("partners").select("id").eq("profile_id", profile.id).limit(1),
         ]);
 
         const keys = ["coaches", "students", "partners"] as const;
@@ -93,11 +94,12 @@ function PortalSelectorPage() {
           }
           return r.value.data;
         });
-        const [coach, student, partner] = rows as [
+        const [coach, student, partnerRows] = rows as [
           { id: string; approved_at: string | null; blocked_at: string | null; is_professional: boolean } | null,
           { id: string } | null,
-          { id: string } | null,
+          Array<{ id: string }> | null,
         ];
+        const partner = (partnerRows && partnerRows.length > 0) ? partnerRows[0] : null;
 
         console.log("[PORTAL] rows", { coach, student, partner, hadQueryError });
 

@@ -524,10 +524,15 @@ export const getMyPartnerOnboarding = createServerFn({ method: "GET" })
       .from("profiles").select("id, name, email").eq("user_id", context.userId).maybeSingle();
     if (!profile) throw new Error("Perfil não encontrado");
     const p = profile as { id: string; name?: string; email?: string };
-    const { data: partner } = await supabaseAdmin
+    // Um mesmo login pode ter várias unidades (filiais). O portão avalia a
+    // unidade principal: a aprovada mais antiga; se nenhuma, a mais antiga.
+    const { data: partnerRows } = await supabaseAdmin
       .from("partners")
-      .select("id, fantasy_name, status, activation_paid_at, activation_source, approved_at, blocked_at, already_partner, updated_at")
-      .eq("profile_id", p.id).maybeSingle();
+      .select("id, fantasy_name, status, activation_paid_at, activation_source, approved_at, blocked_at, already_partner, updated_at, created_at")
+      .eq("profile_id", p.id)
+      .order("created_at", { ascending: true });
+    const list = (partnerRows as Array<Record<string, unknown>> | null) ?? [];
+    const partner = list.find((r) => r["status"] === "approved" && !r["blocked_at"]) ?? list[0] ?? null;
     if (!partner) return null;
     const pt = partner as {
       id: string; fantasy_name: string; status: string;
