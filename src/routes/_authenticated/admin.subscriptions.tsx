@@ -146,10 +146,17 @@ function AdminSubscriptionsPage() {
         </div>
       )}
 
-      {tab === "invoices" && (
+      {tab === "invoices" && (() => {
+        const term = search.trim().toLowerCase();
+        const visibleInvs = term
+          ? invs.filter((i) =>
+              `${i.profile?.name ?? ""} ${i.profile?.email ?? ""} ${i.user_id}`.toLowerCase().includes(term))
+          : invs;
+        return (
         <>
           {(() => {
-            const blocking = invs.filter((i) => i.status === "blocked" || i.status === "overdue");
+            const blocking = visibleInvs.filter((i) => i.status === "blocked" || i.status === "overdue");
+
             if (!blocking.length) return null;
             const blockedCount = blocking.filter((i) => i.status === "blocked").length;
             return (
