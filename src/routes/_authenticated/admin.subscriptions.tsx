@@ -176,12 +176,17 @@ function AdminSubscriptionsPage() {
                   </button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {blocking.slice(0, 20).map((i) => (
-                    <span key={i.id} className="rounded bg-white/5 px-2 py-1 text-xs text-white/80">
-                      {i.profile?.name ?? i.profile?.email ?? i.user_id.slice(0, 8)} · {fmtMonth(i.reference_month)} · {STATUS_LABEL[i.status]}
+                  {Array.from(new Map(blocking.map((i) => [i.user_id, i])).values()).slice(0, 30).map((i) => (
+                    <span key={i.user_id} className="inline-flex items-center gap-2 rounded bg-white/5 px-2 py-1 text-xs text-white/80">
+                      {i.profile?.name ?? i.profile?.email ?? i.user_id.slice(0, 8)}
+                      <button onClick={() => releaseUser(i.user_id, i.profile?.name ?? i.profile?.email)}
+                        className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold">
+                        <Unlock className="h-3 w-3" /> Liberar acesso
+                      </button>
                     </span>
                   ))}
                 </div>
+
               </div>
             );
           })()}
