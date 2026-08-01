@@ -68,7 +68,7 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    const [{ data: coach }, { data: partner }] = await Promise.all([
+    const [{ data: coach }, { data: partnerRows }] = await Promise.all([
       supabase
         .from("coaches")
         .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at, onboarding_stage, approved_at")
@@ -78,8 +78,16 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
         .from("partners")
         .select("id, activation_paid_at, activation_source, activation_note, status, created_at")
         .eq("profile_id", profile?.id ?? "")
-        .maybeSingle(),
+        .order("created_at", { ascending: true }),
     ]);
+    // Anuidade é por login: usa a unidade principal (aprovada mais antiga),
+    // ou a primeira que já tenha anuidade paga. Filiais novas não recobram.
+    const plist = partnerRows ?? [];
+    const partner =
+      plist.find((r) => r.activation_paid_at) ??
+      plist.find((r) => r.status === "approved") ??
+      plist[0] ??
+      null;
 
     const today = new Date();
     let paidAt: Date | null = null;
