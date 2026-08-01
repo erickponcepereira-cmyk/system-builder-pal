@@ -69,7 +69,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" type="image/png" href="/fitmind-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/fitmind-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('fitmind_theme')||'dark';var r=document.documentElement;r.classList.remove('light','dark');r.classList.add(t);r.dataset.theme=t;}catch(e){}})();`,
