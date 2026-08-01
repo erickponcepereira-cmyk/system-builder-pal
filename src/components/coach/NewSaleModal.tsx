@@ -143,7 +143,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div
         className="w-full max-w-2xl rounded-2xl border border-white/10 max-h-[90vh] flex flex-col"
         style={{ backgroundColor: "#0F0F0F" }}

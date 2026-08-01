@@ -25,7 +25,7 @@ type ModalShellProps = {
 export function ModalShell({ header, footer, children, className, zIndex = 50 }: ModalShellProps) {
   return (
     <div
-      className="modal-safe fixed inset-0 flex items-end justify-center overflow-y-auto overscroll-contain bg-black/70 sm:items-center"
+      className="modal-safe fixed inset-0 flex justify-center overflow-y-auto overscroll-contain bg-black/70 items-start sm:items-center"
       style={{ zIndex }}
     >
       <div

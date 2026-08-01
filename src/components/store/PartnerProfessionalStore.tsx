@@ -617,7 +617,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
       {selected && (
         <div
-          className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe"
+          className="fixed inset-0 z-[60] flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -748,7 +748,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       )}
 
       {payOrder && (
-        <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-black/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-[70] flex justify-center bg-black/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>

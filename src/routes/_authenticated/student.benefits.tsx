@@ -154,7 +154,7 @@ function BenefitsPage() {
       </section>
 
       {selectedCoupon && (
-        <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-start sm:items-center sm:justify-center overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex bg-background/80 p-4 backdrop-blur-sm sm:justify-center overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-start gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Ticket className="h-5 w-5 text-primary" /></div><div className="flex-1"><h2 className="text-base font-bold text-foreground">{selectedCoupon.name}</h2><p className="text-xs text-muted-foreground">{selectedCoupon.description}</p></div></div>
             <div className="rounded-xl bg-muted p-3 text-center"><p className="text-[10px] font-bold uppercase text-muted-foreground">Cupom</p><p className="mt-1 font-mono text-lg font-bold text-foreground">{selectedCoupon.coupon_code || "FITMIND"}</p></div>

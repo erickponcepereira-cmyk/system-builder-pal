@@ -94,7 +94,7 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
 
       {showIosHelp && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-4 sm:items-start sm:items-center overflow-y-auto overscroll-contain modal-safe"
+          className="fixed inset-0 z-[100] flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center"
           onClick={() => setShowIosHelp(false)}
         >
           <div

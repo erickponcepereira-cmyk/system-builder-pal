@@ -13,7 +13,7 @@ type Props = {
 export function FreebieReservedModal({ productName, whatsapp, buyerName, slotLabel, onClose }: Props) {
   const waUrl = purchaseWhatsappUrl({ phone: whatsapp, buyerName, productName, slotLabel });
   return (
-    <div className="fixed inset-0 z-[90] flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
+    <div className="fixed inset-0 z-[90] flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-card p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">

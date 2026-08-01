@@ -318,7 +318,7 @@ function PermsModal({ profile, onClose, onSave, busy }: {
   const toggle = (k: string) => setPerms((p) => ({ ...p, [k]: !p[k] }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#111] p-5" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-white">Permissões de {profile.name}</h3>
         <p className="text-xs text-white/50 mb-4">Defina o que este admin pode acessar.</p>

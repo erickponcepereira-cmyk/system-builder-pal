@@ -965,7 +965,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           />
         )}
         {cartOpen && (
-          <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-start sm:items-center sm:justify-center sm:pb-4 overflow-y-auto overscroll-contain modal-safe">
+          <div className="fixed inset-0 z-50 flex bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:justify-center sm:pb-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
             <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
@@ -1036,7 +1036,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           </div>
         )}
         {payOrder && (
-          <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe">
+          <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
             <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -1446,7 +1446,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-start sm:items-center sm:justify-center sm:pb-4 overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:justify-center sm:pb-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
@@ -1545,7 +1545,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
       )}
 
       {payOrder && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe">
+        <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -1661,7 +1661,7 @@ function ClientPickerModal({
   const list = tab === "all" ? allResults : filteredMine;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-3 text-base font-bold text-foreground">Selecione o aluno</h2>
         {isMaster && (

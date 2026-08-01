@@ -169,7 +169,7 @@ export function ImageCropperDialog({
   const imgH = img ? img.height * scale : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe" onClick={onCancel}>
+    <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onCancel}>
       <div
         className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-white/10 bg-[#0F0F0F] p-4 shadow-2xl"
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}

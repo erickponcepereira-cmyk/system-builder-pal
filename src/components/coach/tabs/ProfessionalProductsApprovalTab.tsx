@@ -134,7 +134,7 @@ export function ProfessionalProductsApprovalTab({ coachId }: { coachId: string }
       )}
 
       {reasonFor && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-3 overflow-y-auto overscroll-contain modal-safe" onClick={() => setReasonFor(null)}>
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-3 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={() => setReasonFor(null)}>
           <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-bold mb-3">Motivo da rejeição</h3>
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4}
