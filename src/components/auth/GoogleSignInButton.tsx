@@ -6,6 +6,8 @@ import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
 import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
+import { signInWithGooglePopup } from "@/lib/google-popup-auth";
+
 
 
 
@@ -58,9 +60,27 @@ export function GoogleSignInButton({
       await enriquecerAtribuicao();
       persistReferralForOAuth();
 
+      const redirectUri = getAuthRedirectUrl("/auth/callback");
 
+      // 1) Tenta pop-up (não sai da página e preserva a sessão no app).
+      const popup = await signInWithGooglePopup(redirectUri);
+      if (popup.ok) {
+        window.location.href = "/auth/callback";
+        return;
+      }
+      if (popup.cancelled) {
+        setLoading(false);
+        return;
+      }
+      if (!popup.blocked) {
+        toast.error(popup.error || "Não foi possível entrar com o Google.");
+        setLoading(false);
+        return;
+      }
+
+      // 2) Pop-up bloqueado: cai no fluxo padrão de redirecionamento.
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: getAuthRedirectUrl("/auth/callback"),
+        redirect_uri: redirectUri,
       });
 
       if (result.error) {
@@ -78,6 +98,7 @@ export function GoogleSignInButton({
       setLoading(false);
     }
   };
+
 
 
   return (
