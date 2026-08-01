@@ -48,7 +48,7 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
         found.push("coach");
         if ((coach as any).is_professional && (coach as any).approved_at) found.push("professional");
       }
-      if (partner || membro) found.push("partner");
+      if ((Array.isArray(partner) ? partner.length : 0) > 0 || membro) found.push("partner");
 
       if (student) found.push("student");
       if (active) setRoles(found);
