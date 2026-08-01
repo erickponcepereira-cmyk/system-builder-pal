@@ -6,6 +6,8 @@ import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
 import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
+import { signInWithGooglePopup } from "@/lib/google-popup-auth";
+
 
 
 
