@@ -35,7 +35,7 @@ export function FreebieDetailModal({ freebie, onClose, onAttend, attendLabel, at
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 overflow-y-auto overscroll-contain modal-safe"
     >
       <div
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"

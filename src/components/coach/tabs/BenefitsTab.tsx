@@ -420,7 +420,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
       )}
 
       {showMyQR && checkinUrl && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowMyQR(false)}>
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/90 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setShowMyQR(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <p className="text-[10px] uppercase tracking-wider text-black/50 font-bold">Carteirinha do coach</p>
             <p className="mt-1 text-sm font-bold text-black/80">Apresente para o parceiro</p>
@@ -447,7 +447,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
       {coupon && <CouponModal coupon={coupon} onClose={() => setCoupon(null)} />}
 
       {openBenefit && (
-        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4" onClick={() => setOpenBenefit(null)}>
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-start sm:items-center justify-center bg-black/80 p-0 sm:p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setOpenBenefit(null)}>
           <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl text-white" style={{ backgroundColor: "#111" }} onClick={(e) => e.stopPropagation()}>
             {openBenefit.image_url && (
               <div className="relative h-48 overflow-hidden rounded-t-2xl">

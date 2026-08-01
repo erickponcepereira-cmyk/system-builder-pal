@@ -1113,7 +1113,7 @@ export function ProtocolTab() {
       )}
 
       {templatePickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setTemplatePickerOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setTemplatePickerOpen(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-bold text-white">Escolher treino pronto</h3>
@@ -1167,7 +1167,7 @@ export function ProtocolTab() {
       )}
 
       {saveTemplateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSaveTemplateOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setSaveTemplateOpen(false)}>
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-3 text-base font-bold text-white">Salvar treino atual como template</h3>
             <p className="mb-3 text-xs text-white/50">Este template ficará disponível só para você reutilizar em outros alunos.</p>
@@ -1194,7 +1194,7 @@ export function ProtocolTab() {
       )}
 
       {newExternalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !creatingExternal && setNewExternalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => !creatingExternal && setNewExternalOpen(false)}>
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-base font-bold text-white">Novo cliente externo</h3>
             <p className="mb-3 text-xs text-white/50">Crie um protocolo/treino para alguém de fora do app. O cliente fica disponível também na avaliação.</p>

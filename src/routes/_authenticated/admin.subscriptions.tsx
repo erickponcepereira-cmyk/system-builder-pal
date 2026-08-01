@@ -366,7 +366,7 @@ function AuditModal({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
   const fn = useServerFn(getInvoiceAuditLog);
   useEffect(() => { (async () => { try { setLogs(await fn({ data: { invoice_id: invoiceId } } as any) ?? []); } catch (e: any) { toast.error(e.message); } finally { setLoading(false); } })(); }, [invoiceId]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-2xl border border-white/10 bg-neutral-900 p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-white">Histórico da fatura</h3>

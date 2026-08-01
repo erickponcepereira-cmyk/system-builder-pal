@@ -178,7 +178,7 @@ function StudentEvolution() {
       </section>
 
       {galleryOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={() => setGalleryOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-start sm:items-center sm:p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setGalleryOpen(false)}>
           <div className="flex h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-card sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
               <div>
@@ -508,7 +508,7 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
         </div>
       )}
       {historyOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={() => setHistoryOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-start sm:items-center sm:p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setHistoryOpen(false)}>
           <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-card sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
               <div>

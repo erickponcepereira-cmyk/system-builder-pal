@@ -379,7 +379,7 @@ function DetalheCartao({
   const campo = "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-primary/50 focus:outline-none";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:p-8" onClick={onFechar}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:p-8 overflow-y-auto overscroll-contain modal-safe" onClick={onFechar}>
       <div
         className="w-full max-w-2xl rounded-2xl border border-white/10"
         style={{ backgroundColor: "#1A1A1A" }}

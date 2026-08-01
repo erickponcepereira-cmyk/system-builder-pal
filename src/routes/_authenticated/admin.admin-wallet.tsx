@@ -222,7 +222,7 @@ function DebitModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
       <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="flex items-start justify-between mb-4">
           <div>

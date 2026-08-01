@@ -247,7 +247,7 @@ function EvaluationLinksPage() {
 
       {confirmUnlink && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe"
           onClick={() => busy !== confirmUnlink.id && setConfirmUnlink(null)}
         >
           <div
@@ -287,7 +287,7 @@ function EvaluationLinksPage() {
 
       {historyClientId && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe"
           onClick={() => setHistoryClientId(null)}
         >
           <div

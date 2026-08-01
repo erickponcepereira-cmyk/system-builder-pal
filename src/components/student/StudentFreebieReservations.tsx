@@ -171,7 +171,7 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/85 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setSelected(null)}>
           <div className="w-full max-w-sm rounded-2xl p-5 text-center" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-2">
               <div className="text-left">
@@ -240,7 +240,7 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
       */}
       {paraCancelar && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center bg-black/85 p-4 overflow-y-auto overscroll-contain modal-safe"
           onClick={() => { if (!cancelando) setParaCancelar(null); }}
         >
           <div

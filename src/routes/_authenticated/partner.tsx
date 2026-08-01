@@ -1006,7 +1006,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:items-center justify-center bg-black/70 p-2 overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base font-bold text-white">{readOnly ? "Visualizar" : (editing.id ? "Editar" : "Novo")} produto</h3>
@@ -2011,7 +2011,7 @@ function PartnerVisitsModal({ onClose }: { onClose: () => void }) {
   const totalUnique = new Set(filtered.map((r) => r.student_id)).size;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:items-center justify-center bg-black/70 p-2 sm:p-4 overflow-y-auto overscroll-contain modal-safe">
       <div className="w-full max-w-2xl rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ backgroundColor: "#111" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div>

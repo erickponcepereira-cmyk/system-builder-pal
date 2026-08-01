@@ -774,7 +774,7 @@ function StudentChallengePage() {
       {activeTab === "hall" && <HallOfFame highlightStudentId={studentId || undefined} />}
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-2">
               <Scale className="h-5 w-5 text-primary" />
@@ -818,7 +818,7 @@ function StudentChallengePage() {
       )}
       {/* Modal de confirmação de entrada no desafio com moeda */}
       {confirmTurma && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-md rounded-2xl bg-card p-5 border border-border space-y-4">
             <div className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-primary" />

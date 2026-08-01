@@ -140,7 +140,7 @@ export function ProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-background/90 p-0 sm:p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-stretch sm:items-start sm:items-center justify-center bg-background/90 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe"
       style={{ height: "100dvh" }}
     >
       <div

@@ -445,7 +445,7 @@ function EventsTab() {
 
       {/* Modal de Edição */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-2xl rounded-2xl my-8" style={{ backgroundColor: "#111" }}>
             {/* Header do modal */}
             <div className="flex items-center justify-between p-5 border-b border-white/10">
@@ -865,7 +865,7 @@ function HighlightedDaysTab() {
 
       {/* Modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-md rounded-2xl" style={{ backgroundColor: "#111" }}>
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <h2 className="text-base font-bold text-white">{editing.id ? "Editar Dia" : "Novo Dia em Destaque"}</h2>

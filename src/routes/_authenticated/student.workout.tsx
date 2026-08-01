@@ -325,7 +325,7 @@ function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCrea
     setSaving(false);
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-start sm:items-center overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
@@ -716,7 +716,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext, onFinished }: { plan:
 
 function AchievementReveal({ achievement, onClose }: { achievement: { code: string; title: string; icon: string | null }; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-6 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center bg-black/85 p-6 animate-fade-in overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
       <div className="relative" onClick={(e) => e.stopPropagation()}>
         {/* burst rays */}
         <div className="absolute inset-0 -m-20 animate-pulse opacity-60" aria-hidden>
