@@ -230,7 +230,8 @@ function AdminSubscriptionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {invs.map((i) => {
+                {visibleInvs.map((i) => {
+
                   const annual = annualMap.get(i.user_id);
                   return (
                   <tr key={i.id} className="border-t border-white/5">
