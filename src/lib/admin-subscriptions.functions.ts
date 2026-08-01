@@ -34,8 +34,8 @@ export const listAdminSubscriptions = createServerFn({ method: "GET" })
 
 export const listAdminInvoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { status?: string; month?: string } | undefined) =>
-    z.object({ status: z.string().optional(), month: z.string().optional() }).parse(d ?? {}))
+  .inputValidator((d: { status?: string; month?: string; user_id?: string } | undefined) =>
+    z.object({ status: z.string().optional(), month: z.string().optional(), user_id: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     let q: any = context.supabase
@@ -43,13 +43,18 @@ export const listAdminInvoices = createServerFn({ method: "GET" })
       .select("*")
       .order("reference_month", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(data.user_id ? 500 : 1500);
     if (data.status) q = q.eq("status", data.status);
     if (data.month) q = q.eq("reference_month", data.month);
-    const cutoff = await getServerCutoffIso();
-    if (cutoff) q = q.gte("created_at", cutoff);
+    if (data.user_id) q = q.eq("user_id", data.user_id);
+    // Histórico completo do assinante: não corta pelo período de teste
+    if (!data.user_id) {
+      const cutoff = await getServerCutoffIso();
+      if (cutoff) q = q.gte("created_at", cutoff);
+    }
     const { data: invs, error } = await q;
     if (error) throw new Error(error.message);
+
 
     const userIds = Array.from(new Set((invs ?? []).map((i: any) => i.user_id))) as string[];
     const { data: profs } = await context.supabase
