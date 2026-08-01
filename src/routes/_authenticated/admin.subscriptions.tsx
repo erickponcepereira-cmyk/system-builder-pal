@@ -120,31 +120,47 @@ function AdminSubscriptionsPage() {
       {tab === "dashboard" && <DashboardTab />}
 
 
-      {tab === "subs" && (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-white/5 text-xs uppercase text-white/50">
-              <tr>
-                <th className="p-3 text-left">Usuário</th>
-                <th className="p-3 text-left">Email</th>
-                <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-center">Dia</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-left">Isento até</th>
-                <th className="p-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subs.map((s) => (
-                <SubRow key={s.id} sub={s} onSave={async (patch) => {
-                  try { await fnUpd({ data: { id: s.id, ...patch } } as any); toast.success("Atualizado"); load(); }
-                  catch (e: any) { toast.error(e.message); }
-                }} />
-              ))}
-            </tbody>
-          </table>
+      {tab === "subs" && (() => {
+        const term = search.trim().toLowerCase();
+        const visibleSubs = term
+          ? subs.filter((s) => `${s.profile?.name ?? ""} ${s.profile?.email ?? ""}`.toLowerCase().includes(term))
+          : subs;
+        return (
+        <div className="space-y-3">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail"
+              className="w-full rounded bg-white/5 py-1.5 pl-7 pr-3 text-sm placeholder:text-white/30" />
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead className="bg-white/5 text-xs uppercase text-white/50">
+                <tr>
+                  <th className="p-3 text-left">Usuário</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-right">Valor</th>
+                  <th className="p-3 text-center">Dia</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Isento até</th>
+                  <th className="p-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSubs.map((s) => (
+                  <SubRow key={s.id} sub={s}
+                    onRelease={() => releaseUser(s.user_id, s.profile?.name ?? s.profile?.email)}
+                    onSave={async (patch) => {
+                      try { await fnUpd({ data: { id: s.id, ...patch } } as any); toast.success("Atualizado"); load(); }
+                      catch (e: any) { toast.error(e.message); }
+                    }} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
+
 
       {tab === "invoices" && (() => {
         const term = search.trim().toLowerCase();
