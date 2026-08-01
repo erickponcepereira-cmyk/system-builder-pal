@@ -9,14 +9,16 @@ export const getMyWalletTotals = createServerFn({ method: "GET" })
     const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
     const profileId = prof?.id;
     if (!profileId) return { coach: 0, partner: 0, professional: 0, total: 0 };
-    const [cw, pRow, cRow] = await Promise.all([
+    const [cw, pRows, cRow] = await Promise.all([
       supabase.from("wallets").select("available_balance").eq("profile_id", profileId).maybeSingle(),
-      supabase.from("partners").select("id").eq("profile_id", profileId).maybeSingle(),
+      supabase.from("partners").select("id,status,created_at").eq("profile_id", profileId).order("created_at", { ascending: true }),
       supabase.from("coaches").select("id").eq("profile_id", profileId).maybeSingle(),
     ]);
+    const plist = pRows.data ?? [];
+    const primaryPartner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
     let partner = 0, professional = 0;
-    if (pRow.data?.id) {
-      const { data } = await supabase.from("partner_wallets").select("available_balance").eq("partner_id", pRow.data.id).maybeSingle();
+    if (primaryPartner?.id) {
+      const { data } = await supabase.from("partner_wallets").select("available_balance").eq("partner_id", primaryPartner.id).maybeSingle();
       partner = Number(data?.available_balance || 0);
     }
     if (cRow.data?.id) {
