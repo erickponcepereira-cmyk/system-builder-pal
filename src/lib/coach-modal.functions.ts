@@ -128,7 +128,7 @@ export const getCoachModalData = createServerFn({ method: "GET" })
         : Promise.resolve({ data: null }),
     ]);
     const isMaster = !!master && ((master as any).status || "active") === "active";
-    const isPartner = !!partner;
+    const isPartner = Array.isArray(partner) ? partner.length > 0 : !!partner;
     const isHbl = !!((coach as any).herbalife_portal_url && String((coach as any).herbalife_portal_url).trim());
     const specialtyLabel = (spec as any)?.label || null;
     const categories: string[] = [];
