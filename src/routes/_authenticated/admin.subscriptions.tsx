@@ -478,13 +478,23 @@ function SubRow({ sub, onSave, onRelease }: { sub: any; onSave: (p: any) => Prom
         ) : "—"}
       </td>
       <td className="p-3 text-right">
-        <button className="rounded bg-primary px-3 py-1 text-xs font-bold" onClick={() => onSave({
-          custom_amount: amount === "" ? null : Number(amount),
-          billing_day: Number(day),
-          status,
-          exempt_until: status === "exempt_annual" ? (exemptUntil || null) : null,
-        })}>Salvar</button>
+        <div className="flex flex-wrap justify-end gap-1">
+          <button className="rounded bg-primary px-3 py-1 text-xs font-bold" onClick={() => onSave({
+            custom_amount: amount === "" ? null : Number(amount),
+            billing_day: Number(day),
+            status,
+            exempt_until: status === "exempt_annual" ? (exemptUntil || null) : null,
+          })}>Salvar</button>
+          {onRelease && (
+            <button onClick={onRelease}
+              className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-bold"
+              title="Isenta todas as faturas em aberto deste usuário e libera o acesso imediatamente">
+              <Unlock className="h-3 w-3" /> Liberar acesso
+            </button>
+          )}
+        </div>
       </td>
+
     </tr>
   );
 }
