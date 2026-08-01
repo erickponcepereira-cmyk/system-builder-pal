@@ -122,7 +122,7 @@ export const getCoachModalData = createServerFn({ method: "GET" })
     // categories meta
     const [{ data: master }, { data: partner }, { data: spec }] = await Promise.all([
       supabaseAdmin.from("master_coaches").select("status").eq("coach_id", coachId).maybeSingle(),
-      supabaseAdmin.from("partners").select("id").eq("profile_id", profileId).maybeSingle(),
+      supabaseAdmin.from("partners").select("id").eq("profile_id", profileId).limit(1),
       (coach as any).specialty_key
         ? supabaseAdmin.from("professional_specialties").select("label").eq("key", (coach as any).specialty_key).maybeSingle()
         : Promise.resolve({ data: null }),
