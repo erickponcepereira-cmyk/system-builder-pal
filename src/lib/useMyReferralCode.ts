@@ -16,12 +16,14 @@ export function useMyReferralCode(): string | null {
         .eq("user_id", u.user.id)
         .maybeSingle();
       if (!prof?.id) return;
-      const [{ data: coach }, { data: partner }, { data: student }] = await Promise.all([
+      const [{ data: coach }, { data: partnerRows }, { data: student }] = await Promise.all([
         supabase.from("coaches").select("referral_code").eq("profile_id", prof.id).maybeSingle(),
-        supabase.from("partners").select("referral_code").eq("profile_id", prof.id).maybeSingle(),
+        supabase.from("partners").select("referral_code,status,created_at").eq("profile_id", prof.id).order("created_at", { ascending: true }),
         supabase.from("students").select("referral_code").eq("profile_id", prof.id).maybeSingle(),
       ]);
       if (cancelled) return;
+      const plist = partnerRows ?? [];
+      const partner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
       const c =
         (coach as { referral_code?: string | null } | null)?.referral_code ||
         (partner as { referral_code?: string | null } | null)?.referral_code ||
