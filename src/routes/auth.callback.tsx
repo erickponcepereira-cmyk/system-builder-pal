@@ -95,7 +95,9 @@ function AuthCallbackPage() {
         }
 
         if (next) {
-          if (next.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
+          if (next.startsWith("/student")) {
+            try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
+          }
           window.location.replace(next);
           return;
         }

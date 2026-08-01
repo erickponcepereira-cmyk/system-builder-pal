@@ -46,7 +46,12 @@ export function SupportCoachFab() {
 
 
   return (
-    <div className="fixed bottom-20 right-3 z-50 flex items-end gap-2 sm:bottom-6 sm:right-6">
+    // iPhone: a barra inferior tem safe-area — sem isso o botão fica em cima
+    // do ícone de perfil da navegação.
+    <div
+      className="fixed right-3 z-50 flex items-end gap-2 sm:right-6"
+      style={{ bottom: "calc(6.25rem + env(safe-area-inset-bottom))" }}
+    >
       {expanded && (
         <div className="mb-1 flex max-w-[260px] flex-col gap-2 rounded-2xl border border-white/10 bg-card p-3 shadow-xl">
           <div className="flex items-start justify-between gap-2">
