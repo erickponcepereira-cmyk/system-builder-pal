@@ -132,7 +132,7 @@ function ReferralLandingPage() {
             .eq("profile_id", profile.id)
             .maybeSingle();
           if (student?.id) {
-            sessionStorage.setItem("fitmind_selected_area", "student");
+            try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
             nextAction = "store";
           } else {
             await supabase.auth.signOut();
