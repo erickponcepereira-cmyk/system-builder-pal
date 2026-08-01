@@ -449,7 +449,7 @@ function AuditModal({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
 }
 
 
-function SubRow({ sub, onSave }: { sub: any; onSave: (p: any) => Promise<void> }) {
+function SubRow({ sub, onSave, onRelease }: { sub: any; onSave: (p: any) => Promise<void>; onRelease?: () => void }) {
   const [amount, setAmount] = useState(String(sub.custom_amount ?? ""));
   const [day, setDay] = useState(String(sub.billing_day));
   const [status, setStatus] = useState(sub.status);
