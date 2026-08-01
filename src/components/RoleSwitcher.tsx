@@ -39,7 +39,8 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       if (profile.role === "admin") found.push("admin");
       const [{ data: coach }, { data: partner }, { data: student }, { data: membro }] = await Promise.all([
         supabase.from("coaches").select("id, is_professional, approved_at").eq("profile_id", profile.id).maybeSingle(),
-        supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
+        // Um login pode ter várias unidades: nunca usar maybeSingle aqui.
+        supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).limit(1),
         supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
         supabase.from("partner_members" as never).select("id" as never).eq("profile_id" as never, profile.id).limit(1).maybeSingle(),
       ]);
