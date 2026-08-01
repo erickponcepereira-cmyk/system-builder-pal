@@ -45,6 +45,7 @@ function AdminSubscriptionsPage() {
   const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; note: string | null; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [search, setSearch] = useState("");
   const [auditInvoiceId, setAuditInvoiceId] = useState<string | null>(null);
 
   const fnSubs = useServerFn(listAdminSubscriptions);
@@ -61,6 +62,17 @@ function AdminSubscriptionsPage() {
   const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
   const fnResetAttempt = useServerFn(resetInvoicePaymentAttemptAdmin);
   const fnSkip = useServerFn(skipInvoiceAdmin);
+  const fnRelease = useServerFn(adminReleaseUserSubscription);
+
+  const releaseUser = async (userId: string, label?: string) => {
+    if (!confirm(`Liberar acesso de ${label ?? "este usuário"} agora? Todas as faturas em aberto (bloqueadas, atrasadas e pendentes) ficarão isentas.`)) return;
+    try {
+      const r: any = await fnRelease({ data: { user_id: userId } } as any);
+      toast.success(`Acesso liberado — ${r?.released ?? 0} fatura(s) isenta(s)`);
+      load();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
 
 
