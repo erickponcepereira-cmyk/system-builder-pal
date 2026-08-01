@@ -66,7 +66,7 @@ function LoginPage() {
 
 
   const goToPortalSelector = () => {
-    sessionStorage.removeItem("fitmind_selected_area");
+    try { sessionStorage.removeItem("fitmind_selected_area"); } catch { /* storage indisponível */ }
     const next = getNextParam();
     if (next) {
       window.location.replace(next);
