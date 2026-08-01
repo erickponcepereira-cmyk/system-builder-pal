@@ -7,10 +7,11 @@ import {
   listAdminSubscriptions, listAdminInvoices, updateSubscriptionAdmin,
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
   revertInvoiceAdmin, postponeInvoiceAdmin, resetInvoiceDueDateAdmin, resetInvoicePaymentAttemptAdmin,
-  skipInvoiceAdmin, getInvoiceAuditLog, getSubscriptionsDashboard,
+  skipInvoiceAdmin, getInvoiceAuditLog, getSubscriptionsDashboard, adminReleaseUserSubscription,
 } from "@/lib/admin-subscriptions.functions";
 import { listAllAnnualActivationsAdmin } from "@/lib/annual-activation.functions";
-import { History, X, SkipForward } from "lucide-react";
+import { History, X, SkipForward, Unlock, Search } from "lucide-react";
+
 
 
 
@@ -44,6 +45,7 @@ function AdminSubscriptionsPage() {
   const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; note: string | null; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [search, setSearch] = useState("");
   const [auditInvoiceId, setAuditInvoiceId] = useState<string | null>(null);
 
   const fnSubs = useServerFn(listAdminSubscriptions);
@@ -60,6 +62,17 @@ function AdminSubscriptionsPage() {
   const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
   const fnResetAttempt = useServerFn(resetInvoicePaymentAttemptAdmin);
   const fnSkip = useServerFn(skipInvoiceAdmin);
+  const fnRelease = useServerFn(adminReleaseUserSubscription);
+
+  const releaseUser = async (userId: string, label?: string) => {
+    if (!confirm(`Liberar acesso de ${label ?? "este usuário"} agora? Todas as faturas em aberto (bloqueadas, atrasadas e pendentes) ficarão isentas.`)) return;
+    try {
+      const r: any = await fnRelease({ data: { user_id: userId } } as any);
+      toast.success(`Acesso liberado — ${r?.released ?? 0} fatura(s) isenta(s)`);
+      load();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
 
 
@@ -107,36 +120,59 @@ function AdminSubscriptionsPage() {
       {tab === "dashboard" && <DashboardTab />}
 
 
-      {tab === "subs" && (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-white/5 text-xs uppercase text-white/50">
-              <tr>
-                <th className="p-3 text-left">Usuário</th>
-                <th className="p-3 text-left">Email</th>
-                <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-center">Dia</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-left">Isento até</th>
-                <th className="p-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subs.map((s) => (
-                <SubRow key={s.id} sub={s} onSave={async (patch) => {
-                  try { await fnUpd({ data: { id: s.id, ...patch } } as any); toast.success("Atualizado"); load(); }
-                  catch (e: any) { toast.error(e.message); }
-                }} />
-              ))}
-            </tbody>
-          </table>
+      {tab === "subs" && (() => {
+        const term = search.trim().toLowerCase();
+        const visibleSubs = term
+          ? subs.filter((s) => `${s.profile?.name ?? ""} ${s.profile?.email ?? ""}`.toLowerCase().includes(term))
+          : subs;
+        return (
+        <div className="space-y-3">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail"
+              className="w-full rounded bg-white/5 py-1.5 pl-7 pr-3 text-sm placeholder:text-white/30" />
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead className="bg-white/5 text-xs uppercase text-white/50">
+                <tr>
+                  <th className="p-3 text-left">Usuário</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-right">Valor</th>
+                  <th className="p-3 text-center">Dia</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Isento até</th>
+                  <th className="p-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSubs.map((s) => (
+                  <SubRow key={s.id} sub={s}
+                    onRelease={() => releaseUser(s.user_id, s.profile?.name ?? s.profile?.email)}
+                    onSave={async (patch) => {
+                      try { await fnUpd({ data: { id: s.id, ...patch } } as any); toast.success("Atualizado"); load(); }
+                      catch (e: any) { toast.error(e.message); }
+                    }} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
+        );
+      })()}
 
-      {tab === "invoices" && (
+
+      {tab === "invoices" && (() => {
+        const term = search.trim().toLowerCase();
+        const visibleInvs = term
+          ? invs.filter((i) =>
+              `${i.profile?.name ?? ""} ${i.profile?.email ?? ""} ${i.user_id}`.toLowerCase().includes(term))
+          : invs;
+        return (
         <>
           {(() => {
-            const blocking = invs.filter((i) => i.status === "blocked" || i.status === "overdue");
+            const blocking = visibleInvs.filter((i) => i.status === "blocked" || i.status === "overdue");
+
             if (!blocking.length) return null;
             const blockedCount = blocking.filter((i) => i.status === "blocked").length;
             return (
@@ -156,21 +192,32 @@ function AdminSubscriptionsPage() {
                   </button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {blocking.slice(0, 20).map((i) => (
-                    <span key={i.id} className="rounded bg-white/5 px-2 py-1 text-xs text-white/80">
-                      {i.profile?.name ?? i.profile?.email ?? i.user_id.slice(0, 8)} · {fmtMonth(i.reference_month)} · {STATUS_LABEL[i.status]}
+                  {Array.from(new Map(blocking.map((i) => [i.user_id, i])).values()).slice(0, 30).map((i) => (
+                    <span key={i.user_id} className="inline-flex items-center gap-2 rounded bg-white/5 px-2 py-1 text-xs text-white/80">
+                      {i.profile?.name ?? i.profile?.email ?? i.user_id.slice(0, 8)}
+                      <button onClick={() => releaseUser(i.user_id, i.profile?.name ?? i.profile?.email)}
+                        className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold">
+                        <Unlock className="h-3 w-3" /> Liberar acesso
+                      </button>
                     </span>
                   ))}
                 </div>
+
               </div>
             );
           })()}
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail"
+                className="rounded bg-white/5 py-1 pl-7 pr-3 text-sm placeholder:text-white/30" />
+            </div>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded bg-white/5 px-3 py-1 text-sm">
               <option value="">Todos os status</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
+
             {[
               ["", "Todas"],
               ["pending", "Pendentes"],
@@ -199,7 +246,8 @@ function AdminSubscriptionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {invs.map((i) => {
+                {visibleInvs.map((i) => {
+
                   const annual = annualMap.get(i.user_id);
                   return (
                   <tr key={i.id} className="border-t border-white/5">
@@ -297,6 +345,11 @@ function AdminSubscriptionsPage() {
                               try { await fnResetAttempt({ data: { invoice_id: i.id } } as any); toast.success("Fatura liberada para nova tentativa"); load(); }
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-violet-600 px-2 py-1 text-xs">Nova tentativa</button>
+                            <button onClick={() => releaseUser(i.user_id, i.profile?.name ?? i.profile?.email)}
+                              className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-bold"
+                              title="Isenta todas as faturas em aberto deste usuário e libera o acesso imediatamente">
+                              <Unlock className="h-3 w-3" /> Liberar acesso
+                            </button>
 
                           </>
                         )}
@@ -310,7 +363,9 @@ function AdminSubscriptionsPage() {
             </table>
           </div>
         </>
-      )}
+        );
+      })()}
+
 
       {tab === "config" && (
         <div className="space-y-4">
@@ -394,7 +449,7 @@ function AuditModal({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
 }
 
 
-function SubRow({ sub, onSave }: { sub: any; onSave: (p: any) => Promise<void> }) {
+function SubRow({ sub, onSave, onRelease }: { sub: any; onSave: (p: any) => Promise<void>; onRelease?: () => void }) {
   const [amount, setAmount] = useState(String(sub.custom_amount ?? ""));
   const [day, setDay] = useState(String(sub.billing_day));
   const [status, setStatus] = useState(sub.status);
@@ -423,13 +478,23 @@ function SubRow({ sub, onSave }: { sub: any; onSave: (p: any) => Promise<void> }
         ) : "—"}
       </td>
       <td className="p-3 text-right">
-        <button className="rounded bg-primary px-3 py-1 text-xs font-bold" onClick={() => onSave({
-          custom_amount: amount === "" ? null : Number(amount),
-          billing_day: Number(day),
-          status,
-          exempt_until: status === "exempt_annual" ? (exemptUntil || null) : null,
-        })}>Salvar</button>
+        <div className="flex flex-wrap justify-end gap-1">
+          <button className="rounded bg-primary px-3 py-1 text-xs font-bold" onClick={() => onSave({
+            custom_amount: amount === "" ? null : Number(amount),
+            billing_day: Number(day),
+            status,
+            exempt_until: status === "exempt_annual" ? (exemptUntil || null) : null,
+          })}>Salvar</button>
+          {onRelease && (
+            <button onClick={onRelease}
+              className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-bold"
+              title="Isenta todas as faturas em aberto deste usuário e libera o acesso imediatamente">
+              <Unlock className="h-3 w-3" /> Liberar acesso
+            </button>
+          )}
+        </div>
       </td>
+
     </tr>
   );
 }

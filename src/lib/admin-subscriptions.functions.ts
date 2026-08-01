@@ -34,8 +34,8 @@ export const listAdminSubscriptions = createServerFn({ method: "GET" })
 
 export const listAdminInvoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { status?: string; month?: string } | undefined) =>
-    z.object({ status: z.string().optional(), month: z.string().optional() }).parse(d ?? {}))
+  .inputValidator((d: { status?: string; month?: string; user_id?: string } | undefined) =>
+    z.object({ status: z.string().optional(), month: z.string().optional(), user_id: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     let q: any = context.supabase
@@ -43,13 +43,18 @@ export const listAdminInvoices = createServerFn({ method: "GET" })
       .select("*")
       .order("reference_month", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(data.user_id ? 500 : 1500);
     if (data.status) q = q.eq("status", data.status);
     if (data.month) q = q.eq("reference_month", data.month);
-    const cutoff = await getServerCutoffIso();
-    if (cutoff) q = q.gte("created_at", cutoff);
+    if (data.user_id) q = q.eq("user_id", data.user_id);
+    // Histórico completo do assinante: não corta pelo período de teste
+    if (!data.user_id) {
+      const cutoff = await getServerCutoffIso();
+      if (cutoff) q = q.gte("created_at", cutoff);
+    }
     const { data: invs, error } = await q;
     if (error) throw new Error(error.message);
+
 
     const userIds = Array.from(new Set((invs ?? []).map((i: any) => i.user_id))) as string[];
     const { data: profs } = await context.supabase
@@ -73,10 +78,37 @@ export const updateSubscriptionAdmin = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { id, ...patch } = data;
     (patch as any).updated_at = new Date().toISOString();
+    const { data: sub } = await context.supabase
+      .from("user_subscriptions").select("user_id").eq("id", id).maybeSingle();
     const { error } = await (context.supabase.from("user_subscriptions") as any).update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+    // Ao isentar a assinatura, limpa faturas que ainda bloqueiam o acesso
+    if (data.status && data.status.startsWith("exempt") && (sub as any)?.user_id) {
+      await context.supabase.rpc("admin_release_user_subscription", {
+        _user_id: (sub as any).user_id,
+        _reason: `Assinatura marcada como ${data.status}`,
+      } as any);
+    }
     return { ok: true };
   });
+
+export const adminReleaseUserSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({
+    user_id: z.string().uuid(),
+    reason: z.string().max(500).optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: count, error } = await context.supabase.rpc("admin_release_user_subscription", {
+      _user_id: data.user_id,
+      _reason: data.reason ?? "Liberação de acesso pelo admin",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { released: Number(count ?? 0) };
+  });
+
+
 
 export const updatePlanAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
