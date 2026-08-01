@@ -190,12 +190,18 @@ function AdminSubscriptionsPage() {
               </div>
             );
           })()}
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail"
+                className="rounded bg-white/5 py-1 pl-7 pr-3 text-sm placeholder:text-white/30" />
+            </div>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded bg-white/5 px-3 py-1 text-sm">
               <option value="">Todos os status</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
+
             {[
               ["", "Todas"],
               ["pending", "Pendentes"],
