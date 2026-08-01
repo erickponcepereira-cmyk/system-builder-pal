@@ -78,7 +78,7 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
     <ImageCropContext.Provider value={value}>
       {children}
       {pending && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[1000] flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe" role="dialog" aria-modal="true">
           <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#141010] shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>

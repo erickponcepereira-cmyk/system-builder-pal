@@ -321,7 +321,7 @@ export function ProfessionalWalletTab() {
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
           <div className="w-full max-w-sm rounded-2xl bg-[#1A1A1A] p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Solicitar saque</h3>

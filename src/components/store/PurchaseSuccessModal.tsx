@@ -32,7 +32,7 @@ export function PurchaseSuccessModal({ productId, productName, price, kind, buye
   const waUrl = purchaseWhatsappUrl({ phone: whats, buyerName, productName });
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[80] flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-card p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">

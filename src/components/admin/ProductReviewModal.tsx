@@ -119,7 +119,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
 
   if (loading || !product) {
     return (
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4">
+      <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overscroll-contain modal-safe">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
@@ -141,7 +141,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-black/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe"
     >
       <div
         onClick={(e) => e.stopPropagation()}

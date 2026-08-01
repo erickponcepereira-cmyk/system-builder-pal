@@ -503,3 +503,22 @@ select option {
 :root.light .bg-\[\#111111\],
 :root.light .bg-\[\#161212\],
 :root.light .bg-\[\#1A1A1A\] { background-color: var(--card) !important; }
+
+/* ---------------------------------------------------------------
+   Modais em telas pequenas: garante que o conteúdo role dentro da
+   área visível (incluindo safe-area do iPhone) e que nenhum botão
+   fique fora da área de clique.
+---------------------------------------------------------------- */
+@utility modal-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(0.75rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cartões internos não podem ultrapassar a altura útil da tela */
+.modal-safe > *:not(script):not(style) {
+  max-height: none;
+  flex-shrink: 0;
+}

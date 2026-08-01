@@ -1020,7 +1020,7 @@ function EventDetailModal({ event: ev, onClose, onChanged }: { event: FitmindEve
   const gcUrl = buildGoogleCalendarUrl(ev);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:items-center justify-center bg-black/80 p-2 sm:p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
       <div className="w-full max-w-md my-auto max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl" style={{ backgroundColor: "#111" }}>
         {/* Banner do evento */}
         <div className="relative p-6 pb-4" style={{ background: `linear-gradient(135deg, ${evColor}30, ${evColor}10)` }}>
@@ -1615,7 +1615,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/80 p-4 overflow-y-auto overflow-y-auto overscroll-contain modal-safe">
       <div className="w-full max-w-lg rounded-2xl my-8" style={{ backgroundColor: "#111" }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <h3 className="text-base font-bold text-white flex items-center gap-2">

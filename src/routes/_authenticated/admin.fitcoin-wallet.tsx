@@ -168,7 +168,7 @@ function DetailModal({ row, onClose }: { row: AdminFitcoinRow; onClose: () => vo
   }, [row.studentId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-start sm:items-center sm:p-4 overflow-y-auto overscroll-contain modal-safe">
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-card sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-white/5 p-4">
           <div>

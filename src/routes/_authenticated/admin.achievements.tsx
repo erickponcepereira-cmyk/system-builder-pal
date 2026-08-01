@@ -175,7 +175,7 @@ function AdminAchievementsPage() {
         )}
       </div>
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setModalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={() => setModalOpen(false)}>
           <div className="w-full max-w-lg rounded-2xl bg-[#1A1A1A] p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">{editing ? "Editar conquista" : "Nova conquista"}</h2>

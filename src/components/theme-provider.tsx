@@ -64,7 +64,7 @@ function applyThemeToDocument(theme: BrandTheme) {
   meta.content = theme.themeColor;
 
   // Favicon
-  const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]');
+  const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]');
   links.forEach((l) => { l.href = theme.faviconUrl; });
 
   // Cor de fundo do body/html (evita flash)

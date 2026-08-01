@@ -1158,7 +1158,7 @@ export function EvaluateTab() {
 
       {linkingClient && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/50 p-4"
+          className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-foreground/50 p-4 overflow-y-auto overscroll-contain modal-safe"
           onClick={() => setLinkingClient(null)}
         >
           <div
@@ -1231,7 +1231,7 @@ export function EvaluateTab() {
 
       {confirmLink && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-foreground/50 p-4"
+          className="fixed inset-0 z-[110] flex items-start sm:items-center justify-center bg-foreground/50 p-4 overflow-y-auto overscroll-contain modal-safe"
           onClick={() => !confirmBusy && setConfirmLink(null)}
         >
           <div

@@ -50,7 +50,7 @@ export function QRScannerModal({ onClose, onScan, title = "Ler QR Code" }: Props
 
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/90 p-4 overflow-y-auto overscroll-contain modal-safe" onClick={onClose}>
       <div
         className="w-full max-w-md rounded-2xl overflow-hidden text-white"
         style={{ backgroundColor: "#111" }}
