@@ -29,7 +29,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
     if (profile?.id) {
       const [{ data: cw }, { data: partner }, { data: coach }] = await Promise.all([
         supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
-        supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partners").select("id,status,created_at").eq("profile_id", profile.id).order("created_at", { ascending: true }),
         supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
       ]);
       wallets.coach = Number(cw?.available_balance || 0);
