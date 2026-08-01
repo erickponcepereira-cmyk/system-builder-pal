@@ -329,6 +329,11 @@ function AdminSubscriptionsPage() {
                               try { await fnResetAttempt({ data: { invoice_id: i.id } } as any); toast.success("Fatura liberada para nova tentativa"); load(); }
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-violet-600 px-2 py-1 text-xs">Nova tentativa</button>
+                            <button onClick={() => releaseUser(i.user_id, i.profile?.name ?? i.profile?.email)}
+                              className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-bold"
+                              title="Isenta todas as faturas em aberto deste usuário e libera o acesso imediatamente">
+                              <Unlock className="h-3 w-3" /> Liberar acesso
+                            </button>
 
                           </>
                         )}
@@ -342,7 +347,9 @@ function AdminSubscriptionsPage() {
             </table>
           </div>
         </>
-      )}
+        );
+      })()}
+
 
       {tab === "config" && (
         <div className="space-y-4">
