@@ -78,10 +78,37 @@ export const updateSubscriptionAdmin = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { id, ...patch } = data;
     (patch as any).updated_at = new Date().toISOString();
+    const { data: sub } = await context.supabase
+      .from("user_subscriptions").select("user_id").eq("id", id).maybeSingle();
     const { error } = await (context.supabase.from("user_subscriptions") as any).update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+    // Ao isentar a assinatura, limpa faturas que ainda bloqueiam o acesso
+    if (data.status && data.status.startsWith("exempt") && (sub as any)?.user_id) {
+      await context.supabase.rpc("admin_release_user_subscription", {
+        _user_id: (sub as any).user_id,
+        _reason: `Assinatura marcada como ${data.status}`,
+      } as any);
+    }
     return { ok: true };
   });
+
+export const adminReleaseUserSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({
+    user_id: z.string().uuid(),
+    reason: z.string().max(500).optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: count, error } = await context.supabase.rpc("admin_release_user_subscription", {
+      _user_id: data.user_id,
+      _reason: data.reason ?? "Liberação de acesso pelo admin",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { released: Number(count ?? 0) };
+  });
+
+
 
 export const updatePlanAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
