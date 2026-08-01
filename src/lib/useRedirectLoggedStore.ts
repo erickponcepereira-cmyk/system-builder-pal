@@ -44,7 +44,7 @@ export function useRedirectLoggedStore(productId?: string | null) {
       if (redirectStarted.current) return;
       redirectStarted.current = true;
       setStatus("redirecting");
-      sessionStorage.setItem("fitmind_selected_area", "student");
+      try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
       await navigate({
         to: "/student/store",
         search: productId ? { produto: productId } : {},
