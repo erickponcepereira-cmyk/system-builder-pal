@@ -61,18 +61,22 @@ function ReferralLandingPage() {
         setStatus("invalid");
         return;
       }
-      sessionStorage.setItem(
-        "fitmind_referral",
-        JSON.stringify({
-          code,
-          kind: row.kind,
-          sponsorName: row.sponsor_name,
-          coachId: row.coach_id,
-          referredByStudentId: row.referred_by_student_id,
-          partnerId: row.partner_id,
-          productId: productId || null,
-        })
-      );
+      // Em guia anônima / modo privado o storage pode lançar. Sem o try,
+      // o link de indicação travava na tela "Validando seu convite...".
+      try {
+        sessionStorage.setItem(
+          "fitmind_referral",
+          JSON.stringify({
+            code,
+            kind: row.kind,
+            sponsorName: row.sponsor_name,
+            coachId: row.coach_id,
+            referredByStudentId: row.referred_by_student_id,
+            partnerId: row.partner_id,
+            productId: productId || null,
+          })
+        );
+      } catch { /* storage indisponível */ }
       // Atribuição durável: localStorage + primeiro toque. Sobrevive ao
       // redirect do OAuth do Google, que o sessionStorage acima não garante.
       gravarAtribuicao({
