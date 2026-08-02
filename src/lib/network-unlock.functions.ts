@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { computeMonthlySnapshot, upsertMonthlySnapshot } from "@/lib/network-unlock.server";
 import { dedupeCommissions, isNetworkCommissionRow } from "@/lib/financial-dedupe";
+import { tzCurrentYearMonth, tzDateKey } from "@/lib/timezone";
+
 
 export type UnlockGoal = {
   id: string;
@@ -49,8 +51,9 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
     if (!profile) return emptySplit();
 
-    const now = new Date();
-    const snap = await computeMonthlySnapshot(profile.id, now.getFullYear(), now.getMonth() + 1);
+    const { year: curYear, month: curMonth0 } = tzCurrentYearMonth();
+    const snap = await computeMonthlySnapshot(profile.id, curYear, curMonth0 + 1);
+
 
     // Persist live snapshot so admin reports always reflect latest progress.
     try { await upsertMonthlySnapshot(snap); } catch (e) { console.error("live snapshot upsert failed", e); }
@@ -99,15 +102,20 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
     const { data: comms } = await commQ;
 
+    const monthKeyOf = (d: Date) => {
+      const [y, m] = tzDateKey(d).split("-").map(Number);
+      return `${y}-${m}`;
+    };
     const monthKeys = Array.from(new Set(((comms as Array<any> | null) || []).map((c) => {
       const created = new Date(c.created_at);
       if (Number.isNaN(created.getTime())) return null;
-      return `${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`;
+      return monthKeyOf(created);
     }).filter(Boolean) as string[]));
 
     const unlockByMonth = new Map<string, boolean>([
-      [`${now.getFullYear()}-${now.getMonth() + 1}`, snap.anyCompleted],
+      [`${curYear}-${curMonth0 + 1}`, snap.anyCompleted],
     ]);
+
     if (monthKeys.length) {
       const years = Array.from(new Set(monthKeys.map((k) => Number(k.split("-")[0]))));
       const { data: unlockRows } = await supabaseAdmin
@@ -135,7 +143,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       const released = c.status === "available" || (c.status === "pending" && c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
       const created = new Date(c.created_at);
       const monthUnlocked = !Number.isNaN(created.getTime())
-        ? Boolean(unlockByMonth.get(`${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`))
+        ? Boolean(unlockByMonth.get(monthKeyOf(created)))
         : false;
       if (isNetwork) {
         networkTotal += amt;

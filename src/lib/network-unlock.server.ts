@@ -56,11 +56,13 @@ export function pointsRequiredForLevel(level: number): { required: number; tier:
 }
 
 export function monthBounds(year: number, month: number): { start: Date; end: Date } {
-  // month: 1-12
-  const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const end = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+  // month: 1-12 — limites no fuso do app (Cuiabá, UTC-4), não em UTC, para que
+  // a virada de mês (e o reset de pontos) ocorra à meia-noite local.
+  const start = new Date(Date.UTC(year, month - 1, 1, 4, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month, 1, 4, 0, 0, 0));
   return { start, end };
 }
+
 
 /**
  * Compute the patent level for a given coach by replicating the same windowed
