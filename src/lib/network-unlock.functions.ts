@@ -143,7 +143,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       const released = c.status === "available" || (c.status === "pending" && c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
       const created = new Date(c.created_at);
       const monthUnlocked = !Number.isNaN(created.getTime())
-        ? Boolean(unlockByMonth.get(`${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`))
+        ? Boolean(unlockByMonth.get(monthKeyOf(created)))
         : false;
       if (isNetwork) {
         networkTotal += amt;
