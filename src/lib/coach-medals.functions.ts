@@ -101,10 +101,12 @@ async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<numbe
 export const getIndividualCareer = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<IndividualCareer> => {
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth() + 1;
-    const startOfMonth = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+    const { year: tzYear, month: tzMonth0 } = tzCurrentYearMonth();
+    const year = tzYear;
+    const month = tzMonth0 + 1;
+    // Início do mês no fuso do app (UTC-4), evitando virada antecipada.
+    const startOfMonth = new Date(Date.UTC(year, month - 1, 1, 4)).toISOString();
+
 
     const { data: rulesRaw } = await supabaseAdmin
       .from("career_medal_rules" as never)
