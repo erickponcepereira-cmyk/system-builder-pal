@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import { setStoreIntent } from "@/lib/post-auth-intent";
 
@@ -95,16 +96,17 @@ function ProdutoPublicoError({ reset }: { error: Error; reset: () => void }) {
       <p className="mt-1 text-xs text-muted-foreground">
         Verifique sua conexão e tente novamente.
       </p>
-      <button
+      <Button
         type="button"
+        size="sm"
         onClick={() => {
           void router.invalidate();
           reset();
         }}
-        className="mt-6 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+        className="mt-6"
       >
         Tentar novamente
-      </button>
+      </Button>
     </div>
   );
 }
