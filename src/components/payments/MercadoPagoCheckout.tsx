@@ -163,7 +163,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
   useEffect(() => {
     setPayer(defaultPayer || { email: "", name: "", doc: "" });
-    setHolder({ name: defaultPayer?.name || "", doc: defaultPayer?.doc || "" });
+    setHolderError(null);
     setPixData(null);
     setPixApproved(false);
     setPaymentError(null);
