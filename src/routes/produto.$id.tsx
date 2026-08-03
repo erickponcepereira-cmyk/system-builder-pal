@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
-import { setStoreIntent } from "@/lib/post-auth-intent";
+import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
 
 import {
   fetchPublicProduct,
@@ -333,13 +333,17 @@ function ProdutoPublico() {
           </button>
           <Link
             to="/register"
-            onClick={() => setStoreIntent(produto.id)}
-
+            search={{ role: "student" }}
+            onClick={() => {
+              if (noCarrinho) setCheckoutIntent();
+              else setStoreIntent(produto.id);
+            }}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
           >
             <UserPlus className="h-4 w-4" />
-            Criar conta grátis
+            {noCarrinho ? "Finalizar compra" : "Criar conta grátis"}
           </Link>
+
         </div>
         <Link
           to="/student/store"

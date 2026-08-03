@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, User, Dumbbell, Building2, Stethoscope } from "lucide-react";
+import { ArrowLeft, User, Dumbbell, Building2, Stethoscope, ShoppingCart } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
 import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { readPublicCart, type PublicCartLine } from "@/lib/public-store";
 
 
 type SearchParams = { role?: string };
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function RegisterPage() {
   const search = Route.useSearch();
   const [role, setRole] = useState<"student" | "coach" | "partner" | "professional" | null>(
@@ -35,10 +38,44 @@ function RegisterPage() {
     : null
   );
 
+  /**
+   * Quem chegou com carrinho montado na loja pública é comprador: vai direto
+   * para o cadastro de aluno, sem passar pelo seletor de perfil. Ler o
+   * carrinho só depois de montar evita divergência de hidratação (SSR).
+   */
+  const [cart, setCart] = useState<PublicCartLine[]>([]);
+  useEffect(() => {
+    const lines = readPublicCart();
+    setCart(lines);
+    if (lines.length && !search.role) setRole("student");
+  }, [search.role]);
+
+  const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
+  const cartTotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
+
   if (role === "coach") return <CoachRegistration onBack={() => setRole(null)} />;
-  if (role === "student") return <StudentRegistration onBack={() => setRole(null)} />;
+  if (role === "student") {
+    return (
+      <>
+        {cartCount > 0 && (
+          <div className="sticky top-0 z-40 border-b border-primary/20 bg-primary/10 px-4 py-2.5">
+            <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-xs font-bold text-primary">
+                <ShoppingCart className="h-4 w-4" />
+                Seu carrinho: {cartCount} {cartCount === 1 ? "item" : "itens"}
+              </span>
+              <span className="text-xs font-bold text-primary">{brl(cartTotal)}</span>
+            </div>
+          </div>
+        )}
+        <StudentRegistration onBack={() => setRole(null)} />
+      </>
+    );
+  }
   if (role === "partner") return <PartnerRegistration onBack={() => setRole(null)} />;
   if (role === "professional") return <ProfessionalRegistration onBack={() => setRole(null)} />;
+
+
 
 
   // Role selection
