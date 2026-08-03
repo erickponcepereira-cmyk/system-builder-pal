@@ -70,8 +70,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const statusFn = useServerFn(getPaymentStatus);
   const recurrenceFn = useServerFn(getSourceRecurrence);
 
-  const buildCardPayer = (cardFormData: any): Payer => {
+  const buildCardPayer = (cardFormData: any, additionalData?: any): Payer => {
     const rawName =
+      additionalData?.cardholderName ||
       cardFormData?.cardholderName ||
       cardFormData?.cardholder_name ||
       cardFormData?.card_holder_name ||
@@ -271,7 +272,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setHolderError(null);
                 toast.dismiss();
                 try {
-                  const cardPayerData = buildCardPayer(cardFormData);
+                  // No Card Payment Brick, o documento vem em cardFormData.payer,
+                  // mas o nome impresso no cartão vem em additionalData.
+                  const cardPayerData = buildCardPayer(cardFormData, additionalData);
                   const holderName = String(cardPayerData.name || "").trim();
                   const holderDoc = String(cardPayerData.doc || "").replace(/\D/g, "");
 
@@ -288,7 +291,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     return;
                   }
                   const deviceId = await getDeviceId();
-                  const cardPayer = buildCardPayer(cardFormData);
+                  const cardPayer = buildCardPayer(cardFormData, additionalData);
                   const r = await cardFn({
                     data: {
                       source,
