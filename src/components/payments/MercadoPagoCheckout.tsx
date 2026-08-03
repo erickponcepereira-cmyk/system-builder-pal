@@ -462,28 +462,15 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
       {tab === "card" && (
         <div className="space-y-3">
-          <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
+          <div className="space-y-1 rounded-lg border border-border bg-muted/50 p-3">
             <p className="text-xs font-bold text-foreground">Dados do titular do cartão</p>
             <p className="text-[11px] text-muted-foreground">
-              Cartão em nome de outra pessoa? Ajuste os dados do titular — precisam ser exatamente os do cartão.
+              O cartão pode estar em nome de outra pessoa. Preencha abaixo o nome e o documento do
+              titular exatamente como constam no cartão.
             </p>
-            <input
-              type="text"
-              placeholder="Nome completo do titular (como impresso no cartão)"
-              value={holder.name}
-              onChange={(e) => setHolder((h) => ({ ...h, name: e.target.value }))}
-              className="w-full rounded-lg bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="CPF ou CNPJ do titular"
-              value={holder.doc}
-              onChange={(e) => setHolder((h) => ({ ...h, doc: e.target.value }))}
-              className="w-full rounded-lg bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
             {holderError && <p className="text-xs font-semibold text-destructive">{holderError}</p>}
           </div>
+
           <div ref={cardFormRef} id={cardContainerId} />
 
           {recurrence && mode === "subscribe" && (
