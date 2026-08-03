@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -32,7 +32,16 @@ export const Route = createFileRoute("/produto/$id")({
   head: ({ loaderData }) => {
     const p = loaderData?.produto;
     if (!p) {
-      return { meta: [{ title: "Produto não encontrado — FitMind Club" }] };
+      return {
+        meta: [
+          { title: "Produto não encontrado — FitMind Club" },
+          { name: "description", content: "Este produto não está disponível na loja pública." },
+          { property: "og:type", content: "website" },
+          { property: "og:title", content: "Produto não encontrado — FitMind Club" },
+          { property: "og:description", content: "Este produto não está disponível na loja pública." },
+          { name: "twitter:card", content: "summary" },
+        ],
+      };
     }
     const titulo = `${p.title} — FitMind Club`;
     const descricao =
@@ -63,11 +72,62 @@ export const Route = createFileRoute("/produto/$id")({
       ],
     };
   },
+  errorComponent: ProdutoPublicoError,
+  notFoundComponent: ProdutoPublicoNotFound,
   component: ProdutoPublico,
 });
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function ProdutoPublicoNotFound() {
+  return <ProdutoPublicoIndisponivel />;
+}
+
+function ProdutoPublicoError({ reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="min-h-screen bg-background p-6 text-center">
+      <Logo className="mx-auto h-8" />
+      <p className="mt-10 text-sm font-bold text-foreground">
+        Não foi possível carregar o produto
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Verifique sua conexão e tente novamente.
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          void router.invalidate();
+          reset();
+        }}
+        className="mt-6 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+      >
+        Tentar novamente
+      </button>
+    </div>
+  );
+}
+
+function ProdutoPublicoIndisponivel() {
+  return (
+    <div className="min-h-screen bg-background p-6 text-center">
+      <Logo className="mx-auto h-8" />
+      <p className="mt-10 text-sm font-bold text-foreground">
+        Produto não encontrado
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Ele pode ter saído do ar ou o link estar incompleto.
+      </p>
+      <Link
+        to="/loja"
+        className="mt-6 inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+      >
+        Ver a loja
+      </Link>
+    </div>
+  );
+}
 
 function Preco({ p }: { p: PublicProduct }) {
   if (p.isPriceRange && p.minPrice !== null) {
@@ -156,23 +216,7 @@ function ProdutoPublico() {
   }
 
   if (!produto) {
-    return (
-      <div className="min-h-screen bg-background p-6 text-center">
-        <Logo className="mx-auto h-8" />
-        <p className="mt-10 text-sm font-bold text-white">
-          Produto não encontrado
-        </p>
-        <p className="mt-1 text-xs text-white/60">
-          Ele pode ter saído do ar ou o link estar incompleto.
-        </p>
-        <Link
-          to="/loja"
-          className="mt-6 inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
-        >
-          Ver a loja
-        </Link>
-      </div>
-    );
+    return <ProdutoPublicoIndisponivel />;
   }
 
   return (
