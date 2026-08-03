@@ -88,20 +88,17 @@ function ReferralLandingPage() {
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         setPendingProduct(productId, null);
-        const [chRes, ppRes, prRes] = await Promise.all([
-          // `products` fechou para anon em 28/07. Ler a tabela direto aqui
-          // devolvia 401 e o link do coach parava de resolver o produto
-          // exatamente para quem esta deslogado — que e o alvo do link.
-          supabase.rpc("catalogo_publico").eq("id", productId).limit(1),
-          supabase.from("partner_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
-          supabase.from("professional_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
-        ]);
-        const ch = Array.isArray(chRes.data) ? chRes.data : [];
-        const pp = ppRes.data;
-        const pr = prRes.data;
-        if (ch.length) productKind = "challenge";
-        else if ((pp as any)?.id) productKind = "partner";
-        else if ((pr as any)?.id) productKind = "professional";
+        const { data: produtoPublico } = await supabase.rpc(
+          "catalogo_publico_produto" as never,
+          { _id: productId } as never,
+        );
+        type ProdutoPublicoRow = { fonte?: string; tipo?: string };
+        const encontrado = Array.isArray(produtoPublico)
+          ? (produtoPublico[0] as ProdutoPublicoRow | undefined)
+          : undefined;
+        if (encontrado?.fonte === "partner") productKind = "partner";
+        else if (encontrado?.fonte === "professional") productKind = "professional";
+        else if (encontrado) productKind = "challenge";
         setPendingProduct(productId, productKind);
       }
       setSponsorName(row.sponsor_name || "");

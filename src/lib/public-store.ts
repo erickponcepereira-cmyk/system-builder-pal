@@ -402,67 +402,28 @@ export async function fetchPublicProduct(
 ): Promise<PublicProduct | null> {
   if (!id) return null;
 
-  // Caminho principal: a RPC. Ler `products` direto devolve 401 para anon
-  // desde 28/07, e o anonimo e exatamente o publico desta rota — era isso
-  // que fazia todo link de produto compartilhado cair em "nao encontrado".
-  // A RPC ja filtra por ativo, entao nao ha status a checar aqui.
-  const viaRpc = await supabase.rpc("catalogo_publico").eq("id", id).limit(1);
-  if (!viaRpc.error && Array.isArray(viaRpc.data) && viaRpc.data.length) {
-    return mapearProduto(
-      (viaRpc.data as unknown as Linha[])[0],
-      await carregarTaxonomia(),
-      "fitmind",
-    );
+  // Uma única RPC SECURITY DEFINER projeta somente campos seguros da vitrine
+  // e pesquisa as três origens. Isso evita que uma política interna de
+  // proprietário/admin transforme um produto válido em 401 para visitantes.
+  const { data, error } = await supabase.rpc(
+    "catalogo_publico_produto" as never,
+    { _id: id } as never,
+  );
+
+  if (error) {
+    throw new Error(`Falha ao consultar o produto público: ${error.message}`);
   }
 
-  // Fallback para sessao autenticada, onde a tabela continua legivel.
-  const { data, error } = await supabase
-    .from("products")
-    .select(`${COLUNAS_VITRINE},status,is_active`)
-    .eq("id", id)
-    .limit(1);
+  const linha = Array.isArray(data)
+    ? (data as unknown as Linha[])[0]
+    : undefined;
+  if (!linha) return null;
 
-  const linha = error ? undefined : ((data ?? []) as unknown as Linha[])[0];
+  const fonte = linha.fonte;
+  const source: PublicProductSource =
+    fonte === "partner" || fonte === "professional" ? fonte : "fitmind";
 
-  if (linha) {
-    const ativo =
-      linha.kind === null || linha.kind === undefined
-        ? linha.status === "active"
-        : linha.is_active === true;
-    if (!ativo) return null;
-    return mapearProduto(linha, await carregarTaxonomia(), "fitmind");
-  }
-
-  // Permalinks de parceiro e profissional usam a mesma rota `/produto/{id}`.
-  const [parceiro, profissional] = await Promise.all([
-    supabase
-      .from("partner_products")
-      .select(COLUNAS_VITRINE_TERCEIROS)
-      .eq("id", id)
-      .eq("status", "approved")
-      .limit(1),
-    supabase
-      .from("professional_products")
-      .select(COLUNAS_VITRINE_TERCEIROS)
-      .eq("id", id)
-      .eq("status", "approved")
-      .eq("is_active_by_professional", true)
-      .limit(1),
-  ]);
-
-  const doParceiro = ((parceiro.data ?? []) as unknown as Linha[])[0];
-  if (doParceiro) {
-    return mapearProduto(doParceiro, await carregarTaxonomia(), "partner");
-  }
-  const doProfissional = ((profissional.data ?? []) as unknown as Linha[])[0];
-  if (doProfissional) {
-    return mapearProduto(
-      doProfissional,
-      await carregarTaxonomia(),
-      "professional",
-    );
-  }
-  return null;
+  return mapearProduto(linha, await carregarTaxonomia(), source);
 }
 
 
