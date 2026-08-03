@@ -535,6 +535,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                     onClick={() => {
                       setPaymentError(null);
                       setLastStatusDetail(null);
+                      setHolderError(null);
+                      setCardNotice(null);
                       setTab("pix");
                     }}
                     className="rounded bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
@@ -547,6 +549,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                   onClick={() => {
                     setPaymentError(null);
                     setLastStatusDetail(null);
+                    setHolderError(null);
+                    setCardNotice(null);
                     setCardAttempt((v) => v + 1);
                   }}
                   className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
