@@ -230,7 +230,28 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
           customization: { paymentMethods: { maxInstallments: 12 }, visual: { hideFormTitle: true } },
 
           callbacks: {
-            onReady: () => { console.log("[MP Checkout] Brick pronto"); },
+            onReady: () => {
+              console.log("[MP Checkout] Brick pronto");
+              // Autofill do navegador preenche o campo sem disparar eventos, e o Brick
+              // continua marcando "Dado obrigatório". Desliga o autofill e ressincroniza.
+              try {
+                const root = document.getElementById(cardContainerId);
+                const inputs = root?.querySelectorAll<HTMLInputElement>("input") ?? [];
+                inputs.forEach((el) => {
+                  const id = `${el.id || ""} ${el.name || ""}`.toLowerCase();
+                  if (id.includes("cardholder") || id.includes("identification") || id.includes("doc")) {
+                    el.setAttribute("autocomplete", "off");
+                    el.setAttribute("autocorrect", "off");
+                    el.setAttribute("spellcheck", "false");
+                  }
+                  if (el.value) {
+                    el.dispatchEvent(new Event("input", { bubbles: true }));
+                    el.dispatchEvent(new Event("change", { bubbles: true }));
+                  }
+                });
+              } catch { /* ignore */ }
+            },
+
             onError: (err: any) => {
               console.error("[MP Brick error - full]", err);
               try { console.error("[MP Brick error - JSON]", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
