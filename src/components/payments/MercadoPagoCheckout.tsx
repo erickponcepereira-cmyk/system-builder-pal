@@ -99,7 +99,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
   useEffect(() => { saveCardRef.current = saveCard; }, [saveCard]);
   useEffect(() => { subscribeRef.current = mode === "subscribe"; }, [mode]);
-  useEffect(() => { holderRef.current = holder; }, [holder]);
+  
 
   // Produto de assinatura? Oferece as duas formas de pagamento ao cliente.
   useEffect(() => {
