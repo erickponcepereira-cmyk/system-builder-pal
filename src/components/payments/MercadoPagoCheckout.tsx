@@ -250,9 +250,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                 setHolderError(null);
                 toast.dismiss();
                 try {
-                  const holderNow = holderRef.current;
-                  const holderName = String(holderNow.name || "").trim();
-                  const holderDoc = String(holderNow.doc || "").replace(/\D/g, "");
+                  const cardPayerData = buildCardPayer(cardFormData);
+                  const holderName = String(cardPayerData.name || "").trim();
+                  const holderDoc = String(cardPayerData.doc || "").replace(/\D/g, "");
+
                   if (holderName.split(/\s+/).filter(Boolean).length < 2) {
                     setHolderError("Informe o nome completo do titular, como impresso no cartão.");
                     setCardLoading(false);
