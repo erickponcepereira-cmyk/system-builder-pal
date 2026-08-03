@@ -11748,6 +11748,25 @@ export type Database = {
           subtitulo: string
         }[]
       }
+      catalogo_publico_produto: {
+        Args: { _id: string }
+        Returns: {
+          badge: string
+          categoria_id: string
+          descricao: string
+          estoque: number
+          fonte: string
+          id: string
+          imagem_url: string
+          nome: string
+          preco: number
+          preco_original: number
+          secao_id: string
+          subcategoria_id: string
+          subtitulo: string
+          tipo: string
+        }[]
+      }
       coach_assessment_counts: {
         Args: { _coach_id: string; _master?: boolean }
         Returns: {
