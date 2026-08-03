@@ -40,13 +40,9 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
 export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
-  // Titular do cartão: pré-preenchido com o comprador, mas editável.
-  const [holder, setHolder] = useState<{ name: string; doc: string }>({
-    name: defaultPayer?.name || "",
-    doc: defaultPayer?.doc || "",
-  });
+  // Titular do cartão vem dos campos oficiais do Brick (podem ser de outra pessoa).
   const [holderError, setHolderError] = useState<string | null>(null);
-  const holderRef = useRef<{ name: string; doc: string }>({ name: "", doc: "" });
+
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [cardNotice, setCardNotice] = useState<string | null>(null);
   const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
