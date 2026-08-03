@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Lock, ShoppingBag, X } from "lucide-react";
+import { Lock, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import type { PublicProduct } from "@/lib/public-store";
 import { setStoreIntent } from "@/lib/post-auth-intent";
 
@@ -12,15 +12,21 @@ const fmt = (n: number) =>
  *
  * Somente campos de vitrine (os mesmos que já vêm de `public-store.ts`).
  * Nada de ficha completa, contato do vendedor, estoque exato, taxa,
- * comissão ou cupom: isso é da área logada. Comprar exige conta.
+ * comissão ou cupom: isso é da área logada. Comprar exige conta — mas
+ * montar o carrinho, não: é o que sustenta a intenção até o cadastro.
  */
 export function PublicProductModal({
   product,
   onClose,
+  onAddToCart,
+  inCartQuantity = 0,
 }: {
   product: PublicProduct;
   onClose: () => void;
+  onAddToCart?: (product: PublicProduct) => void;
+  inCartQuantity?: number;
 }) {
+
   const p = product;
   const preco =
     p.isPriceRange && p.minPrice != null
@@ -74,26 +80,50 @@ export function PublicProductModal({
 
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Ficha completa, condições e compra ficam disponíveis para membros do
-          FitMind Club.
+          Monte seu carrinho à vontade. A conta só é pedida na hora de finalizar
+          a compra.
         </p>
 
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground"
-          >
-            Continuar olhando
-          </button>
-          <Link
-            to="/register"
-            onClick={() => setStoreIntent(p.id)}
+        {onAddToCart ? (
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={() => onAddToCart(p)}
+              disabled={!p.inStock}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {!p.inStock
+                ? "Indisponível"
+                : inCartQuantity > 0
+                  ? `No carrinho (${inCartQuantity}) — adicionar mais`
+                  : "Adicionar ao carrinho"}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground"
+            >
+              Continuar olhando
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground"
+            >
+              Continuar olhando
+            </button>
+            <Link
+              to="/register"
+              search={{ role: "student" }}
+              onClick={() => setStoreIntent(p.id)}
+              className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
+            >
+              Criar conta
+            </Link>
+          </div>
+        )}
 
-            className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
-          >
-            Criar conta
-          </Link>
-        </div>
       </div>
     </div>
   );

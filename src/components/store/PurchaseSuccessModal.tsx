@@ -51,7 +51,7 @@ export function PurchaseSuccessModal({ productId, productName, price, kind, buye
                 <IdCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 Parabéns, você acabou de receber {cardDays} dias de benefícios gratuitos, venha conferir!
               </p>
-              <Link to="/gratuitos" onClick={onClose} className="mt-2 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">
+              <Link to="/student/benefits" onClick={onClose} className="mt-2 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">
                 Ver gratuitos
               </Link>
             </div>

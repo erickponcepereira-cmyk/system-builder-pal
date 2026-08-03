@@ -18,6 +18,8 @@ import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
+import { clearPublicCart, readPublicCart } from "@/lib/public-store";
+
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -83,10 +85,13 @@ interface StorePageProps {
   /** Audiência do visualizador para filtro de visibility_audiences. */
   audience?: "student" | "coach" | "partner" | "professional";
   requestedProductId?: string;
+  /** Veio da loja pública com carrinho montado: abre o checkout direto. */
+  openCheckout?: boolean;
 }
 
-export function StorePage({ coachMode = false, hasUpline = false, audience, requestedProductId }: StorePageProps = {}) {
+export function StorePage({ coachMode = false, hasUpline = false, audience, requestedProductId, openCheckout = false }: StorePageProps = {}) {
   const navigate = useNavigate();
+
 
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
@@ -466,6 +471,39 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
     if (!requestedProductId || coachMode) return;
     void navigate({ to: "/student/store", search: {}, replace: true });
   };
+
+  /**
+   * Carrinho montado na loja pública (antes de existir conta) é importado uma
+   * única vez, assim que o catálogo real carrega. Casamos pelo id do produto —
+   * a loja logada prefixa o id por tipo (`plan-…`, `partner-…`), por isso o
+   * casamento aceita sufixo. Preço/estoque vêm sempre do catálogo real.
+   */
+  const [publicCartImported, setPublicCartImported] = useState(false);
+  useEffect(() => {
+    if (coachMode || publicCartImported || !catalogLoaded) return;
+    const lines = readPublicCart();
+    if (!lines.length) { setPublicCartImported(true); return; }
+
+    const matched: CartItem[] = [];
+    for (const line of lines) {
+      const found = items.find((it) => it.id === line.id || it.id.endsWith(`-${line.id}`));
+      if (found) matched.push({ ...found, quantity: line.quantity });
+    }
+    clearPublicCart();
+    setPublicCartImported(true);
+    if (!matched.length) return;
+
+    setCart((current) => {
+      const existing = new Set(current.map((c) => c.id));
+      return [...current, ...matched.filter((m) => !existing.has(m.id))];
+    });
+    if (openCheckout) setCartOpen(true);
+    if (matched.length < lines.length) {
+      toast.info("Alguns itens do seu carrinho não estão mais disponíveis.");
+    }
+  }, [catalogLoaded, coachMode, items, openCheckout, publicCartImported]);
+
+
 
 
   useEffect(() => {

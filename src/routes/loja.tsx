@@ -1,15 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Gift, Search, ShoppingBag } from "lucide-react";
+import { Gift, Minus, Plus, Search, ShoppingBag, ShoppingCart, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { PublicProductModal } from "@/components/store/public/PublicProductModal";
 import {
+  addPublicCartLine, clearPublicCart,
   fetchPublicBenefits, fetchPublicCatalog, fetchPublicTaxonomy,
-  readReferralContext,
-  type PublicBenefit, type PublicProduct, type PublicTaxonomy,
+  readPublicCart, readReferralContext, removePublicCartLine, setPublicCartQuantity,
+  type PublicBenefit, type PublicCartLine, type PublicProduct, type PublicTaxonomy,
   type PublicTaxonomyCard,
 } from "@/lib/public-store";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
-import { setStoreIntent } from "@/lib/post-auth-intent";
+import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
+
 
 
 /**
@@ -76,6 +79,8 @@ function PublicStorePage() {
 
   const [detail, setDetail] = useState<PublicProduct | null>(null);
   const [montado, setMontado] = useState(false);
+  const [cart, setCart] = useState<PublicCartLine[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
   const [referral, setReferral] = useState<{ referralCode: string | null; sponsorName: string | null }>({
     referralCode: null, sponsorName: null,
   });
@@ -87,8 +92,21 @@ function PublicStorePage() {
    */
   useEffect(() => {
     setReferral(readReferralContext());
+    setCart(readPublicCart());
     setMontado(true);
   }, []);
+
+  const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
+  const cartTotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
+
+  const adicionarAoCarrinho = (p: PublicProduct) => {
+    setCart(addPublicCartLine(p));
+    setDetail(null);
+    setCartOpen(true);
+    toast.success("Adicionado ao carrinho.");
+  };
+
+
 
   useEffect(() => {
     if (!montado) return;
@@ -198,18 +216,33 @@ function PublicStorePage() {
   });
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 bg-background p-4 pb-16">
-      <header className="pt-2">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
-        <h1 className="text-2xl font-bold text-foreground">
-          {referral.sponsorName ? `Loja de ${referral.sponsorName}` : "FitMind Club"}
-        </h1>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {referral.sponsorName
-            ? "Você chegou por indicação — navegue à vontade."
-            : "Navegue livre. A conta só é necessária na hora de comprar."}
-        </p>
+    <main className="flex min-h-screen flex-col gap-4 bg-background p-4 pb-28">
+      <header className="flex items-start justify-between gap-3 pt-2">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {referral.sponsorName ? `Loja de ${referral.sponsorName}` : "FitMind Club"}
+          </h1>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {referral.sponsorName
+              ? "Você chegou por indicação — navegue à vontade."
+              : "Navegue livre. A conta só é necessária na hora de comprar."}
+          </p>
+        </div>
+        <button
+          onClick={() => setCartOpen(true)}
+          aria-label="Ver carrinho"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card"
+        >
+          <ShoppingCart className="h-5 w-5 text-foreground" />
+          {montado && cartCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+              {cartCount}
+            </span>
+          )}
+        </button>
       </header>
+
 
       <div className="flex gap-2 rounded-full bg-card p-1">
         {TABS.map((t) => (
@@ -349,38 +382,48 @@ function PublicStorePage() {
           {mostrarProdutos && (
             <div className="grid grid-cols-2 gap-3">
               {filtered.map((item) => (
-                <button
+                <div
                   key={`${item.source}-${item.id}`}
-                  onClick={() => setDetail(item)}
-                  className="w-full rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent"
+                  className="flex w-full flex-col rounded-2xl bg-card p-3 text-left"
                 >
-                  <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.title} className="h-full w-full object-contain" />
-                    ) : (
-                      <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                  <button onClick={() => setDetail(item)} className="text-left">
+                    <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.title} className="h-full w-full object-contain" />
+                      ) : (
+                        <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    {item.badgeLabel && (
+                      <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">
+                        {item.badgeLabel}
+                      </span>
                     )}
-                  </div>
-                  {item.badgeLabel && (
-                    <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">
-                      {item.badgeLabel}
-                    </span>
-                  )}
-                  <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
-                  {item.subtitle && (
-                    <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>
-                  )}
-                  <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>
+                    <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
+                    {item.subtitle && (
+                      <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>
                     )}
-                  </div>
-                  {!item.inStock && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">Indisponível no momento</p>
-                  )}
-                </button>
+                    <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                      <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
+                      {item.originalPrice && item.originalPrice > item.price && (
+                        <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>
+                      )}
+                    </div>
+                    {!item.inStock && (
+                      <p className="mt-1 text-[10px] text-muted-foreground">Indisponível no momento</p>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => adicionarAoCarrinho(item)}
+                    disabled={!item.inStock}
+                    className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-[11px] font-bold text-primary-foreground disabled:opacity-40"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Adicionar
+                  </button>
+                </div>
               ))}
+
               {filtered.length === 0 && (
                 <p className="col-span-2 py-10 text-center text-sm text-muted-foreground">
                   {buscando ? `Nada encontrado para “${query}”.` : "Nenhum item nesta seção por enquanto."}
@@ -425,20 +468,144 @@ function PublicStorePage() {
       <div className="mt-2 rounded-2xl bg-card p-4">
         <p className="text-sm font-bold text-foreground">Quer comprar?</p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-          A compra acontece dentro do clube. Crie sua conta para finalizar o
-          pedido e acessar todos os benefícios.
+          Monte seu carrinho aqui mesmo. A conta é criada na hora de finalizar —
+          leva menos de um minuto com o Google.
         </p>
         <Link
           to="/register"
-          onClick={() => setStoreIntent(null)}
-
+          search={{ role: "student" }}
+          onClick={() => (cartCount > 0 ? setCheckoutIntent() : setStoreIntent(null))}
           className="mt-3 block rounded-xl bg-primary px-4 py-3 text-center text-sm font-bold text-primary-foreground"
         >
-          Criar conta
+          {cartCount > 0 ? "Finalizar compra" : "Criar conta"}
         </Link>
       </div>
 
-      {detail && <PublicProductModal product={detail} onClose={() => setDetail(null)} />}
+      {/* Barra fixa do carrinho — some quando vazio, como nos marketplaces. */}
+      {montado && cartCount > 0 && !cartOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="mx-auto flex w-full max-w-md items-center justify-between rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              {cartCount} {cartCount === 1 ? "item" : "itens"}
+            </span>
+            <span>{fmt(cartTotal)}</span>
+          </button>
+        </div>
+      )}
+
+      {cartOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm modal-safe overflow-y-auto overscroll-contain sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-2xl bg-card p-4 sm:rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Seu carrinho</h2>
+                <p className="text-xs text-muted-foreground">
+                  {cartCount} {cartCount === 1 ? "item" : "itens"}
+                </p>
+              </div>
+              <button onClick={() => setCartOpen(false)} aria-label="Fechar" className="rounded-lg p-1 text-muted-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {cart.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Seu carrinho está vazio.
+              </p>
+            ) : (
+              <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto">
+                {cart.map((line) => (
+                  <div key={line.id} className="flex items-center gap-3 rounded-xl bg-muted p-2.5">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
+                      {line.imageUrl ? (
+                        <img src={line.imageUrl} alt={line.title} className="h-full w-full object-contain" />
+                      ) : (
+                        <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold text-foreground">{line.title}</p>
+                      <p className="text-[11px] text-muted-foreground">{fmt(line.price * line.quantity)}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <button
+                          aria-label="Diminuir"
+                          onClick={() => setCart(setPublicCartQuantity(line.id, line.quantity - 1))}
+                          className="rounded-md bg-background p-1"
+                        >
+                          <Minus className="h-3 w-3 text-foreground" />
+                        </button>
+                        <span className="text-xs font-bold text-foreground">{line.quantity}</span>
+                        <button
+                          aria-label="Aumentar"
+                          onClick={() => setCart(setPublicCartQuantity(line.id, line.quantity + 1))}
+                          className="rounded-md bg-background p-1"
+                        >
+                          <Plus className="h-3 w-3 text-foreground" />
+                        </button>
+                      </div>
+                    </div>
+                    <button aria-label="Remover" onClick={() => setCart(removePublicCartLine(line.id))}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-lg font-bold text-foreground">{fmt(cartTotal)}</span>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Valores de vitrine. O total final é confirmado no checkout, dentro do app.
+            </p>
+
+            <div className="mt-4 space-y-2">
+              <Link
+                to="/register"
+                search={{ role: "student" }}
+                onClick={setCheckoutIntent}
+                className={`block rounded-xl px-4 py-3 text-center text-sm font-bold ${
+                  cart.length === 0
+                    ? "pointer-events-none bg-muted text-muted-foreground"
+                    : "bg-primary text-primary-foreground"
+                }`}
+              >
+                Finalizar compra
+              </Link>
+              <Link
+                to="/login"
+                onClick={setCheckoutIntent}
+                className="block rounded-xl bg-muted px-4 py-3 text-center text-sm font-bold text-foreground"
+              >
+                Já tenho conta — entrar
+              </Link>
+              {cart.length > 0 && (
+                <button
+                  onClick={() => { clearPublicCart(); setCart([]); }}
+                  className="w-full py-2 text-center text-[11px] text-muted-foreground underline"
+                >
+                  Esvaziar carrinho
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detail && (
+        <PublicProductModal
+          product={detail}
+          onClose={() => setDetail(null)}
+          onAddToCart={adicionarAoCarrinho}
+          inCartQuantity={cart.find((l) => l.id === detail.id)?.quantity ?? 0}
+        />
+      )}
+
     </main>
   );
 }

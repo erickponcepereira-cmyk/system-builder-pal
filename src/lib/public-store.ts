@@ -464,15 +464,14 @@ export const PUBLIC_STORE_IS_MOCKED = false;
  * ------------------------------------------------------------------ */
 
 /**
- * MESMA chave que a loja logada usa (`StorePage.tsx:96`), de propósito:
- * o carrinho montado deslogado é o mesmo objeto que a `StorePage` lê depois
- * do cadastro. É isso que faz o carrinho "continuar lá" sem código de
- * migração — desde que nada no fluxo de signup limpe o localStorage.
+ * Chave PRÓPRIA do carrinho público.
  *
- * PENDENTE DE VERIFICAÇÃO: auditar `register.tsx` e o `onAuthStateChange`
- * para garantir que nenhum `localStorage.clear()` roda no cadastro.
+ * Não pode ser a mesma da loja logada: lá cada linha carrega `sourceId`,
+ * `kind` interno e campos financeiros. Se as duas dividissem a chave, o
+ * checkout logado leria linhas incompletas e criaria pedido inválido.
+ * A migração acontece de forma explícita em `StorePage` após o login.
  */
-export const PUBLIC_CART_STORAGE_KEY = "fitmind_cart_student";
+export const PUBLIC_CART_STORAGE_KEY = "fitmind_public_cart";
 
 export interface PublicCartLine {
   id: string;
@@ -489,7 +488,12 @@ export function readPublicCart(): PublicCartLine[] {
     const raw = window.localStorage.getItem(PUBLIC_CART_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as PublicCartLine[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    // Só aceita linhas no formato novo — restos do formato antigo (que dividia
+    // a chave com a loja logada) são descartados em silêncio.
+    return (parsed as PublicCartLine[]).filter(
+      (l) => l && typeof l.id === "string" && typeof l.price === "number" && typeof l.quantity === "number",
+    );
   } catch {
     return [];
   }
@@ -507,3 +511,49 @@ export function writePublicCart(lines: PublicCartLine[]): void {
     /* quota cheia ou storage bloqueado — carrinho degrada para sessão */
   }
 }
+
+/** Adiciona (ou incrementa) um produto da vitrine pública no carrinho. */
+export function addPublicCartLine(product: PublicProduct, quantity = 1): PublicCartLine[] {
+  const atual = readPublicCart();
+  const existente = atual.find((l) => l.id === product.id);
+  const proximo = existente
+    ? atual.map((l) => (l.id === product.id ? { ...l, quantity: l.quantity + quantity } : l))
+    : [
+        ...atual,
+        {
+          id: product.id,
+          kind: product.kind,
+          title: product.title,
+          // Faixa de preço: guarda o menor valor só como referência de vitrine;
+          // o valor cobrado é sempre recalculado no servidor no checkout.
+          price: product.isPriceRange && product.minPrice != null ? product.minPrice : product.price,
+          imageUrl: product.imageUrl,
+          quantity,
+        },
+      ];
+  writePublicCart(proximo);
+  return proximo;
+}
+
+export function setPublicCartQuantity(id: string, quantity: number): PublicCartLine[] {
+  const proximo = readPublicCart()
+    .map((l) => (l.id === id ? { ...l, quantity: Math.max(0, quantity) } : l))
+    .filter((l) => l.quantity > 0);
+  writePublicCart(proximo);
+  return proximo;
+}
+
+export function removePublicCartLine(id: string): PublicCartLine[] {
+  const proximo = readPublicCart().filter((l) => l.id !== id);
+  writePublicCart(proximo);
+  return proximo;
+}
+
+export function clearPublicCart(): void {
+  writePublicCart([]);
+}
+
+export function publicCartCount(lines?: PublicCartLine[]): number {
+  return (lines ?? readPublicCart()).reduce((s, l) => s + l.quantity, 0);
+}
+

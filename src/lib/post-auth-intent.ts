@@ -72,3 +72,8 @@ export function setStoreIntent(productId?: string | null) {
     productId ? `/student/store?produto=${encodeURIComponent(productId)}` : "/student/store",
   );
 }
+
+/** Atalho: voltar direto para o checkout da loja logada (carrinho público). */
+export function setCheckoutIntent() {
+  setPostAuthIntent("/student/store?checkout=1");
+}
