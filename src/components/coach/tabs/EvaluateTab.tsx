@@ -976,6 +976,7 @@ export function EvaluateTab() {
         coach={coachInfo}
         clients={clients}
         initialClientId={challengeLink?.preferredClientId}
+        initialStudentId={challengeLink?.studentId}
         initialSelectionKey={challengeLink?.nonce ? String(challengeLink.nonce) : undefined}
         getChallengeCandidatesForClient={(client) => {
           const freshClient = clients.find((item) => item.id === client.id);
