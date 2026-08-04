@@ -512,6 +512,11 @@ export function EvaluateTab() {
       preferredClientId: resolved,
       nonce: Date.now(),
     });
+    // Aviso caso a ficha não esteja na lista visível (não deve acontecer,
+    // mas evita o clique "não fazer nada" em silêncio).
+    if (Array.isArray(list) && list.length && !list.some((c: any) => c.id === resolved || c.studentId === studentId)) {
+      toast.error("Não foi possível abrir a ficha deste aluno. Recarregue a página e tente novamente.");
+    }
     // Scroll para o topo pra o FitMindShape auto-selecionar
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
   };
@@ -601,7 +606,10 @@ export function EvaluateTab() {
       next_assessment_time: nz(assessment.nextAssessmentTime),
       group_id: nz(assessment.groupId),
     };
-    if (challengeLink && client.id === challengeLink.preferredClientId) {
+    const matchesChallengeLink = !!challengeLink
+      && (client.id === challengeLink.preferredClientId
+        || (client as any).studentId === challengeLink.studentId);
+    if (challengeLink && matchesChallengeLink) {
       payload.student_id = challengeLink.studentId;
       payload.challenge_enrollment_id = challengeLink.enrollmentId;
       payload.challenge_type = challengeLink.type;
@@ -618,7 +626,7 @@ export function EvaluateTab() {
       toast.error(error.message || "Erro ao salvar avaliação");
       throw error;
     }
-    if (challengeLink && client.id === challengeLink.preferredClientId) {
+    if (challengeLink && matchesChallengeLink) {
       toast.success(`Avaliação vinculada ao Desafio (${challengeLink.type === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`);
       setTimeout(() => navigate({ to: "/coach", search: { tab: "challenge" } as any }), 800);
     } else {
@@ -971,6 +979,7 @@ export function EvaluateTab() {
         coach={coachInfo}
         clients={clients}
         initialClientId={challengeLink?.preferredClientId}
+        initialStudentId={challengeLink?.studentId}
         initialSelectionKey={challengeLink?.nonce ? String(challengeLink.nonce) : undefined}
         getChallengeCandidatesForClient={(client) => {
           const freshClient = clients.find((item) => item.id === client.id);
