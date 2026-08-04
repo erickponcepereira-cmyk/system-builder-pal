@@ -23,7 +23,35 @@ financeiro.
 | **Data** | 31/07/2026 |
 | **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
 | **Toca em dinheiro?** | Não |
-| **Aplicada em produção?** | Ainda não |
+| **Aplicada em produção?** | **Sim — 04/08/2026**, pelo editor SQL do Lovable |
+
+### Conferência pós-aplicação (04/08/2026)
+
+Verificado pela API REST do Supabase, que é a fonte confiável (o texto do editor
+do Lovable engana — ver notas abaixo):
+
+| item | estado |
+|---|---|
+| `bot_conexoes`, `bot_fluxos`, `bot_passos`, `bot_opcoes`, `bot_conversas`, `bot_mensagens` | todas existem |
+| coluna `bot_mensagens.status` (fila de saída) | ok |
+| `bot_acesso_dono`, `bot_acesso_conexao`, `bot_clonar_fluxo` | existem |
+| 6 tabelas com RLS, 12 políticas | confirmado por consulta |
+| gatilhos | o lote aplicou com "Query succeeded" e colagem limpa (1307 de 1306 caracteres), mas **não foi possível reconfirmar por consulta** — o editor entrou em laço de diálogo. Confirmar rodando: `SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE NOT t.tgisinternal AND c.relname LIKE 'bot%'` — esperado 5 |
+
+### Armadilhas do editor SQL do Lovable (custaram tempo nas duas migrations)
+
+1. **Falso positivo de "operação destrutiva".** Ele acusa qualquer SQL que
+   contenha as palavras DELETE, UPDATE ou ALTER — inclusive quando é só o nome
+   do privilégio em `GRANT SELECT, INSERT, UPDATE, DELETE`.
+2. **O diálogo bloqueia o botão Clear.** Com ele aberto, a colagem seguinte
+   **concatena** em vez de substituir, e o SQL sai corrompido. Sempre conferir
+   se o tamanho colado bate com o esperado antes de executar.
+3. **O editor guarda o conteúdo entre sessões.** Recarregar a página não limpa.
+4. **"Query succeeded" na tela não prova nada** quando houve concatenação.
+   Verificar sempre pela API REST (`/rest/v1/rpc/<funcao>`: 404 = não existe;
+   401 = existe e negou para anon, que é o esperado).
+5. **A interface alterna entre inglês e português** no meio da sessão — os
+   botões viram "Executar", "Limpar", "Corra de qualquer maneira".
 
 ### O que cria
 
@@ -208,3 +236,22 @@ separadas, o gatilho atualizou corretamente.
 Observação sobre o editor do Lovable: ele acusa "operação destrutiva" quando o
 SQL contém a palavra DELETE, mesmo que seja só o privilégio em
 `GRANT SELECT, INSERT, UPDATE, DELETE`. É falso positivo.
+
+
+---
+
+## 20260804120000_crm_v2.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 04/08/2026 |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 04/08/2026** |
+
+Separa funil de quadro (coluna `tipo`), adiciona `crm_cartoes.origem`, e cria
+`crm_criar_quadro` e `crm_importar_contatos`. Confirmado pela API REST: as duas
+funcoes existem e as duas colunas respondem.
+
+Corrige tambem `src/lib/admin-crm.functions.ts`, que usava `.maybeSingle()` para
+buscar o quadro do dono — isso quebraria assim que existisse um segundo funil.
