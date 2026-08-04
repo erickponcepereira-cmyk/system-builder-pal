@@ -3,9 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2, FileText, RefreshCw, Download, Printer, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
+import { syncEnrollmentCoaches, getChallengeReport, type ChallengeReportRow } from "@/lib/challenge-admin.functions";
+import { whatsappUrl } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/_authenticated/admin/challenge")({
   component: AdminChallengePage,
@@ -38,7 +40,7 @@ type Enrollment = {
   result_fat_pct_lost: number | null;
   result_muscle_gain_pct: number | null;
   result_kg_lost: number | null;
-  student: { id: string; profile: { name: string } };
+  student: { id: string; profile: { name: string; phone?: string | null } };
   coach: { profile: { name: string } };
 };
 type Student = { id: string; coach_id: string; profile: { name: string }; coach: { profile: { name: string } } };
@@ -163,7 +165,7 @@ function AdminChallengePage() {
           initial_share_url, final_share_url,
           result_kg, result_pct,
           result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
-          student:student_id ( id, profile:profile_id ( name ) ),
+          student:student_id ( id, profile:profile_id ( name, phone ) ),
           coach:coach_id ( profile:profile_id ( name ) )
         )
       `)
@@ -398,7 +400,7 @@ function AdminChallengePage() {
             initial_share_url, final_share_url,
             result_kg, result_pct,
             result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
-            student:student_id ( id, profile:profile_id ( name ) ),
+            student:student_id ( id, profile:profile_id ( name, phone ) ),
             coach:coach_id ( profile:profile_id ( name ) )
           )
         `)
@@ -727,6 +729,7 @@ function AdminChallengePage() {
                           <tr className="border-b border-border text-muted-foreground">
                             <th className="px-3 py-2 text-left">Aluno</th>
                             <th className="px-3 py-2 text-left">Coach</th>
+                            <th className="px-3 py-2 text-left">WhatsApp</th>
                             <th className="px-3 py-2 text-center">Gen</th>
                             <th className="px-3 py-2 text-center">Inicial</th>
                             <th className="px-3 py-2 text-center">Final</th>
@@ -741,6 +744,15 @@ function AdminChallengePage() {
                               <tr key={enroll.id} className="border-b border-border/50 hover:bg-muted/10">
                                 <td className="px-3 py-2 font-medium text-foreground">{(enroll.student as any)?.profile?.name || "—"}</td>
                                 <td className="px-3 py-2 text-muted-foreground">{(enroll.coach as any)?.profile?.name || "—"}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {(() => {
+                                    const phone = ((enroll.student as any)?.profile?.phone || "").trim();
+                                    const url = whatsappUrl(phone);
+                                    return phone && url ? (
+                                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">{phone}</a>
+                                    ) : <span className="text-muted-foreground">—</span>;
+                                  })()}
+                                </td>
                                 <td className="px-3 py-2 text-center">
                                   <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${enroll.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"}`}>{enroll.gender}</span>
                                 </td>
