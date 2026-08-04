@@ -49,6 +49,9 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as ApiBotFilaRouteImport } from './routes/api.bot.fila'
+import { Route as ApiBotEventosRouteImport } from './routes/api.bot.eventos'
+import { Route as ApiBotConfirmarRouteImport } from './routes/api.bot.confirmar'
 import { Route as AuthenticatedUpgradeRoleRouteImport } from './routes/_authenticated/upgrade.$role'
 import { Route as AuthenticatedStudentWorkoutRouteImport } from './routes/_authenticated/student.workout'
 import { Route as AuthenticatedStudentSupportRouteImport } from './routes/_authenticated/student.support'
@@ -86,6 +89,7 @@ import { Route as AuthenticatedAdminStudentTraceRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminStoreReportsRouteImport } from './routes/_authenticated/admin.store-reports'
 import { Route as AuthenticatedAdminStoreRouteImport } from './routes/_authenticated/admin.store'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
+import { Route as AuthenticatedAdminRoboRouteImport } from './routes/_authenticated/admin.robo'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminReferralLinksRouteImport } from './routes/_authenticated/admin.referral-links'
 import { Route as AuthenticatedAdminPushNotificationsRouteImport } from './routes/_authenticated/admin.push-notifications'
@@ -120,7 +124,6 @@ import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/
 import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
 import { Route as AuthenticatedAdminCrmRouteImport } from './routes/_authenticated/admin.crm'
-import { Route as AuthenticatedAdminRoboRouteImport } from './routes/_authenticated/admin.robo'
 import { Route as AuthenticatedAdminCoachesRouteImport } from './routes/_authenticated/admin.coaches'
 import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_authenticated/admin.coach-releases'
 import { Route as AuthenticatedAdminCoachIdsRouteImport } from './routes/_authenticated/admin.coach-ids'
@@ -353,6 +356,21 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const ApiBotFilaRoute = ApiBotFilaRouteImport.update({
+  id: '/api/bot/fila',
+  path: '/api/bot/fila',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotEventosRoute = ApiBotEventosRouteImport.update({
+  id: '/api/bot/eventos',
+  path: '/api/bot/eventos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotConfirmarRoute = ApiBotConfirmarRouteImport.update({
+  id: '/api/bot/confirmar',
+  path: '/api/bot/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedUpgradeRoleRoute =
   AuthenticatedUpgradeRoleRouteImport.update({
     id: '/upgrade/$role',
@@ -573,6 +591,11 @@ const AuthenticatedAdminSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminRoboRoute = AuthenticatedAdminRoboRouteImport.update({
+  id: '/robo',
+  path: '/robo',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminReportsRoute =
   AuthenticatedAdminReportsRouteImport.update({
     id: '/reports',
@@ -774,11 +797,6 @@ const AuthenticatedAdminDigitalProductsRoute =
 const AuthenticatedAdminCrmRoute = AuthenticatedAdminCrmRouteImport.update({
   id: '/crm',
   path: '/crm',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
-const AuthenticatedAdminRoboRoute = AuthenticatedAdminRoboRouteImport.update({
-  id: '/robo',
-  path: '/robo',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
 const AuthenticatedAdminCoachesRoute =
@@ -989,7 +1007,6 @@ export interface FileRoutesByFullPath {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
-  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1023,6 +1040,7 @@ export interface FileRoutesByFullPath {
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
+  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
   '/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
@@ -1060,6 +1078,9 @@ export interface FileRoutesByFullPath {
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/confirmar': typeof ApiBotConfirmarRoute
+  '/api/bot/eventos': typeof ApiBotEventosRoute
+  '/api/bot/fila': typeof ApiBotFilaRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/student/': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1127,7 +1148,6 @@ export interface FileRoutesByTo {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
-  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1161,6 +1181,7 @@ export interface FileRoutesByTo {
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
+  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
   '/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
@@ -1198,6 +1219,9 @@ export interface FileRoutesByTo {
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/confirmar': typeof ApiBotConfirmarRoute
+  '/api/bot/eventos': typeof ApiBotEventosRoute
+  '/api/bot/fila': typeof ApiBotFilaRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/student': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1269,7 +1293,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/_authenticated/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/_authenticated/admin/crm': typeof AuthenticatedAdminCrmRoute
-  '/_authenticated/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1303,6 +1326,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/_authenticated/admin/referral-links': typeof AuthenticatedAdminReferralLinksRoute
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
+  '/_authenticated/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/store': typeof AuthenticatedAdminStoreRoute
   '/_authenticated/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
@@ -1340,6 +1364,9 @@ export interface FileRoutesById {
   '/_authenticated/student/support': typeof AuthenticatedStudentSupportRoute
   '/_authenticated/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/_authenticated/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/confirmar': typeof ApiBotConfirmarRoute
+  '/api/bot/eventos': typeof ApiBotEventosRoute
+  '/api/bot/fila': typeof ApiBotFilaRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/student/': typeof AuthenticatedStudentIndexRoute
   '/_authenticated/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1411,7 +1438,6 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
-    | '/admin/robo'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1445,6 +1471,7 @@ export interface FileRouteTypes {
     | '/admin/push-notifications'
     | '/admin/referral-links'
     | '/admin/reports'
+    | '/admin/robo'
     | '/admin/settings'
     | '/admin/store'
     | '/admin/store-reports'
@@ -1482,6 +1509,9 @@ export interface FileRouteTypes {
     | '/student/support'
     | '/student/workout'
     | '/upgrade/$role'
+    | '/api/bot/confirmar'
+    | '/api/bot/eventos'
+    | '/api/bot/fila'
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
@@ -1549,7 +1579,6 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
-    | '/admin/robo'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1583,6 +1612,7 @@ export interface FileRouteTypes {
     | '/admin/push-notifications'
     | '/admin/referral-links'
     | '/admin/reports'
+    | '/admin/robo'
     | '/admin/settings'
     | '/admin/store'
     | '/admin/store-reports'
@@ -1620,6 +1650,9 @@ export interface FileRouteTypes {
     | '/student/support'
     | '/student/workout'
     | '/upgrade/$role'
+    | '/api/bot/confirmar'
+    | '/api/bot/eventos'
+    | '/api/bot/fila'
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
@@ -1690,7 +1723,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/coach-releases'
     | '/_authenticated/admin/coaches'
     | '/_authenticated/admin/crm'
-    | '/_authenticated/admin/robo'
     | '/_authenticated/admin/digital-products'
     | '/_authenticated/admin/email-releases'
     | '/_authenticated/admin/evaluation-links'
@@ -1724,6 +1756,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/push-notifications'
     | '/_authenticated/admin/referral-links'
     | '/_authenticated/admin/reports'
+    | '/_authenticated/admin/robo'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/store'
     | '/_authenticated/admin/store-reports'
@@ -1761,6 +1794,9 @@ export interface FileRouteTypes {
     | '/_authenticated/student/support'
     | '/_authenticated/student/workout'
     | '/_authenticated/upgrade/$role'
+    | '/api/bot/confirmar'
+    | '/api/bot/eventos'
+    | '/api/bot/fila'
     | '/_authenticated/admin/'
     | '/_authenticated/student/'
     | '/_authenticated/admin/coaches/inactivity'
@@ -1813,6 +1849,9 @@ export interface RootRouteChildren {
   ResultadoTokenRoute: typeof ResultadoTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiBotConfirmarRoute: typeof ApiBotConfirmarRoute
+  ApiBotEventosRoute: typeof ApiBotEventosRoute
+  ApiBotFilaRoute: typeof ApiBotFilaRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
@@ -2108,6 +2147,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/api/bot/fila': {
+      id: '/api/bot/fila'
+      path: '/api/bot/fila'
+      fullPath: '/api/bot/fila'
+      preLoaderRoute: typeof ApiBotFilaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/eventos': {
+      id: '/api/bot/eventos'
+      path: '/api/bot/eventos'
+      fullPath: '/api/bot/eventos'
+      preLoaderRoute: typeof ApiBotEventosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/confirmar': {
+      id: '/api/bot/confirmar'
+      path: '/api/bot/confirmar'
+      fullPath: '/api/bot/confirmar'
+      preLoaderRoute: typeof ApiBotConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/upgrade/$role': {
       id: '/_authenticated/upgrade/$role'
       path: '/upgrade/$role'
@@ -2367,6 +2427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/robo': {
+      id: '/_authenticated/admin/robo'
+      path: '/robo'
+      fullPath: '/admin/robo'
+      preLoaderRoute: typeof AuthenticatedAdminRoboRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/reports': {
       id: '/_authenticated/admin/reports'
       path: '/reports'
@@ -2605,13 +2672,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCrmRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/robo': {
-      id: '/_authenticated/admin/robo'
-      path: '/robo'
-      fullPath: '/admin/robo'
-      preLoaderRoute: typeof AuthenticatedAdminRoboRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
     '/_authenticated/admin/coaches': {
       id: '/_authenticated/admin/coaches'
       path: '/coaches'
@@ -2832,7 +2892,6 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCoachReleasesRoute: typeof AuthenticatedAdminCoachReleasesRoute
   AuthenticatedAdminCoachesRoute: typeof AuthenticatedAdminCoachesRouteWithChildren
   AuthenticatedAdminCrmRoute: typeof AuthenticatedAdminCrmRoute
-  AuthenticatedAdminRoboRoute: typeof AuthenticatedAdminRoboRoute
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
   AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
@@ -2866,6 +2925,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminPushNotificationsRoute: typeof AuthenticatedAdminPushNotificationsRoute
   AuthenticatedAdminReferralLinksRoute: typeof AuthenticatedAdminReferralLinksRoute
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
+  AuthenticatedAdminRoboRoute: typeof AuthenticatedAdminRoboRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminStoreRoute: typeof AuthenticatedAdminStoreRoute
   AuthenticatedAdminStoreReportsRoute: typeof AuthenticatedAdminStoreReportsRoute
@@ -2892,7 +2952,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCoachReleasesRoute: AuthenticatedAdminCoachReleasesRoute,
   AuthenticatedAdminCoachesRoute: AuthenticatedAdminCoachesRouteWithChildren,
   AuthenticatedAdminCrmRoute: AuthenticatedAdminCrmRoute,
-  AuthenticatedAdminRoboRoute: AuthenticatedAdminRoboRoute,
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
   AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
@@ -2940,6 +2999,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminPushNotificationsRoute,
   AuthenticatedAdminReferralLinksRoute: AuthenticatedAdminReferralLinksRoute,
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
+  AuthenticatedAdminRoboRoute: AuthenticatedAdminRoboRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminStoreRoute: AuthenticatedAdminStoreRoute,
   AuthenticatedAdminStoreReportsRoute: AuthenticatedAdminStoreReportsRoute,
@@ -3141,6 +3201,9 @@ const rootRouteChildren: RootRouteChildren = {
   ResultadoTokenRoute: ResultadoTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiBotConfirmarRoute: ApiBotConfirmarRoute,
+  ApiBotEventosRoute: ApiBotEventosRoute,
+  ApiBotFilaRoute: ApiBotFilaRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,

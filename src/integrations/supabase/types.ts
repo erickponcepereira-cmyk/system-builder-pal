@@ -574,6 +574,393 @@ export type Database = {
           },
         ]
       }
+      bot_conexoes: {
+        Row: {
+          arquivado_em: string | null
+          conectado_em: string | null
+          created_at: string
+          criado_por: string | null
+          escopo: string
+          id: string
+          nome: string
+          numero: string | null
+          owner_id: string | null
+          provedor: string
+          status: string
+          status_detalhe: string | null
+          updated_at: string
+          visto_em: string | null
+          webhook_segredo: string
+        }
+        Insert: {
+          arquivado_em?: string | null
+          conectado_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          escopo: string
+          id?: string
+          nome: string
+          numero?: string | null
+          owner_id?: string | null
+          provedor?: string
+          status?: string
+          status_detalhe?: string | null
+          updated_at?: string
+          visto_em?: string | null
+          webhook_segredo?: string
+        }
+        Update: {
+          arquivado_em?: string | null
+          conectado_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          escopo?: string
+          id?: string
+          nome?: string
+          numero?: string | null
+          owner_id?: string | null
+          provedor?: string
+          status?: string
+          status_detalhe?: string | null
+          updated_at?: string
+          visto_em?: string | null
+          webhook_segredo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_conexoes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_conversas: {
+        Row: {
+          cartao_id: string | null
+          conexao_id: string
+          created_at: string
+          encerrada_em: string | null
+          estado: string
+          fluxo_id: string | null
+          id: string
+          nome: string | null
+          passo_atual_id: string | null
+          profile_id: string | null
+          telefone: string
+          ultima_mensagem_em: string | null
+          updated_at: string
+        }
+        Insert: {
+          cartao_id?: string | null
+          conexao_id: string
+          created_at?: string
+          encerrada_em?: string | null
+          estado?: string
+          fluxo_id?: string | null
+          id?: string
+          nome?: string | null
+          passo_atual_id?: string | null
+          profile_id?: string | null
+          telefone: string
+          ultima_mensagem_em?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cartao_id?: string | null
+          conexao_id?: string
+          created_at?: string
+          encerrada_em?: string | null
+          estado?: string
+          fluxo_id?: string | null
+          id?: string
+          nome?: string | null
+          passo_atual_id?: string | null
+          profile_id?: string | null
+          telefone?: string
+          ultima_mensagem_em?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_conversas_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_conversas_conexao_id_fkey"
+            columns: ["conexao_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conexoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_conversas_fluxo_id_fkey"
+            columns: ["fluxo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_fluxos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_conversas_passo_atual_id_fkey"
+            columns: ["passo_atual_id"]
+            isOneToOne: false
+            referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_conversas_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_fluxos: {
+        Row: {
+          arquivado_em: string | null
+          ativo: boolean
+          clonado_de: string | null
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          escopo: string
+          gatilho_tipo: string
+          gatilho_valor: string | null
+          id: string
+          modelo: boolean
+          nome: string
+          owner_id: string | null
+          passo_inicial_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          arquivado_em?: string | null
+          ativo?: boolean
+          clonado_de?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo: string
+          gatilho_tipo?: string
+          gatilho_valor?: string | null
+          id?: string
+          modelo?: boolean
+          nome: string
+          owner_id?: string | null
+          passo_inicial_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arquivado_em?: string | null
+          ativo?: boolean
+          clonado_de?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: string
+          gatilho_tipo?: string
+          gatilho_valor?: string | null
+          id?: string
+          modelo?: boolean
+          nome?: string
+          owner_id?: string | null
+          passo_inicial_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_fluxos_clonado_de_fkey"
+            columns: ["clonado_de"]
+            isOneToOne: false
+            referencedRelation: "bot_fluxos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_fluxos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_fluxos_passo_inicial_fk"
+            columns: ["passo_inicial_id"]
+            isOneToOne: false
+            referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_mensagens: {
+        Row: {
+          conversa_id: string
+          corpo: string | null
+          created_at: string
+          direcao: string
+          enviada_em: string | null
+          enviada_por: string | null
+          erro: string | null
+          id: string
+          midia_url: string | null
+          status: string
+          tentativas: number
+          tipo: string
+          wa_id: string | null
+        }
+        Insert: {
+          conversa_id: string
+          corpo?: string | null
+          created_at?: string
+          direcao: string
+          enviada_em?: string | null
+          enviada_por?: string | null
+          erro?: string | null
+          id?: string
+          midia_url?: string | null
+          status?: string
+          tentativas?: number
+          tipo?: string
+          wa_id?: string | null
+        }
+        Update: {
+          conversa_id?: string
+          corpo?: string | null
+          created_at?: string
+          direcao?: string
+          enviada_em?: string | null
+          enviada_por?: string | null
+          erro?: string | null
+          id?: string
+          midia_url?: string | null
+          status?: string
+          tentativas?: number
+          tipo?: string
+          wa_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_mensagens_enviada_por_fkey"
+            columns: ["enviada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_opcoes: {
+        Row: {
+          created_at: string
+          gatilho: string
+          id: string
+          passo_id: string
+          posicao: number
+          proximo_passo_id: string | null
+          rotulo: string
+        }
+        Insert: {
+          created_at?: string
+          gatilho: string
+          id?: string
+          passo_id: string
+          posicao?: number
+          proximo_passo_id?: string | null
+          rotulo: string
+        }
+        Update: {
+          created_at?: string
+          gatilho?: string
+          id?: string
+          passo_id?: string
+          posicao?: number
+          proximo_passo_id?: string | null
+          rotulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_opcoes_passo_id_fkey"
+            columns: ["passo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_opcoes_proximo_passo_id_fkey"
+            columns: ["proximo_passo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_passos: {
+        Row: {
+          acao: string | null
+          acao_params: Json | null
+          chave: string
+          conteudo: string | null
+          created_at: string
+          fluxo_id: string
+          id: string
+          posicao: number
+          proximo_passo_id: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          acao?: string | null
+          acao_params?: Json | null
+          chave: string
+          conteudo?: string | null
+          created_at?: string
+          fluxo_id: string
+          id?: string
+          posicao?: number
+          proximo_passo_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          acao?: string | null
+          acao_params?: Json | null
+          chave?: string
+          conteudo?: string | null
+          created_at?: string
+          fluxo_id?: string
+          id?: string
+          posicao?: number
+          proximo_passo_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_passos_fluxo_id_fkey"
+            columns: ["fluxo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_fluxos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_passos_proximo_passo_id_fkey"
+            columns: ["proximo_passo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_themes: {
         Row: {
           accent: string
@@ -3301,6 +3688,7 @@ export type Database = {
           descricao: string | null
           id: string
           lead_id: string | null
+          origem: string | null
           posicao: number
           prioridade: string
           profile_id: string | null
@@ -3321,6 +3709,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           lead_id?: string | null
+          origem?: string | null
           posicao?: number
           prioridade?: string
           profile_id?: string | null
@@ -3341,6 +3730,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           lead_id?: string | null
+          origem?: string | null
           posicao?: number
           prioridade?: string
           profile_id?: string | null
@@ -3483,6 +3873,7 @@ export type Database = {
           modelo: boolean
           nome: string
           owner_id: string | null
+          tipo: string
           updated_at: string
         }
         Insert: {
@@ -3496,6 +3887,7 @@ export type Database = {
           modelo?: boolean
           nome: string
           owner_id?: string | null
+          tipo?: string
           updated_at?: string
         }
         Update: {
@@ -3509,6 +3901,7 @@ export type Database = {
           modelo?: boolean
           nome?: string
           owner_id?: string | null
+          tipo?: string
           updated_at?: string
         }
         Relationships: [
@@ -11748,6 +12141,21 @@ export type Database = {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
       }
+      bot_acesso_conexao: { Args: { _conexao_id: string }; Returns: boolean }
+      bot_acesso_dono: {
+        Args: { _escopo: string; _owner_id: string }
+        Returns: boolean
+      }
+      bot_acesso_fluxo: { Args: { _fluxo_id: string }; Returns: boolean }
+      bot_clonar_fluxo: {
+        Args: {
+          _escopo: string
+          _nome?: string
+          _origem_id: string
+          _owner_id: string
+        }
+        Returns: string
+      }
       can_create_fitmind_events: {
         Args: { _user_id: string }
         Returns: boolean
@@ -11942,6 +12350,27 @@ export type Database = {
           _owner_id: string
         }
         Returns: string
+      }
+      crm_criar_quadro: {
+        Args: {
+          _escopo: string
+          _nome: string
+          _owner_id: string
+          _tipo?: string
+        }
+        Returns: string
+      }
+      crm_importar_contatos: {
+        Args: {
+          _coluna_id?: string
+          _contatos: Json
+          _origem?: string
+          _quadro_id: string
+        }
+        Returns: {
+          criados: number
+          ignorados: number
+        }[]
       }
       current_coach_id: { Args: never; Returns: string }
       current_partner_id: { Args: never; Returns: string }
