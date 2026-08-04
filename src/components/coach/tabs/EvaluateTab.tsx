@@ -606,7 +606,10 @@ export function EvaluateTab() {
       next_assessment_time: nz(assessment.nextAssessmentTime),
       group_id: nz(assessment.groupId),
     };
-    if (challengeLink && client.id === challengeLink.preferredClientId) {
+    const matchesChallengeLink = !!challengeLink
+      && (client.id === challengeLink.preferredClientId
+        || (client as any).studentId === challengeLink.studentId);
+    if (challengeLink && matchesChallengeLink) {
       payload.student_id = challengeLink.studentId;
       payload.challenge_enrollment_id = challengeLink.enrollmentId;
       payload.challenge_type = challengeLink.type;
