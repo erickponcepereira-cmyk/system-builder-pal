@@ -485,20 +485,25 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [groups, clients, selectedClient?.groups, newClientData.groups, editingClientData?.groups, assessment.groupId]);
 
-  // ── Pré-seleção via initialClientId (ex.: vindo do Desafio) ──
+  // ── Pré-seleção via initialClientId / initialStudentId (ex.: vindo do Desafio) ──
   const autoSelectedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!initialClientId) return;
-    const key = `${initialClientId}:${initialSelectionKey || ""}`;
+    if (!initialClientId && !initialStudentId) return;
+    const key = `${initialClientId || initialStudentId}:${initialSelectionKey || ""}`;
     if (autoSelectedRef.current === key) return;
-    const c = clients.find((x) => x.id === initialClientId);
+    const c =
+      (initialClientId ? clients.find((x) => x.id === initialClientId) : undefined) ||
+      (initialStudentId ? clients.find((x) => x.studentId === initialStudentId) : undefined);
+    // Não marca como processado enquanto a ficha não estiver na lista:
+    // assim reage ao próximo carregamento de `clients`.
     if (!c) return;
     autoSelectedRef.current = key;
     setSelectedClient(c);
     setAssessment({ height: c.height || undefined });
     setStep(0);
+    setEntryIntent("new");
     setScreen("assessment");
-  }, [initialClientId, initialSelectionKey, clients]);
+  }, [initialClientId, initialStudentId, initialSelectionKey, clients]);
 
   // Mantém o aluno aberto sincronizado com atualizações do componente pai,
   // como integração ao cadastro real ou vínculo ao desafio.
