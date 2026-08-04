@@ -29,7 +29,7 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { CrmBoard } from "@/components/crm/CrmBoard";
-import { meuQuadroCrm } from "@/lib/admin-crm.functions";
+import { meusQuadrosCrm } from "@/lib/admin-crm.functions";
 
 
 
@@ -105,7 +105,7 @@ function ProfessionalPanel() {
   const [collabPending, setCollabPending] = useState(0);
   const [crmQuadroId, setCrmQuadroId] = useState<string | null>(null);
   const getCollabCounts = useServerFn(getCollabPendingCounts);
-  const buscarQuadroCrm = useServerFn(meuQuadroCrm);
+  const buscarQuadroCrm = useServerFn(meusQuadrosCrm);
 
   useEffect(() => {
     if (!info?.coachId) return;
@@ -122,7 +122,7 @@ function ProfessionalPanel() {
     if (!info?.profileId) return;
     let alive = true;
     buscarQuadroCrm({ data: { escopo: "profissional", ownerId: info.profileId } })
-      .then((r) => { if (alive) setCrmQuadroId(r.quadroId); })
+      .then((r) => { if (alive) setCrmQuadroId(r.quadros[0]?.id ?? null); })
       .catch(() => {});
     return () => { alive = false; };
   }, [info?.profileId]);
