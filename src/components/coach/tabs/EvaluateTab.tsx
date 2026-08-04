@@ -626,7 +626,7 @@ export function EvaluateTab() {
       toast.error(error.message || "Erro ao salvar avaliação");
       throw error;
     }
-    if (challengeLink && client.id === challengeLink.preferredClientId) {
+    if (challengeLink && matchesChallengeLink) {
       toast.success(`Avaliação vinculada ao Desafio (${challengeLink.type === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`);
       setTimeout(() => navigate({ to: "/coach", search: { tab: "challenge" } as any }), 800);
     } else {
