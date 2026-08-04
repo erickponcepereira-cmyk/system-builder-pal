@@ -20,6 +20,7 @@ type ChallengeLink = {
   studentName: string;
   compLabel: string;
   preferredClientId?: string;
+  nonce?: number;
 };
 
 type ChallengeCandidate = {
@@ -64,6 +65,8 @@ export function EvaluateTab() {
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
+  // Mapa id-de-ficha-original -> id da ficha que sobreviveu ao dedup da lista
+  const clientAliasRef = useRef<Map<string, string>>(new Map());
 
 
   // Listen for popup connect completion
@@ -180,7 +183,7 @@ export function EvaluateTab() {
     if (cached && cached.expiresAt > Date.now()) {
       setClients(cached.clients);
       void loadChallengeCandidates(coach.id, masterFlag);
-      return;
+      return cached.clients;
     }
 
     let all: any[] = [];
@@ -285,15 +288,30 @@ export function EvaluateTab() {
       } else {
         // Mescla assessments (mantém stubs para contagem correta)
         const merged = [...(prev.assessments || []), ...(c.assessments || [])];
-        dedupMap.set(key, { ...prev, assessments: merged });
+        dedupMap.set(key, {
+          ...prev,
+          studentId: (prev as any).studentId || (c as any).studentId,
+          assessments: merged,
+        } as typeof prev);
       }
     }
     const deduped = Array.from(dedupMap.values());
+    // Mapa: id original (inclusive fichas descartadas no dedup) -> id sobrevivente
+    const alias = new Map<string, string>();
+    for (const c of mappedClients) {
+      const key = c.studentId
+        ? `sid:${c.studentId}`
+        : `self:${c.coachId}:${normalize(c.name)}`;
+      const survivor = dedupMap.get(key);
+      if (survivor) alias.set(c.id, survivor.id);
+    }
+    clientAliasRef.current = alias;
     clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: deduped });
     setClients(deduped);
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
     void loadChallengeCandidates(coach.id, masterFlag);
+    return deduped;
   };
 
   const loadChallengeCandidates = async (coachId: string, master: boolean) => {
@@ -333,11 +351,12 @@ export function EvaluateTab() {
       };
       if (!base.studentId) continue;
       // Pesagem inicial pendente
-      if (!r.initial_weight && ["enrolled","scheduled_initial"].includes(r.status)) {
+      if (!r.initial_weight) {
         out.push({ ...base, type: "initial" });
       }
-      // Pesagem final pendente (requer inicial feita)
-      if (r.initial_weight && !r.final_weight && ["weighed_initial","scheduled_final"].includes(r.status)) {
+      // Pesagem final pendente (requer inicial feita) — independe do status,
+      // pois inscrições ficam em status variados após a pesagem inicial.
+      if (r.initial_weight && !r.final_weight) {
         out.push({ ...base, type: "final" });
       }
     }
@@ -423,24 +442,32 @@ export function EvaluateTab() {
       const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
       compLabel = compLabel || `${months[e.competition?.month || 1]}/${e.competition?.year || ""}`;
     }
-    // Find or create a coach_evaluation_clients row linked to this student (para ESTE coach)
+    // Procura a ficha de avaliação do aluno. Master/admin pode reaproveitar a
+    // ficha criada por outro coach (evita duplicar e evita o dedup descartá-la).
     let preferredClientId: string | undefined;
-    const { data: existing } = await supabase
+    let query = supabase
       .from("coach_evaluation_clients" as never)
-      .select("id")
-      .eq("coach_id" as never, coachInfo.id as never)
+      .select("id, coach_id, created_at")
       .eq("student_id" as never, studentId as never)
-      .maybeSingle();
-    if (existing) {
-      preferredClientId = (existing as any).id;
-    } else {
+      .order("created_at" as never, { ascending: true })
+      .limit(50);
+    if (!isMaster) query = query.eq("coach_id" as never, coachInfo.id as never);
+    const { data: existingRows, error: existingError } = await query;
+    if (existingError) {
+      console.error("challenge link lookup:", existingError);
+    }
+    const rows = ((existingRows as any[]) || []);
+    const own = rows.find((r) => r.coach_id === coachInfo.id);
+    preferredClientId = (own || rows[0])?.id;
+
+    if (!preferredClientId) {
       const { data: st } = await supabase
         .from("students" as never)
         .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
         .eq("id" as never, studentId as never)
         .maybeSingle();
       const s = st as any;
-      const { data: created } = await supabase
+      const { data: created, error: createError } = await supabase
         .from("coach_evaluation_clients" as never)
         .insert({
           coach_id: coachInfo.id,
@@ -457,11 +484,34 @@ export function EvaluateTab() {
         } as never)
         .select("id")
         .single();
+      if (createError) {
+        console.error("challenge link create client:", createError);
+        toast.error("Não foi possível abrir a ficha deste aluno");
+        return;
+      }
       preferredClientId = (created as any)?.id;
-      clientSummaryCache.delete(coachInfo.id);
-      await loadClients();
     }
-    setChallengeLink({ enrollmentId, type, studentId, studentName: studentName!, compLabel: compLabel!, preferredClientId });
+
+    // Recarrega a lista e resolve o id que realmente está na tela (pós-dedup)
+    clientSummaryCache.delete(coachInfo.id);
+    const list = ((await loadClients()) || []) as any[];
+    const resolved =
+      (Array.isArray(list) ? list.find((c: any) => c.id === preferredClientId)?.id : undefined) ||
+      (preferredClientId ? clientAliasRef.current.get(preferredClientId) : undefined) ||
+      (Array.isArray(list) ? list.find((c: any) => c.studentId === studentId)?.id : undefined) ||
+      preferredClientId;
+
+    if (!resolved) {
+      toast.error("Ficha do aluno não encontrada para avaliação");
+      return;
+    }
+
+    setChallengeLink({
+      enrollmentId, type, studentId,
+      studentName: studentName!, compLabel: compLabel!,
+      preferredClientId: resolved,
+      nonce: Date.now(),
+    });
     // Scroll para o topo pra o FitMindShape auto-selecionar
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
   };
@@ -921,12 +971,18 @@ export function EvaluateTab() {
         coach={coachInfo}
         clients={clients}
         initialClientId={challengeLink?.preferredClientId}
-        getChallengeCandidatesForClient={(client) =>
-          challengeCandidates
+        initialSelectionKey={challengeLink?.nonce ? String(challengeLink.nonce) : undefined}
+        getChallengeCandidatesForClient={(client) => {
+          const freshClient = clients.find((item) => item.id === client.id);
+          const studentId = (client as any).studentId || (freshClient as any)?.studentId
+            || (challengeLink && challengeLink.preferredClientId === client.id ? challengeLink.studentId : undefined);
+          const norm = (s: string) =>
+            (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+          const clientName = norm(client.name || freshClient?.name || "");
+          return challengeCandidates
             .filter((c) => {
-              const freshClient = clients.find((item) => item.id === client.id);
-              const studentId = client.studentId || freshClient?.studentId;
-              return !!studentId && c.studentId === studentId;
+              if (studentId) return c.studentId === studentId;
+              return !!clientName && norm(c.studentName) === clientName;
             })
             .map((c) => ({
               enrollmentId: c.enrollmentId,
@@ -935,8 +991,8 @@ export function EvaluateTab() {
               studentName: c.studentName,
               compLabel: c.compLabel,
               groupNumber: c.groupNumber,
-            }))
-        }
+            }));
+        }}
         onLoadFullAssessments={loadFullAssessmentsForClient}
         onLinkClientToStudent={openLinkClientModal}
         onSync={async () => {
