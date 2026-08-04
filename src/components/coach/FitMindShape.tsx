@@ -319,6 +319,8 @@ export interface FitMindShapeProps {
   themeFontFamily?: string;
   // Pré-seleção de cliente (usado quando vindo do Desafio)
   initialClientId?: string;
+  // Aluno vinculado (fallback quando a ficha foi mesclada/dedupada)
+  initialStudentId?: string;
   // Muda a cada clique em "Avaliar Inicial/Final" para reabrir o mesmo aluno
   initialSelectionKey?: string;
   // Retorna vagas pendentes no Desafio para um cliente (usado no editar avaliação)
