@@ -623,7 +623,10 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               ) : (
                 !editForm.challengeEnrollmentId && (
                   <span style={{ fontSize: 11, color: "#94a3b8" }}>
-                    Nenhum desafio ativo com pesagem pendente para este aluno.
+                    Nenhuma pesagem pendente para este aluno. Isso acontece quando a pesagem
+                    (inicial ou final) já foi registrada, quando a inscrição está fora da janela
+                    da turma (até 7 dias após a pesagem final) ou quando a ficha ainda não está
+                    integrada ao cadastro do aluno.
                   </span>
                 )
               )}

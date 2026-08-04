@@ -89,7 +89,7 @@ export const listBotAlvos = createServerFn({ method: "GET" })
           naFila: fila.get(c.id) ?? 0,
         }));
 
-    const parceiros: BotAlvo[] = (parceirosRes.data ?? []).map((p) => ({
+    const parceiros: BotAlvo[] = ((parceirosRes.data ?? []) as any[]).map((p: any) => ({
       id: p.id,
       nome: p.fantasy_name ?? "Sem nome",
       subtitulo: [[p.city, p.state].filter(Boolean).join(" · ") || null, p.business_area].filter(Boolean).join(" · ") || null,

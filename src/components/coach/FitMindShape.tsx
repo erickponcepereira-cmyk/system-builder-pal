@@ -319,6 +319,8 @@ export interface FitMindShapeProps {
   themeFontFamily?: string;
   // Pré-seleção de cliente (usado quando vindo do Desafio)
   initialClientId?: string;
+  // Muda a cada clique em "Avaliar Inicial/Final" para reabrir o mesmo aluno
+  initialSelectionKey?: string;
   // Retorna vagas pendentes no Desafio para um cliente (usado no editar avaliação)
   getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
   // Abre modal de integrar um cliente importado (Fineshape) a um aluno já cadastrado no sistema
@@ -402,6 +404,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
   initialClientId,
+  initialSelectionKey,
   getChallengeCandidatesForClient,
   onLinkClientToStudent,
   onSync,
@@ -483,15 +486,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const autoSelectedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!initialClientId) return;
-    if (autoSelectedRef.current === initialClientId) return;
+    const key = `${initialClientId}:${initialSelectionKey || ""}`;
+    if (autoSelectedRef.current === key) return;
     const c = clients.find((x) => x.id === initialClientId);
     if (!c) return;
-    autoSelectedRef.current = initialClientId;
+    autoSelectedRef.current = key;
     setSelectedClient(c);
     setAssessment({ height: c.height || undefined });
     setStep(0);
     setScreen("assessment");
-  }, [initialClientId, clients]);
+  }, [initialClientId, initialSelectionKey, clients]);
 
   // Mantém o aluno aberto sincronizado com atualizações do componente pai,
   // como integração ao cadastro real ou vínculo ao desafio.
