@@ -15,6 +15,81 @@ financeiro.
 
 ---
 
+## 20260731210000_bot_infra.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 31/07/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | Não |
+| **Aplicada em produção?** | Ainda não |
+
+### O que cria
+
+Robô de atendimento por WhatsApp, na mesma arquitetura do CRM: ancorado em
+`(escopo, owner_id)`, com fluxos clonáveis entre painéis.
+
+Tabelas: `bot_conexoes`, `bot_fluxos`, `bot_passos`, `bot_opcoes`,
+`bot_conversas`, `bot_mensagens`.
+
+Funções: `bot_acesso_dono(text, uuid)`, `bot_acesso_fluxo(uuid)`,
+`bot_acesso_conexao(uuid)`, `bot_marcar_ultima_mensagem()`,
+`bot_clonar_fluxo(uuid, text, uuid, text)`.
+
+**Permissão nova esperada em `partner_members.permissoes`:** `robo`.
+
+### Por que não é financeira
+
+Nenhuma tabela de dinheiro é lida ou alterada. As únicas chaves estrangeiras
+para fora do robô são `profiles` e `crm_cartoes`, e nenhuma delas é modificada.
+
+### Decisões que valem registro
+
+**A conversa aponta para um cartão do CRM** (`bot_conversas.cartao_id`). O que o
+robô descobre vira lead no funil sem digitação manual.
+
+**Credenciais do WhatsApp não ficam no banco.** A sessão vive no conector, na
+máquina da academia. Aqui só existe estado de conexão e `webhook_segredo`, que o
+conector usa para provar que a chamada é dele.
+
+**Fila de saída em vez de chamada direta.** O conector roda no PC da academia,
+atrás de NAT e sem IP fixo — a nuvem não alcança ele. Então mensagens de saída
+nascem com `status = 'pendente'` e o conector *busca* a fila. Uma constraint
+garante que mensagem de entrada nunca entre nessa fila por engano.
+
+**`chave` é o identificador estável do passo dentro do fluxo.** É por ela que a
+clonagem religa os ponteiros no destino, em vez de mapear UUID a UUID.
+
+**Clone nasce desativado** (`ativo = false`), para ninguém publicar um
+atendimento sem revisar.
+
+### Validação feita antes de subir
+
+PostgreSQL 16, banco recriado do zero com stubs + CRM + robô:
+
+- aplicada duas vezes seguidas sem erro (idempotente)
+- 6 tabelas com RLS, 12 políticas, 5 funções, 5 gatilhos
+- academia B não vê fluxo, conversa nem mensagem da academia A
+- funcionário sem a permissão `robo` não vê nada
+- webhook repetido não duplica mensagem (índice único em `wa_id`)
+- ciclo completo da fila: enfileira, conector busca, confirma envio, fila esvazia
+- clonagem religa ponteiros dentro do clone, sem vazar para o fluxo de origem
+- clonagem de fluxo alheio é bloqueada
+
+**Dois bugs que a validação pegou:** `gen_random_bytes` exige a extensão
+pgcrypto (trocado por `gen_random_uuid`, nativo), e um `UPDATE` referenciava o
+alias do alvo dentro do `JOIN` do `FROM`, o que o Postgres recusa.
+
+### Pendências
+
+- [ ] Aplicar em produção
+- [ ] Endpoints do app para o conector (webhook de entrada, fila de saída, status)
+- [ ] Conector para o PC da academia
+- [ ] Interface de fluxos e caixa de entrada
+
+---
+
 ## 20260730190000_crm_infra.sql
 
 | | |
