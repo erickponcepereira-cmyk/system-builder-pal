@@ -120,6 +120,7 @@ import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/
 import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
 import { Route as AuthenticatedAdminCrmRouteImport } from './routes/_authenticated/admin.crm'
+import { Route as AuthenticatedAdminRoboRouteImport } from './routes/_authenticated/admin.robo'
 import { Route as AuthenticatedAdminCoachesRouteImport } from './routes/_authenticated/admin.coaches'
 import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_authenticated/admin.coach-releases'
 import { Route as AuthenticatedAdminCoachIdsRouteImport } from './routes/_authenticated/admin.coach-ids'
@@ -775,6 +776,11 @@ const AuthenticatedAdminCrmRoute = AuthenticatedAdminCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminRoboRoute = AuthenticatedAdminRoboRouteImport.update({
+  id: '/robo',
+  path: '/robo',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminCoachesRoute =
   AuthenticatedAdminCoachesRouteImport.update({
     id: '/coaches',
@@ -983,6 +989,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1120,6 +1127,7 @@ export interface FileRoutesByTo {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1261,6 +1269,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/_authenticated/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/_authenticated/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/_authenticated/admin/robo': typeof AuthenticatedAdminRoboRoute
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1402,6 +1411,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
+    | '/admin/robo'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1539,6 +1549,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
+    | '/admin/robo'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1679,6 +1690,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/coach-releases'
     | '/_authenticated/admin/coaches'
     | '/_authenticated/admin/crm'
+    | '/_authenticated/admin/robo'
     | '/_authenticated/admin/digital-products'
     | '/_authenticated/admin/email-releases'
     | '/_authenticated/admin/evaluation-links'
@@ -2593,6 +2605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCrmRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/robo': {
+      id: '/_authenticated/admin/robo'
+      path: '/robo'
+      fullPath: '/admin/robo'
+      preLoaderRoute: typeof AuthenticatedAdminRoboRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/coaches': {
       id: '/_authenticated/admin/coaches'
       path: '/coaches'
@@ -2813,6 +2832,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCoachReleasesRoute: typeof AuthenticatedAdminCoachReleasesRoute
   AuthenticatedAdminCoachesRoute: typeof AuthenticatedAdminCoachesRouteWithChildren
   AuthenticatedAdminCrmRoute: typeof AuthenticatedAdminCrmRoute
+  AuthenticatedAdminRoboRoute: typeof AuthenticatedAdminRoboRoute
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
   AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
@@ -2872,6 +2892,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCoachReleasesRoute: AuthenticatedAdminCoachReleasesRoute,
   AuthenticatedAdminCoachesRoute: AuthenticatedAdminCoachesRouteWithChildren,
   AuthenticatedAdminCrmRoute: AuthenticatedAdminCrmRoute,
+  AuthenticatedAdminRoboRoute: AuthenticatedAdminRoboRoute,
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
   AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
