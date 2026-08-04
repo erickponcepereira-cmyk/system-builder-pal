@@ -1126,6 +1126,51 @@ export type Database = {
           },
         ]
       }
+      challenge_final_reports: {
+        Row: {
+          competition_id: string
+          created_at: string
+          group_id: string
+          id: string
+          payload: Json
+          report_date: string
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          payload?: Json
+          report_date: string
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          payload?: Json
+          report_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_final_reports_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_final_reports_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "competition_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_groups: {
         Row: {
           cover_url: string | null

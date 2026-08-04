@@ -3,9 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2, FileText, RefreshCw, Download, Printer, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
+import { syncEnrollmentCoaches, getChallengeReport, type ChallengeReportRow } from "@/lib/challenge-admin.functions";
+import { whatsappUrl } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/_authenticated/admin/challenge")({
   component: AdminChallengePage,
@@ -38,7 +40,7 @@ type Enrollment = {
   result_fat_pct_lost: number | null;
   result_muscle_gain_pct: number | null;
   result_kg_lost: number | null;
-  student: { id: string; profile: { name: string } };
+  student: { id: string; profile: { name: string; phone?: string | null } };
   coach: { profile: { name: string } };
 };
 type Student = { id: string; coach_id: string; profile: { name: string }; coach: { profile: { name: string } } };
@@ -118,6 +120,55 @@ function AdminChallengePage() {
   const [showAttempts, setShowAttempts] = useState(false);
   const fetchAttempts = useServerFn(getAdminTokenAttempts);
 
+  // Relatório e sincronização de coaches
+  const runSync = useServerFn(syncEnrollmentCoaches);
+  const runReport = useServerFn(getChallengeReport);
+  const [syncingComp, setSyncingComp] = useState<string | null>(null);
+  const [reportComp, setReportComp] = useState<string | null>(null);
+  const [reportRows, setReportRows] = useState<ChallengeReportRow[] | null>(null);
+  const [reportTitle, setReportTitle] = useState("");
+
+  const handleSync = async (comp: Competition) => {
+    setSyncingComp(comp.id);
+    try {
+      const res = await runSync({ data: { competitionId: comp.id } });
+      if (res.updated === 0) toast.success("Tudo sincronizado. Nenhuma mudança de coach.");
+      else {
+        toast.success(`${res.updated} inscriç${res.updated > 1 ? "ões atualizadas" : "ão atualizada"}.`);
+        console.info("Coaches sincronizados:", res.changes);
+      }
+      await loadGroups(comp.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao sincronizar coaches");
+    } finally { setSyncingComp(null); }
+  };
+
+  const handleReport = async (comp: Competition) => {
+    setReportComp(comp.id);
+    setReportRows(null);
+    setReportTitle(`Desafio ${MONTHS[comp.month]}/${comp.year}`);
+    try {
+      const rows = await runReport({ data: { competitionId: comp.id } });
+      setReportRows(rows);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao gerar relatório");
+      setReportComp(null);
+    }
+  };
+
+  const downloadCsv = () => {
+    if (!reportRows) return;
+    const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [["Coach", "Aluno", "Telefone", "Turma"].map(esc).join(";")];
+    reportRows.forEach(r => lines.push([r.coachName, r.studentName, r.phone || "", r.groupNumber ?? ""].map(v => esc(String(v))).join(";")));
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${reportTitle.replace(/[^\w]+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const loadAttempts = async (onlyFailures: boolean) => {
     setAttemptsLoading(true);
     try {
@@ -163,7 +214,7 @@ function AdminChallengePage() {
           initial_share_url, final_share_url,
           result_kg, result_pct,
           result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
-          student:student_id ( id, profile:profile_id ( name ) ),
+          student:student_id ( id, profile:profile_id ( name, phone ) ),
           coach:coach_id ( profile:profile_id ( name ) )
         )
       `)
@@ -398,7 +449,7 @@ function AdminChallengePage() {
             initial_share_url, final_share_url,
             result_kg, result_pct,
             result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
-            student:student_id ( id, profile:profile_id ( name ) ),
+            student:student_id ( id, profile:profile_id ( name, phone ) ),
             coach:coach_id ( profile:profile_id ( name ) )
           )
         `)
@@ -667,6 +718,14 @@ function AdminChallengePage() {
               </div>
             </button>
             <div className="flex items-center gap-2">
+              <button onClick={(e) => { e.stopPropagation(); handleReport(comp); }}
+                className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20">
+                <FileText className="h-3 w-3" /> Relatório
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleSync(comp); }} disabled={syncingComp === comp.id}
+                className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-400 hover:bg-blue-500/20 disabled:opacity-60">
+                {syncingComp === comp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Sincronizar coaches
+              </button>
               <button onClick={(e) => { e.stopPropagation(); openFinalize(comp); }}
                 className="flex items-center gap-1 rounded-lg bg-yellow-500/10 px-3 py-1.5 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
                 <Award className="h-3 w-3" /> {comp.finalized_at ? "Refinalizar" : "Finalizar Desafio"}
@@ -727,6 +786,7 @@ function AdminChallengePage() {
                           <tr className="border-b border-border text-muted-foreground">
                             <th className="px-3 py-2 text-left">Aluno</th>
                             <th className="px-3 py-2 text-left">Coach</th>
+                            <th className="px-3 py-2 text-left">WhatsApp</th>
                             <th className="px-3 py-2 text-center">Gen</th>
                             <th className="px-3 py-2 text-center">Inicial</th>
                             <th className="px-3 py-2 text-center">Final</th>
@@ -741,6 +801,15 @@ function AdminChallengePage() {
                               <tr key={enroll.id} className="border-b border-border/50 hover:bg-muted/10">
                                 <td className="px-3 py-2 font-medium text-foreground">{(enroll.student as any)?.profile?.name || "—"}</td>
                                 <td className="px-3 py-2 text-muted-foreground">{(enroll.coach as any)?.profile?.name || "—"}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {(() => {
+                                    const phone = ((enroll.student as any)?.profile?.phone || "").trim();
+                                    const url = whatsappUrl(phone);
+                                    return phone && url ? (
+                                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">{phone}</a>
+                                    ) : <span className="text-muted-foreground">—</span>;
+                                  })()}
+                                </td>
                                 <td className="px-3 py-2 text-center">
                                   <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${enroll.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"}`}>{enroll.gender}</span>
                                 </td>
@@ -801,6 +870,60 @@ function AdminChallengePage() {
           )}
         </div>
       ))}
+
+      {/* Modal: Relatório por coach */}
+      {reportComp && (
+        <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/60 p-4 overscroll-contain modal-safe items-start sm:items-center">
+          <div className="w-full max-w-2xl my-8 rounded-2xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-foreground">Relatório · {reportTitle}</h3>
+                <p className="text-xs text-muted-foreground">Alunos agrupados por coach, com telefone.</p>
+              </div>
+              <button onClick={() => { setReportComp(null); setReportRows(null); }} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {!reportRows ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : reportRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">Nenhum aluno inscrito nesta edição.</p>
+            ) : (
+              <div id="challenge-report-print" className="max-h-[55vh] overflow-y-auto space-y-4">
+                <h4 className="hidden print:block font-bold">{reportTitle}</h4>
+                {Array.from(new Set(reportRows.map(r => r.coachName))).map(coach => (
+                  <div key={coach} className="rounded-xl border border-border p-3">
+                    <p className="text-sm font-bold text-foreground mb-2">{coach}</p>
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {reportRows.filter(r => r.coachName === coach).map((r, i) => (
+                          <tr key={i} className="border-t border-border/50">
+                            <td className="py-1 pr-3 text-foreground">{r.studentName}</td>
+                            <td className="py-1 pr-3 text-muted-foreground">{r.phone || "—"}</td>
+                            <td className="py-1 text-right text-muted-foreground">Turma {r.groupNumber ?? "?"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <button onClick={downloadCsv} disabled={!reportRows?.length}
+                className="flex items-center gap-1 rounded-lg bg-muted px-3 py-2 text-xs font-bold text-foreground disabled:opacity-60">
+                <Download className="h-3 w-3" /> Baixar CSV
+              </button>
+              <button onClick={() => window.print()} disabled={!reportRows?.length}
+                className="flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60">
+                <Printer className="h-3 w-3" /> Imprimir / PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Adicionar/Editar Turma */}
       {groupModal && (
