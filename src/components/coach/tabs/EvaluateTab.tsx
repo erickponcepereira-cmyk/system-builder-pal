@@ -512,6 +512,11 @@ export function EvaluateTab() {
       preferredClientId: resolved,
       nonce: Date.now(),
     });
+    // Aviso caso a ficha não esteja na lista visível (não deve acontecer,
+    // mas evita o clique "não fazer nada" em silêncio).
+    if (Array.isArray(list) && list.length && !list.some((c: any) => c.id === resolved || c.studentId === studentId)) {
+      toast.error("Não foi possível abrir a ficha deste aluno. Recarregue a página e tente novamente.");
+    }
     // Scroll para o topo pra o FitMindShape auto-selecionar
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
   };
