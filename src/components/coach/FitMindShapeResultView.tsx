@@ -477,6 +477,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
               <tbody>
                 {[
                   { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: N >= 3 ? `${dateLabel(previousA.date)} · ${followLabel}` : followLabel },
+                  { l: "Balança", first: String(firstA.scaleNumber || "").trim() || "—", latest: String((a.scaleNumber || previousA.scaleNumber) || "").trim() || "—" },
                   { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(previousA.weight, firstA.weight, " kg") },
                   { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(previousA.bodyFat, firstA.bodyFat, " %") },
                   { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(previousA.skeletalMuscle, firstA.skeletalMuscle, " %") },
