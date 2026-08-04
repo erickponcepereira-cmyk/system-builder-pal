@@ -406,6 +406,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
   initialClientId,
+  initialStudentId,
   initialSelectionKey,
   getChallengeCandidatesForClient,
   onLinkClientToStudent,
