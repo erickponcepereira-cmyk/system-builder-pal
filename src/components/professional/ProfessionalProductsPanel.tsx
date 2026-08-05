@@ -934,8 +934,17 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
         </div>
       )}
 
+      {buyersFor && (
+        <ProductBuyersModal
+          productType={buyersFor.type}
+          productId={buyersFor.id}
+          productName={buyersFor.name}
+          onClose={() => setBuyersFor(null)}
+        />
+      )}
 
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+
     </div>
   );
 }
