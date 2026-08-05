@@ -127,7 +127,28 @@ export const Route = createFileRoute("/api/bot/eventos")({
           // 23505 = duplicata; é esperado quando o WhatsApp reenvia o mesmo evento
           if (erroMsg && erroMsg.code !== "23505") return json({ erro: erroMsg.message }, 500);
 
-          return json({ ok: true, conversaId, repetida: erroMsg?.code === "23505" });
+          // repetida: já foi processada antes, não roda o robô de novo
+          if (erroMsg?.code === "23505") {
+            return json({ ok: true, conversaId, repetida: true });
+          }
+
+          // o robô decide o que responder (verificação, funil, fluxo)
+          let resultado = { acao: "sem processamento" };
+          try {
+            const { processarMensagem } = await import("@/lib/bot-engine");
+            resultado = await processarMensagem(db, {
+              conexao: { id: conexao.id, escopo: conexao.escopo, owner_id: conexao.owner_id },
+              conversaId: conversaId!,
+              telefone,
+              texto: corpo.corpo ? String(corpo.corpo) : "",
+              nome: corpo.nome ? String(corpo.nome) : null,
+            });
+          } catch (e) {
+            // o robô falhar não pode fazer a mensagem se perder: ela já está salva
+            console.error("[bot] motor falhou:", e);
+          }
+
+          return json({ ok: true, conversaId, ...resultado });
         }
 
         return json({ erro: `tipo desconhecido: ${tipo}` }, 400);
