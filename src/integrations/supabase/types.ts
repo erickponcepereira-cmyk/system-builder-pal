@@ -939,10 +939,12 @@ export type Database = {
       }
       bot_mensagens: {
         Row: {
+          agendado_para: string | null
           conversa_id: string
           corpo: string | null
           created_at: string
           direcao: string
+          disparo_id: string | null
           enviada_em: string | null
           enviada_por: string | null
           erro: string | null
@@ -954,10 +956,12 @@ export type Database = {
           wa_id: string | null
         }
         Insert: {
+          agendado_para?: string | null
           conversa_id: string
           corpo?: string | null
           created_at?: string
           direcao: string
+          disparo_id?: string | null
           enviada_em?: string | null
           enviada_por?: string | null
           erro?: string | null
@@ -969,10 +973,12 @@ export type Database = {
           wa_id?: string | null
         }
         Update: {
+          agendado_para?: string | null
           conversa_id?: string
           corpo?: string | null
           created_at?: string
           direcao?: string
+          disparo_id?: string | null
           enviada_em?: string | null
           enviada_por?: string | null
           erro?: string | null
@@ -989,6 +995,13 @@ export type Database = {
             columns: ["conversa_id"]
             isOneToOne: false
             referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_mensagens_disparo_fk"
+            columns: ["disparo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_disparos"
             referencedColumns: ["id"]
           },
           {
