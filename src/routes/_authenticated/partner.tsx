@@ -1996,15 +1996,142 @@ function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; 
                   <p className="text-[10px] text-white/40 truncate">{c.profiles?.email || c.profiles?.phone || ""}</p>
                   <p className="text-[10px] text-primary/80 truncate font-semibold">Colaborador · {partner.fantasy_name}</p>
                 </div>
-                <span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold whitespace-nowrap">Colab.</span>
+                <button
+                  onClick={() => removeCollab(c.id)}
+                  className="rounded-lg p-2 text-red-400 hover:bg-red-500/10"
+                  title="Remover"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {pickerOpen && (
+        <PartnerEligibleStudentsPicker
+          partnerId={partner.id}
+          onClose={() => setPickerOpen(false)}
+          onAttached={async () => {
+            setPickerOpen(false);
+            await reload();
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function PartnerEligibleStudentsPicker({
+  partnerId,
+  onClose,
+  onAttached,
+}: {
+  partnerId: string;
+  onClose: () => void;
+  onAttached: () => void;
+}) {
+  const [rows, setRows] = useState<Array<{ id: string; profile: { name: string | null; email: string | null; phone: string | null; photo_url: string | null } | null }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { listPartnerEligibleStudents } = await import("@/lib/partner-collaborators.functions");
+        const data = await listPartnerEligibleStudents({ data: { partnerId } });
+        setRows(data);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao carregar alunos");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [partnerId]);
+
+  const filtered = rows.filter((r) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (r.profile?.name || "").toLowerCase().includes(q) ||
+      (r.profile?.email || "").toLowerCase().includes(q) ||
+      (r.profile?.phone || "").toLowerCase().includes(q)
+    );
+  });
+
+  const attach = async (studentId: string) => {
+    setBusyId(studentId);
+    try {
+      const { attachPartnerCollaborator } = await import("@/lib/partner-collaborators.functions");
+      await attachPartnerCollaborator({ data: { studentId, partnerId } });
+      toast.success("Colaborador vinculado");
+      onAttached();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao vincular");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-2 sm:p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ backgroundColor: "#111" }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <h3 className="text-base font-bold text-white">Vincular aluno</h3>
+            <p className="text-[11px] text-white/50">Alunos vinculados a você que ainda não são colaboradores.</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1 text-white/60 hover:bg-white/5">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-3 border-b border-white/5">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome, e-mail ou telefone..."
+            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus:border-primary/50"
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {loading ? (
+            <p className="text-xs text-white/40 text-center py-6">Carregando...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-xs text-white/40 text-center py-6">
+              {rows.length === 0 ? "Nenhum aluno disponível para vincular." : "Nenhum aluno encontrado com esse filtro."}
+            </p>
+          ) : (
+            filtered.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 rounded-lg bg-black/30 px-3 py-2">
+                {r.profile?.photo_url ? (
+                  <img src={r.profile.photo_url} className="h-9 w-9 rounded-full object-cover" alt={r.profile?.name || ""} />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/60">{r.profile?.name?.[0]?.toUpperCase() || "?"}</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{r.profile?.name || "—"}</p>
+                  <p className="text-[10px] text-white/40 truncate">{r.profile?.email || r.profile?.phone || ""}</p>
+                </div>
+                <button
+                  onClick={() => attach(r.id)}
+                  disabled={busyId === r.id}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {busyId === r.id ? "..." : "Vincular"}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function PartnerVisitsModal({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<import("@/lib/partner-visits.functions").PartnerVisitRow[]>([]);
