@@ -78,13 +78,14 @@ export const submitMyPendingCoach = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!coach?.id) throw new Error("Coach inválido. Selecione um coach da lista.");
 
-    const patch: Record<string, unknown> = {};
+    const patch: { phone?: string; gender?: string; birthdate?: string } = {};
     if (data.phone) patch.phone = data.phone.replace(/\D/g, "");
     if (data.gender) patch.gender = data.gender;
     if (data.birthdate) patch.birthdate = data.birthdate;
     if (Object.keys(patch).length) {
       await supabaseAdmin.from("profiles").update(patch).eq("id", profile.id);
     }
+
 
     const { error } = await supabaseAdmin
       .from("students")
