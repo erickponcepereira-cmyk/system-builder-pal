@@ -463,6 +463,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">
                   {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
                 </button>
+                <button
+                  onClick={() => setBuyersFor({ id: p.id, name: p.name })}
+                  className="inline-flex items-center gap-1 text-[11px] text-white/60 hover:text-white"
+                >
+                  <Users className="h-3 w-3" /> Compradores
+                </button>
+
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400">
                     <Trash2 className="inline h-3 w-3" />
