@@ -4,9 +4,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CrmBoard } from "@/components/crm/CrmBoard";
+import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
 import { meusQuadrosCrm } from "@/lib/admin-crm.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
@@ -55,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo";
 
 
 interface Partner {
@@ -258,6 +259,7 @@ function PartnerPanel() {
     collaborators: "members.gerenciar",
     collab: "collab.ver",
     crm: "crm",
+  robo: "robo",
     profile: "profile.editar",
     members: "members.gerenciar",
   };
@@ -285,6 +287,7 @@ function PartnerPanel() {
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
     ...(crmQuadroId ? [{ key: "crm" as Tab, label: "CRM", icon: KanbanSquare }] : []),
+    { key: "robo" as Tab, label: "Rob\u00f4 WhatsApp", icon: Bot },
     { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
@@ -430,6 +433,7 @@ function PartnerPanel() {
         {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
         {abaAtiva === "crm" && crmQuadroId && <CrmBoard quadroId={crmQuadroId} />}
+            {abaAtiva === "robo" && partner?.id && <PartnerRoboPanel partnerId={partner.id} />}
         {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
 
 
