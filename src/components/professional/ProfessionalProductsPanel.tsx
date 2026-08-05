@@ -113,7 +113,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [readOnly, setReadOnly] = useState(false);
   const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string } | null>(null);
+  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string; type: "partner" | "professional" } | null>(null);
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
   // Blocos da agenda do profissional: duração dos produtos precisa ser múltipla deles.
@@ -464,7 +464,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
                 </button>
                 <button
-                  onClick={() => setBuyersFor({ id: p.id, name: p.name })}
+                  onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "professional" })}
                   className="inline-flex items-center gap-1 text-[11px] text-white/60 hover:text-white"
                 >
                   <Users className="h-3 w-3" /> Compradores
@@ -517,7 +517,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                       <Eye className="h-3 w-3" /> Visualizar painel
                     </button>
                     <button
-                      onClick={() => setBuyersFor({ id: p.id, name: p.name })}
+                      onClick={() => setBuyersFor({ id: p.id, name: p.name, type: (c as any).productType || "professional" })}
                       className="ml-3 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
                     >
                       <Users className="h-3 w-3" /> Compradores
