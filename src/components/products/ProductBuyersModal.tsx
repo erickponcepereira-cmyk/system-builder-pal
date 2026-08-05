@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Users, X, MessageCircle } from "lucide-react";
 import { ModalShell } from "@/components/ui/ModalShell";
 import { listProductBuyers, type ProductBuyersResult } from "@/lib/product-buyers.functions";
-import { onlyDigits } from "@/lib/masks";
+const onlyDigits = (v: string) => v.replace(/\D/g, "");
 
 type Props = {
   productType: "partner" | "professional";
