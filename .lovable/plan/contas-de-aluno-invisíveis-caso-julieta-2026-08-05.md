@@ -2,7 +2,7 @@
 
 ## O que aconteceu
 
-Verifiquei no banco: a Julieta (julieta_vaz@hotmail.com) tem perfil criado em 05/08 com papel "aluno", mas **não existe o registro dela na tabela de alunos**. Por isso ela consegue usar o app, mas não aparece para o coach, nem no admin, nem em nenhuma lista.
+Verifiquei no banco: a Julieta ([julieta_vaz@hotmail.com](mailto:julieta_vaz@hotmail.com)) tem perfil criado em 05/08 com papel "aluno", mas **não existe o registro dela na tabela de alunos**. Por isso ela consegue usar o app, mas não aparece para o coach, nem no admin, nem em nenhuma lista.
 
 Ela não é caso isolado — hoje existem **4 contas** na mesma situação:
 
@@ -24,3 +24,5 @@ No perfil da Julieta os campos telefone, sexo e nascimento estão vazios, o que 
 - Nova função `ensure_student_row_for_profile(profile_id, coach_id)` (SECURITY DEFINER) que cria a linha em `students` com `referral_code`/`referral_link` únicos, usando o coach informado ou o coach padrão do sistema como fallback.
 - Novo gatilho `on_profile_created_ensure_student` em `profiles` (AFTER INSERT), acionado apenas quando `role = 'student'`. O `upsert` já existente em `finalizeRegistration` (onConflict `profile_id`) sobrescreve o coach correto quando o cadastro conclui.
 - Bloco de backfill na mesma migração para os perfis com `role = 'student'` sem linha em `students` e sem linha em `coaches`.
+
+Como não tem como saber de quem são coachs, deixe um alerta no admin e envie para cada uma dessas clientes preencherem na próxima entrada no app quem é o coach que trouxe elas e fazer elas preencherem o restante das informações faltantes
