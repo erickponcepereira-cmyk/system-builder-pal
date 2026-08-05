@@ -10645,6 +10645,7 @@ export type Database = {
           card_valid_until: string | null
           challenge_override_allowed: boolean
           coach_account_created_at: string | null
+          coach_assignment_pending: boolean
           coach_course_completed_at: string | null
           coach_id: string
           completed_coach_course: boolean | null
@@ -10691,6 +10692,7 @@ export type Database = {
           card_valid_until?: string | null
           challenge_override_allowed?: boolean
           coach_account_created_at?: string | null
+          coach_assignment_pending?: boolean
           coach_course_completed_at?: string | null
           coach_id: string
           completed_coach_course?: boolean | null
@@ -10737,6 +10739,7 @@ export type Database = {
           card_valid_until?: string | null
           challenge_override_allowed?: boolean
           coach_account_created_at?: string | null
+          coach_assignment_pending?: boolean
           coach_course_completed_at?: string | null
           coach_id?: string
           completed_coach_course?: boolean | null
@@ -12662,6 +12665,10 @@ export type Database = {
           _preferred_coach_id?: string
           _profile_id: string
         }
+        Returns: string
+      }
+      ensure_student_row_for_profile: {
+        Args: { _coach_id?: string; _pending?: boolean; _profile_id: string }
         Returns: string
       }
       ensure_user_subscription: {
