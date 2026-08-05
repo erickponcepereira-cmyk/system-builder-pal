@@ -211,7 +211,10 @@ function AdminDashboard() {
         <p className="text-sm text-white/50">Visão geral da plataforma FitMind Club</p>
       </div>
 
+      <PendingCoachStudentsAlert />
+
       <div className="mb-6"><WhatsAppGroupCard /></div>
+
 
 
       {/* KPI cards */}
