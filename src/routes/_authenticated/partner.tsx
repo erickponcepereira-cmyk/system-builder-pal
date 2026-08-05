@@ -1868,20 +1868,37 @@ type Collaborator = {
 function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; coachReferralCode?: string | null }) {
   const [collabs, setCollabs] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const effectiveCode = coachReferralCode || partner.referral_code;
   const link = effectiveCode ? `${getShareOrigin()}/r/${effectiveCode}` : "";
 
+  const reload = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("students")
+      .select("id, created_at, profiles!students_profile_id_fkey(name, email, phone, photo_url)")
+      .eq("partner_id", partner.id)
+      .order("created_at", { ascending: false });
+    setCollabs((data as unknown as Collaborator[]) || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("students")
-        .select("id, created_at, profiles!students_profile_id_fkey(name, email, phone, photo_url)")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false });
-      setCollabs((data as unknown as Collaborator[]) || []);
-      setLoading(false);
-    })();
+    reload();
   }, [partner.id]);
+
+  const removeCollab = async (studentId: string) => {
+    if (!confirm("Remover este colaborador?")) return;
+    try {
+      const { detachPartnerCollaborator } = await import("@/lib/partner-collaborators.functions");
+      await detachPartnerCollaborator({ data: { studentId, partnerId: partner.id } });
+      toast.success("Colaborador removido");
+      await reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover");
+    }
+  };
+
 
   const copy = () => {
     if (!link) return;
