@@ -12391,6 +12391,11 @@ export type Database = {
         Args: { _escopo: string; _owner_id: string; _uso?: string }
         Returns: string
       }
+      bot_registrar_no_cartao: {
+        Args: { _conversa_id: string; _direcao: string; _texto: string }
+        Returns: undefined
+      }
+      bot_vincular_cartao: { Args: { _conversa_id: string }; Returns: string }
       can_create_fitmind_events: {
         Args: { _user_id: string }
         Returns: boolean
@@ -12785,6 +12790,10 @@ export type Database = {
       }
       join_student_challenge_group: {
         Args: { _group_id: string }
+        Returns: undefined
+      }
+      link_partner_collaborator: {
+        Args: { _partner_id: string; _student_id: string }
         Returns: undefined
       }
       link_professional_collaborator: {
@@ -13374,6 +13383,10 @@ export type Database = {
         Returns: Json
       }
       unblock_coach: { Args: { _coach_id: string }; Returns: undefined }
+      unlink_partner_collaborator: {
+        Args: { _partner_id: string; _student_id: string }
+        Returns: undefined
+      }
       unlink_professional_collaborator: {
         Args: { _student_id: string }
         Returns: undefined
