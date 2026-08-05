@@ -1,3 +1,30 @@
+## 20260805140000_bot_v2.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 05/08/2026 |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 05/08/2026** |
+
+Rotacao de numeros de WhatsApp (prioridade, limite diario por chip, bloqueio),
+verificacao invertida por WhatsApp, disparos, e vinculo automatico da conversa
+com o funil do CRM.
+
+Conferido pela API REST (fonte confiavel; o texto do editor do Lovable engana):
+6 tabelas e 8 funcoes respondendo.
+
+**Nova permissao esperada em partner_members.permissoes:** `robo`.
+
+### Armadilha do editor que voltou a aparecer
+
+O botao Limpar nao funciona com dialogo aberto, e a colagem seguinte CONCATENA
+em vez de substituir. A solucao que funcionou: clicar no editor e usar Ctrl+A
+e Delete pelo teclado real. O botao tambem muda de nome conforme o idioma da
+interface (Run / Executar / Correr).
+
+---
+
 # Registro de migrations fora do chat financeiro
 
 O chat financeiro é o dono de `supabase/migrations/`. Este arquivo registra as
