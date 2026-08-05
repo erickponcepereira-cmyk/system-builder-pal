@@ -577,52 +577,76 @@ export type Database = {
       bot_conexoes: {
         Row: {
           arquivado_em: string | null
+          bloqueado_em: string | null
+          bloqueado_motivo: string | null
           conectado_em: string | null
+          contador_dia: string | null
           created_at: string
           criado_por: string | null
+          enviadas_hoje: number
           escopo: string
+          falhas_seguidas: number
           id: string
+          limite_diario: number | null
           nome: string
           numero: string | null
           owner_id: string | null
+          prioridade: number
           provedor: string
           status: string
           status_detalhe: string | null
           updated_at: string
+          uso: string
           visto_em: string | null
           webhook_segredo: string
         }
         Insert: {
           arquivado_em?: string | null
+          bloqueado_em?: string | null
+          bloqueado_motivo?: string | null
           conectado_em?: string | null
+          contador_dia?: string | null
           created_at?: string
           criado_por?: string | null
+          enviadas_hoje?: number
           escopo: string
+          falhas_seguidas?: number
           id?: string
+          limite_diario?: number | null
           nome: string
           numero?: string | null
           owner_id?: string | null
+          prioridade?: number
           provedor?: string
           status?: string
           status_detalhe?: string | null
           updated_at?: string
+          uso?: string
           visto_em?: string | null
           webhook_segredo?: string
         }
         Update: {
           arquivado_em?: string | null
+          bloqueado_em?: string | null
+          bloqueado_motivo?: string | null
           conectado_em?: string | null
+          contador_dia?: string | null
           created_at?: string
           criado_por?: string | null
+          enviadas_hoje?: number
           escopo?: string
+          falhas_seguidas?: number
           id?: string
+          limite_diario?: number | null
           nome?: string
           numero?: string | null
           owner_id?: string | null
+          prioridade?: number
           provedor?: string
           status?: string
           status_detalhe?: string | null
           updated_at?: string
+          uso?: string
           visto_em?: string | null
           webhook_segredo?: string
         }
@@ -714,6 +738,123 @@ export type Database = {
           {
             foreignKeyName: "bot_conversas_profile_id_fkey"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_disparo_alvos: {
+        Row: {
+          cartao_id: string | null
+          created_at: string
+          disparo_id: string
+          erro: string | null
+          id: string
+          mensagem_id: string | null
+          nome: string | null
+          status: string
+          telefone: string
+        }
+        Insert: {
+          cartao_id?: string | null
+          created_at?: string
+          disparo_id: string
+          erro?: string | null
+          id?: string
+          mensagem_id?: string | null
+          nome?: string | null
+          status?: string
+          telefone: string
+        }
+        Update: {
+          cartao_id?: string | null
+          created_at?: string
+          disparo_id?: string
+          erro?: string | null
+          id?: string
+          mensagem_id?: string | null
+          nome?: string | null
+          status?: string
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_disparo_alvos_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_disparo_alvos_disparo_id_fkey"
+            columns: ["disparo_id"]
+            isOneToOne: false
+            referencedRelation: "bot_disparos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_disparo_alvos_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "bot_mensagens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_disparos: {
+        Row: {
+          agendado_para: string | null
+          concluido_em: string | null
+          created_at: string
+          criado_por: string | null
+          escopo: string
+          id: string
+          iniciado_em: string | null
+          intervalo_segundos: number
+          mensagem: string
+          nome: string
+          owner_id: string | null
+          status: string
+          updated_at: string
+          uso: string
+        }
+        Insert: {
+          agendado_para?: string | null
+          concluido_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          escopo: string
+          id?: string
+          iniciado_em?: string | null
+          intervalo_segundos?: number
+          mensagem: string
+          nome: string
+          owner_id?: string | null
+          status?: string
+          updated_at?: string
+          uso?: string
+        }
+        Update: {
+          agendado_para?: string | null
+          concluido_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          escopo?: string
+          id?: string
+          iniciado_em?: string | null
+          intervalo_segundos?: number
+          mensagem?: string
+          nome?: string
+          owner_id?: string | null
+          status?: string
+          updated_at?: string
+          uso?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_disparos_criado_por_fkey"
+            columns: ["criado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -957,6 +1098,76 @@ export type Database = {
             columns: ["proximo_passo_id"]
             isOneToOne: false
             referencedRelation: "bot_passos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_verificacoes: {
+        Row: {
+          conexao_id: string | null
+          conversa_id: string | null
+          created_at: string
+          email: string | null
+          expira_em: string
+          finalidade: string
+          id: string
+          nome_whatsapp: string | null
+          profile_id: string | null
+          telefone: string | null
+          tentativas: number
+          token: string
+          verificado_em: string | null
+        }
+        Insert: {
+          conexao_id?: string | null
+          conversa_id?: string | null
+          created_at?: string
+          email?: string | null
+          expira_em?: string
+          finalidade?: string
+          id?: string
+          nome_whatsapp?: string | null
+          profile_id?: string | null
+          telefone?: string | null
+          tentativas?: number
+          token: string
+          verificado_em?: string | null
+        }
+        Update: {
+          conexao_id?: string | null
+          conversa_id?: string | null
+          created_at?: string
+          email?: string | null
+          expira_em?: string
+          finalidade?: string
+          id?: string
+          nome_whatsapp?: string | null
+          profile_id?: string | null
+          telefone?: string | null
+          tentativas?: number
+          token?: string
+          verificado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_verificacoes_conexao_id_fkey"
+            columns: ["conexao_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conexoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_verificacoes_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "bot_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_verificacoes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -12147,6 +12358,10 @@ export type Database = {
         Returns: boolean
       }
       bot_acesso_fluxo: { Args: { _fluxo_id: string }; Returns: boolean }
+      bot_bloquear_conexao: {
+        Args: { _conexao_id: string; _motivo: string }
+        Returns: undefined
+      }
       bot_clonar_fluxo: {
         Args: {
           _escopo: string
@@ -12154,6 +12369,26 @@ export type Database = {
           _origem_id: string
           _owner_id: string
         }
+        Returns: string
+      }
+      bot_confirmar_verificacao: {
+        Args: {
+          _conexao_id?: string
+          _conversa_id?: string
+          _nome?: string
+          _telefone: string
+          _token: string
+        }
+        Returns: {
+          finalidade: string
+          motivo: string
+          ok: boolean
+          profile_id: string
+        }[]
+      }
+      bot_contar_envio: { Args: { _conexao_id: string }; Returns: undefined }
+      bot_escolher_conexao: {
+        Args: { _escopo: string; _owner_id: string; _uso?: string }
         Returns: string
       }
       can_create_fitmind_events: {
