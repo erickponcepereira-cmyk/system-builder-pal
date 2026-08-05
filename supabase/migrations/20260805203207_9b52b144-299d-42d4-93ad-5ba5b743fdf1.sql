@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.ensure_student_row_for_profile(uuid, uuid, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trg_profile_ensure_student() FROM PUBLIC, anon, authenticated;
