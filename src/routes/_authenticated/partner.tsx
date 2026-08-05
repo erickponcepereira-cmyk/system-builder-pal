@@ -1957,6 +1957,14 @@ function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; 
                 <Share2 className="h-3.5 w-3.5" /> Compartilhar
               </button>
             </div>
+
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="mt-3 w-full flex items-center justify-center gap-1 rounded-lg border border-primary/40 bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+            >
+              <Plus className="h-3.5 w-3.5" /> Vincular aluno existente
+            </button>
+
           </>
         ) : (
           <div className="mt-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs text-yellow-200">
