@@ -8,6 +8,7 @@ import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { listCoproducedProducts } from "@/lib/collab.functions";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
+import { ProductBuyersModal } from "@/components/products/ProductBuyersModal";
 
 
 type TimeRange = { start: string; end: string };
