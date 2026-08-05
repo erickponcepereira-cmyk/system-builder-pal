@@ -516,7 +516,14 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     >
                       <Eye className="h-3 w-3" /> Visualizar painel
                     </button>
+                    <button
+                      onClick={() => setBuyersFor({ id: p.id, name: p.name })}
+                      className="ml-3 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                    >
+                      <Users className="h-3 w-3" /> Compradores
+                    </button>
                   </div>
+
                 </div>
               </div>
             );
