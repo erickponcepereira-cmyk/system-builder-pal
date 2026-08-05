@@ -630,6 +630,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [readOnly, setReadOnly] = useState(false);
   const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string; type: "partner" | "professional" } | null>(null);
   const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [policyDismissed, setPolicyDismissed] = useState(false);
