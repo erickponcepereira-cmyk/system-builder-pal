@@ -6,6 +6,8 @@ import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
+import { PendingCoachStudentsAlert } from "@/components/admin/PendingCoachStudentsAlert";
+
 import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
