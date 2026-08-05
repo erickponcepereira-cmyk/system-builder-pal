@@ -113,6 +113,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [readOnly, setReadOnly] = useState(false);
   const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string } | null>(null);
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
   // Blocos da agenda do profissional: duração dos produtos precisa ser múltipla deles.
