@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  alvosDoFunil, alvosColados, resumoDisparo, dispararCampanha, cancelarCampanha,
+} from "@/lib/bot-disparos.functions";
 import { toast } from "sonner";
 import {
   Bot, MessageSquare, Send, Plus, Loader2, Wifi, WifiOff, QrCode, AlertTriangle,
@@ -796,16 +800,22 @@ function AbaConversas({ conexoes }: { conexoes: Conexao[] }) {
    ============================================================ */
 function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: boolean }) {
   const [disparos, setDisparos] = useState<any[]>([]);
-  const [criando, setCriando] = useState(false);
+  const [quadros, setQuadros] = useState<any[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [aberto, setAberto] = useState<any | null>(null);
   const [nome, setNome] = useState("");
   const [mensagem, setMensagem] = useState("");
-  const [carregando, setCarregando] = useState(true);
+  const [criando, setCriando] = useState(false);
 
   const carregar = useCallback(async () => {
-    const { data } = await db.from("bot_disparos").select("*")
-      .eq("escopo", "parceiro").eq("owner_id", partnerId)
-      .order("created_at", { ascending: false }).limit(20);
-    setDisparos(data || []);
+    const [d, q] = await Promise.all([
+      db.from("bot_disparos").select("*").eq("escopo", "parceiro").eq("owner_id", partnerId)
+        .order("created_at", { ascending: false }).limit(20),
+      db.from("crm_quadros").select("id, nome, tipo").eq("escopo", "parceiro").eq("owner_id", partnerId)
+        .eq("tipo", "funil").is("arquivado_em", null),
+    ]);
+    setDisparos(d.data || []);
+    setQuadros(q.data || []);
     setCarregando(false);
   }, [partnerId]);
 
@@ -814,15 +824,24 @@ function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: b
   async function criar() {
     if (!nome.trim() || !mensagem.trim()) { toast.error("Dê um nome e escreva a mensagem"); return; }
     setCriando(true);
-    const { error } = await db.from("bot_disparos").insert({
+    const { data, error } = await db.from("bot_disparos").insert({
       escopo: "parceiro", owner_id: partnerId, nome: nome.trim(), mensagem: mensagem.trim(),
       status: "rascunho", intervalo_segundos: 20,
-    });
+    }).select("*").single();
     setCriando(false);
     if (error) { toast.error("Não deu para criar"); return; }
     setNome(""); setMensagem("");
-    toast.success("Rascunho salvo");
-    void carregar();
+    await carregar();
+    setAberto(data);
+  }
+
+  if (carregando) {
+    return <div className="flex items-center gap-2 py-8 text-white/50"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>;
+  }
+
+  if (aberto) {
+    return <DetalheDisparo disparo={aberto} quadros={quadros} temNumero={temNumero}
+      onVoltar={() => { setAberto(null); void carregar(); }} />;
   }
 
   return (
@@ -837,45 +856,241 @@ function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: b
       <div className={`${cartao} p-4`} style={{ backgroundColor: "#1A1A1A" }}>
         <p className="text-sm font-medium text-white">Nova campanha</p>
         <p className="mt-1 text-xs text-white/50">
-          Para avisar do desafio, lembrar da avaliação, chamar para promoção. As mensagens saem
-          espaçadas de propósito — mandar tudo de uma vez é o que faz o WhatsApp bloquear o número.
+          Para avisar do desafio, lembrar da avaliação, chamar para promoção. Escreva{" "}
+          <span className="font-mono text-white/70">{"{nome}"}</span> onde quiser o primeiro nome da pessoa.
         </p>
         <div className="mt-3 space-y-3">
           <input value={nome} onChange={(e) => setNome(e.target.value)}
             placeholder="Nome da campanha (ex.: Desafio de janeiro)" className={campo} />
           <textarea rows={3} value={mensagem} onChange={(e) => setMensagem(e.target.value)}
-            placeholder="A mensagem que será enviada" className={`${campo} resize-none`} />
+            placeholder="Oi {nome}! Abriram as inscrições do desafio…" className={`${campo} resize-none`} />
           <button onClick={() => void criar()} disabled={criando}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
             {criando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
-            Salvar rascunho
+            Criar campanha
           </button>
         </div>
       </div>
 
-      {carregando ? (
-        <div className="flex items-center gap-2 py-6 text-white/50"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>
-      ) : !disparos.length ? (
+      {!disparos.length ? (
         <p className="py-6 text-center text-sm text-white/40">Nenhuma campanha ainda.</p>
-      ) : (
-        disparos.map((d) => (
-          <div key={d.id} className={`${cartao} p-4`} style={{ backgroundColor: "#1A1A1A" }}>
-            <div className="flex flex-wrap items-center gap-2">
-              <Megaphone className="h-4 w-4 text-white/40" />
-              <span className="text-sm font-medium text-white">{d.nome}</span>
-              <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-white/50">{d.status}</span>
-              <span className="ml-auto text-xs text-white/30">
-                {new Date(d.created_at).toLocaleDateString("pt-BR")}
-              </span>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-white/60">{d.mensagem}</p>
+      ) : disparos.map((d) => (
+        <button key={d.id} onClick={() => setAberto(d)}
+          className={`${cartao} flex w-full items-center gap-3 p-4 text-left hover:border-white/15`}
+          style={{ backgroundColor: "#1A1A1A" }}>
+          <Megaphone className="h-4 w-4 shrink-0 text-white/40" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">{d.nome}</p>
+            <p className="truncate text-xs text-white/40">{d.mensagem}</p>
           </div>
-        ))
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+            d.status === "concluido" ? "bg-emerald-400/10 text-emerald-400"
+            : d.status === "enviando" ? "bg-amber-400/10 text-amber-400"
+            : d.status === "cancelado" ? "bg-red-400/10 text-red-400"
+            : "bg-white/5 text-white/40"}`}>{d.status}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Monta a lista de contatos e dispara. */
+function DetalheDisparo({
+  disparo, quadros, temNumero, onVoltar,
+}: { disparo: any; quadros: any[]; temNumero: boolean; onVoltar: () => void }) {
+  const [d, setD] = useState<any>(disparo);
+  const [resumo, setResumo] = useState<any>(null);
+  const [alvos, setAlvos] = useState<any[]>([]);
+  const [quadroId, setQuadroId] = useState<string>(quadros[0]?.id ?? "");
+  const [colado, setColado] = useState("");
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [confirmar, setConfirmar] = useState(false);
+
+  const puxarFunil = useServerFn(alvosDoFunil);
+  const puxarColados = useServerFn(alvosColados);
+  const verResumo = useServerFn(resumoDisparo);
+  const disparar = useServerFn(dispararCampanha);
+  const cancelar = useServerFn(cancelarCampanha);
+
+  const carregar = useCallback(async () => {
+    const [r, a, atual] = await Promise.all([
+      verResumo({ data: { disparoId: d.id } }).catch(() => null),
+      db.from("bot_disparo_alvos").select("id, telefone, nome, status, erro").eq("disparo_id", d.id).limit(200),
+      db.from("bot_disparos").select("*").eq("id", d.id).maybeSingle(),
+    ]);
+    setResumo(r);
+    setAlvos(a.data || []);
+    if (atual.data) setD(atual.data);
+  }, [d.id, verResumo]);
+
+  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    if (d.status !== "enviando" && d.status !== "enfileirando") return;
+    const t = setInterval(() => void carregar(), 10000);
+    return () => clearInterval(t);
+  }, [d.status, carregar]);
+
+  const rascunho = d.status === "rascunho";
+
+  async function acao(nome: string, fn: () => Promise<any>, msg?: (r: any) => string) {
+    setOcupado(nome);
+    try {
+      const r = await fn();
+      if (msg) toast.success(msg(r));
+      await carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu certo");
+    }
+    setOcupado(null);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={onVoltar} className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white/60 hover:text-white">Voltar</button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-bold text-white">{d.nome}</p>
+          <p className="text-xs text-white/40">
+            {d.status} · uma mensagem a cada {d.intervalo_segundos}s
+          </p>
+        </div>
+      </div>
+
+      <div className={`${cartao} p-4`} style={{ backgroundColor: "#1A1A1A" }}>
+        <p className="whitespace-pre-wrap text-sm text-white/70">{d.mensagem}</p>
+      </div>
+
+      {resumo && resumo.total > 0 && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[
+            { r: "Contatos", v: resumo.total, c: "text-white" },
+            { r: "Na fila", v: resumo.enfileirado, c: "text-amber-400" },
+            { r: "Enviados", v: resumo.enviado, c: "text-emerald-400" },
+            { r: "Com erro", v: resumo.erro, c: "text-red-400" },
+          ].map((x) => (
+            <div key={x.r} className={`${cartao} p-4`} style={{ backgroundColor: "#1A1A1A" }}>
+              <p className="text-xs text-white/50">{x.r}</p>
+              <p className={`mt-1 text-xl font-bold ${x.c}`}>{x.v}</p>
+            </div>
+          ))}
+        </div>
       )}
 
-      <p className="text-xs text-white/30">
-        O envio das campanhas ainda está sendo construído — por enquanto dá para preparar e revisar o texto.
-      </p>
+      {rascunho && (
+        <div className={`${cartao} space-y-4 p-4`} style={{ backgroundColor: "#1A1A1A" }}>
+          <p className="text-sm font-medium text-white">Para quem enviar</p>
+
+          {quadros.length > 0 && (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[200px] flex-1">
+                <label className="mb-1 block text-xs text-white/50">Puxar os contatos de um funil</label>
+                <select value={quadroId} onChange={(e) => setQuadroId(e.target.value)} className={campo}>
+                  {quadros.map((q) => <option key={q.id} value={q.id}>{q.nome}</option>)}
+                </select>
+              </div>
+              <button
+                onClick={() => void acao("funil",
+                  () => puxarFunil({ data: { disparoId: d.id, quadroId } }),
+                  (r) => `${r.adicionados} adicionados · ${r.repetidos} já estavam na lista`)}
+                disabled={!quadroId || ocupado === "funil"}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-white hover:bg-white/5 disabled:opacity-50">
+                {ocupado === "funil" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Puxar do funil
+              </button>
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Ou cole uma lista (um por linha)</label>
+            <textarea rows={4} value={colado} onChange={(e) => setColado(e.target.value)}
+              placeholder={"Joana, 65 99999-0001\nCarlos; 65999990002"}
+              className={`${campo} resize-none font-mono text-xs`} />
+            <button
+              onClick={() => void acao("colado",
+                () => puxarColados({ data: { disparoId: d.id, texto: colado } }),
+                (r) => `${r.adicionados} adicionados · ${r.repetidos} repetidos`).then(() => setColado(""))}
+              disabled={!colado.trim() || ocupado === "colado"}
+              className="mt-2 inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/5 disabled:opacity-50">
+              {ocupado === "colado" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Adicionar colados
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rascunho && resumo && resumo.total > 0 && (
+        <div className={`${cartao} p-4`} style={{ backgroundColor: "#1A1A1A" }}>
+          {!confirmar ? (
+            <>
+              <p className="text-sm text-white">
+                Pronto para enviar para <b>{resumo.pendente}</b> pessoa{resumo.pendente === 1 ? "" : "s"}.
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                Vai levar cerca de {Math.ceil((resumo.pendente * d.intervalo_segundos) / 60)} minutos —
+                as mensagens saem espaçadas de propósito, porque mandar tudo de uma vez é o que faz o
+                WhatsApp bloquear o número.
+              </p>
+              <button onClick={() => setConfirmar(true)} disabled={!temNumero}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40">
+                <Send className="h-4 w-4" /> Disparar
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-200/80">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Isso envia mensagem de verdade para {resumo.pendente} pessoa{resumo.pendente === 1 ? "" : "s"} e
+                não dá para desfazer o que já saiu. Confere o texto antes.
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => void acao("disparar",
+                    () => disparar({ data: { disparoId: d.id } }),
+                    (r) => r.ficamParaDepois > 0
+                      ? `${r.enfileirados} na fila · ${r.ficamParaDepois} ficaram para amanhã (limite do número)`
+                      : `${r.enfileirados} na fila · leva ~${r.minutosEstimados} min`
+                  ).then(() => setConfirmar(false))}
+                  disabled={ocupado === "disparar"}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+                  {ocupado === "disparar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Confirmar envio
+                </button>
+                <button onClick={() => setConfirmar(false)}
+                  className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {(d.status === "enviando" || d.status === "enfileirando") && (
+        <button
+          onClick={() => void acao("cancelar", () => cancelar({ data: { disparoId: d.id } }),
+            (r) => `${r.canceladas} mensagens tiradas da fila`)}
+          disabled={ocupado === "cancelar"}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white/60 hover:text-red-400 disabled:opacity-50">
+          {ocupado === "cancelar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
+          Parar o que ainda não saiu
+        </button>
+      )}
+
+      {alvos.length > 0 && (
+        <div className={`${cartao} max-h-80 overflow-y-auto`} style={{ backgroundColor: "#1A1A1A" }}>
+          {alvos.map((a) => (
+            <div key={a.id} className="flex items-center gap-2 border-b border-white/5 px-4 py-2 last:border-b-0">
+              <span className="min-w-0 truncate text-sm text-white">{a.nome || "sem nome"}</span>
+              <span className="font-mono text-xs text-white/40">{a.telefone}</span>
+              <span className={`ml-auto shrink-0 text-xs ${
+                a.status === "enviado" ? "text-emerald-400"
+                : a.status === "erro" ? "text-red-400"
+                : a.status === "enfileirado" ? "text-amber-400" : "text-white/30"}`}>
+                {a.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,8 @@ export const Route = createFileRoute("/api/bot/fila")({
           .eq("direcao", "saida")
           .eq("status", "pendente")
           .in("conversa_id", lista.map((c) => c.id))
+          // só o que já venceu: é assim que o disparo sai espaçado sem agendador
+          .or(`agendado_para.is.null,agendado_para.lte.${new Date().toISOString()}`)
           .order("created_at", { ascending: true })
           .limit(limite);
 
