@@ -86,7 +86,9 @@ function StudentLayout() {
 
   return (
     <MobileShell>
+      <PendingCoachGate />
       <Outlet />
     </MobileShell>
   );
 }
+
