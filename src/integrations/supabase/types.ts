@@ -13396,6 +13396,10 @@ export type Database = {
         Args: { _sub_id: string }
         Returns: number
       }
+      sync_coach_evaluation_client_for_student: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       test_mode_cutoff: { Args: never; Returns: string }
       touch_my_activity: { Args: never; Returns: undefined }
       transfer_inactive_coach_network: {

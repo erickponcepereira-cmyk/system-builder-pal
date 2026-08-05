@@ -78,6 +78,16 @@ export const submitMyPendingCoach = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!coach?.id) throw new Error("Coach inválido. Selecione um coach da lista.");
 
+    // Grava o coach ANTES do patch de perfil: a ficha de avaliação é criada por
+    // trigger a partir do aluno, e precisa nascer já com o coach correto.
+    const { data: studentRow, error } = await supabaseAdmin
+      .from("students")
+      .update({ coach_id: data.coachId, coach_assignment_pending: false } as never)
+      .eq("profile_id", profile.id)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
     const patch: { phone?: string; gender?: string; birthdate?: string } = {};
     if (data.phone) patch.phone = data.phone.replace(/\D/g, "");
     if (data.gender) patch.gender = data.gender;
@@ -86,15 +96,15 @@ export const submitMyPendingCoach = createServerFn({ method: "POST" })
       await supabaseAdmin.from("profiles").update(patch).eq("id", profile.id);
     }
 
-
-    const { error } = await supabaseAdmin
-      .from("students")
-      .update({ coach_id: data.coachId, coach_assignment_pending: false } as never)
-      .eq("profile_id", profile.id);
-    if (error) throw new Error(error.message);
+    // Garante que a ficha de avaliação reflita coach/gênero/nome atuais.
+    if (studentRow?.id) {
+      await supabaseAdmin.rpc("ensure_coach_evaluation_client_for_student" as never, { _student_id: studentRow.id } as never);
+      await supabaseAdmin.rpc("sync_coach_evaluation_client_for_student" as never, { _student_id: studentRow.id } as never);
+    }
 
     return { ok: true };
   });
+
 
 export type PendingCoachStudentRow = {
   studentId: string;
