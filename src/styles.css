@@ -510,8 +510,8 @@ select option {
    fique fora da área de clique.
 ---------------------------------------------------------------- */
 @utility modal-safe {
-  padding-top: max(0.75rem, env(safe-area-inset-top));
-  padding-bottom: max(0.75rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  padding-top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
+  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
   padding-left: max(0.75rem, env(safe-area-inset-left));
   padding-right: max(0.75rem, env(safe-area-inset-right));
   -webkit-overflow-scrolling: touch;
@@ -520,9 +520,10 @@ select option {
 /* Teto de altura: o cartão nunca ultrapassa a tela útil e rola por dentro,
    mas qualquer max-h menor definido no próprio componente continua valendo. */
 .modal-safe > *:not(script):not(style) {
-  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
 
 

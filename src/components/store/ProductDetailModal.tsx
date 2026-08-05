@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
+import { ModalShell } from "@/components/ui/ModalShell";
+
 
 export interface ProductDetail {
   id: string;
@@ -139,32 +141,34 @@ export function ProductDetailModal({
 
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-stretch justify-center bg-background/90 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center"
-      style={{ height: "100dvh" }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative flex h-full sm:h-auto w-full max-w-lg flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-border bg-card sm:max-h-[92vh]"
-        style={{ maxHeight: "100dvh" }}
-      >
-        {/* Barra fixa com botão de fechar — sempre visível */}
-        <div
-          className="flex items-center justify-end border-b border-border/40 bg-card/95 px-3 py-2 backdrop-blur shrink-0"
-          style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
-        >
-
+    <ModalShell
+      zIndex={100}
+      className="max-w-lg"
+      header={
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-sm font-bold text-foreground">{product.title}</p>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground hover:bg-muted/80"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground hover:bg-muted/80"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
+      }
+      footer={
+        <button
+          onClick={() => onAdd({ ...product, scheduledSlot: slot })}
+          disabled={needsSlot && !slot}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {needsSlot && !slot ? "Escolha um horário" : (addLabel || "Adicionar ao carrinho")}
+        </button>
+      }
+    >
+      <div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
 
         <div className="relative mx-auto mt-4 aspect-square w-full max-w-[300px] overflow-hidden rounded-2xl bg-muted">
           {currentImage ? (
@@ -464,18 +468,10 @@ export function ProductDetailModal({
               onChange={setSlot}
             />
           )}
-
-          <button
-            onClick={() => onAdd({ ...product, scheduledSlot: slot })}
-            disabled={needsSlot && !slot}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> {needsSlot && !slot ? "Escolha um horário" : (addLabel || "Adicionar ao carrinho")}
-          </button>
-        </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
+
 }
 

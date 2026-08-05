@@ -54,6 +54,7 @@ type OrderRow = {
   sale_channel: SaleChannel;
   student_name?: string | null;
   product_name?: string | null;
+  coprod_amount?: number;
 };
 
 type WithdrawRow = {
@@ -171,8 +172,21 @@ export function PartnerWalletTab() {
     const pMap = new Map<string, string>();
     ((ppRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
     ((profProdRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+    // Repasses de co-producao das vendas destes produtos (saem do liquido do criador)
+    const coprodMap = new Map<string, number>();
+    if (baseOrders.length) {
+      const { data: credits } = await supabase
+        .from("product_coproduction_credits" as never)
+        .select("order_id, amount_brl" as never)
+        .in("order_id" as never, baseOrders.map((o) => o.id) as never);
+      ((credits as any[]) || []).forEach((c: any) => {
+        coprodMap.set(c.order_id, (coprodMap.get(c.order_id) || 0) + Number(c.amount_brl || 0));
+      });
+    }
+
     const enriched = baseOrders.map((o) => ({
       ...o,
+      coprod_amount: coprodMap.get(o.id) || 0,
       student_name: o.student_id ? sMap.get(o.student_id) || null : null,
       product_name:
         (o.partner_product_id ? pMap.get(o.partner_product_id) : null) ||
@@ -254,6 +268,12 @@ export function PartnerWalletTab() {
           <Card label="Total recebido" value={brl(w.total_earned)} />
           <Card label="Sacado" value={brl(w.total_withdrawn)} />
         </div>
+        {orders.some((o) => o.status === "paid" && Number(o.coprod_amount || 0) > 0) && (
+          <p className="mt-3 text-[11px] text-amber-400">
+            Repassado a co-produtores nas vendas listadas:{" "}
+            {brl(orders.filter((o) => o.status === "paid").reduce((s, o) => s + Number(o.coprod_amount || 0), 0))}
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
@@ -281,7 +301,10 @@ export function PartnerWalletTab() {
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-3">
-                  <p className={`text-sm font-bold ${st.value}`}>{brl(o.partner_net_amount)}</p>
+                    <p className={`text-sm font-bold ${st.value}`}>{brl(Number(o.partner_net_amount || 0) - Number(o.coprod_amount || 0))}</p>
+                  {Number(o.coprod_amount || 0) > 0 && (
+                    <p className="text-[11px] text-amber-400">co-produção −{brl(Number(o.coprod_amount || 0))}</p>
+                  )}
                   <p className="text-[11px] text-white/40">bruto {brl(o.gross_amount)}</p>
                 </div>
               </div>

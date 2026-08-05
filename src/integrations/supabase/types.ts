@@ -13064,6 +13064,7 @@ export type Database = {
         Returns: boolean
       }
       profile_has_student: { Args: { _profile_id: string }; Returns: boolean }
+      profile_is_my_client: { Args: { _profile_id: string }; Returns: boolean }
       profile_is_referred_by_current_student: {
         Args: { _profile_id: string }
         Returns: boolean

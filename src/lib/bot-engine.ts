@@ -136,6 +136,8 @@ async function lerPasso(db: Db, passoId: string) {
   return {
     ...(passo as Record<string, any>),
     opcoes: (opcoes ?? []) as Array<{ rotulo: string; gatilho: string; proximo_passo_id: string | null }>,
+  } as Record<string, any> & {
+    opcoes: Array<{ rotulo: string; gatilho: string; proximo_passo_id: string | null }>;
   };
 }
 
