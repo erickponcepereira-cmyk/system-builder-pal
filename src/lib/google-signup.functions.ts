@@ -49,10 +49,14 @@ export const resolveGoogleAccount = createServerFn({ method: "POST" })
       if (role !== "student") return true; // coach/partner/professional/admin têm fluxo próprio
       const { data: student } = await supabaseAdmin
         .from("students")
-        .select("id")
+        .select("id, coach_assignment_pending")
         .eq("profile_id", profile.id)
         .maybeSingle();
-      return !!student?.id && !!profile.phone && !!profile.gender && !!profile.birthdate;
+      return !!student?.id
+        && student.coach_assignment_pending === false
+        && !!profile.phone
+        && !!profile.gender
+        && !!profile.birthdate;
     };
 
     // 1) Já tem profile vinculado a este user_id?
