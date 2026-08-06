@@ -204,6 +204,13 @@ export function AvailabilityPicker({
               })}
             </div>
           )}
+          {value && (
+            <p className="mt-2 rounded-lg bg-amber-500/10 px-2.5 py-2 text-[10px] leading-relaxed text-amber-200">
+              Horário reservado das {fmtTime(value)} às{" "}
+              {fmtTime(new Date(new Date(value).getTime() + durationMinutes * 60000).toISOString())} ({durationMinutes} min).
+              A reserva é liberada automaticamente se o pagamento não for confirmado em até 30 minutos.
+            </p>
+          )}
         </div>
       )}
     </div>
