@@ -1615,7 +1615,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 orderId={payOrder.id}
                 amount={payOrder.total}
                 kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
-                onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+                onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
               />
             </div>
             <MercadoPagoCheckout
