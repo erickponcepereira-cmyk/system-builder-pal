@@ -21,11 +21,17 @@ function fmtDate(iso: string | null) {
   }
 }
 
+const CANCELLED = ["cancelled", "refunded", "failed", "rejected"];
+const isCancelled = (s: string) => CANCELLED.includes(s);
+
+type Filter = "all" | "paid" | "pending" | "cancelled";
+
 export function ProductBuyersModal({ productType, productId, productName, onClose }: Props) {
   const load = useServerFn(listProductBuyers);
   const [data, setData] = useState<ProductBuyersResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     let alive = true;
@@ -37,9 +43,17 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
     return () => { alive = false; };
   }, [productType, productId, load]);
 
-  const buyers = (data?.buyers || []).filter((b) =>
-    q.trim() ? b.name.toLowerCase().includes(q.trim().toLowerCase()) : true,
-  );
+  const buyers = (data?.buyers || [])
+    .filter((b) =>
+      filter === "all"
+        ? true
+        : filter === "paid"
+          ? b.status === "paid"
+          : filter === "cancelled"
+            ? isCancelled(b.status)
+            : b.status !== "paid" && !isCancelled(b.status),
+    )
+    .filter((b) => (q.trim() ? b.name.toLowerCase().includes(q.trim().toLowerCase()) : true));
 
   return (
     <ModalShell
@@ -73,20 +87,37 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
 
       {data && (
         <>
-          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-white/5 p-2">
+          <div className="mb-3 grid grid-cols-4 gap-2 text-center">
+            <button
+              onClick={() => setFilter("paid")}
+              className={`rounded-xl p-2 transition ${filter === "paid" ? "bg-primary/20 ring-1 ring-primary/60" : "bg-white/5"}`}
+            >
               <p className="text-lg font-bold text-primary">{data.paidCount}</p>
-              <p className="text-[10px] text-white/50">Vendas pagas</p>
-            </div>
-            <div className="rounded-xl bg-white/5 p-2">
-              <p className="text-lg font-bold text-white">{data.pendingCount}</p>
+              <p className="text-[10px] text-white/50">Pagas</p>
+            </button>
+            <button
+              onClick={() => setFilter("pending")}
+              className={`rounded-xl p-2 transition ${filter === "pending" ? "bg-yellow-500/20 ring-1 ring-yellow-500/60" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-yellow-400">{data.pendingCount}</p>
               <p className="text-[10px] text-white/50">Pendentes</p>
-            </div>
-            <div className="rounded-xl bg-white/5 p-2">
-              <p className="text-lg font-bold text-white">{data.stock === null ? "∞" : data.stock}</p>
+            </button>
+            <button
+              onClick={() => setFilter("cancelled")}
+              className={`rounded-xl p-2 transition ${filter === "cancelled" ? "bg-red-500/20 ring-1 ring-red-500/60" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-red-400">{data.cancelledCount}</p>
+              <p className="text-[10px] text-white/50">Canceladas</p>
+            </button>
+            <button
+              onClick={() => setFilter("all")}
+              className={`rounded-xl p-2 transition ${filter === "all" ? "bg-white/15 ring-1 ring-white/40" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-white">{data.remaining === null ? "∞" : data.remaining}</p>
               <p className="text-[10px] text-white/50">Vagas restantes</p>
-            </div>
+            </button>
           </div>
+
 
           <input
             value={q}
@@ -114,11 +145,16 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span
                         className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${
-                          b.status === "paid" ? "bg-green-500/15 text-green-400" : "bg-yellow-500/15 text-yellow-400"
+                          b.status === "paid"
+                            ? "bg-green-500/15 text-green-400"
+                            : isCancelled(b.status)
+                              ? "bg-red-500/15 text-red-400"
+                              : "bg-yellow-500/15 text-yellow-400"
                         }`}
                       >
-                        {b.status === "paid" ? "pago" : b.status}
+                        {b.status === "paid" ? "pago" : isCancelled(b.status) ? "cancelado" : b.status}
                       </span>
+
                       {b.phone ? (
                         <a
                           href={`https://wa.me/55${onlyDigits(b.phone)}`}

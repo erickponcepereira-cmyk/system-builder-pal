@@ -12675,6 +12675,7 @@ export type Database = {
         Args: { _billing_day?: number; _user_id: string }
         Returns: string
       }
+      expire_unpaid_product_orders: { Args: never; Returns: number }
       expire_unpaid_professional_appointments: { Args: never; Returns: number }
       extend_coach_card_access: {
         Args: { _coach_id: string; _days: number }
@@ -13225,6 +13226,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resolve_selling_coach: {
+        Args: { _coach_id: string; _student_id: string }
+        Returns: string
       }
       resolver_tema_marca: {
         Args: { _coach_id?: string; _profile_id?: string }
