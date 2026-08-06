@@ -1625,7 +1625,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && (() => {
               const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
