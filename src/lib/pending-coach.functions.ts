@@ -140,7 +140,9 @@ export const adminListPendingCoachStudents = createServerFn({ method: "POST" })
       .from("students")
       .select("id, created_at, profile_id, profiles!students_profile_id_fkey(name, email, phone)")
       .eq("coach_assignment_pending" as never, true as never)
+      .eq("coach_id" as never, DEFAULT_AUTO_COACH_ID as never)
       .order("created_at", { ascending: false });
+
 
     return ((data || []) as Array<{
       id: string;
