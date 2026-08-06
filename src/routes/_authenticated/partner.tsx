@@ -13,6 +13,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
 
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
+import { ProductBuyersModal } from "@/components/products/ProductBuyersModal";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
 import { Logo } from "@/components/Logo";
