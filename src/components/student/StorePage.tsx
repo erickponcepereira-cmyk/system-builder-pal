@@ -127,6 +127,21 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
   /** Pop-up "compra aprovada" com benefícios e WhatsApp do dono do produto. */
   const [purchased, setPurchased] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
+  /** Converte itens do carrinho pagos no formato do pop-up de compra aprovada. */
+  const buildPurchasedItems = (ids: string[]): PurchasedItem[] =>
+    cart
+      .filter((c) => ids.includes(c.id))
+      .map((c) => ({
+        productId: c.kind === "partner" || c.kind === "partner_company" ? c.sourceId : null,
+        productName: c.title,
+        price: Number(c.price) * (c.quantity || 1),
+        kind: c.kind === "partner_company" ? "partner" : c.kind === "partner" ? "professional" : "fitmind",
+        slotLabel: c.scheduledSlot
+          ? new Date(c.scheduledSlot).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+          : null,
+      }));
+
+
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
