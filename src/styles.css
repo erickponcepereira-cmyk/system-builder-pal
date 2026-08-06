@@ -511,19 +511,46 @@ select option {
 ---------------------------------------------------------------- */
 @utility modal-safe {
   padding-top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
-  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
+  padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 1rem));
   padding-left: max(0.75rem, env(safe-area-inset-left));
   padding-right: max(0.75rem, env(safe-area-inset-right));
   -webkit-overflow-scrolling: touch;
 }
 
-/* Teto de altura: o cartão nunca ultrapassa a tela útil e rola por dentro,
-   mas qualquer max-h menor definido no próprio componente continua valendo. */
+/* O overlay NUNCA rola: quem rola é o cartão, por dentro. Assim o topo do
+   cartão (com o X) e o rodapé de ações ficam sempre dentro da tela, mesmo
+   no Chrome Android, onde a barra de endereço muda a altura visível. */
+.modal-safe {
+  overflow: hidden !important;
+  align-items: center !important;
+}
+
+/* Teto de altura real da janela visível (--vvh é atualizado pelo script do
+   root a partir do visualViewport; 100dvh é o fallback). Sobrescreve
+   propositalmente max-h-[90vh] & cia., que no Android estouram a tela. */
 .modal-safe > *:not(script):not(style) {
-  max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(
+    var(--vvh, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* Cabeçalho/rodapé fixos dentro do cartão do modal. */
+@utility modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--card);
+}
+
+@utility modal-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background-color: var(--card);
+}
+
 
 
 
