@@ -145,11 +145,16 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span
                         className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${
-                          b.status === "paid" ? "bg-green-500/15 text-green-400" : "bg-yellow-500/15 text-yellow-400"
+                          b.status === "paid"
+                            ? "bg-green-500/15 text-green-400"
+                            : isCancelled(b.status)
+                              ? "bg-red-500/15 text-red-400"
+                              : "bg-yellow-500/15 text-yellow-400"
                         }`}
                       >
-                        {b.status === "paid" ? "pago" : b.status}
+                        {b.status === "paid" ? "pago" : isCancelled(b.status) ? "cancelado" : b.status}
                       </span>
+
                       {b.phone ? (
                         <a
                           href={`https://wa.me/55${onlyDigits(b.phone)}`}
