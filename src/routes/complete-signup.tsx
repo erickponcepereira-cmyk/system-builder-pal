@@ -85,7 +85,7 @@ function CompleteSignupPage() {
       let ref = readReferralSignup();
       // Link `?ref=` grava só o código: resolve aqui quem é o coach, senão o
       // seletor aparece vazio e a indicação se perde.
-      if (ref.code && !ref.coachId) {
+      if (ref.code) {
         const row = await resolverCodigo(ref.code);
         if (row) {
           ref = {
@@ -95,6 +95,16 @@ function CompleteSignupPage() {
             partnerId: row.partner_id ?? ref.partnerId,
             referredByStudentId: row.referred_by_student_id ?? ref.referredByStudentId,
           };
+        } else {
+          ref = {
+            code: null,
+            kind: null,
+            coachId: null,
+            sponsorName: null,
+            partnerId: null,
+            referredByStudentId: null,
+          };
+          setError("O link de indicação expirou. Selecione um coach para continuar.");
         }
       }
       setReferral(ref);

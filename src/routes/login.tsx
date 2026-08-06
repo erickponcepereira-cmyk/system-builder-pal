@@ -55,6 +55,9 @@ function LoginPage() {
       if (active && session?.user) {
         const next = getNextParam();
         if (next) {
+          if (next.startsWith("/student")) {
+            try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
+          }
           clearPostAuthIntent();
           window.location.replace(next);
         } else {
@@ -70,6 +73,9 @@ function LoginPage() {
     try { sessionStorage.removeItem("fitmind_selected_area"); } catch { /* storage indisponível */ }
     const next = getNextParam();
     if (next) {
+      if (next.startsWith("/student")) {
+        try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
+      }
       clearPostAuthIntent();
       window.location.replace(next);
       return;

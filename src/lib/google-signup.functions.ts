@@ -49,10 +49,14 @@ export const resolveGoogleAccount = createServerFn({ method: "POST" })
       if (role !== "student") return true; // coach/partner/professional/admin têm fluxo próprio
       const { data: student } = await supabaseAdmin
         .from("students")
-        .select("id")
+        .select("id, coach_assignment_pending")
         .eq("profile_id", profile.id)
         .maybeSingle();
-      return !!student?.id && !!profile.phone && !!profile.gender && !!profile.birthdate;
+      return !!student?.id
+        && student.coach_assignment_pending === false
+        && !!profile.phone
+        && !!profile.gender
+        && !!profile.birthdate;
     };
 
     // 1) Já tem profile vinculado a este user_id?
@@ -154,11 +158,12 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         referred_by_student_id: string | null;
         partner_id: string | null;
       } | undefined) : undefined);
-      if (row?.valid && row.coach_id) {
-        coachId = row.coach_id;
-        referredByStudentId = row.referred_by_student_id ?? referredByStudentId;
-        partnerId = row.partner_id ?? partnerId;
+      if (!row?.valid || !row.coach_id) {
+        throw new Error("O link de indicação não é mais válido. Abra novamente o link enviado pelo seu coach.");
       }
+      coachId = row.coach_id;
+      referredByStudentId = row.referred_by_student_id ?? null;
+      partnerId = row.partner_id ?? null;
     }
 
 
@@ -185,7 +190,7 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         .eq("id", existing.id);
 
       if (!existing.role || existing.role === "student") {
-        await ensureStudentForProfile(existing.id as string, coachId, partnerId);
+        await ensureStudentForProfile(existing.id as string, coachId, partnerId, referredByStudentId);
       }
       return { ok: true, alreadyExisted: true };
     }
