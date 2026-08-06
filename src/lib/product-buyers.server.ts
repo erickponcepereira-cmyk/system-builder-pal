@@ -89,8 +89,8 @@ export async function fetchProductBuyers(
     .from("partner_product_orders")
     .select("id,order_number,status,gross_amount,paid_at,created_at,student_id,selling_coach_id")
     .eq(column, productId)
-    .neq("status", "cancelled")
     .order("created_at", { ascending: false });
+
 
   const orders = ((ordersData as Array<{
     id: string;
