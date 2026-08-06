@@ -12675,6 +12675,7 @@ export type Database = {
         Args: { _billing_day?: number; _user_id: string }
         Returns: string
       }
+      expire_unpaid_professional_appointments: { Args: never; Returns: number }
       extend_coach_card_access: {
         Args: { _coach_id: string; _days: number }
         Returns: undefined
