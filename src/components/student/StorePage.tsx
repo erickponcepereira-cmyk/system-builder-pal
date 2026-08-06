@@ -1671,6 +1671,9 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           </div>
         </div>
       )}
+      {purchased && (
+        <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={() => setPurchased(null)} />
+      )}
     </div>
   );
 }
