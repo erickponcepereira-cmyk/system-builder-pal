@@ -766,7 +766,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       {payOrder && (
         <div className="fixed inset-0 z-[70] flex justify-center bg-black/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="modal-head -mx-5 -mt-5 mb-4 flex items-center justify-between bg-[#1A1A1A] px-5 pb-3 pt-5">
               <div>
                 <h2 className="text-base font-bold text-white">Pagamento</h2>
                 <p className="text-xs text-white/50">Pedido {payOrder.number}</p>

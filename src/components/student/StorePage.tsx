@@ -1075,7 +1075,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               <div className="mb-4 rounded-xl bg-muted p-3 text-xs">
                 <div className="flex justify-between"><span className="text-muted-foreground">Total</span><b className="text-primary">{fmt(total)}</b></div>
               </div>
-              <div className="flex gap-2">
+              <div className="modal-foot -mx-5 -mb-5 mt-2 flex gap-2 px-5 pb-5 pt-3">
                 <button onClick={() => setCartOpen(false)} className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground">Fechar</button>
                 <button
                   onClick={() => {
@@ -1094,7 +1094,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
         {payOrder && (
           <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
             <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-foreground">Pagamento</h2>
                   <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
@@ -1507,7 +1507,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
       {cartOpen && (
         <div className="fixed inset-0 z-50 flex bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:justify-center sm:pb-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center gap-3">
+            <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
               <div>
                 <h2 className="text-base font-bold text-foreground">Carrinho</h2>
@@ -1582,7 +1582,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               <div className="mt-2 flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><b className="text-primary">{fmt(total)}</b></div>
               <p className="mt-1 text-[10px] text-muted-foreground">* Taxas de cartão são aplicadas diretamente no checkout/maquininha.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="modal-foot -mx-5 -mb-5 mt-2 flex gap-2 px-5 pb-5 pt-3">
               <button onClick={() => setCartOpen(false)} className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground">Fechar</button>
               <button
                 onClick={() => {
@@ -1606,7 +1606,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
       {payOrder && (
         <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-foreground">Pagamento</h2>
                 <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
@@ -1725,7 +1725,7 @@ function ClientPickerModal({
   return (
     <div className="fixed inset-0 z-50 flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-base font-bold text-foreground">Selecione o aluno</h2>
+        <h2 className="modal-head -mx-5 -mt-5 mb-3 px-5 pb-2 pt-5 text-base font-bold text-foreground">Selecione o aluno</h2>
         {isMaster && (
           <div className="mb-3 flex rounded-lg bg-muted p-0.5">
             <button onClick={() => setTab("mine")}
