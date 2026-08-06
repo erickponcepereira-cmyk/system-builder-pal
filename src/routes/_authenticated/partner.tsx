@@ -1004,12 +1004,29 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   >
                     <Eye className="h-3 w-3" /> Visualizar painel
                   </button>
+                  <button
+                    onClick={() => setBuyersFor({ id: p.id, name: p.name, type: ((c as any).productType || "partner") })}
+                    className="mt-1.5 ml-3 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    <Users className="h-3 w-3" /> Compradores
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {buyersFor && (
+        <ProductBuyersModal
+          productType={buyersFor.type}
+          productId={buyersFor.id}
+          productName={buyersFor.name}
+          onClose={() => setBuyersFor(null)}
+        />
+      )}
+
+
 
       {editing && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-2 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
