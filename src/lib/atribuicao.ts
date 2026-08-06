@@ -6,9 +6,8 @@
  * compartilhado terminava em /register. Aqui fica so o "quem indicou";
  * o "onde cai" e responsabilidade da rota.
  *
- * Regra de negocio: PRIMEIRO TOQUE VENCE. Se a pessoa chega pelo link do
- * coach A, navega, e depois abre um link generico, o A continua dono da
- * indicacao. Sem isso ha disputa de comissao.
+ * Um link explícito válido inicia a jornada atual e substitui uma atribuição
+ * antiga ainda não convertida. Links sem `ref` nunca alteram a atribuição.
  *
  * Compatibilidade: continua espelhando em sessionStorage["fitmind_referral"],
  * que e o formato lido hoje por /r/$code e pelo cadastro. Nada quebra.
@@ -17,6 +16,7 @@
 const CHAVE = "fitmind_atribuicao";
 const CHAVE_LEGADA = "fitmind_referral";
 const VALIDADE_DIAS = 30;
+export const ATTRIBUTION_CHANGED_EVENT = "fitmind:attribution-changed";
 
 export type Atribuicao = {
   codigo: string;
@@ -54,17 +54,22 @@ export function lerAtribuicao(): Atribuicao | null {
 }
 
 /**
- * Grava a atribuicao respeitando primeiro toque.
- * Retorna a atribuicao que ficou valendo (pode ser a antiga).
+ * Grava a atribuição do link explícito atual. O mesmo código preserva o
+ * instante original, mas recebe os dados resolvidos mais recentes.
  */
 export function gravarAtribuicao(nova: Omit<Atribuicao, "em">): Atribuicao | null {
   if (typeof window === "undefined") return null;
   if (!nova?.codigo) return lerAtribuicao();
 
   const existente = lerAtribuicao();
-  if (existente) return existente; // primeiro toque vence
-
-  const registro: Atribuicao = { ...nova, em: agora() };
+  const mesmoCodigo = existente?.codigo === nova.codigo;
+  const registro: Atribuicao = {
+    ...nova,
+    coachId: nova.coachId ?? (mesmoCodigo ? existente.coachId : null),
+    coachNome: nova.coachNome ?? (mesmoCodigo ? existente.coachNome : null),
+    parceiroId: nova.parceiroId ?? (mesmoCodigo ? existente.parceiroId : null),
+    em: mesmoCodigo ? existente.em : agora(),
+  };
   try {
     window.localStorage.setItem(CHAVE, JSON.stringify(registro));
     // espelho no formato EXATO que /r/$code grava e que os formulários de
@@ -79,8 +84,29 @@ export function gravarAtribuicao(nova: Omit<Atribuicao, "em">): Atribuicao | nul
         partnerId: registro.parceiroId,
       }),
     );
+    window.dispatchEvent(new CustomEvent(ATTRIBUTION_CHANGED_EVENT, { detail: registro }));
   } catch {
     /* storage indisponivel (aba anonima, cota) — segue sem atribuicao */
+  }
+  return registro;
+}
+
+/** Grava e espelha todos os campos retornados pela validação do código. */
+export function gravarAtribuicaoResolvida(
+  codigo: string,
+  row: CodigoResolvido,
+): Atribuicao | null {
+  const registro = gravarAtribuicao({
+    codigo,
+    coachId: row.coach_id,
+    coachNome: row.sponsor_name,
+    parceiroId: row.partner_id,
+  });
+  if (registro) {
+    espelharSessao(registro, {
+      referredByStudentId: row.referred_by_student_id,
+      kind: row.kind,
+    });
   }
   return registro;
 }
@@ -153,6 +179,7 @@ export async function enriquecerAtribuicao(): Promise<Atribuicao | null> {
     referredByStudentId: row.referred_by_student_id,
     kind: row.kind,
   });
+  window.dispatchEvent(new CustomEvent(ATTRIBUTION_CHANGED_EVENT, { detail: atualizado }));
   return atualizado;
 }
 

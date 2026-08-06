@@ -149,6 +149,27 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
   }
 }
 
+async function resolveStudentReferral(input: NonNullable<FinalizeRegistrationInput["student"]>) {
+  const code = clean(input.referralCode);
+  if (!code) return input;
+  const { data } = await supabaseAdmin.rpc("validate_referral_code" as never, { _code: code } as never);
+  const row = (Array.isArray(data) ? data[0] : null) as {
+    valid?: boolean;
+    coach_id?: string | null;
+    referred_by_student_id?: string | null;
+    partner_id?: string | null;
+  } | null;
+  if (!row?.valid || !row.coach_id) {
+    throw new Error("O link de indicação não é mais válido. Abra novamente o link enviado pelo seu coach.");
+  }
+  return {
+    ...input,
+    coachId: row.coach_id,
+    referredByStudentId: row.referred_by_student_id ?? null,
+    partnerId: row.partner_id ?? null,
+  };
+}
+
 async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
   const email = input.email.trim().toLowerCase();
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(input.userId);
@@ -326,6 +347,8 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
     throw new Error("Selecione um coach para concluir o cadastro de aluno.");
   }
 
+  const studentInput = await resolveStudentReferral(input.student);
+
   // Gera código de indicação único para o próprio aluno (não confundir com o código do padrinho usado no convite)
   let studentReferralCode = makeReferralCode();
   let studentError: { code?: string; message: string } | null = null;
@@ -333,10 +356,10 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
     const { error } = await supabaseAdmin.from("students").upsert(
       {
         profile_id: profile.id,
-        coach_id: input.student.coachId,
-        referred_by_student_id: input.student.referredByStudentId || null,
+        coach_id: studentInput.coachId,
+        referred_by_student_id: studentInput.referredByStudentId || null,
         referral_code: studentReferralCode,
-        partner_id: input.student.partnerId || null,
+        partner_id: studentInput.partnerId || null,
       },
       { onConflict: "profile_id" }
     );

@@ -1,17 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Gift, Minus, Plus, Search, ShoppingBag, ShoppingCart, Trash2, X } from "lucide-react";
+import { Gift, Plus, Search, ShoppingBag, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { PublicProductModal } from "@/components/store/public/PublicProductModal";
+import { PublicCartDrawer } from "@/components/store/public/PublicCartDrawer";
 import {
-  addPublicCartLine, clearPublicCart,
+  addPublicCartLine,
   fetchPublicBenefits, fetchPublicCatalog, fetchPublicTaxonomy,
-  readPublicCart, readReferralContext, removePublicCartLine, setPublicCartQuantity,
+  readPublicCart, readReferralContext,
   type PublicBenefit, type PublicCartLine, type PublicProduct, type PublicTaxonomy,
   type PublicTaxonomyCard,
 } from "@/lib/public-store";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
+import { ATTRIBUTION_CHANGED_EVENT, enriquecerAtribuicao, lerAtribuicao, resolverCodigo, type Atribuicao } from "@/lib/atribuicao";
 
 
 
@@ -91,9 +93,32 @@ function PublicStorePage() {
    * de indicação apenas depois de montar, para não divergir na hidratação.
    */
   useEffect(() => {
-    setReferral(readReferralContext());
+    const updateReferral = (event: Event) => {
+      const attribution = (event as CustomEvent<Atribuicao>).detail;
+      setReferral({ referralCode: attribution?.codigo ?? null, sponsorName: attribution?.coachNome ?? null });
+    };
+    window.addEventListener(ATTRIBUTION_CHANGED_EVENT, updateReferral);
+    const context = readReferralContext();
+    setReferral(context);
+    if (context.referralCode && !context.sponsorName) {
+      void resolverCodigo(context.referralCode).then((row) => {
+        if (row?.sponsor_name) setReferral({ referralCode: context.referralCode, sponsorName: row.sponsor_name });
+        return enriquecerAtribuicao();
+      });
+    }
     setCart(readPublicCart());
     setMontado(true);
+    const syncTimer = window.setInterval(() => {
+      const attribution = lerAtribuicao();
+      if (attribution?.coachNome) {
+        setReferral({ referralCode: attribution.codigo, sponsorName: attribution.coachNome });
+        window.clearInterval(syncTimer);
+      }
+    }, 250);
+    return () => {
+      window.clearInterval(syncTimer);
+      window.removeEventListener(ATTRIBUTION_CHANGED_EVENT, updateReferral);
+    };
   }, []);
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
@@ -497,111 +522,14 @@ function PublicStorePage() {
         </div>
       )}
 
-      {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm modal-safe overflow-y-auto overscroll-contain sm:items-center sm:p-4">
-          <div className="w-full max-w-md rounded-t-2xl bg-card p-4 sm:rounded-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Seu carrinho</h2>
-                <p className="text-xs text-muted-foreground">
-                  {cartCount} {cartCount === 1 ? "item" : "itens"}
-                </p>
-              </div>
-              <button onClick={() => setCartOpen(false)} aria-label="Fechar" className="rounded-lg p-1 text-muted-foreground">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {cart.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Seu carrinho está vazio.
-              </p>
-            ) : (
-              <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto">
-                {cart.map((line) => (
-                  <div key={line.id} className="flex items-center gap-3 rounded-xl bg-muted p-2.5">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background">
-                      {line.imageUrl ? (
-                        <img src={line.imageUrl} alt={line.title} className="h-full w-full object-contain" />
-                      ) : (
-                        <ShoppingBag className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-foreground">{line.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{fmt(line.price * line.quantity)}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <button
-                          aria-label="Diminuir"
-                          onClick={() => setCart(setPublicCartQuantity(line.id, line.quantity - 1))}
-                          className="rounded-md bg-background p-1"
-                        >
-                          <Minus className="h-3 w-3 text-foreground" />
-                        </button>
-                        <span className="text-xs font-bold text-foreground">{line.quantity}</span>
-                        <button
-                          aria-label="Aumentar"
-                          onClick={() => setCart(setPublicCartQuantity(line.id, line.quantity + 1))}
-                          className="rounded-md bg-background p-1"
-                        >
-                          <Plus className="h-3 w-3 text-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                    <button aria-label="Remover" onClick={() => setCart(removePublicCartLine(line.id))}>
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="text-lg font-bold text-foreground">{fmt(cartTotal)}</span>
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              Valores de vitrine. O total final é confirmado no checkout, dentro do app.
-            </p>
-
-            <div className="mt-4 space-y-2">
-              <Link
-                to="/register"
-                search={{ role: "student" }}
-                onClick={setCheckoutIntent}
-                className={`block rounded-xl px-4 py-3 text-center text-sm font-bold ${
-                  cart.length === 0
-                    ? "pointer-events-none bg-muted text-muted-foreground"
-                    : "bg-primary text-primary-foreground"
-                }`}
-              >
-                Finalizar compra
-              </Link>
-              <Link
-                to="/login"
-                onClick={setCheckoutIntent}
-                className="block rounded-xl bg-muted px-4 py-3 text-center text-sm font-bold text-foreground"
-              >
-                Já tenho conta — entrar
-              </Link>
-              {cart.length > 0 && (
-                <button
-                  onClick={() => { clearPublicCart(); setCart([]); }}
-                  className="w-full py-2 text-center text-[11px] text-muted-foreground underline"
-                >
-                  Esvaziar carrinho
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <PublicCartDrawer open={cartOpen} lines={cart} onClose={() => setCartOpen(false)} onChange={setCart} />
 
       {detail && (
         <PublicProductModal
           product={detail}
           onClose={() => setDetail(null)}
           onAddToCart={adicionarAoCarrinho}
+          onOpenCart={() => { setDetail(null); setCartOpen(true); }}
           inCartQuantity={cart.find((l) => l.id === detail.id)?.quantity ?? 0}
         />
       )}

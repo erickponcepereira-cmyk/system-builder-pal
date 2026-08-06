@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { Logo } from "@/components/Logo";
-import { clearPostAuthIntent, setPostAuthIntent, takePostAuthIntent } from "@/lib/post-auth-intent";
+import { clearPostAuthIntent, peekPostAuthIntent, setPostAuthIntent } from "@/lib/post-auth-intent";
 
 
 export const Route = createFileRoute("/auth/callback")({
@@ -38,7 +38,7 @@ function safeNext(): string | null {
   }
   // O sessionStorage não sobrevive ao OAuth em alguns aparelhos: usa o
   // destino durável guardado antes de sair para o Google.
-  return takePostAuthIntent();
+  return peekPostAuthIntent();
 }
 
 
@@ -98,6 +98,7 @@ function AuthCallbackPage() {
           if (next.startsWith("/student")) {
             try { sessionStorage.setItem("fitmind_selected_area", "student"); } catch { /* storage indisponível */ }
           }
+          clearPostAuthIntent();
           window.location.replace(next);
           return;
         }

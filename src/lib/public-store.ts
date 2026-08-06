@@ -19,7 +19,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { capturarAtribuicaoDaUrl, enriquecerAtribuicao, lerAtribuicao } from "@/lib/atribuicao";
+import { capturarAtribuicaoDaUrl, lerAtribuicao } from "@/lib/atribuicao";
 
 export type PublicProductKind =
   | "challenge"
@@ -112,9 +112,6 @@ export function readReferralContext(): PublicStoreContext {
   // captura ?ref= se houver; senão devolve o que já estava gravado
   const a = capturarAtribuicaoDaUrl() ?? lerAtribuicao();
   if (a) {
-    // `?ref=` grava só o código: resolve o coach em segundo plano para que a
-    // indicação sobreviva ao login com Google.
-    if (!a.coachId) void enriquecerAtribuicao();
     return { referralCode: a.codigo, sponsorName: a.coachNome };
   }
 

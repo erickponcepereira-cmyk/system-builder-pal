@@ -19,11 +19,13 @@ export function PublicProductModal({
   product,
   onClose,
   onAddToCart,
+  onOpenCart,
   inCartQuantity = 0,
 }: {
   product: PublicProduct;
   onClose: () => void;
   onAddToCart?: (product: PublicProduct) => void;
+  onOpenCart?: () => void;
   inCartQuantity?: number;
 }) {
 
@@ -87,7 +89,7 @@ export function PublicProductModal({
         {onAddToCart ? (
           <div className="mt-4 space-y-2">
             <button
-              onClick={() => onAddToCart(p)}
+              onClick={() => inCartQuantity > 0 && onOpenCart ? onOpenCart() : onAddToCart(p)}
               disabled={!p.inStock}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
             >
@@ -95,7 +97,7 @@ export function PublicProductModal({
               {!p.inStock
                 ? "Indisponível"
                 : inCartQuantity > 0
-                  ? `No carrinho (${inCartQuantity}) — adicionar mais`
+                  ? `Ir ao carrinho (${inCartQuantity})`
                   : "Adicionar ao carrinho"}
             </button>
             <button

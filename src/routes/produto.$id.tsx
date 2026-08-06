@@ -1,16 +1,18 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Lock, ShoppingBag, UserPlus } from "lucide-react";
+import { ArrowLeft, Check, Lock, ShoppingBag, ShoppingCart, UserPlus } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { PublicCartDrawer } from "@/components/store/public/PublicCartDrawer";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
+import { ATTRIBUTION_CHANGED_EVENT, enriquecerAtribuicao, lerAtribuicao, resolverCodigo, type Atribuicao } from "@/lib/atribuicao";
 
 import {
   fetchPublicProduct,
+  addPublicCartLine,
   readPublicCart,
   readReferralContext,
-  writePublicCart,
   type PublicCartLine,
   type PublicProduct,
 } from "@/lib/public-store";
@@ -169,17 +171,36 @@ function ProdutoPublico() {
    */
   const [montado, setMontado] = useState(false);
   const [cart, setCart] = useState<PublicCartLine[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
   const [indicacao, setIndicacao] = useState<string | null>(null);
 
   useEffect(() => {
+    const updateSponsor = (event: Event) => {
+      setIndicacao((event as CustomEvent<Atribuicao>).detail?.coachNome ?? null);
+    };
+    window.addEventListener(ATTRIBUTION_CHANGED_EVENT, updateSponsor);
     setCart(readPublicCart());
-    setIndicacao(readReferralContext().sponsorName);
+    const context = readReferralContext();
+    setIndicacao(context.sponsorName);
+    if (context.referralCode && !context.sponsorName) {
+      void resolverCodigo(context.referralCode).then((row) => {
+        if (row?.sponsor_name) setIndicacao(row.sponsor_name);
+        return enriquecerAtribuicao();
+      });
+    }
     setMontado(true);
+    const syncTimer = window.setInterval(() => {
+      const name = lerAtribuicao()?.coachNome;
+      if (name) {
+        setIndicacao(name);
+        window.clearInterval(syncTimer);
+      }
+    }, 250);
+    return () => {
+      window.clearInterval(syncTimer);
+      window.removeEventListener(ATTRIBUTION_CHANGED_EVENT, updateSponsor);
+    };
   }, []);
-
-  useEffect(() => {
-    if (montado) writePublicCart(cart);
-  }, [cart, montado]);
 
   const noCarrinho = useMemo(
     () => (produto ? cart.find((l) => l.id === produto.id) : undefined),
@@ -194,27 +215,14 @@ function ProdutoPublico() {
     );
   }
 
-  function adicionar() {
+  function adicionarOuAbrir() {
     if (!produto) return;
-    setCart((atual) => {
-      const existente = atual.find((l) => l.id === produto.id);
-      if (existente) {
-        return atual.map((l) =>
-          l.id === produto.id ? { ...l, quantity: l.quantity + 1 } : l,
-        );
-      }
-      return [
-        ...atual,
-        {
-          id: produto.id,
-          kind: produto.kind,
-          title: produto.title,
-          price: produto.price,
-          imageUrl: produto.imageUrl,
-          quantity: 1,
-        },
-      ];
-    });
+    if (noCarrinho) {
+      setCartOpen(true);
+      return;
+    }
+    setCart(addPublicCartLine(produto));
+    setCartOpen(true);
   }
 
   if (!produto) {
@@ -321,14 +329,14 @@ function ProdutoPublico() {
         <div className="mx-auto max-w-5xl">
         <div className="flex gap-2">
           <button
-            onClick={adicionar}
+            onClick={adicionarOuAbrir}
             disabled={!produto.inStock}
             className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15 disabled:opacity-40"
           >
             {!produto.inStock
               ? "Indisponível"
               : noCarrinho
-                ? `No carrinho (${noCarrinho.quantity})`
+                ? `Ir ao carrinho (${noCarrinho.quantity})`
                 : "Adicionar ao carrinho"}
           </button>
           <Link
@@ -356,6 +364,12 @@ function ProdutoPublico() {
         </Link>
         </div>
       </div>
+      <PublicCartDrawer
+        open={cartOpen}
+        lines={cart}
+        onClose={() => setCartOpen(false)}
+        onChange={setCart}
+      />
     </div>
   );
 }

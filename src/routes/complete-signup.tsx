@@ -11,14 +11,15 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { maskPhone } from "@/lib/masks";
 import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
-import { takePostAuthIntent } from "@/lib/post-auth-intent";
+import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent";
 import { resolverCodigo } from "@/lib/atribuicao";
 
 /** Destino guardado antes do login (loja/produto) — consumido uma vez. */
 function goAfterSignup(navigate: ReturnType<typeof useNavigate>) {
-  const next = takePostAuthIntent();
+  const next = peekPostAuthIntent();
   if (next) {
     if (next.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
+    clearPostAuthIntent();
     window.location.replace(next);
     return;
   }
