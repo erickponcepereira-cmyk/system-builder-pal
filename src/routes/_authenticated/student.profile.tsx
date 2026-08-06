@@ -508,7 +508,7 @@ function ProfilePage() {
       />
 
       {withdrawOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe">
           <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5">
             <h2 className="text-lg font-bold text-foreground">Solicitar saque</h2>
             <p className="mt-1 text-xs text-foreground/50">Disponível: R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
@@ -545,7 +545,7 @@ function ProfilePage() {
       )}
 
       {showChallengesModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm" onClick={() => setShowChallengesModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe" onClick={() => setShowChallengesModal(false)}>
           <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-bold text-foreground">Histórico de desafios</h2>
@@ -601,7 +601,7 @@ function ProfilePage() {
       )}
 
       {showReferralsModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm" onClick={() => setShowReferralsModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe" onClick={() => setShowReferralsModal(false)}>
           <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <div>

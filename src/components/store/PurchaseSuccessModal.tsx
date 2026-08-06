@@ -108,7 +108,7 @@ export function PurchaseSuccessModal({
   return (
     <div className="fixed inset-0 z-[80] flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-card p-5">
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="modal-head -mx-5 -mt-5 mb-4 flex items-start justify-between gap-3 px-5 pb-3 pt-5">
           <div className="flex items-center gap-2">
             <PartyPopper className="h-5 w-5 text-primary" />
             <h2 className="text-base font-bold text-foreground">Parabéns, sua compra foi aprovada!</h2>
@@ -166,7 +166,7 @@ export function PurchaseSuccessModal({
           )}
         </div>
 
-        <button onClick={onClose} className="mt-5 w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-foreground">Fechar</button>
+        <button onClick={onClose} className="modal-foot mt-5 -mx-5 -mb-5 block w-[calc(100%+2.5rem)] px-5 pb-5 pt-3 text-sm font-semibold text-foreground">Fechar</button>
       </div>
     </div>
   );

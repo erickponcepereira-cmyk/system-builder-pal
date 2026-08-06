@@ -80,6 +80,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
             __html: `(function(){try{if(!('serviceWorker' in navigator))return;navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){var u=(r.active&&r.active.scriptURL)||(r.installing&&r.installing.scriptURL)||(r.waiting&&r.waiting.scriptURL)||'';if(u.indexOf('firebase-messaging')!==-1||u.indexOf('OneSignal')!==-1)return;r.unregister();});}).catch(function(){});if('caches' in window){caches.keys().then(function(ns){ns.forEach(function(n){if(/(^|-)precache-v\\d+-|(^|-)runtime-|^html$|^workbox-/.test(n)){caches.delete(n);}});}).catch(function(){});}}catch(e){}})();`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{function s(){var h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;if(h)document.documentElement.style.setProperty('--vvh',h+'px');}s();window.addEventListener('resize',s);window.addEventListener('orientationchange',s);if(window.visualViewport){window.visualViewport.addEventListener('resize',s);window.visualViewport.addEventListener('scroll',s);}}catch(e){}})();`,
+          }}
+        />
+
+
 
       </head>
       <body style={{ backgroundColor: "#0b0707", margin: 0 }}>
