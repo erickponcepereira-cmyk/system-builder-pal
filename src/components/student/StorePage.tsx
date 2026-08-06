@@ -124,6 +124,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
   const attachShippingFn = useServerFn(attachShippingToOrder);
   const [checkingOut, setCheckingOut] = useState(false);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
+  /** Pop-up "compra aprovada" com benefícios e WhatsApp do dono do produto. */
+  const [purchased, setPurchased] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
