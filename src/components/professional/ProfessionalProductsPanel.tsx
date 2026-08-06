@@ -258,7 +258,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
         );
       }
       if (agenda.maxWindow > 0 && dur > agenda.maxWindow) {
-        toast.warning(`Atenção: sua maior janela contínua tem ${agenda.maxWindow} min — ninguém conseguirá agendar ${dur} min.`);
+        toast.warning(`Atenção: hoje o maior período livre seguido na sua agenda é de ${agenda.maxWindow} min. Como este atendimento dura ${dur} min, o aluno não vai encontrar horário até você aumentar o período na aba Configurações → Agenda.`);
       }
     }
 
