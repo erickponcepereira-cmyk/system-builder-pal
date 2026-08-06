@@ -858,10 +858,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                             </option>
                           ))}
                         </select>
-                        <p className="mt-1 text-[10px] text-white/40">Sua agenda usa blocos de {agenda.slotMinutes} min.</p>
+                        <p className="mt-1 text-[10px] text-white/40">
+                          Sua agenda usa blocos de {agenda.slotMinutes} min.
+                          {agenda.summary.length > 0 && <> Horários configurados: {agenda.summary.join(" · ")}.</>}
+                        </p>
                         {agenda.maxWindow > 0 && Number(editing.default_duration_minutes || agenda.slotMinutes) > agenda.maxWindow && (
                           <p className="mt-1 text-[10px] font-bold text-amber-400">
-                            Sua maior janela contínua tem {agenda.maxWindow} min — ninguém conseguirá agendar esta duração.
+                            O maior período livre seguido na sua agenda é de {agenda.maxWindow} min. Com esta duração o aluno não encontrará horário — aumente o período em Configurações → Agenda.
                           </p>
                         )}
                       </Field>
