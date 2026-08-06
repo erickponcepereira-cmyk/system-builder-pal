@@ -288,6 +288,22 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     return () => { alive = false; };
   }, [cards]);
 
+  // Revalida as vagas ao abrir o detalhe do produto (evita "esgotado" desatualizado).
+  useEffect(() => {
+    if (!selected || selected.kind !== "partner") return;
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("partner_products_stock_status" as never, { _ids: [selected.id] } as never);
+      if (error || !alive) return;
+      const row = ((data as unknown as Array<{ product_id: string; stock: number; remaining: number }>) || [])[0];
+      if (!row) return;
+      setStockById((prev) => ({ ...prev, [row.product_id]: { stock: Number(row.stock), remaining: Number(row.remaining) } }));
+    })();
+    return () => { alive = false; };
+  }, [selected]);
+
+
+
   // Abre o produto solicitado diretamente pela rota. O armazenamento pendente
   // permanece apenas como compatibilidade para fluxos que atravessam login/OAuth.
   useEffect(() => {
