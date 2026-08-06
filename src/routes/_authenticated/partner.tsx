@@ -961,6 +961,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </>
                 )}
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
+                <button onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "partner" })} className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"><Users className="h-3 w-3" /> Compradores</button>
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
                 )}
