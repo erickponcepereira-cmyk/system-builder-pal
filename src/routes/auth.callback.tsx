@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
 import { clearPostAuthIntent, peekPostAuthIntent, setPostAuthIntent } from "@/lib/post-auth-intent";
 
 
@@ -44,6 +45,7 @@ function safeNext(): string | null {
 function AuthCallbackPage() {
   const navigate = useNavigate();
   const [message, setMessage] = useState("Concluindo o login...");
+  const [retryNeeded, setRetryNeeded] = useState(false);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -104,9 +106,11 @@ function AuthCallbackPage() {
 
         navigate({ to: "/portal-selector", replace: true });
       } catch (e) {
-        toast.error((e as Error)?.message || "Falha ao verificar o cadastro.");
+        const errorMessage = (e as Error)?.message || "Falha ao verificar o cadastro.";
+        toast.error(errorMessage);
         if (next) setPostAuthIntent(next);
-        navigate({ to: "/login", replace: true });
+        setMessage("Não foi possível verificar seu cadastro. Sua indicação e sua loja continuam salvas.");
+        setRetryNeeded(true);
       }
     })();
   }, [navigate]);
@@ -116,6 +120,12 @@ function AuthCallbackPage() {
       <Logo />
       <Loader2 className="h-6 w-6 animate-spin text-primary" />
       <p className="text-sm text-white/60">{message}</p>
+      {retryNeeded ? (
+        <Button type="button" onClick={() => window.location.reload()}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Tentar novamente
+        </Button>
+      ) : null}
     </div>
   );
 }
