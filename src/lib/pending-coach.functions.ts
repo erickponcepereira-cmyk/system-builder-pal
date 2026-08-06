@@ -35,11 +35,13 @@ export const getMyPendingCoachStatus = createServerFn({ method: "POST" })
 
     const { data: student } = await supabaseAdmin
       .from("students")
-      .select("id, coach_assignment_pending")
+      .select("id, coach_id, coach_assignment_pending")
       .eq("profile_id", profile.id)
       .maybeSingle();
 
-    const pending = !!(student as { coach_assignment_pending?: boolean } | null)?.coach_assignment_pending;
+    const row = student as { coach_id?: string | null; coach_assignment_pending?: boolean } | null;
+    // Quem já foi vinculado a um coach real (fora o automático) não é pendente.
+    const pending = !!row?.coach_assignment_pending && row?.coach_id === DEFAULT_AUTO_COACH_ID;
 
     return {
       pending,
