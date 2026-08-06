@@ -637,6 +637,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [policyDismissed, setPolicyDismissed] = useState(false);
   const { cropToBlob } = useImageCrop();
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: Product }>>([]);
+  const [editingStock, setEditingStock] = useState<{ used: number; remaining: number } | null>(null);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
 
   useEffect(() => {
