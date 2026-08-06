@@ -87,20 +87,37 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
 
       {data && (
         <>
-          <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-white/5 p-2">
+          <div className="mb-3 grid grid-cols-4 gap-2 text-center">
+            <button
+              onClick={() => setFilter("paid")}
+              className={`rounded-xl p-2 transition ${filter === "paid" ? "bg-primary/20 ring-1 ring-primary/60" : "bg-white/5"}`}
+            >
               <p className="text-lg font-bold text-primary">{data.paidCount}</p>
-              <p className="text-[10px] text-white/50">Vendas pagas</p>
-            </div>
-            <div className="rounded-xl bg-white/5 p-2">
-              <p className="text-lg font-bold text-white">{data.pendingCount}</p>
+              <p className="text-[10px] text-white/50">Pagas</p>
+            </button>
+            <button
+              onClick={() => setFilter("pending")}
+              className={`rounded-xl p-2 transition ${filter === "pending" ? "bg-yellow-500/20 ring-1 ring-yellow-500/60" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-yellow-400">{data.pendingCount}</p>
               <p className="text-[10px] text-white/50">Pendentes</p>
-            </div>
-            <div className="rounded-xl bg-white/5 p-2">
-              <p className="text-lg font-bold text-white">{data.stock === null ? "∞" : data.stock}</p>
+            </button>
+            <button
+              onClick={() => setFilter("cancelled")}
+              className={`rounded-xl p-2 transition ${filter === "cancelled" ? "bg-red-500/20 ring-1 ring-red-500/60" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-red-400">{data.cancelledCount}</p>
+              <p className="text-[10px] text-white/50">Canceladas</p>
+            </button>
+            <button
+              onClick={() => setFilter("all")}
+              className={`rounded-xl p-2 transition ${filter === "all" ? "bg-white/15 ring-1 ring-white/40" : "bg-white/5"}`}
+            >
+              <p className="text-lg font-bold text-white">{data.remaining === null ? "∞" : data.remaining}</p>
               <p className="text-[10px] text-white/50">Vagas restantes</p>
-            </div>
+            </button>
           </div>
+
 
           <input
             value={q}
