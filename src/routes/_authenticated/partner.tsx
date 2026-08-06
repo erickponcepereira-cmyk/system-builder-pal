@@ -637,6 +637,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [policyDismissed, setPolicyDismissed] = useState(false);
   const { cropToBlob } = useImageCrop();
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: Product }>>([]);
+  const [editingStock, setEditingStock] = useState<{ used: number; remaining: number } | null>(null);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
 
   useEffect(() => {
@@ -646,6 +647,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       .catch(() => {});
     return () => { alive = false; };
   }, [partner.id]);
+
+  // Vagas já consumidas do produto em edição (para mostrar vendidas/restantes).
+  const editingId = editing?.id;
+  useEffect(() => {
+    if (!editingId) { setEditingStock(null); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("partner_products_stock_status" as never, { _ids: [editingId] } as never);
+      if (error || !alive) return;
+      const row = ((data as unknown as Array<{ used: number; remaining: number }>) || [])[0];
+      setEditingStock(row ? { used: Number(row.used), remaining: Number(row.remaining) } : null);
+    })();
+    return () => { alive = false; };
+  }, [editingId]);
 
 
 
@@ -756,6 +771,18 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       redemption_location_name: editing.kind === "free" ? (emptyToNull(editing.redemption_location_name) as string | null) : null,
       redemption_location_url: editing.kind === "free" ? (emptyToNull(editing.redemption_location_url) as string | null) : null,
     };
+
+    // Aviso ao reduzir as vagas abaixo do que já foi vendido/reservado.
+    if (editing.id && editing.kind === "paid" && editing.stock != null && editingStock) {
+      const novo = Number(editing.stock);
+      if (novo < editingStock.used) {
+        const ok = confirm(
+          `Este produto já tem ${editingStock.used} vaga(s) ocupada(s). Ao salvar com ${novo} vaga(s), ele ficará esgotado e não poderá mais ser vendido. Deseja continuar?`,
+        );
+        if (!ok) return;
+      }
+    }
+
     try {
       const finalPaidPrice = Number((extra.price ?? editing.price) || 0);
       if (editing.id) {
@@ -776,7 +803,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       return toast.error(`Falha de rede ao salvar: ${e?.message || e}. Verifique sua conexão e tente novamente.`);
     }
 
-    toast.success("Salvo. Aguardando aprovação do admin.");
+    const jaAprovado = !!editing.id && (editing.status as string | undefined) === "approved";
+    toast.success(jaAprovado ? "Alterações salvas. O produto continua ativo na loja." : "Salvo. Aguardando aprovação do admin.");
     setEditing(null); onReload();
   };
 
@@ -1234,7 +1262,15 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               )}
 
               {editing.kind === "paid" && (
-                <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
+                <Field label="Estoque (opcional)">
+                  <input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
+                  {editing.id && editing.stock != null && editingStock && (
+                    <p className="mt-1 text-[11px] text-white/60">
+                      {editingStock.used} vaga(s) ocupada(s) · {editingStock.remaining} restante(s).
+                      {editingStock.remaining === 0 ? " Aumente o número para voltar a vender imediatamente." : ""}
+                    </p>
+                  )}
+                </Field>
               )}
 
               {editing.kind === "paid" && (
