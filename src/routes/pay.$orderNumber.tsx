@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
 
 export const Route = createFileRoute("/pay/$orderNumber")({
   head: () => ({ meta: [{ title: "Pagamento — FitMind Club" }] }),
@@ -22,6 +23,7 @@ type OrderData = {
     clientEmail: string | null;
   };
   items: Array<{ title: string; quantity: number; unitPrice: number; totalPrice: number }>;
+  products?: Array<{ productId: string; kind: "partner" | "professional"; productName: string; price: number; sellerName: string | null; whatsapp: string | null }>;
 };
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -31,6 +33,7 @@ function PayPage() {
   const [data, setData] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [purchased, setPurchased] = useState(false);
 
   const reload = () => {
     fetch(`/api/public/pay/${orderNumber}`)
@@ -87,10 +90,23 @@ function PayPage() {
             amount={data.order.total}
             description={`Pedido #${data.order.number}`}
             defaultPayer={{ email: data.order.clientEmail || "", name: data.order.clientName }}
-            onApproved={reload}
+            onApproved={() => { setPurchased(true); reload(); }}
           />
         )}
       </div>
+
+      {purchased && (
+        <PurchaseSuccessModal
+          items={
+            (data.products?.length
+              ? data.products.map((p) => ({ productId: p.productId, productName: p.productName, price: p.price, kind: p.kind }))
+              : data.items.map((it) => ({ productId: null, productName: it.title, price: it.totalPrice, kind: "fitmind" as const }))) as PurchasedItem[]
+          }
+          contacts={(data.products || []).map((p) => ({ productId: p.productId, sellerName: p.sellerName, whatsapp: p.whatsapp }))}
+          buyerName={data.order.clientName}
+          onClose={() => setPurchased(false)}
+        />
+      )}
     </div>
   );
 }
