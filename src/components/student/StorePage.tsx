@@ -11,6 +11,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
+import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
@@ -124,6 +125,23 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
   const attachShippingFn = useServerFn(attachShippingToOrder);
   const [checkingOut, setCheckingOut] = useState(false);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
+  /** Pop-up "compra aprovada" com benefícios e WhatsApp do dono do produto. */
+  const [purchased, setPurchased] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
+  /** Converte itens do carrinho pagos no formato do pop-up de compra aprovada. */
+  const buildPurchasedItems = (ids: string[]): PurchasedItem[] =>
+    cart
+      .filter((c) => ids.includes(c.id))
+      .map((c) => ({
+        productId: c.kind === "partner" || c.kind === "partner_company" ? c.sourceId : null,
+        productName: c.title,
+        price: Number(c.price) * (c.quantity || 1),
+        kind: c.kind === "partner_company" ? "partner" : c.kind === "partner" ? "professional" : "fitmind",
+        slotLabel: c.scheduledSlot
+          ? new Date(c.scheduledSlot).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+          : null,
+      }));
+
+
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
@@ -1088,7 +1106,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                   orderId={payOrder.id}
                   amount={payOrder.total}
                   kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
-                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
                 />
               </div>
               <MercadoPagoCheckout
@@ -1097,7 +1115,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 description={`Pedido ${payOrder.number}`}
                 defaultPayer={{ email: payOrder.email, name: payOrder.name }}
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-                onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
               {coachMode && (() => {
                 const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
@@ -1139,6 +1157,9 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               })()}
             </div>
           </div>
+        )}
+        {purchased && (
+          <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={() => setPurchased(null)} />
         )}
       </div>
     );
@@ -1597,7 +1618,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 orderId={payOrder.id}
                 amount={payOrder.total}
                 kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
-                onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+                onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
               />
             </div>
             <MercadoPagoCheckout
@@ -1607,7 +1628,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && (() => {
               const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
@@ -1649,6 +1670,9 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
             })()}
           </div>
         </div>
+      )}
+      {purchased && (
+        <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={() => setPurchased(null)} />
       )}
     </div>
   );
