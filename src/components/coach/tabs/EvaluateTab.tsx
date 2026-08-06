@@ -152,14 +152,22 @@ export function EvaluateTab() {
       // erro quando já existem duplicatas (caso do bug "Ana Flávia (eu)" 5x),
       // fazendo o código pensar que não existe e inserir mais uma. Aqui só
       // criamos se realmente não houver NENHUM cadastro self do coach.
+      const firstName = String(p.name || "Meu perfil").trim().split(/\s+/)[0];
       const { data: existingSelf } = await supabase
         .from("coach_evaluation_clients" as never)
-        .select("id" as never)
+        .select("id,name,groups" as never)
         .eq("coach_id" as never, coach.id as never)
         .is("student_id" as never, null as never)
-        .ilike("name" as never, `${p.name || "Meu perfil"}%` as never)
-        .limit(1);
-      const hasSelf = Array.isArray(existingSelf) && existingSelf.length > 0;
+        .ilike("name" as never, `${firstName}%` as never)
+        .limit(20);
+      // Já existe ficha própria se houver qualquer cadastro marcado como "self"
+      // ou com nome que bate com o do coach (evita criar uma segunda "(eu)").
+      const hasSelf = ((existingSelf as unknown as Array<{ name: string; groups: string[] | null }>) || []).some((r) => {
+        if ((r.groups || []).includes("self")) return true;
+        const norm = (s: string) => (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\(eu\)/gi, "").replace(/\s+/g, " ").trim().toLowerCase();
+        const a = norm(r.name), b = norm(String(p.name || ""));
+        return !!a && !!b && (a.startsWith(b) || b.startsWith(a));
+      });
       if (!hasSelf) {
         await supabase
           .from("coach_evaluation_clients" as never)
@@ -276,22 +284,41 @@ export function EvaluateTab() {
     // e junta contagens de avaliações. Corrige duplicatas visíveis como
     // "Ana Flávia (eu)" e cadastros do mesmo aluno em coaches diferentes.
     const normalize = (s: string) =>
-      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\(eu\)/gi, "").replace(/\s+/g, " ").trim().toLowerCase();
+    const myName = normalize(p.name || "");
+    // Ficha do próprio coach: pode ter sido criada manualmente (nome curto) e
+    // também pelo bootstrap "(eu)". Ambas caem na MESMA chave para não duplicar.
+    const isSelfCard = (c: typeof mappedClients[number]) => {
+      if (c.studentId || c.coachId !== coach.id) return false;
+      if ((c.groups || []).includes("self")) return true;
+      const n = normalize(c.name);
+      return !!n && !!myName && (myName.startsWith(n) || n.startsWith(myName));
+    };
+    const keyFor = (c: typeof mappedClients[number]) =>
+      c.studentId ? `sid:${c.studentId}`
+      : isSelfCard(c) ? `self:${c.coachId}`
+      : `name:${c.coachId}:${normalize(c.name)}`;
+    // Score simples: fichas com mais dados preenchidos vencem como "sobrevivente".
+    const richness = (c: typeof mappedClients[number]) =>
+      (c.height ? 1 : 0) + (c.birthDate ? 1 : 0) + (c.gender && c.gender !== "other" ? 1 : 0) + (c.assessments?.length || 0);
     const dedupMap = new Map<string, typeof mappedClients[number]>();
     for (const c of mappedClients) {
-      const key = c.studentId
-        ? `sid:${c.studentId}`
-        : `self:${c.coachId}:${normalize(c.name)}`;
+      const key = keyFor(c);
       const prev = dedupMap.get(key);
       if (!prev) {
         dedupMap.set(key, c);
       } else {
-        // Mescla assessments (mantém stubs para contagem correta)
-        const merged = [...(prev.assessments || []), ...(c.assessments || [])];
+        const base = richness(c) > richness(prev) ? c : prev;
+        const other = base === c ? prev : c;
         dedupMap.set(key, {
-          ...prev,
-          studentId: (prev as any).studentId || (c as any).studentId,
-          assessments: merged,
+          ...base,
+          id: prev.id,
+          name: base.name || other.name,
+          studentId: (base as any).studentId || (other as any).studentId,
+          height: base.height || other.height,
+          birthDate: base.birthDate || other.birthDate,
+          avatar: base.avatar || other.avatar,
+          assessments: [...(prev.assessments || []), ...(c.assessments || [])],
         } as typeof prev);
       }
     }
@@ -299,10 +326,7 @@ export function EvaluateTab() {
     // Mapa: id original (inclusive fichas descartadas no dedup) -> id sobrevivente
     const alias = new Map<string, string>();
     for (const c of mappedClients) {
-      const key = c.studentId
-        ? `sid:${c.studentId}`
-        : `self:${c.coachId}:${normalize(c.name)}`;
-      const survivor = dedupMap.get(key);
+      const survivor = dedupMap.get(keyFor(c));
       if (survivor) alias.set(c.id, survivor.id);
     }
     clientAliasRef.current = alias;

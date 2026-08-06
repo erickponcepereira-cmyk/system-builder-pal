@@ -117,23 +117,45 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
   // Blocos da agenda do profissional: duração dos produtos precisa ser múltipla deles.
-  const [agenda, setAgenda] = useState<{ slotMinutes: number; maxWindow: number }>({ slotMinutes: 30, maxWindow: 0 });
+  const [agenda, setAgenda] = useState<{ slotMinutes: number; maxWindow: number; summary: string[] }>({ slotMinutes: 30, maxWindow: 0, summary: [] });
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("professional_availability" as never)
-        .select("start_time,end_time,slot_minutes,is_active")
+        .select("weekday,start_time,end_time,slot_minutes,is_active")
         .eq("professional_coach_id" as never, coachId as never);
-      const rows = ((data as unknown) as Array<{ start_time: string; end_time: string; slot_minutes: number | null; is_active: boolean | null }>) || [];
+      const rows = ((data as unknown) as Array<{ weekday: number; start_time: string; end_time: string; slot_minutes: number | null; is_active: boolean | null }>) || [];
       const active = rows.filter((r) => r.is_active !== false);
       if (!active.length) return;
       const toMin = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
+      const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
       const slotMinutes = Math.min(...active.map((r) => Number(r.slot_minutes || 30)));
-      const maxWindow = Math.max(...active.map((r) => toMin(r.end_time) - toMin(r.start_time)));
-      setAgenda({ slotMinutes: slotMinutes > 0 ? slotMinutes : 30, maxWindow });
+      // Faixas coladas (ex.: 14:00–14:30, 14:30–15:00…) formam UMA janela contínua.
+      const byDay = new Map<number, Array<[number, number]>>();
+      for (const r of active) {
+        const list = byDay.get(r.weekday) || [];
+        list.push([toMin(r.start_time), toMin(r.end_time)]);
+        byDay.set(r.weekday, list);
+      }
+      const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+      let maxWindow = 0;
+      const summary: string[] = [];
+      for (const [wd, listRaw] of Array.from(byDay.entries()).sort((a, b) => a[0] - b[0])) {
+        const list = listRaw.sort((a, b) => a[0] - b[0]);
+        const merged: Array<[number, number]> = [];
+        for (const [s, e] of list) {
+          const last = merged[merged.length - 1];
+          if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+          else merged.push([s, e]);
+        }
+        for (const [s, e] of merged) maxWindow = Math.max(maxWindow, e - s);
+        summary.push(`${DAYS[wd]} ${merged.map(([s, e]) => `${fmt(s)}–${fmt(e)}`).join(", ")}`);
+      }
+      setAgenda({ slotMinutes: slotMinutes > 0 ? slotMinutes : 30, maxWindow, summary });
     })();
   }, [coachId]);
+
 
   const load = async () => {
     setLoading(true);
@@ -236,7 +258,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
         );
       }
       if (agenda.maxWindow > 0 && dur > agenda.maxWindow) {
-        toast.warning(`Atenção: sua maior janela contínua tem ${agenda.maxWindow} min — ninguém conseguirá agendar ${dur} min.`);
+        toast.warning(`Atenção: hoje o maior período livre seguido na sua agenda é de ${agenda.maxWindow} min. Como este atendimento dura ${dur} min, o aluno não vai encontrar horário até você aumentar o período na aba Configurações → Agenda.`);
       }
     }
 
@@ -836,10 +858,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                             </option>
                           ))}
                         </select>
-                        <p className="mt-1 text-[10px] text-white/40">Sua agenda usa blocos de {agenda.slotMinutes} min.</p>
+                        <p className="mt-1 text-[10px] text-white/40">
+                          Sua agenda usa blocos de {agenda.slotMinutes} min.
+                          {agenda.summary.length > 0 && <> Horários configurados: {agenda.summary.join(" · ")}.</>}
+                        </p>
                         {agenda.maxWindow > 0 && Number(editing.default_duration_minutes || agenda.slotMinutes) > agenda.maxWindow && (
                           <p className="mt-1 text-[10px] font-bold text-amber-400">
-                            Sua maior janela contínua tem {agenda.maxWindow} min — ninguém conseguirá agendar esta duração.
+                            O maior período livre seguido na sua agenda é de {agenda.maxWindow} min. Com esta duração o aluno não encontrará horário — aumente o período em Configurações → Agenda.
                           </p>
                         )}
                       </Field>
