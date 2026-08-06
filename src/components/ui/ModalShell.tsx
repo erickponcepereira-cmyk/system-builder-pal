@@ -35,7 +35,7 @@ export function ModalShell({ header, footer, children, className, zIndex = 50 }:
         )}
         style={{
           maxHeight:
-            "calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+            "calc(var(--vvh, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
         }}
       >
         {header ? <div className="shrink-0 border-b border-white/10 p-4">{header}</div> : null}
