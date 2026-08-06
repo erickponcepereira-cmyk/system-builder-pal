@@ -152,14 +152,22 @@ export function EvaluateTab() {
       // erro quando já existem duplicatas (caso do bug "Ana Flávia (eu)" 5x),
       // fazendo o código pensar que não existe e inserir mais uma. Aqui só
       // criamos se realmente não houver NENHUM cadastro self do coach.
+      const firstName = String(p.name || "Meu perfil").trim().split(/\s+/)[0];
       const { data: existingSelf } = await supabase
         .from("coach_evaluation_clients" as never)
-        .select("id" as never)
+        .select("id,name,groups" as never)
         .eq("coach_id" as never, coach.id as never)
         .is("student_id" as never, null as never)
-        .ilike("name" as never, `${p.name || "Meu perfil"}%` as never)
-        .limit(1);
-      const hasSelf = Array.isArray(existingSelf) && existingSelf.length > 0;
+        .ilike("name" as never, `${firstName}%` as never)
+        .limit(20);
+      // Já existe ficha própria se houver qualquer cadastro marcado como "self"
+      // ou com nome que bate com o do coach (evita criar uma segunda "(eu)").
+      const hasSelf = ((existingSelf as unknown as Array<{ name: string; groups: string[] | null }>) || []).some((r) => {
+        if ((r.groups || []).includes("self")) return true;
+        const norm = (s: string) => (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\(eu\)/gi, "").replace(/\s+/g, " ").trim().toLowerCase();
+        const a = norm(r.name), b = norm(String(p.name || ""));
+        return !!a && !!b && (a.startsWith(b) || b.startsWith(a));
+      });
       if (!hasSelf) {
         await supabase
           .from("coach_evaluation_clients" as never)
