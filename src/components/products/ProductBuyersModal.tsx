@@ -21,11 +21,17 @@ function fmtDate(iso: string | null) {
   }
 }
 
+const CANCELLED = ["cancelled", "refunded", "failed", "rejected"];
+const isCancelled = (s: string) => CANCELLED.includes(s);
+
+type Filter = "all" | "paid" | "pending" | "cancelled";
+
 export function ProductBuyersModal({ productType, productId, productName, onClose }: Props) {
   const load = useServerFn(listProductBuyers);
   const [data, setData] = useState<ProductBuyersResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     let alive = true;
@@ -37,9 +43,17 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
     return () => { alive = false; };
   }, [productType, productId, load]);
 
-  const buyers = (data?.buyers || []).filter((b) =>
-    q.trim() ? b.name.toLowerCase().includes(q.trim().toLowerCase()) : true,
-  );
+  const buyers = (data?.buyers || [])
+    .filter((b) =>
+      filter === "all"
+        ? true
+        : filter === "paid"
+          ? b.status === "paid"
+          : filter === "cancelled"
+            ? isCancelled(b.status)
+            : b.status !== "paid" && !isCancelled(b.status),
+    )
+    .filter((b) => (q.trim() ? b.name.toLowerCase().includes(q.trim().toLowerCase()) : true));
 
   return (
     <ModalShell
