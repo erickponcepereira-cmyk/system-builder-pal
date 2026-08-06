@@ -13,7 +13,7 @@ import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions"
 import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
-import { takePostAuthIntent } from "@/lib/post-auth-intent";
+import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent";
 
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
@@ -163,9 +163,10 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
         // Conta de teste: já está logada (bootstrapTestSignup fez signIn). Marca is_test e vai direto pro app.
         try { await markSelfAsTest(); } catch (err) { console.warn("[test] markSelfAsTest falhou:", err); }
         toast.success("Conta de teste criada. Bem-vindo(a)!");
-        const destino = takePostAuthIntent();
+        const destino = peekPostAuthIntent();
         if (destino) {
           sessionStorage.setItem("fitmind_selected_area", "student");
+          clearPostAuthIntent();
           window.location.replace(destino);
           return;
         }

@@ -1,4 +1,4 @@
-import { lerAtribuicao } from "@/lib/atribuicao";
+import { lerAtribuicao, limparAtribuicao } from "@/lib/atribuicao";
 
 export type ReferralSignup = {
   code: string | null;
@@ -37,10 +37,22 @@ function parse(raw: string | null): ReferralSignup | null {
   }
 }
 
-/** Lê a indicação vigente (sessão → backup do OAuth → atribuição durável). */
+/** Lê a indicação vigente. A atribuição atual é autoritativa sobre backups. */
 export function readReferralSignup(): ReferralSignup {
   if (typeof window === "undefined") return EMPTY;
+  const a = lerAtribuicao();
   const fromSession = parse(window.sessionStorage.getItem(SESSION_KEY));
+  if (a) {
+    const matchingSession = fromSession?.code === a.codigo ? fromSession : null;
+    return {
+      code: a.codigo,
+      kind: matchingSession?.kind ?? null,
+      sponsorName: a.coachNome ?? matchingSession?.sponsorName ?? null,
+      coachId: a.coachId ?? matchingSession?.coachId ?? null,
+      referredByStudentId: matchingSession?.referredByStudentId ?? null,
+      partnerId: a.parceiroId ?? matchingSession?.partnerId ?? null,
+    };
+  }
   if (fromSession) return fromSession;
 
   const fromBackup = parse(window.localStorage.getItem(BACKUP_KEY));
@@ -52,13 +64,6 @@ export function readReferralSignup(): ReferralSignup {
     return fromBackup;
   }
 
-  const a = lerAtribuicao();
-  if (a) {
-    return {
-      code: a.codigo, kind: null, sponsorName: a.coachNome,
-      coachId: a.coachId, referredByStudentId: null, partnerId: a.parceiroId,
-    };
-  }
   return EMPTY;
 }
 
@@ -79,5 +84,6 @@ export function clearReferralSignup() {
   try {
     window.localStorage.removeItem(BACKUP_KEY);
     window.sessionStorage.removeItem(SESSION_KEY);
+    limparAtribuicao();
   } catch { /* ignora */ }
 }

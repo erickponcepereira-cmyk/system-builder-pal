@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
-import { takePostAuthIntent } from "@/lib/post-auth-intent";
+import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent";
 
 import { useBranding } from "@/components/theme-provider";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
@@ -44,7 +44,7 @@ function LoginPage() {
     // Only allow same-origin relative paths.
     if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
     // Sem ?next: usa o destino guardado antes do login (loja/produto).
-    return takePostAuthIntent();
+    return peekPostAuthIntent();
   };
 
 
@@ -55,6 +55,7 @@ function LoginPage() {
       if (active && session?.user) {
         const next = getNextParam();
         if (next) {
+          clearPostAuthIntent();
           window.location.replace(next);
         } else {
           navigate({ to: "/portal-selector", replace: true });
@@ -69,6 +70,7 @@ function LoginPage() {
     try { sessionStorage.removeItem("fitmind_selected_area"); } catch { /* storage indisponível */ }
     const next = getNextParam();
     if (next) {
+      clearPostAuthIntent();
       window.location.replace(next);
       return;
     }

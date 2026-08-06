@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { gravarAtribuicao } from "@/lib/atribuicao";
+import { gravarAtribuicaoResolvida } from "@/lib/atribuicao";
 import { setPendingProduct } from "@/lib/pending-product";
 import { setStoreIntent } from "@/lib/post-auth-intent";
 
@@ -63,28 +63,9 @@ function ReferralLandingPage() {
       }
       // Em guia anônima / modo privado o storage pode lançar. Sem o try,
       // o link de indicação travava na tela "Validando seu convite...".
-      try {
-        sessionStorage.setItem(
-          "fitmind_referral",
-          JSON.stringify({
-            code,
-            kind: row.kind,
-            sponsorName: row.sponsor_name,
-            coachId: row.coach_id,
-            referredByStudentId: row.referred_by_student_id,
-            partnerId: row.partner_id,
-            productId: productId || null,
-          })
-        );
-      } catch { /* storage indisponível */ }
-      // Atribuição durável: localStorage + primeiro toque. Sobrevive ao
-      // redirect do OAuth do Google, que o sessionStorage acima não garante.
-      gravarAtribuicao({
-        codigo: code,
-        coachId: row.coach_id,
-        coachNome: row.sponsor_name,
-        parceiroId: row.partner_id,
-      });
+      // O link explícito atual é autoritativo e substitui uma indicação antiga
+      // ainda não convertida neste navegador.
+      gravarAtribuicaoResolvida(code, row);
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         setPendingProduct(productId, null);
