@@ -648,6 +648,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     return () => { alive = false; };
   }, [partner.id]);
 
+  // Vagas já consumidas do produto em edição (para mostrar vendidas/restantes).
+  const editingId = editing?.id;
+  useEffect(() => {
+    if (!editingId) { setEditingStock(null); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("partner_products_stock_status" as never, { _ids: [editingId] } as never);
+      if (error || !alive) return;
+      const row = ((data as unknown as Array<{ used: number; remaining: number }>) || [])[0];
+      setEditingStock(row ? { used: Number(row.used), remaining: Number(row.remaining) } : null);
+    })();
+    return () => { alive = false; };
+  }, [editingId]);
+
 
 
   const activeFreeCount = products.filter(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner).length;
