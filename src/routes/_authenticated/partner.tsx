@@ -1262,7 +1262,15 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               )}
 
               {editing.kind === "paid" && (
-                <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
+                <Field label="Estoque (opcional)">
+                  <input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
+                  {editing.id && editing.stock != null && editingStock && (
+                    <p className="mt-1 text-[11px] text-white/60">
+                      {editingStock.used} vaga(s) ocupada(s) · {editingStock.remaining} restante(s).
+                      {editingStock.remaining === 0 ? " Aumente o número para voltar a vender imediatamente." : ""}
+                    </p>
+                  )}
+                </Field>
               )}
 
               {editing.kind === "paid" && (
