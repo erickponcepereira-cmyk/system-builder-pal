@@ -3,6 +3,12 @@ import { z } from "zod";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/**
+ * Coach usado no vínculo automático quando o cadastro nasce sem indicação.
+ * Só quem continua nele é realmente "sem coach confirmado".
+ */
+const DEFAULT_AUTO_COACH_ID = "f9a44c8a-31ea-4ca1-8cef-b9049733c5e1";
+
 export type PendingCoachStatus = {
   pending: boolean;
   studentId: string | null;
