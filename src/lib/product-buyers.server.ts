@@ -12,10 +12,14 @@ export type ProductBuyerRow = {
 export type ProductBuyersResult = {
   productName: string;
   stock: number | null;
+  remaining: number | null;
   paidCount: number;
   pendingCount: number;
+  cancelledCount: number;
   buyers: ProductBuyerRow[];
 };
+
+export const CANCELLED_STATUSES = ["cancelled", "refunded", "failed", "rejected"];
 
 type AnyClient = any;
 
