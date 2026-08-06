@@ -13,6 +13,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts, listCoproducedProducts } from "@/lib/collab.functions";
 
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
+import { ProductBuyersModal } from "@/components/products/ProductBuyersModal";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
 import { Logo } from "@/components/Logo";
@@ -630,6 +631,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [readOnly, setReadOnly] = useState(false);
   const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string; type: "partner" | "professional" } | null>(null);
   const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [policyDismissed, setPolicyDismissed] = useState(false);
@@ -960,6 +962,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </>
                 )}
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
+                <button onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "partner" })} className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"><Users className="h-3 w-3" /> Compradores</button>
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
                 )}
@@ -1002,12 +1005,29 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   >
                     <Eye className="h-3 w-3" /> Visualizar painel
                   </button>
+                  <button
+                    onClick={() => setBuyersFor({ id: p.id, name: p.name, type: ((c as any).productType || "partner") })}
+                    className="mt-1.5 ml-3 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    <Users className="h-3 w-3" /> Compradores
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {buyersFor && (
+        <ProductBuyersModal
+          productType={buyersFor.type}
+          productId={buyersFor.id}
+          productName={buyersFor.name}
+          onClose={() => setBuyersFor(null)}
+        />
+      )}
+
+
 
       {editing && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/70 p-2 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">

@@ -8,6 +8,7 @@ import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { listCoproducedProducts } from "@/lib/collab.functions";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
+import { ProductBuyersModal } from "@/components/products/ProductBuyersModal";
 
 
 type TimeRange = { start: string; end: string };
@@ -112,6 +113,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [readOnly, setReadOnly] = useState(false);
   const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [buyersFor, setBuyersFor] = useState<{ id: string; name: string; type: "partner" | "professional" } | null>(null);
   const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
   const loadCoproducedFn = useServerFn(listCoproducedProducts);
   // Blocos da agenda do profissional: duração dos produtos precisa ser múltipla deles.
@@ -461,6 +463,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">
                   {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
                 </button>
+                <button
+                  onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "professional" })}
+                  className="inline-flex items-center gap-1 text-[11px] text-white/60 hover:text-white"
+                >
+                  <Users className="h-3 w-3" /> Compradores
+                </button>
+
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400">
                     <Trash2 className="inline h-3 w-3" />
@@ -507,7 +516,14 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     >
                       <Eye className="h-3 w-3" /> Visualizar painel
                     </button>
+                    <button
+                      onClick={() => setBuyersFor({ id: p.id, name: p.name, type: (c as any).productType || "professional" })}
+                      className="ml-3 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                    >
+                      <Users className="h-3 w-3" /> Compradores
+                    </button>
                   </div>
+
                 </div>
               </div>
             );
@@ -918,8 +934,17 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
         </div>
       )}
 
+      {buyersFor && (
+        <ProductBuyersModal
+          productType={buyersFor.type}
+          productId={buyersFor.id}
+          productName={buyersFor.name}
+          onClose={() => setBuyersFor(null)}
+        />
+      )}
 
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+
     </div>
   );
 }
