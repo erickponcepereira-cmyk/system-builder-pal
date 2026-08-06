@@ -86,15 +86,49 @@ async function getFallbackCoachId() {
   throw new Error("Não há coach ativo para vincular o perfil de aluno automaticamente.");
 }
 
-export async function ensureStudentForProfile(profileId: string, preferredCoachId?: string | null, partnerId?: string | null) {
+export async function ensureStudentForProfile(
+  profileId: string,
+  preferredCoachId?: string | null,
+  partnerId?: string | null,
+  referredByStudentId?: string | null,
+) {
+  const coachId = clean(preferredCoachId);
+  if (coachId) {
+    const { data: selectedCoach } = await supabaseAdmin
+      .from("coaches")
+      .select("id, profile_id")
+      .eq("id", coachId)
+      .maybeSingle();
+    if (!selectedCoach?.id) {
+      throw new Error("O coach indicador selecionado não foi encontrado.");
+    }
+    if (selectedCoach.profile_id === profileId) {
+      throw new Error("Você não pode selecionar a si próprio como coach indicador.");
+    }
+  }
+
   const { data: existing } = await supabaseAdmin
     .from("students")
-    .select("id")
+    .select("id, coach_assignment_pending")
     .eq("profile_id", profileId)
     .maybeSingle();
-  if (existing?.id) return existing.id;
+  if (existing?.id) {
+    if (coachId && existing.coach_assignment_pending !== false) {
+      const { error } = await supabaseAdmin
+        .from("students")
+        .update({
+          coach_id: coachId,
+          referred_by_student_id: clean(referredByStudentId),
+          partner_id: clean(partnerId),
+          coach_assignment_pending: false,
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    }
+    return existing.id;
+  }
 
-  const coachId = clean(preferredCoachId) || await getFallbackCoachId();
+  const confirmedCoachId = coachId || await getFallbackCoachId();
   let referralCode = makeReferralCode();
   let lastError: { code?: string; message: string } | null = null;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -102,10 +136,12 @@ export async function ensureStudentForProfile(profileId: string, preferredCoachI
       .from("students")
       .insert({
         profile_id: profileId,
-        coach_id: coachId,
+        coach_id: confirmedCoachId,
         referral_code: referralCode,
         referral_link: `/i/${referralCode}`,
         partner_id: clean(partnerId),
+        referred_by_student_id: clean(referredByStudentId),
+        coach_assignment_pending: !coachId,
       })
       .select("id")
       .single();
@@ -349,27 +385,12 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
   const studentInput = await resolveStudentReferral(input.student);
 
-  // Gera código de indicação único para o próprio aluno (não confundir com o código do padrinho usado no convite)
-  let studentReferralCode = makeReferralCode();
-  let studentError: { code?: string; message: string } | null = null;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { error } = await supabaseAdmin.from("students").upsert(
-      {
-        profile_id: profile.id,
-        coach_id: studentInput.coachId,
-        referred_by_student_id: studentInput.referredByStudentId || null,
-        referral_code: studentReferralCode,
-        partner_id: studentInput.partnerId || null,
-      },
-      { onConflict: "profile_id" }
-    );
-    if (!error) { studentError = null; break; }
-    studentError = error;
-    if (error.code !== "23505") break;
-    studentReferralCode = makeReferralCode();
-  }
-
-  if (studentError) throw new Error(studentError.message);
+  await ensureStudentForProfile(
+    profile.id,
+    studentInput.coachId,
+    studentInput.partnerId,
+    studentInput.referredByStudentId,
+  );
 
   return { ok: true, profileId: profile.id, role: input.role };
 }

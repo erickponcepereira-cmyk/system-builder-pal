@@ -154,11 +154,12 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         referred_by_student_id: string | null;
         partner_id: string | null;
       } | undefined) : undefined);
-      if (row?.valid && row.coach_id) {
-        coachId = row.coach_id;
-        referredByStudentId = row.referred_by_student_id ?? referredByStudentId;
-        partnerId = row.partner_id ?? partnerId;
+      if (!row?.valid || !row.coach_id) {
+        throw new Error("O link de indicação não é mais válido. Abra novamente o link enviado pelo seu coach.");
       }
+      coachId = row.coach_id;
+      referredByStudentId = row.referred_by_student_id ?? null;
+      partnerId = row.partner_id ?? null;
     }
 
 
@@ -185,7 +186,7 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         .eq("id", existing.id);
 
       if (!existing.role || existing.role === "student") {
-        await ensureStudentForProfile(existing.id as string, coachId, partnerId);
+        await ensureStudentForProfile(existing.id as string, coachId, partnerId, referredByStudentId);
       }
       return { ok: true, alreadyExisted: true };
     }

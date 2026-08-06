@@ -33,7 +33,6 @@ function safeNext(): string | null {
   const raw = sessionStorage.getItem("fitmind:auth-next");
   sessionStorage.removeItem("fitmind:auth-next");
   if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
-    clearPostAuthIntent();
     return raw;
   }
   // O sessionStorage não sobrevive ao OAuth em alguns aparelhos: usa o
@@ -68,6 +67,7 @@ function AuthCallbackPage() {
 
       const next = safeNext();
       const role = pendingRole();
+      if (next) setPostAuthIntent(next);
 
       try {
         setMessage("Verificando seu cadastro...");
@@ -75,7 +75,6 @@ function AuthCallbackPage() {
 
         if (state.status === "needs_profile") {
           // Ainda falta completar o cadastro: devolve o destino para depois.
-          if (next) setPostAuthIntent(next);
           navigate({
             to: "/complete-signup",
             search: role && role !== "student" ? { role } : {},
@@ -106,7 +105,8 @@ function AuthCallbackPage() {
         navigate({ to: "/portal-selector", replace: true });
       } catch (e) {
         toast.error((e as Error)?.message || "Falha ao verificar o cadastro.");
-        navigate({ to: "/complete-signup", search: {}, replace: true });
+        if (next) setPostAuthIntent(next);
+        navigate({ to: "/login", replace: true });
       }
     })();
   }, [navigate]);
