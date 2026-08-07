@@ -2,7 +2,8 @@
 // Método das Janelas FitMind
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity, Check, Save } from "lucide-react";
+import { todayISOLocal, addDaysISO, formatDateOnlyBR } from "@/lib/date-only";
+import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity, Check, Save, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
@@ -431,8 +432,51 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
           <span className="text-2xl">🪟</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          {new Date(targetDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          {formatDateOnlyBR(targetDate, { weekday: "long", day: "numeric", month: "long" })}
         </p>
+        {showPicker && (
+          <div className="mx-auto mt-2 w-full max-w-sm space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTargetDate(addDaysISO(targetDate, -1))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/30 text-foreground hover:bg-muted/50"
+                aria-label="Dia anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <label className="flex flex-1 items-center gap-2 rounded-lg bg-muted/30 px-3 py-1.5">
+                <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+                <input
+                  type="date"
+                  value={targetDate}
+                  max={today}
+                  onChange={(e) => e.target.value && setTargetDate(e.target.value)}
+                  className="w-full bg-transparent text-xs font-semibold text-foreground outline-none"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={targetDate >= today}
+                onClick={() => setTargetDate(addDaysISO(targetDate, 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/30 text-foreground hover:bg-muted/50 disabled:opacity-30"
+                aria-label="Próximo dia"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            {targetDate !== today && (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5">
+                <p className="text-[11px] font-semibold text-yellow-300">
+                  Lançando o dia {formatDateOnlyBR(targetDate, { day: "2-digit", month: "2-digit" })}
+                </p>
+                <button type="button" onClick={() => setTargetDate(today)} className="text-[11px] font-bold text-primary underline">
+                  Voltar para hoje
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {saving && (
           <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" /> Salvando...
