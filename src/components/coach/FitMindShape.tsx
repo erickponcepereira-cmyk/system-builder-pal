@@ -2994,17 +2994,43 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       const { token } = await createShareFn({ data: { assessmentId: a.id, clientName: client.name } });
       const url = `${getShareOrigin()}/resultado/${token}`;
       const { toast } = await import("sonner");
+      const copyToClipboard = async (text: string) => {
+        try {
+          if (navigator.clipboard?.writeText && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+          }
+        } catch { /* fallback abaixo */ }
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return ok;
+        } catch {
+          return false;
+        }
+      };
       if (navigator.share) {
         try {
           await navigator.share({ title: `Resultado — ${client.name}`, url });
           toast.success("Link compartilhado");
         } catch {
-          /* user cancelled */
+          const ok = await copyToClipboard(url);
+          if (ok) toast.success("Link copiado: " + url);
+          else toast.info("Copie o link: " + url, { duration: 15000 });
         }
       } else {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copiado: " + url);
+        const ok = await copyToClipboard(url);
+        if (ok) toast.success("Link copiado: " + url);
+        else toast.info("Copie o link: " + url, { duration: 15000 });
       }
+
     } catch (e: any) {
       const { toast } = await import("sonner");
       toast.error(e?.message || "Não foi possível gerar o link");
