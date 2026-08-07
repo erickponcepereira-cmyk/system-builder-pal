@@ -88,7 +88,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
 
     const [{ data: students }, { data: products }, { data: sellers }, { data: orders }] = await Promise.all([
       studentIds.length
-        ? supabaseAdmin.from("students").select("id,coach_id,profiles!students_profile_id_fkey(name,email,phone,avatar_url)").in("id", studentIds)
+        ? supabaseAdmin.from("students").select("id,coach_id,profiles!students_profile_id_fkey(name,email,phone,avatar_url,photo_url)").in("id", studentIds)
         : Promise.resolve({ data: [] }),
       productIds.length
         ? supabaseAdmin.from("professional_products").select("id,name,kind").in("id", productIds)
@@ -101,7 +101,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
         : Promise.resolve({ data: [] }),
     ]);
 
-    type StudentRow = { id: string; coach_id: string | null; profiles: { name: string | null; email: string | null; phone: string | null; avatar_url: string | null } | null };
+    type StudentRow = { id: string; coach_id: string | null; profiles: { name: string | null; email: string | null; phone: string | null; avatar_url: string | null; photo_url?: string | null } | null };
     type ProductRow = { id: string; name: string | null; kind: string | null };
     type CoachRow = { id: string; profiles: { name: string | null } | null };
     type OrderRow = { id: string; status: string | null; order_number: string | null };
@@ -126,7 +126,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
       return {
         ...a,
         student_name: student?.profiles?.name || null,
-        student_avatar_url: student?.profiles?.avatar_url || null,
+        student_avatar_url: student?.profiles?.photo_url || student?.profiles?.avatar_url || null,
         student_email: student?.profiles?.email || null,
         student_phone: student?.profiles?.phone || null,
         student_coach_name: studentCoach?.profiles?.name || null,

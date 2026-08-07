@@ -1281,14 +1281,14 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     if (!myProfileId) { toast.error("Faça login para marcar presença."); return; }
     setLoading(true);
     const { data: prof } = await supabase
-      .from("profiles").select("name,avatar_url").eq("id", myProfileId).maybeSingle();
+      .from("profiles").select("name,avatar_url,photo_url").eq("id", myProfileId).maybeSingle();
     const { data: student } = await supabase
       .from("students").select("id").eq("profile_id", myProfileId).maybeSingle();
     const { error } = await supabase.from("event_attendances").insert({
       event_id: eventId,
       profile_id: myProfileId,
       display_name: prof?.name || "Participante",
-      avatar_url: prof?.avatar_url || null,
+      avatar_url: (prof as any)?.photo_url || prof?.avatar_url || null,
       student_id: student?.id || null,
     });
     setLoading(false);

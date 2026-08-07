@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Cake, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { profilePhoto } from "@/lib/profile-photo";
 import { parseDateOnly, daysUntilBirthday, ageOnNextBirthday, todayLocal } from "@/lib/date-only";
 
 type Person = {
@@ -8,6 +9,7 @@ type Person = {
   name: string | null;
   birthdate: string | null;
   avatar_url?: string | null;
+  photo_url?: string | null;
   role?: string | null;
   coachName?: string | null;
 };
@@ -42,14 +44,14 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
           } else {
             const { data } = await supabase
               .from("profiles")
-              .select("id,name,birthdate,avatar_url,role")
+              .select("id,name,birthdate,avatar_url,photo_url,role")
               .in("id", ids);
             list = (data as Person[]) || [];
           }
         } else {
           const { data } = await supabase
             .from("profiles")
-            .select("id,name,birthdate,avatar_url,role")
+            .select("id,name,birthdate,avatar_url,photo_url,role")
             .not("birthdate", "is", null);
           list = (data as Person[]) || [];
         }
@@ -136,8 +138,8 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
                       : "border-border bg-muted/20"
                 }`}
               >
-                {p.avatar_url ? (
-                  <img src={p.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                {profilePhoto(p) ? (
+                  <img src={profilePhoto(p)!} alt="" className="h-9 w-9 rounded-full object-cover" />
                 ) : (
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
                     {(p.name || "?").slice(0, 1).toUpperCase()}

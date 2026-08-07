@@ -9,7 +9,7 @@ type Reservation = {
   slot_start: string;
   slot_end: string;
   status: string;
-  profiles: { name: string | null; avatar_url: string | null } | null;
+  profiles: { name: string | null; avatar_url: string | null; photo_url?: string | null } | null;
   partner_products: { name: string } | null;
 };
 
@@ -39,7 +39,7 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
     const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
     const { data, error } = await supabase
       .from("partner_freebie_reservations" as never)
-      .select("id, slot_start, slot_end, status, profiles!partner_freebie_reservations_profile_id_fkey(name, avatar_url), partner_products(name)")
+      .select("id, slot_start, slot_end, status, profiles!partner_freebie_reservations_profile_id_fkey(name, avatar_url, photo_url), partner_products(name)")
       .eq("partner_id" as never, partnerId as never)
       .gte("slot_start" as never, startOfDay.toISOString() as never)
       .lte("slot_start" as never, endOfDay.toISOString() as never)
@@ -115,8 +115,8 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
               const state = reservationState(r, now);
               return (
               <div key={r.id} className="p-3 flex items-center gap-2">
-                {r.profiles?.avatar_url ? (
-                  <img src={r.profiles.avatar_url} className="h-8 w-8 rounded-full object-cover" alt="" />
+                {profilePhoto(r.profiles) ? (
+                  <img src={profilePhoto(r.profiles)!} className="h-8 w-8 rounded-full object-cover" alt="" />
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/60">
                     {(r.profiles?.name || "?")[0]}
