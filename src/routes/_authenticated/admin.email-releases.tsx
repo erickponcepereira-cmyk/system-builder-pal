@@ -1,14 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, MailCheck, Loader2, RefreshCw, KeyRound } from "lucide-react";
+import { Search, MailCheck, Loader2, RefreshCw, KeyRound, Link2, Copy, MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   listUnconfirmedUsers,
   confirmUserEmailByUserId,
   adminSetTemporaryPassword,
+  adminSearchAuthUsers,
+  adminGenerateRecoveryLink,
+  adminSendRecoveryEmail,
   type UnconfirmedUserRow,
+  type AuthUserRow,
 } from "@/lib/admin-email-releases.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin/email-releases")({
   head: () => ({
