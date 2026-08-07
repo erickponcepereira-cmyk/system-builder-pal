@@ -319,15 +319,30 @@ function ExplanationSection() {
   );
 }
 
-interface Props { studentId: string; readOnly?: boolean; date?: string; hideExplanation?: boolean }
+interface Props {
+  studentId: string;
+  readOnly?: boolean;
+  date?: string;
+  hideExplanation?: boolean;
+  /** Quando informado, a data vira controlada pelo componente pai. */
+  onDateChange?: (date: string) => void;
+}
 
-export function WindowMethod({ studentId, readOnly = false, date, hideExplanation = false }: Props) {
+export function WindowMethod({ studentId, readOnly = false, date, hideExplanation = false, onDateChange }: Props) {
   const [goal, setGoal] = useState<Goal | null>(null);
   const [meals, setMeals] = useState<MealState[]>(emptyMeals());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const targetDate = date || new Date().toISOString().slice(0, 10);
+  const [internalDate, setInternalDate] = useState<string>(() => date || todayISOLocal());
+  const today = todayISOLocal();
+  const targetDate = date || internalDate;
+  const showPicker = !readOnly;
+  const setTargetDate = (d: string) => {
+    const safe = d > today ? today : d;
+    setInternalDate(safe);
+    onDateChange?.(safe);
+  };
 
   useEffect(() => {
     if (!studentId) return;
