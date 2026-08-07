@@ -105,7 +105,7 @@ export const checkInToEvent = createServerFn({ method: "POST" })
 
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id,name,avatar_url")
+      .select("id,name,avatar_url,photo_url")
       .eq("user_id", userId)
       .maybeSingle();
     if (!prof) throw new Error("Perfil não encontrado.");
@@ -125,7 +125,7 @@ export const checkInToEvent = createServerFn({ method: "POST" })
           event_id: data.eventId,
           profile_id: prof.id,
           display_name: prof.name || "Participante",
-          avatar_url: prof.avatar_url,
+          avatar_url: (prof as any).photo_url || prof.avatar_url,
           student_id: student?.id || null,
         },
         { onConflict: "event_id,profile_id", ignoreDuplicates: true },

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Star, Trophy, Loader2, ExternalLink, Award, Dumbbell, TrendingDown, Lock } from "lucide-react";
+import { profilePhoto } from "@/lib/profile-photo";
 
 type Gender = "M" | "F" | "all";
 type Tab = "winners" | "fat" | "muscle" | "kg";
@@ -11,7 +12,7 @@ type HallEntry = {
   result_kg: number | null;
   result_pct: number | null;
   prize_amount: number;
-  student: { id?: string; profile: { name: string; avatar_url: string | null } };
+  student: { id?: string; profile: { name: string; avatar_url: string | null; photo_url?: string | null } };
   coach: { id?: string; profile: { name: string } };
   competition: { id?: string; month: number; year: number };
 };
@@ -33,7 +34,7 @@ type Enroll = {
   result_muscle_gain_pct: number | null;
   result_kg_lost: number | null;
   competition: { id: string; month: number; year: number } | null;
-  student: { id?: string; profile: { name: string; avatar_url: string | null } } | null;
+  student: { id?: string; profile: { name: string; avatar_url: string | null; photo_url?: string | null } } | null;
   coach: { id?: string; profile: { name: string } } | null;
 };
 
@@ -69,7 +70,7 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
           .from("competition_hall_of_fame" as never)
           .select(`
             id, gender, result_kg, result_pct, prize_amount,
-            student:student_id ( id, profile:profile_id ( name, avatar_url ) ),
+            student:student_id ( id, profile:profile_id ( name, avatar_url, photo_url ) ),
             coach:coach_id ( id, profile:profile_id ( name ) ),
             competition:competition_id ( id, month, year )
           `)
@@ -85,7 +86,7 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
             initial_share_url, final_share_url,
             result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
             competition:competition_id ( id, month, year ),
-            student:student_id ( id, profile:profile_id ( name, avatar_url ) ),
+            student:student_id ( id, profile:profile_id ( name, avatar_url, photo_url ) ),
             coach:coach_id ( id, profile:profile_id ( name ) )
           `)
           .limit(2000),
@@ -288,7 +289,7 @@ function WinnersList({ items, highlightStudentId, highlightRef }: { items: HallE
             ref={isHL ? highlightRef : undefined}
             className={`rounded-2xl border bg-card p-4 ${isHL ? "border-primary ring-2 ring-primary/40" : "border-border"}`}>
             <div className="flex items-center gap-3">
-              <Avatar url={e.student?.profile?.avatar_url} name={e.student?.profile?.name || "?"} />
+              <Avatar url={profilePhoto(e.student?.profile)} name={e.student?.profile?.name || "?"} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏆"}</span>
@@ -348,7 +349,7 @@ function RankList({ items, metric, showAudit, highlightStudentId, highlightRef }
               <div className="w-6 text-center text-xs font-bold text-muted-foreground flex-shrink-0">
                 {`${i + 1}º`}
               </div>
-              <Avatar url={e.student?.profile?.avatar_url} name={e.student?.profile?.name || "?"} />
+              <Avatar url={profilePhoto(e.student?.profile)} name={e.student?.profile?.name || "?"} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="font-medium text-foreground text-sm truncate">{e.student?.profile?.name || "—"}</p>

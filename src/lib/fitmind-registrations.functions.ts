@@ -98,7 +98,7 @@ export const getEventRegistrations = createServerFn({ method: "GET" })
 
     const profileIds = Array.from(new Set(regs.map((r) => r.profile_id)));
     const [profilesRes, coachesRes, studentsRes, partnersRes] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id,name,avatar_url").in("id", profileIds),
+      supabaseAdmin.from("profiles").select("id,name,avatar_url,photo_url").in("id", profileIds),
       supabaseAdmin.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
       supabaseAdmin
         .from("students")
@@ -111,8 +111,8 @@ export const getEventRegistrations = createServerFn({ method: "GET" })
     ]);
 
     const profMap = new Map<string, { name: string; avatar_url: string | null }>();
-    ((profilesRes.data as Array<{ id: string; name: string; avatar_url: string | null }>) || []).forEach((p) => {
-      profMap.set(p.id, { name: p.name, avatar_url: p.avatar_url });
+    ((profilesRes.data as Array<{ id: string; name: string; avatar_url: string | null; photo_url: string | null }>) || []).forEach((p) => {
+      profMap.set(p.id, { name: p.name, avatar_url: p.photo_url || p.avatar_url });
     });
     const coachMap = new Map<string, boolean | null>();
     ((coachesRes.data as Array<{ profile_id: string; is_professional: boolean | null }>) || []).forEach((c) => {
