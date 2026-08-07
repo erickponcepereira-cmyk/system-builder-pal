@@ -87,3 +87,21 @@ export function ageOnNextBirthday(input: string | Date | null | undefined, today
   const nextYear = days === 0 ? today.getFullYear() : new Date(today.getFullYear(), b.getMonth(), b.getDate()) < today ? today.getFullYear() + 1 : today.getFullYear();
   return nextYear - b.getFullYear();
 }
+
+/** Today as `YYYY-MM-DD` using the LOCAL calendar (never UTC). */
+export function todayISOLocal(d: Date = new Date()): string {
+  return toISODateLocal(d);
+}
+
+/** Convert a Date to `YYYY-MM-DD` using the LOCAL calendar. */
+export function toISODateLocal(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Shift a `YYYY-MM-DD` value by N days without timezone drift. */
+export function addDaysISO(iso: string, days: number): string {
+  const d = parseDateOnly(iso) ?? todayLocal();
+  d.setDate(d.getDate() + days);
+  return toISODateLocal(d);
+}

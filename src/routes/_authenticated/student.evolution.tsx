@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
 import { ProtectedImage } from "@/components/security/ProtectedImage";
 import { WindowMethod } from "@/components/student/WindowMethod";
+import { todayISOLocal } from "@/lib/date-only";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
 
@@ -35,6 +36,7 @@ function StudentEvolution() {
   // Gallery / compare state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [windowDate, setWindowDate] = useState<string>(() => todayISOLocal());
 
   const latestPhoto = photos[0];
   const firstPhoto = photos[photos.length - 1];
@@ -133,14 +135,20 @@ function StudentEvolution() {
       {student && <WaterTrackerCard studentId={student.id} />}
 
       {student && (
-        <section className="rounded-2xl bg-card p-4">
-          <WindowMethod studentId={student.id} />
+        <section id="window-method" className="rounded-2xl bg-card p-4">
+          <WindowMethod studentId={student.id} date={windowDate} onDateChange={setWindowDate} />
         </section>
       )}
 
       {student && (
         <section className="rounded-2xl bg-card p-4">
-          <WindowMethodHistory studentId={student.id} />
+          <WindowMethodHistory
+            studentId={student.id}
+            onEditDate={(d) => {
+              setWindowDate(d);
+              document.getElementById("window-method")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
         </section>
       )}
 
