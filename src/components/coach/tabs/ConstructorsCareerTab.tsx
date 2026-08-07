@@ -102,9 +102,21 @@ export function ConstructorsCareerTab() {
       {next && nextWindow && (
         <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima patente</p>
-              <p className="text-base font-bold text-white">{next.display_name}</p>
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="relative flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
+                style={{ backgroundColor: `${next.badge_color || "#FF4230"}20`, border: `1px solid ${next.badge_color || "#FF4230"}45` }}
+              >
+                {next.image_url ? (
+                  <BadgeImage path={next.image_url} alt={next.display_name} className="h-full w-full object-contain p-1 opacity-70 grayscale" />
+                ) : (
+                  <Shield className="h-6 w-6" style={{ color: next.badge_color || "#FF4230" }} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima patente</p>
+                <p className="text-base font-bold text-white truncate">{next.display_name}</p>
+              </div>
             </div>
             <span className="rounded-full px-2.5 py-1 text-[10px] font-bold"
               style={{ backgroundColor: `${next.badge_color || "#FF4230"}20`, color: next.badge_color || "#FF4230" }}>
