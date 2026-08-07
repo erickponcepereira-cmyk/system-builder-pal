@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Star, Trophy, Loader2, ExternalLink, Award, Dumbbell, TrendingDown, Lock } from "lucide-react";
+import { profilePhoto } from "@/lib/profile-photo";
 
 type Gender = "M" | "F" | "all";
 type Tab = "winners" | "fat" | "muscle" | "kg";

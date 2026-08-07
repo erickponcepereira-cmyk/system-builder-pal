@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QrCode, ScanLine, Loader2, CheckCircle2, Clock, Users, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { QRScannerModal } from "@/components/QRScannerModal";
+import { profilePhoto } from "@/lib/profile-photo";
 
 type Reservation = {
   id: string;
