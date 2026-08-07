@@ -99,25 +99,24 @@ export const createAssessmentShare = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const coachId = await getCallerCoachId(context.userId);
+    const caller = await getCallerCoachIdSafe(context.userId);
 
-    // Ensure the assessment belongs to this coach
     const { data: assessment } = await supabaseAdmin
       .from("coach_body_assessments" as never)
       .select("id,coach_id" as never)
       .eq("id" as never, data.assessmentId as never)
       .maybeSingle();
     const a = assessment as { id: string; coach_id: string } | null;
-    if (!a || a.coach_id !== coachId) {
-      throw new Error("Avaliação não encontrada");
-    }
+    if (!a) throw new Error("Avaliação não encontrada");
 
-    // Reuse existing share if any
+    const allowed = await canManageAssessment(caller, a.coach_id);
+    if (!allowed) throw new Error("Sem permissão para compartilhar esta avaliação");
+
+    // Reuse existing share if any (independente de quem gerou)
     const { data: existing } = await supabaseAdmin
       .from("assessment_shares" as never)
       .select("token" as never)
       .eq("assessment_id" as never, data.assessmentId as never)
-      .eq("coach_id" as never, coachId as never)
       .maybeSingle();
     if (existing) return { token: (existing as { token: string }).token };
 
@@ -125,11 +124,13 @@ export const createAssessmentShare = createServerFn({ method: "POST" })
       .from("assessment_shares" as never)
       .insert({
         assessment_id: data.assessmentId,
-        coach_id: coachId,
+        // mantém o coach titular da avaliação para a página pública
+        coach_id: a.coach_id,
         client_name: data.clientName.trim().slice(0, 120),
       } as never)
       .select("token" as never)
       .single();
+
 
     if (insertErr) throw new Error(insertErr.message);
     return { token: (share as { token: string }).token };
