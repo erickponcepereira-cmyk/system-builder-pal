@@ -86,6 +86,41 @@ async function getCallerCoachId(userId: string): Promise<string> {
   return coach.id as string;
 }
 
+/** Igual a getCallerCoachId, mas não lança se o usuário não for coach (ex.: admin). */
+async function getCallerCoachIdSafe(
+  userId: string,
+): Promise<{ coachId: string | null; isAdmin: boolean }> {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!profile?.id) throw new Error("Perfil não encontrado");
+  const { data: coach } = await supabaseAdmin
+    .from("coaches")
+    .select("id")
+    .eq("profile_id", profile.id as string)
+    .maybeSingle();
+  return {
+    coachId: (coach?.id as string | undefined) ?? null,
+    isAdmin: (profile as { role?: string }).role === "admin",
+  };
+}
+
+/** Dono da avaliação, master coach ou admin podem gerenciar o link. */
+async function canManageAssessment(
+  caller: { coachId: string | null; isAdmin: boolean },
+  ownerCoachId: string,
+): Promise<boolean> {
+  if (caller.isAdmin) return true;
+  if (!caller.coachId) return false;
+  if (caller.coachId === ownerCoachId) return true;
+  const { data: isMaster } = await supabaseAdmin.rpc("is_master_coach" as never, {
+    _coach_id: caller.coachId,
+  } as never);
+  return !!isMaster;
+}
+
 // ── Create a share link ──────────────────────────────────────────────────────
 
 export const createAssessmentShare = createServerFn({ method: "POST" })
@@ -99,25 +134,24 @@ export const createAssessmentShare = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const coachId = await getCallerCoachId(context.userId);
+    const caller = await getCallerCoachIdSafe(context.userId);
 
-    // Ensure the assessment belongs to this coach
     const { data: assessment } = await supabaseAdmin
       .from("coach_body_assessments" as never)
       .select("id,coach_id" as never)
       .eq("id" as never, data.assessmentId as never)
       .maybeSingle();
     const a = assessment as { id: string; coach_id: string } | null;
-    if (!a || a.coach_id !== coachId) {
-      throw new Error("Avaliação não encontrada");
-    }
+    if (!a) throw new Error("Avaliação não encontrada");
 
-    // Reuse existing share if any
+    const allowed = await canManageAssessment(caller, a.coach_id);
+    if (!allowed) throw new Error("Sem permissão para compartilhar esta avaliação");
+
+    // Reuse existing share if any (independente de quem gerou)
     const { data: existing } = await supabaseAdmin
       .from("assessment_shares" as never)
       .select("token" as never)
       .eq("assessment_id" as never, data.assessmentId as never)
-      .eq("coach_id" as never, coachId as never)
       .maybeSingle();
     if (existing) return { token: (existing as { token: string }).token };
 
@@ -125,11 +159,13 @@ export const createAssessmentShare = createServerFn({ method: "POST" })
       .from("assessment_shares" as never)
       .insert({
         assessment_id: data.assessmentId,
-        coach_id: coachId,
+        // mantém o coach titular da avaliação para a página pública
+        coach_id: a.coach_id,
         client_name: data.clientName.trim().slice(0, 120),
       } as never)
       .select("token" as never)
       .single();
+
 
     if (insertErr) throw new Error(insertErr.message);
     return { token: (share as { token: string }).token };
@@ -330,15 +366,24 @@ export const deleteAssessmentShare = createServerFn({ method: "POST" })
     z.object({ token: z.string().min(8).max(64) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const coachId = await getCallerCoachId(context.userId);
+    const caller = await getCallerCoachIdSafe(context.userId);
+    const { data: row } = await supabaseAdmin
+      .from("assessment_shares" as never)
+      .select("token,coach_id" as never)
+      .eq("token" as never, data.token as never)
+      .maybeSingle();
+    const s = row as { token: string; coach_id: string } | null;
+    if (!s) return { ok: true };
+    const allowed = await canManageAssessment(caller, s.coach_id);
+    if (!allowed) throw new Error("Sem permissão para remover este link");
     const { error } = await supabaseAdmin
       .from("assessment_shares" as never)
       .delete()
-      .eq("token" as never, data.token as never)
-      .eq("coach_id" as never, coachId as never);
+      .eq("token" as never, data.token as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 // ── Student: get or create a share link for OWN assessment ───────────────────
 // O aluno não consegue ler assessment_shares (RLS é apenas do coach), então
