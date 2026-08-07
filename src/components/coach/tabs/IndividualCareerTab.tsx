@@ -324,9 +324,21 @@ function CurrentMedalPanel({
       {nextMedal && (
         <div className="rounded-2xl p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima medalha</p>
-              <p className="text-base font-bold text-white">{nextMedal.display_name}</p>
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="relative flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
+                style={{ backgroundColor: `${nextColor}20`, border: `1px solid ${nextColor}45` }}
+              >
+                {nextMedal.image_url ? (
+                  <BadgeImage path={nextMedal.image_url} alt={nextMedal.display_name} className="h-full w-full object-contain p-1 opacity-70 grayscale" />
+                ) : (
+                  <Medal className="h-6 w-6" style={{ color: nextColor }} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima medalha</p>
+                <p className="text-base font-bold text-white truncate">{nextMedal.display_name}</p>
+              </div>
             </div>
             <span className="rounded-full px-2.5 py-1 text-[10px] font-bold"
               style={{ backgroundColor: `${nextColor}20`, color: nextColor }}>
