@@ -333,6 +333,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     setSlot(null);
   };
 
+  const closeSelectedProduct = () => {
+    if (!selected) return;
+    const closingRequestedProduct = selected.id === requestedProductId;
+    setSelected(null);
+    setSlot(null);
+    if (closingRequestedProduct) onRequestedProductClose?.();
+  };
+
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
     if (selected.isSchedulable && !slot) {
@@ -633,38 +641,49 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
       {selected && (
         <div
-          className="fixed inset-0 z-[60] flex justify-center bg-background/80 p-4 backdrop-blur-sm overflow-y-auto overscroll-contain modal-safe items-start sm:items-center"
+          className="fixed inset-x-0 top-0 z-[60] flex items-start justify-center overflow-hidden bg-background/80 px-3 backdrop-blur-sm sm:items-center sm:px-4"
+          style={{
+            height: "var(--vvh, 100dvh)",
+            paddingTop: "max(0.5rem, env(safe-area-inset-top))",
+            paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
+            className="flex min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+            style={{
+              maxHeight: "calc(var(--vvh, 100dvh) - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)))",
+            }}
           >
-            <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
-              {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
-                <ProductImageCarousel
-                  images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}
-                  alt={selected.name}
-                  className="h-full w-full"
-                  rounded=""
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <ShoppingBag className="h-16 w-16 text-muted-foreground" />
-                </div>
-              )}
+            <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-card px-4 py-3">
+              <p className="min-w-0 truncate text-sm font-bold text-foreground">{selected.name}</p>
               <button
-                onClick={() => {
-                  const closingRequestedProduct = selected.id === requestedProductId;
-                  setSelected(null);
-                  setSlot(null);
-                  if (closingRequestedProduct) onRequestedProductClose?.();
-                }}
-                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
+                type="button"
+                onClick={closeSelectedProduct}
+                aria-label="Fechar"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground hover:bg-muted/80"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="space-y-4 p-5">
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [-webkit-overflow-scrolling:touch]">
+              <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-2xl bg-muted">
+                {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
+                  <ProductImageCarousel
+                    images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}
+                    alt={selected.name}
+                    className="h-full w-full"
+                    rounded=""
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <ShoppingBag className="h-16 w-16 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 space-y-4">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
                 <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
@@ -729,6 +748,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   )}
                 </div>
               )}
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t border-border bg-card p-4">
               {stockById[selected.id]?.remaining === 0 ? (
                 <button disabled className="w-full rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground">
                   Esgotado
