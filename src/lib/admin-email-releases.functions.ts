@@ -122,3 +122,105 @@ export const adminSetTemporaryPassword = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+export type AuthUserRow = UnconfirmedUserRow & { emailConfirmed: boolean };
+
+/** Busca QUALQUER conta (confirmada ou não) por e-mail ou nome. Somente admin. */
+export const adminSearchAuthUsers = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ search: z.string().min(2).max(120) }).parse(input),
+  )
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile } = await import("./admin-network.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertAdminProfile(context.userId);
+
+    const q = data.search.trim().toLowerCase();
+    const found: AuthUserRow[] = [];
+    const perPage = 1000;
+
+    for (let page = 1; page <= 10; page++) {
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (error) throw new Error(error.message);
+      const users = list?.users || [];
+      for (const u of users) {
+        const email = (u.email || "").toLowerCase();
+        const metaName = String((u.user_metadata as Record<string, unknown> | null)?.["name"] ?? "").toLowerCase();
+        if (!email.includes(q) && !metaName.includes(q)) continue;
+        found.push({
+          userId: u.id,
+          email: u.email || "",
+          createdAt: u.created_at,
+          lastSignInAt: u.last_sign_in_at ?? null,
+          provider: (u.app_metadata?.provider as string) || "email",
+          profileId: null,
+          name: null,
+          role: null,
+          emailConfirmed: Boolean(u.email_confirmed_at),
+        });
+      }
+      if (users.length < perPage) break;
+      if (found.length >= 50) break;
+    }
+
+    const rows = found.slice(0, 50);
+    if (rows.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, user_id, name, role")
+        .in("user_id", rows.map((r) => r.userId));
+      const map = new Map((profiles || []).map((p) => [p.user_id as string, p]));
+      for (const row of rows) {
+        const p = map.get(row.userId);
+        if (p) {
+          row.profileId = p.id as string;
+          row.name = (p.name as string) ?? null;
+          row.role = (p.role as string) ?? null;
+        }
+      }
+    }
+
+    rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return { rows };
+  });
+
+/** Gera um link de redefinição de senha (uso único, ~1h) para enviar manualmente. Somente admin. */
+export const adminGenerateRecoveryLink = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ email: z.string().email() }).parse(input))
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile } = await import("./admin-network.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertAdminProfile(context.userId);
+
+    const email = data.email.trim().toLowerCase();
+
+    const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: "https://fitmindclub.com.br/reset-password" },
+    });
+
+    if (error || !link?.properties?.action_link) {
+      throw new Error(error?.message || "Não foi possível gerar o link de redefinição.");
+    }
+
+    return { url: link.properties.action_link, email };
+  });
+
+/** Reenvia o e-mail padrão de redefinição de senha. Somente admin. */
+export const adminSendRecoveryEmail = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ email: z.string().email() }).parse(input))
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile } = await import("./admin-network.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertAdminProfile(context.userId);
+
+    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(data.email.trim().toLowerCase(), {
+      redirectTo: "https://fitmindclub.com.br/reset-password",
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
