@@ -86,6 +86,41 @@ async function getCallerCoachId(userId: string): Promise<string> {
   return coach.id as string;
 }
 
+/** Igual a getCallerCoachId, mas não lança se o usuário não for coach (ex.: admin). */
+async function getCallerCoachIdSafe(
+  userId: string,
+): Promise<{ coachId: string | null; isAdmin: boolean }> {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!profile?.id) throw new Error("Perfil não encontrado");
+  const { data: coach } = await supabaseAdmin
+    .from("coaches")
+    .select("id")
+    .eq("profile_id", profile.id as string)
+    .maybeSingle();
+  return {
+    coachId: (coach?.id as string | undefined) ?? null,
+    isAdmin: (profile as { role?: string }).role === "admin",
+  };
+}
+
+/** Dono da avaliação, master coach ou admin podem gerenciar o link. */
+async function canManageAssessment(
+  caller: { coachId: string | null; isAdmin: boolean },
+  ownerCoachId: string,
+): Promise<boolean> {
+  if (caller.isAdmin) return true;
+  if (!caller.coachId) return false;
+  if (caller.coachId === ownerCoachId) return true;
+  const { data: isMaster } = await supabaseAdmin.rpc("is_master_coach" as never, {
+    _coach_id: caller.coachId,
+  } as never);
+  return !!isMaster;
+}
+
 // ── Create a share link ──────────────────────────────────────────────────────
 
 export const createAssessmentShare = createServerFn({ method: "POST" })
