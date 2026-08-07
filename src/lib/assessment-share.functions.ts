@@ -366,15 +366,24 @@ export const deleteAssessmentShare = createServerFn({ method: "POST" })
     z.object({ token: z.string().min(8).max(64) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const coachId = await getCallerCoachId(context.userId);
+    const caller = await getCallerCoachIdSafe(context.userId);
+    const { data: row } = await supabaseAdmin
+      .from("assessment_shares" as never)
+      .select("token,coach_id" as never)
+      .eq("token" as never, data.token as never)
+      .maybeSingle();
+    const s = row as { token: string; coach_id: string } | null;
+    if (!s) return { ok: true };
+    const allowed = await canManageAssessment(caller, s.coach_id);
+    if (!allowed) throw new Error("Sem permissão para remover este link");
     const { error } = await supabaseAdmin
       .from("assessment_shares" as never)
       .delete()
-      .eq("token" as never, data.token as never)
-      .eq("coach_id" as never, coachId as never);
+      .eq("token" as never, data.token as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 // ── Student: get or create a share link for OWN assessment ───────────────────
 // O aluno não consegue ler assessment_shares (RLS é apenas do coach), então
