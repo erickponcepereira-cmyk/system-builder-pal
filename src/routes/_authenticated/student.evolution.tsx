@@ -36,6 +36,7 @@ function StudentEvolution() {
   // Gallery / compare state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [windowDate, setWindowDate] = useState<string>(() => todayISOLocal());
 
   const latestPhoto = photos[0];
   const firstPhoto = photos[photos.length - 1];
