@@ -7,6 +7,8 @@ import { persistReferralForOAuth } from "@/lib/referral-signup";
 import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
 import { signInWithGooglePopup } from "@/lib/google-popup-auth";
+import { Capacitor } from "@capacitor/core";
+import { startNativeGoogleOAuth } from "@/lib/native-oauth";
 
 
 
@@ -59,6 +61,23 @@ export function GoogleSignInButton({
       // há mais querystring para consultar.
       await enriquecerAtribuicao();
       persistReferralForOAuth();
+
+      // O Google não permite autenticação dentro de WebView/modal. No Capacitor
+      // abrimos uma Custom Tab/SFSafariViewController e voltamos pelo deep link.
+      if (Capacitor.isNativePlatform()) {
+        const { Browser } = await import("@capacitor/browser");
+        let browserFinished: Awaited<ReturnType<typeof Browser.addListener>> | undefined;
+        browserFinished = await Browser.addListener("browserFinished", () => {
+          setLoading(false);
+          void browserFinished?.remove();
+        });
+        const nativeResult = await startNativeGoogleOAuth();
+        if (nativeResult.ok) return;
+        await browserFinished.remove();
+        toast.error(nativeResult.error || "Não foi possível entrar com o Google.");
+        setLoading(false);
+        return;
+      }
 
       const redirectUri = getAuthRedirectUrl("/auth/callback");
 

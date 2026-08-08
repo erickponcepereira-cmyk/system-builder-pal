@@ -12,6 +12,11 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 // que já tinham o Service Worker instalado.
 export default defineConfig({
   vite: {
-    plugins: [mcpPlugin()],
+    // @lovable.dev/mcp-js 0.24 resolves child paths with Windows separators,
+    // while Vite exposes the project root with POSIX separators. The generated
+    // MCP route files are committed, so they remain available to the router;
+    // only their regeneration is skipped on Windows until the upstream package
+    // fixes the path comparison.
+    plugins: process.platform === "win32" ? [] : [mcpPlugin()],
   },
 });

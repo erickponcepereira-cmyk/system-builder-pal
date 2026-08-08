@@ -19,6 +19,9 @@ function createSupabaseClient() {
       storage: typeof window !== 'undefined' ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
+      // Necessário para o retorno seguro do Google em Android/iOS: o código
+      // recebido pelo deep link só pode ser trocado por esta instalação.
+      flowType: 'pkce',
     }
   });
 }

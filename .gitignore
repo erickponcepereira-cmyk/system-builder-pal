@@ -16,6 +16,10 @@ dist-ssr
 .nitro
 *.local
 
+# Firebase native configuration is supplied by the release environment.
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

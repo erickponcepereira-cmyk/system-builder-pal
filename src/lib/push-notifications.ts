@@ -1,37 +1,32 @@
 /**
- * Push Notifications service for Capacitor (Android/iOS) via Firebase Cloud Messaging.
+ * Push nativo via Firebase Cloud Messaging.
  *
- * - Solicita permissão ao usuário
- * - Registra o dispositivo no FCM
- * - Obtém e expõe o token FCM
- * - Estrutura pronta para persistir o token no backend (ex: Supabase)
- * - Executa APENAS dentro do Capacitor; ignorado silenciosamente no navegador web
+ * O plugin escolhido devolve token FCM tanto no Android quanto no iOS. O
+ * plugin oficial do Capacitor devolve APNs no iOS, que não é enviável pela
+ * API FCM HTTP v1 usada no backend deste projeto.
  */
-
 import { Capacitor } from "@capacitor/core";
 import {
-  PushNotifications,
-  type Token,
-  type PushNotificationSchema,
-  type ActionPerformed,
-} from "@capacitor/push-notifications";
+  FirebaseMessaging,
+  Importance,
+  Visibility,
+  type Notification,
+  type NotificationActionPerformedEvent,
+} from "@capacitor-firebase/messaging";
 
 export type PushTokenHandler = (token: string, platform: string) => void | Promise<void>;
 
 export interface PushNotificationOptions {
-  /** Chamado quando o token FCM é recebido. Use para salvar no Supabase. */
   onToken?: PushTokenHandler;
-  /** Chamado quando uma notificação é recebida com o app aberto. */
-  onNotification?: (notification: PushNotificationSchema) => void;
-  /** Chamado quando o usuário toca em uma notificação. */
-  onNotificationAction?: (action: ActionPerformed) => void;
-  /** Chamado em caso de erro no registro. */
+  onNotification?: (notification: Notification) => void;
+  onNotificationAction?: (action: NotificationActionPerformedEvent) => void;
   onError?: (error: unknown) => void;
 }
 
 let initialized = false;
+let lastPushToken: string | null = null;
+let handlers: PushNotificationOptions = {};
 
-/** Retorna true se estamos rodando dentro do Capacitor (Android/iOS). */
 export function isNativePlatform(): boolean {
   try {
     return Capacitor.isNativePlatform();
@@ -40,103 +35,124 @@ export function isNativePlatform(): boolean {
   }
 }
 
+function isNativePushAvailable() {
+  return isNativePlatform() && Capacitor.isPluginAvailable("FirebaseMessaging");
+}
+
+async function emitToken(token: string) {
+  if (!token) return;
+  lastPushToken = token;
+  try {
+    await handlers.onToken?.(token, Capacitor.getPlatform());
+  } catch (error) {
+    console.error("[Push] Erro ao processar token:", error);
+  }
+}
+
 /**
- * Inicializa o serviço de Push Notifications.
- * Só roda em plataformas nativas (Android/iOS). No navegador, retorna false.
+ * Inicializa FCM somente quando há sessão autenticada. A função é um no-op
+ * seguro enquanto o Firebase ainda não foi incluído na build nativa.
  */
-export async function initPushNotifications(
-  options: PushNotificationOptions = {},
-): Promise<boolean> {
-  if (!isNativePlatform()) return false;
-  if (initialized) return true;
-  initialized = true;
+export async function initPushNotifications(options: PushNotificationOptions = {}): Promise<boolean> {
+  handlers = { ...handlers, ...options };
+  if (!isNativePushAvailable()) return false;
+
+  if (initialized) {
+    if (lastPushToken) await emitToken(lastPushToken);
+    return true;
+  }
 
   try {
-    let permStatus = await PushNotifications.checkPermissions();
-
-    if (permStatus.receive === "prompt" || permStatus.receive === "prompt-with-rationale") {
-      permStatus = await PushNotifications.requestPermissions();
+    let permission = await FirebaseMessaging.checkPermissions();
+    if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
+      permission = await FirebaseMessaging.requestPermissions();
     }
+    if (permission.receive !== "granted") return false;
 
-    if (permStatus.receive !== "granted") {
-      initialized = false;
-      return false;
-    }
-
-    // Listeners ANTES do register() para não perder eventos
-    await PushNotifications.addListener("registration", async (token: Token) => {
-      try {
-        await options.onToken?.(token.value, Capacitor.getPlatform());
-      } catch (err) {
-        console.error("[Push] Erro ao processar token:", err);
-      }
+    await FirebaseMessaging.addListener("tokenReceived", ({ token }) => {
+      void emitToken(token);
+    });
+    await FirebaseMessaging.addListener("notificationReceived", ({ notification }) => {
+      handlers.onNotification?.(notification);
+    });
+    await FirebaseMessaging.addListener("notificationActionPerformed", (action) => {
+      handlers.onNotificationAction?.(action);
     });
 
-    await PushNotifications.addListener("registrationError", (err) => {
-      console.error("[Push] Erro de registro:", err);
-      options.onError?.(err);
-    });
+    if (Capacitor.getPlatform() === "android") {
+      await FirebaseMessaging.createChannel({
+        id: "fitmind_default",
+        name: "FitMind Club",
+        description: "Lembretes e atualizações da FitMind Club",
+        importance: Importance.High,
+        visibility: Visibility.Private,
+        vibration: true,
+        lightColor: "#FF4A3D",
+      });
+    }
 
-    await PushNotifications.addListener(
-      "pushNotificationReceived",
-      (notification: PushNotificationSchema) => {
-        options.onNotification?.(notification);
-      },
-    );
-
-    await PushNotifications.addListener(
-      "pushNotificationActionPerformed",
-      (action: ActionPerformed) => {
-        options.onNotificationAction?.(action);
-      },
-    );
-
-    await PushNotifications.register();
+    initialized = true;
+    const { token } = await FirebaseMessaging.getToken();
+    await emitToken(token);
     return true;
-  } catch (err) {
-    console.error("[Push] Falha ao inicializar:", err);
-    options.onError?.(err);
+  } catch (error) {
+    console.error("[Push] Falha ao inicializar:", error);
+    handlers.onError?.(error);
     initialized = false;
     return false;
   }
 }
 
-/** Remove todos os listeners de push notifications. */
-export async function removePushListeners(): Promise<void> {
-  if (!isNativePlatform()) return;
-  await PushNotifications.removeAllListeners();
-  initialized = false;
+/** Tenta vincular o token guardado quando um login acontece depois do bootstrap. */
+export async function syncPushTokenToCurrentUser(): Promise<void> {
+  if (lastPushToken) await saveTokenToSupabase(lastPushToken, Capacitor.getPlatform());
 }
 
 /**
- * Persiste o token FCM no Supabase na tabela `device_tokens`.
- * Faz upsert pelo token (único) e vincula ao usuário autenticado.
+ * Revoga o token FCM ao sair. Isso evita que o próximo push seja entregue a
+ * um celular que acabou de trocar de conta; o registro antigo é limpo pelo
+ * backend na primeira tentativa de envio inválida.
  */
+export async function disablePushNotificationsOnSignOut(): Promise<void> {
+  if (!isNativePushAvailable()) return;
+  try {
+    await FirebaseMessaging.deleteToken();
+  } catch {
+    // O token local pode já ter sido invalidado pelo Firebase.
+  }
+  try {
+    await FirebaseMessaging.removeAllListeners();
+  } catch {
+    // ignore
+  }
+  initialized = false;
+  lastPushToken = null;
+}
+
+export async function removePushListeners(): Promise<void> {
+  if (!isNativePushAvailable()) return;
+  await FirebaseMessaging.removeAllListeners();
+  initialized = false;
+}
+
+/** Persiste o token FCM e o reassocia caso este aparelho troque de usuário. */
 export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => {
   try {
     const { supabase } = await import("@/integrations/supabase/client");
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return;
 
-    const { error: upsertError } = await supabase
-      .from("device_tokens")
-      .upsert(
-        {
-          user_id: user.id,
-          token,
-          platform,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "token" },
-      );
-
-    if (upsertError) console.error("[Push] Erro ao salvar token:", upsertError);
-  } catch (err) {
-    console.error("[Push] Erro ao salvar token:", err);
+    const { error } = await supabase.from("device_tokens").upsert(
+      {
+        user_id: user.id,
+        token,
+        platform,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "token" },
+    );
+    if (error) console.error("[Push] Erro ao salvar token:", error);
+  } catch (error) {
+    console.error("[Push] Erro ao salvar token:", error);
   }
 };

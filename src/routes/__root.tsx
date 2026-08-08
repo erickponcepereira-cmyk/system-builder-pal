@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { completeNativeOAuthCallback, isNativeAuthCallback } from "@/lib/native-oauth";
 
 
 function NotFoundComponent() {
@@ -98,6 +100,45 @@ function RootComponent() {
     ((router.options.context as { queryClient?: QueryClient } | undefined)?.queryClient) ??
     fallbackQueryClient;
   useEffect(() => {
+    let appUrlListener: PluginListenerHandle | undefined;
+    let handlingNativeCallback = false;
+
+    const handleNativeCallback = async (url: string) => {
+      if (!isNativeAuthCallback(url) || handlingNativeCallback) return;
+      handlingNativeCallback = true;
+      try {
+        const result = await completeNativeOAuthCallback(url);
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.close();
+        if (!result.ok) {
+          const { toast } = await import("sonner");
+          toast.error(result.error);
+          await router.navigate({ to: "/login", replace: true });
+          return;
+        }
+        await router.navigate({ to: "/auth/callback", replace: true });
+      } finally {
+        handlingNativeCallback = false;
+      }
+    };
+
+    // Browser seguro + deep link para Google OAuth no Android/iOS. O listener
+    // também trata o caso em que o SO reabre o app depois de o processo morrer.
+    if (Capacitor.isNativePlatform()) {
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          appUrlListener = await App.addListener("appUrlOpen", ({ url }) => {
+            void handleNativeCallback(url);
+          });
+          const launchUrl = await App.getLaunchUrl();
+          if (launchUrl?.url) void handleNativeCallback(launchUrl.url);
+        } catch (error) {
+          console.error("[OAuth] Listener nativo indisponível:", error);
+        }
+      })();
+    }
+
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
     // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
@@ -158,12 +199,16 @@ function RootComponent() {
       }
     })();
 
-    // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
-    import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
-      initPushNotifications({ onToken: saveTokenToSupabase }).catch((err) => {
-        console.error("[Push] init falhou:", err);
-      });
-    });
+    // Push somente depois do login: evita pedir permissão na tela de entrada e
+    // garante que o token seja associado ao usuário certo.
+    const initPushForAuthenticatedUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      const { initPushNotifications, saveTokenToSupabase, syncPushTokenToCurrentUser } = await import("@/lib/push-notifications");
+      await initPushNotifications({ onToken: saveTokenToSupabase });
+      await syncPushTokenToCurrentUser();
+    };
+    void initPushForAuthenticatedUser().catch((error) => console.error("[Push] init falhou:", error));
 
     // Auto-reload quando o navegador tenta carregar um chunk JS antigo (após deploy)
     const onPreloadError = (e: Event) => {
@@ -211,11 +256,16 @@ function RootComponent() {
       // TOKEN_REFRESHED acontece a cada ~1h e em todo foco de aba: não registra acesso.
       if (event === "SIGNED_IN") {
         done = false; ping();
+        void initPushForAuthenticatedUser().catch((error) => console.error("[Push] sync falhou:", error));
+      }
+      if (event === "SIGNED_OUT") {
+        void import("@/lib/push-notifications").then(({ disablePushNotificationsOnSignOut }) => disablePushNotificationsOnSignOut());
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      void appUrlListener?.remove();
       window.removeEventListener("vite:preloadError", onPreloadError);
       window.removeEventListener("error", onChunkError);
     };
