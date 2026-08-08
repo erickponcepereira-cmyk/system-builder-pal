@@ -144,7 +144,7 @@ const COLUNAS_VITRINE =
 /** Parceiro/profissional têm um subconjunto menor — sem faixa de preço. */
 const COLUNAS_VITRINE_TERCEIROS =
   "id,name,description,price,original_price,image_url,section_id,category_id," +
-  "subcategory_id,stock,sort_order";
+  "subcategory_id,stock,sort_order,restrict_to_networks,allowed_coach_ids";
 
 const KINDS_VALIDOS: PublicProductKind[] = [
   "challenge",
