@@ -425,7 +425,11 @@ function StudentChallengePage() {
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
+          {/* Desafios de corrida (em destaque) */}
+          <RunChallengesSection />
+
           {/* Painel de tickets de desafio */}
+
           {tokens && (tokens.balance > 0 || tokens.totalEarned > 0) && (
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
               <div className="flex items-center justify-between">
