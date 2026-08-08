@@ -204,8 +204,12 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const bmiCat = getBMICategory(a.bmi || computedBMI);
   const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
   const avatarIndex = avatarEntry.index;
-  const clientGenderBin: "male" | "female" = client.gender === "female" ? "female" : "male";
-  const fatCat = getBodyFatCategory(a.bodyFat, client.gender, currentAge || 30);
+  const genderNorm = normalizeGender(client.gender);
+  const genderUnknown = genderNorm === "unknown";
+  // Sem sexo definido, mantemos referência masculina apenas para não quebrar o layout,
+  // mas o aviso abaixo deixa claro que os índices não são confiáveis.
+  const clientGenderBin: "male" | "female" = genderNorm === "female" ? "female" : "male";
+  const fatCat = getBodyFatCategory(a.bodyFat, clientGenderBin, currentAge || 30);
   const viscCat = getVisceralCategory(a.visceralFat);
   const ageBodyDiff = a.bodyAge && currentAge ? a.bodyAge - currentAge : 0;
 
