@@ -1101,7 +1101,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-foreground">Pagamento</h2>
-                  <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                  <p className="text-xs text-muted-foreground">Pedido {payOrder.number || "—"}</p>
                 </div>
                 <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
               </div>
@@ -1121,7 +1121,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
                 onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
-              {coachMode && (() => {
+              {coachMode && !payOrder.number && (
+                <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
+                  Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+                </p>
+              )}
+              {coachMode && !!payOrder.number && (() => {
                 const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
                 const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
                 const waMsg = encodeURIComponent(
@@ -1613,7 +1618,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
             <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-foreground">Pagamento</h2>
-                <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                <p className="text-xs text-muted-foreground">Pedido {payOrder.number || "—"}</p>
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
             </div>
@@ -1634,7 +1639,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
               onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
-            {coachMode && (() => {
+            {coachMode && !payOrder.number && (
+              <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
+                Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+              </p>
+            )}
+            {coachMode && !!payOrder.number && (() => {
               const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
               const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
               const waMsg = encodeURIComponent(
