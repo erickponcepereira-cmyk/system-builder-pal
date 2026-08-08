@@ -231,7 +231,7 @@ function AdminModules() {
                   Rede considerada: {resolution.chain.length} nível(is) acima
                 </p>
                 <div className="mt-2 space-y-1">
-                  {resolution.modules.map((m) => (
+                  {resolution.modules.map((m: ModuleResolution["modules"][number]) => (
                     <div key={m.module_key} className="flex items-center justify-between text-[12px]">
                       <span className="text-foreground">{MODULE_LABELS[m.module_key as ModuleKey] || m.module_key}</span>
                       <span className={m.enabled ? "font-bold text-primary" : "text-muted-foreground"}>
