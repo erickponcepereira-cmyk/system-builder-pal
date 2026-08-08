@@ -7,8 +7,10 @@ import { MODULE_LABELS, type ModuleKey } from "@/lib/use-modules";
 import {
   listModuleSettings,
   removeModuleSetting,
+  resolveModulesForUser,
   searchModuleTargets,
   setModuleSetting,
+  type ModuleResolution,
   type ModuleSetting,
   type ModuleTarget,
 } from "@/lib/admin-modules.functions";
