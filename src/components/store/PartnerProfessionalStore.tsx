@@ -474,6 +474,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleCards = cards.filter((c) => {
     const cProductKind = productKindFor(c.kind);
     const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
+    // Produto restrito: só aparece para alunos da rede autorizada.
+    if (c.restrictToNetworks) {
+      const allowed = c.allowedCoachIds || [];
+      if (!myCoachId || !allowed.includes(myCoachId)) return false;
+    }
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
     // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.
     if (vis.isHiddenByUpline("product", cProductKind, c.id, creator)) return false;
