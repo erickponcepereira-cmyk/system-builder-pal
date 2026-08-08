@@ -180,3 +180,39 @@ export const searchModuleTargets = createServerFn({ method: "POST" })
     ];
     return { targets };
   });
+
+export interface ModuleResolution {
+  profile: { id: string; name: string | null; email: string | null } | null;
+  chain: string[];
+  modules: Array<{ module_key: string; enabled: boolean; source: string }>;
+}
+
+/**
+ * Diagnóstico: mostra exatamente quais módulos uma pessoa enxerga hoje
+ * e por qual regra (perfil, coach, rede, tema ou padrão).
+ */
+export const resolveModulesForUser = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ q: z.string().min(2) }).parse(input))
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }): Promise<ModuleResolution> => {
+    const supabaseAdmin = await exigirAdmin(context.userId);
+    const termo = data.q.trim();
+    const { data: perfis } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email")
+      .or(`name.ilike.%${termo}%,email.ilike.%${termo}%`)
+      .limit(1);
+    const perfil = ((perfis as Array<{ id: string; name: string | null; email: string | null }> | null) || [])[0] ?? null;
+    if (!perfil) return { profile: null, chain: [], modules: [] };
+
+    const [{ data: chain }, { data: mods }] = await Promise.all([
+      supabaseAdmin.rpc("cadeia_coaches_do_perfil" as never, { _profile_id: perfil.id } as never),
+      supabaseAdmin.rpc("resolver_modulos" as never, { _profile_id: perfil.id } as never),
+    ]);
+
+    return {
+      profile: perfil,
+      chain: ((chain as unknown as string[]) || []).filter(Boolean),
+      modules: (mods as unknown as Array<{ module_key: string; enabled: boolean; source: string }>) || [],
+    };
+  });
