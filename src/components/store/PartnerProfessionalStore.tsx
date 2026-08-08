@@ -17,8 +17,10 @@ import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { PurchaseSuccessModal } from "@/components/store/PurchaseSuccessModal";
 
-function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
-  const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
+function BenefitsBadges({ price, compact = false, cardDaysOverride, ticketsOverride }: { price: number; compact?: boolean; cardDaysOverride?: number | null; ticketsOverride?: number | null }) {
+  const base = computePartnerProductBenefits(price);
+  const cardDays = cardDaysOverride ?? base.cardDays;
+  const challengeTickets = ticketsOverride ?? base.challengeTickets;
   const size = compact ? "text-[10px] px-1.5 py-0.5" : "text-[11px] px-2 py-1";
   return (
     <div className="mt-1 flex flex-wrap gap-1">
