@@ -39,7 +39,14 @@ interface ProductFull {
   network_l1_amount: number | null;
   network_l2_amount: number | null;
   network_l3_amount: number | null;
+  restrict_to_networks?: boolean | null;
+  allowed_coach_ids?: string[] | null;
+  perk_card_days_override?: number | null;
+  perk_challenge_tickets_override?: number | null;
 }
+
+type CoachOption = { id: string; name: string };
+
 
 const money = (v: number | null | undefined) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
