@@ -130,6 +130,27 @@ function StudentEvolution() {
         <h1 className="text-2xl font-bold text-foreground">Evolução</h1>
       </header>
 
+      {runningEnabled && (
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-1.5">
+          {([
+            { key: "evolucao" as const, label: "Evolução", icon: Trophy },
+            { key: "corrida" as const, label: "Corrida", icon: Footprints },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <t.icon className="h-4 w-4" /> {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {runningEnabled && tab === "corrida" && profileId ? (
+        <RunningTab profileId={profileId} />
+      ) : (
+      <>
       <HealthGoalsCard />
 
       {student && <WaterTrackerCard studentId={student.id} />}
