@@ -408,6 +408,7 @@ export async function fetchPublicCatalog(
  */
 export async function fetchPublicProduct(
   id: string,
+  coachId?: string | null,
 ): Promise<PublicProduct | null> {
   if (!id) return null;
 
@@ -416,8 +417,9 @@ export async function fetchPublicProduct(
   // proprietário/admin transforme um produto válido em 401 para visitantes.
   const { data, error } = await supabase.rpc(
     "catalogo_publico_produto" as never,
-    { _id: id } as never,
+    { _id: id, _coach_id: coachId ?? null } as never,
   );
+
 
   if (error) {
     throw new Error(`Falha ao consultar o produto público: ${error.message}`);
