@@ -217,7 +217,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .order("sort_order" as never, { ascending: true } as never)
           .limit(1000);
         if (error) console.error("[partner store]", error);
-        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; restrict_to_networks?: boolean | null; allowed_coach_ids?: string[] | null; perk_card_days_override?: number | null; perk_challenge_tickets_override?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
           id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
           section_id: r.section_id, category_id: r.category_id,
           seller: r.partners?.fantasy_name || "Parceiro",
@@ -226,6 +226,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           creatorCoachId: r.partners?.upline_coach_id ?? null,
           isPhysical: !!r.is_physical,
           deliveryDays: r.delivery_days ?? null,
+          restrictToNetworks: !!r.restrict_to_networks,
+          allowedCoachIds: r.allowed_coach_ids || [],
+          perkCardDays: r.perk_card_days_override ?? null,
+          perkTickets: r.perk_challenge_tickets_override ?? null,
         }));
       };
 
