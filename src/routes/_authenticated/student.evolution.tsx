@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Camera, Droplet, GlassWater, ImagePlus, Loader2, Plus, Target, Trophy, Pencil, X, Save } from "lucide-react";
+import { Camera, Droplet, Footprints, GlassWater, ImagePlus, Loader2, Plus, Target, Trophy, Pencil, X, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
@@ -10,6 +10,8 @@ import { WindowMethod } from "@/components/student/WindowMethod";
 import { todayISOLocal } from "@/lib/date-only";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
+import { useEnabledModules } from "@/lib/use-modules";
+import { RunningTab } from "@/components/student/running/RunningTab";
 
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
