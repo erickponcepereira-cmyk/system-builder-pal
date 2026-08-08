@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
 import { purchaseWhatsappUrl } from "@/lib/purchase-messages";
 import { getProductContact } from "@/lib/product-contact.functions";
+import { runChallengesForProducts } from "@/lib/run-challenges.functions";
 
 export type PurchasedItem = {
   /** id do partner_product / professional_product (nulo em produtos FitMind) */
@@ -36,6 +37,8 @@ export function PurchaseSuccessModal({
   productId, productName, price, kind, items, contacts, buyerName, onClose,
 }: Props) {
   const fetchContact = useServerFn(getProductContact);
+  const fetchRunChallenges = useServerFn(runChallengesForProducts);
+  const [runChallenges, setRunChallenges] = useState<Array<{ id: string; name: string }>>([]);
 
   const list = useMemo<PurchasedItem[]>(() => {
     if (items && items.length) return items;
@@ -83,6 +86,18 @@ export function PurchaseSuccessModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingKey]);
 
+  const productIdsKey = list.map((i) => i.productId).filter(Boolean).join(",");
+  useEffect(() => {
+    const ids = productIdsKey ? productIdsKey.split(",") : [];
+    if (!ids.length) return;
+    let alive = true;
+    fetchRunChallenges({ data: { productIds: ids } })
+      .then((r) => { if (alive) setRunChallenges(r); })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productIdsKey]);
+
   const benefits = list.reduce(
     (acc, i) => {
       if (i.kind === "fitmind") return acc;
@@ -126,6 +141,18 @@ export function PurchaseSuccessModal({
         </ul>
 
         <div className="space-y-3">
+          {runChallenges.length > 0 && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+              <p className="flex items-start gap-2 text-sm font-semibold text-foreground">
+                <Trophy className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                Seu acesso ao {runChallenges[0]!.name} foi liberado! Escolha sua meta de km.
+              </p>
+              <Link to="/student/challenge" onClick={onClose} className="mt-2 inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">
+                Ir para o desafio
+              </Link>
+            </div>
+          )}
+
           {benefits.cardDays > 0 && (
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
               <p className="flex items-start gap-2 text-sm font-semibold text-foreground">
