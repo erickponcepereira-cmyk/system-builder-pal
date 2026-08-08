@@ -121,6 +121,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [myCoachId, setMyCoachId] = useState<string | null>(null);
+  const [myCoachChain, setMyCoachChain] = useState<string[]>([]);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
   const [purchased, setPurchased] = useState<{ productId: string; productName: string; price: number; kind: CardKind; buyerName?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
