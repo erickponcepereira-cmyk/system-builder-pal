@@ -22,6 +22,11 @@ Sem ele rodando, a tela de cadastro fica esperando para sempre.
 3. No FitMind, entre em **Admin → WhatsApp da plataforma**, cadastre o número
    (se ainda não existir) e copie o **ID da conexão** e a **Chave de conexão**.
 4. Renomeie o arquivo `.env.example` para `.env` e preencha os três campos.
+   No Windows, o jeito mais seguro é abrir o PowerShell na pasta e rodar
+   `Copy-Item .env.example .env` (renomear pelo Explorer costuma criar `.env.txt`).
+   Se preferir, pode simplesmente preencher o próprio `.env.example`: o conector
+   também lê dele quando não existe `.env`.
+
 5. Rode:
 
    ```
@@ -43,7 +48,10 @@ sem pedir QR de novo.
 
 ## Se algo der errado
 
+- **"faltam dados de configuração"**: o conector mostra a pasta, o arquivo que leu e
+  quais campos estão vazios. Preencha-os ou rode `Copy-Item .env.example .env`.
 - **"conexao ou segredo invalido"**: o ID ou a chave no `.env` estão errados.
+
 - **Fica pedindo QR toda hora**: apague a pasta `sessao/` e pareie de novo.
 - **Número aparece desconectado no painel**: confira se o terminal ainda está
   aberto e se o computador está na internet.
