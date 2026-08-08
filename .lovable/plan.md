@@ -1,61 +1,32 @@
-# Módulo de Corrida + arquitetura modular por rede/coach
+# Produto restrito à rede de um coach
 
-## Contexto verificado
+Permitir que um produto (de parceiro ou de profissional) só apareça para os alunos vinculados diretamente a determinados coaches — começando pelo produto do Adriano.
 
-- O Painel de Evolução do aluno hoje é uma página única (`student.evolution`) com foto de evolução, metas e Método das Janelas — sem abas.
-- A conta `carolheming25@gmail.com` existe como **coach** e já possui tema visual próprio (`carol`) na tabela de temas de marca. O tema é aplicado automaticamente pelo provedor de identidade visual (logo, cores, nome), então a aba Corrida herda a identidade da Carol sem código específico.
-- A identidade visual já é resolvida por coach/parceiro, não por e-mail. Nada disso precisa ser refeito.
+## Como vai funcionar
 
-## O que será construído
-
-### 1. Módulos por rede (arquitetura)
-
-Nova configuração administrativa que define quais módulos cada escopo enxerga, com a ordem de prioridade pedida:
-
-```text
-usuário (perfil)  →  coach/profissional/parceiro  →  rede (upline)  →  White Label (tema)  →  padrão FitMind
-```
-
-- Módulos previstos desde já: Nutrição, Corrida, Treinos, Mentalidade, Benefícios, Avaliação Física (ligar/desligar).
-- Padrão FitMind: Corrida OFF, demais como hoje (nada muda para quem já usa o app).
-- Ativação inicial: Corrida ON para o coach Carol Aventureira — herdada por toda a rede abaixo dela.
-- Exceções individuais por perfil já suportadas pela estrutura.
-
-### 2. Painel de Evolução com abas
-
-- A página atual vira a aba **Nutrição**, com exatamente o mesmo conteúdo e comportamento.
-- A aba **Corrida** só aparece quando o módulo está habilitado para aquele usuário. Quem não tem o módulo continua vendo a tela atual, sem abas.
-
-### 3. Aba Corrida
-
-Ordem da tela (mobile-first, cards, ícones esportivos):
-
-1. **Indicadores**: melhor pace, KM no mês, mês com maior KM, pace médio, provas participadas, dias corridos.
-2. **Botão + Registrar Corrida**.
-3. **Nível de distância** (KM acumulados) com escudo, barra de progresso, percentual e "faltam X km para o nível Y".
-4. **Nível de pace** (classificação separada, baseada no melhor pace).
-5. **Histórico de corridas** com editar, excluir e detalhes.
-6. **Gráficos**: KM por mês, evolução do pace, dias corridos por mês.
-7. Aviso discreto: "Integração automática em desenvolvimento" com o texto sugerido.
-
-Escudos: Branco 0–100, Azul 100–300, Rosa 300–500, Verde 500–1.000, Preto 1.000–3.000, Vermelho 3.000–10.000 km. Pace: 7 Branco, 6 Azul, 5 Rosa, 4 Verde, 3 Preto, abaixo de 3 Vermelho. Níveis não alcançados aparecem apagados, como já é feito nas medalhas de carreira.
-
-### 4. Registro de corrida
-
-Formulário com data, distância (km), tempo total, pace (calculado automaticamente a partir de distância + tempo, editável), tipo de atividade, treino ou prova, nome da prova, cidade/local, observações e foto/comprovante opcional (com o recorte 1:1 já existente).
-
-### 5. Admin → Personalização da Rede
-
-Nova página no painel admin: buscar coach, profissional, parceiro, perfil ou tema/White Label e ligar/desligar módulos com switches, mostrando de onde vem a configuração herdada quando não houver regra própria.
+- No admin, ao abrir um produto para revisão/edição, aparece um bloco novo: **Visibilidade por rede**.
+  - Padrão: "Todos" (comportamento atual, nada muda nos produtos existentes).
+  - Opção: "Somente redes selecionadas" + lista de coaches permitidos (busca por nome, múltipla seleção).
+- Com a restrição ligada:
+  - **Aluno logado**: o produto só aparece na loja se o coach responsável dele for um dos coaches permitidos (vínculo direto, não downline).
+  - **Loja pública / link compartilhado**: o produto só aparece quando o visitante chega por um link de indicação de um coach permitido; sem link, ou com link de outro coach, o produto não é listado.
+  - **Link direto do produto**: quem não é da rede permitida vê "produto indisponível" em vez da tela de compra.
+  - **Compra**: a validação é refeita no servidor no momento do pedido, então ninguém compra fora da rede mesmo forçando o link.
+- O dono do produto (parceiro/profissional) e o admin continuam vendo o produto nos próprios painéis, com um selo indicando que ele é restrito.
 
 ## Detalhes técnicos
 
-- **Banco**: tabela `run_logs` (registros de corrida por aluno, com campos para origem do dado — `manual`, `strava`, `garmin`, etc. — e id externo, preparando integrações futuras sem refazer o módulo); tabela `module_settings` (escopo: `profile` | `coach` | `partner` | `theme` | `global`, id do escopo, chave do módulo, habilitado); função `resolver_modulos(_profile_id)` que percorre perfil → papéis → cadeia de upline → tema → padrão. GRANTs e RLS por dono em todas as tabelas novas; leitura de módulos pelo próprio usuário, escrita só por admin.
-- **Estatísticas** calculadas em função no banco (`run_stats`) para evitar baixar todo o histórico no celular.
-- **Frontend**: `src/routes/_authenticated/student.evolution.tsx` passa a montar abas; o conteúdo atual vai para `src/components/student/NutritionEvolutionTab.tsx` sem alteração de lógica; novo `src/components/student/running/` com painel, formulário, histórico, escudos e gráficos (Recharts, já disponível). Hook `useEnabledModules()` para consultar os módulos liberados.
-- **Admin**: `src/routes/_authenticated/admin.modules.tsx` + funções de servidor com verificação de admin, seguindo o padrão de `admin.branding.tsx`.
-- A migração inicial insere a regra Corrida ON para o coach da Carol pelo ID do coach (o e-mail é usado apenas para localizar a conta).
+Migração:
+- Adicionar em `partner_products` e `professional_products`:
+  - `restrict_to_networks boolean not null default false`
+  - `allowed_coach_ids uuid[] not null default '{}'`
+- Atualizar as RPCs de catálogo público (`catalogo_publico`, `catalogo_publico_produto`) para aceitar um parâmetro opcional `_coach_id` e filtrar: `not restrict_to_networks or _coach_id = any(allowed_coach_ids)`.
+- Atualizar `create_partner_product_order`, `create_scheduled_professional_order` e `create_partner_company_order` para rejeitar a compra quando o produto for restrito e o `coach_id` do aluno comprador não estiver em `allowed_coach_ids`.
 
-## Fora de escopo agora
+Frontend:
+- `src/components/admin/ProductReviewModal.tsx`: novo bloco de visibilidade por rede, com seletor de coaches (consulta `coaches` + `profiles.name`) e persistência dos dois campos novos.
+- `src/components/store/PartnerProfessionalStore.tsx`: buscar os campos novos e filtrar os cards pelo `coach_id` do aluno logado.
+- `src/routes/loja.tsx` e `src/routes/produto.$id.tsx`: repassar o coach da indicação (código já resolvido em `atribuicao.ts`) para as RPCs públicas e tratar o caso "indisponível".
+- Selo "Restrito à rede" nos cards dos painéis de parceiro e profissional.
 
-Integrações reais com Strava, Garmin, Apple Health e Health Connect — apenas a estrutura de dados fica preparada.
+Após aplicar, configuro o produto do Adriano com a restrição ligada apontando para o coach dele.
