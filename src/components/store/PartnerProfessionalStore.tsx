@@ -615,7 +615,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                          : `${stockById[p.id].remaining} de ${stockById[p.id].stock} vagas restantes`}
                      </p>
                    )}
-                   <BenefitsBadges price={p.price} compact />
+                   <BenefitsBadges price={p.price} compact cardDaysOverride={p.perkCardDays} ticketsOverride={p.perkTickets} />
                  </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
                   {mode === "reseller" && (
