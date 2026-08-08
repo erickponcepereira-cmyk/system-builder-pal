@@ -453,10 +453,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         .maybeSingle();
       const o = od as unknown as { id: string; order_number: string; gross_amount: number } | null;
       const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), o?.order_number);
+      if (!ppNumber || !/^PP-[A-Z0-9]+$/.test(ppNumber)) {
+        throw new Error("O número real do pedido não foi retornado. Tente novamente antes de compartilhar o pagamento.");
+      }
       setPayOrder({
         id: o?.id || String(ppId),
         total: Number(o?.gross_amount || selected.price),
-        number: ppNumber || "",
+        number: ppNumber,
         email: userData.user?.email || "",
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
         productId: selected.id,

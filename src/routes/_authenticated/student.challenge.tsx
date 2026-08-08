@@ -4,6 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureOrderNumber } from "@/lib/order-number";
 import { toast } from "sonner";
 import {
   Trophy, Scale, Calendar, AlertCircle, CheckCircle2,
@@ -237,9 +238,11 @@ function StudentChallengePage() {
         .eq("id" as never, orderId as never)
         .maybeSingle();
       const order = od as any;
+      const orderNumber = await ensureOrderNumber("store_order", String(orderId), order?.order_number);
+      if (!orderNumber) throw new Error("Número do pedido indisponível. Tente novamente.");
       setPayOrder({
         id: order?.id || String(orderId),
-        number: order?.order_number || "pedido",
+        number: orderNumber,
         total: Number(order?.total_amount || ticketProduct.price),
         email: auth.user?.email || "",
         name: (auth.user?.user_metadata as any)?.name || "",
