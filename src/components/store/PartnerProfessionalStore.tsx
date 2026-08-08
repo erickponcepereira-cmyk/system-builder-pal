@@ -236,7 +236,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
         // Paginação: o limite default do PostgREST é 1000; buscamos em lotes até esgotar.
         const PAGE = 1000;
-        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
+        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; restrict_to_networks?: boolean | null; allowed_coach_ids?: string[] | null; perk_card_days_override?: number | null; perk_challenge_tickets_override?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("professional_products" as never)
