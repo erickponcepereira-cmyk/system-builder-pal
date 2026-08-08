@@ -5,6 +5,7 @@ import { Loader2, Palette, Plus, Save, Search, Trash2, Wand2 } from "lucide-reac
 import { toast } from "sonner";
 import { StoreImageUpload } from "@/components/admin/StoreImageUpload";
 import { limparCacheTemas } from "@/lib/branding";
+import { auditarContraste, corrigirContraste, gerarPaleta } from "@/lib/palette";
 import {
   assignBrandTheme,
   deleteBrandTheme,
