@@ -482,10 +482,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleCards = cards.filter((c) => {
     const cProductKind = productKindFor(c.kind);
     const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
-    // Produto restrito: só aparece para alunos da rede autorizada.
+    // Produto restrito: aparece para quem está na rede autorizada (aluno direto ou
+    // qualquer nível abaixo do coach autorizado) e também para o próprio criador.
     if (c.restrictToNetworks) {
       const allowed = c.allowedCoachIds || [];
-      if (!myCoachId || !allowed.includes(myCoachId)) return false;
+      const naRede = allowed.some((id) => id === myCoachId || myCoachChain.includes(id));
+      const souCriador = !!creator && myCoachChain.includes(creator);
+      if (!naRede && !souCriador) return false;
     }
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
     // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.
