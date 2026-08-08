@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Palette, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Loader2, Palette, Plus, Save, Search, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { StoreImageUpload } from "@/components/admin/StoreImageUpload";
 import { limparCacheTemas } from "@/lib/branding";
