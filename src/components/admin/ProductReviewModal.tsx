@@ -60,6 +60,14 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const [sectionName, setSectionName] = useState<string>("—");
   const [categoryName, setCategoryName] = useState<string>("—");
   const [note, setNote] = useState("");
+  // Restrição por rede + benefícios manuais
+  const [restrict, setRestrict] = useState(false);
+  const [allowedCoachIds, setAllowedCoachIds] = useState<string[]>([]);
+  const [cardDays, setCardDays] = useState<string>("");
+  const [tickets, setTickets] = useState<string>("");
+  const [coaches, setCoaches] = useState<CoachOption[]>([]);
+  const [coachSearch, setCoachSearch] = useState("");
+  const [savingConfig, setSavingConfig] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +80,10 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       const p = data as unknown as ProductFull | null;
       setProduct(p);
       setNote(p?.admin_notes || "");
+      setRestrict(!!p?.restrict_to_networks);
+      setAllowedCoachIds(p?.allowed_coach_ids || []);
+      setCardDays(p?.perk_card_days_override != null ? String(p.perk_card_days_override) : "");
+      setTickets(p?.perk_challenge_tickets_override != null ? String(p.perk_challenge_tickets_override) : "");
       if (p?.section_id) {
         const { data: s } = await supabase
           .from("store_sections" as never)
@@ -91,6 +103,45 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       setLoading(false);
     })();
   }, [table, productId]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("coaches")
+        .select("id,profiles:profile_id(name)")
+        .limit(2000);
+      const rows = (data as unknown as Array<{ id: string; profiles?: { name: string | null } | null }>) || [];
+      setCoaches(
+        rows
+          .map((r) => ({ id: r.id, name: r.profiles?.name || "Coach sem nome" }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    })();
+  }, []);
+
+  const salvarConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const patch: Record<string, unknown> = {
+        restrict_to_networks: restrict,
+        allowed_coach_ids: restrict ? allowedCoachIds : [],
+        perk_card_days_override: cardDays.trim() === "" ? null : Number(cardDays),
+        perk_challenge_tickets_override: tickets.trim() === "" ? null : Number(tickets),
+      };
+      const { error } = await supabase
+        .from(table as never)
+        .update(patch as never)
+        .eq("id" as never, productId);
+      if (error) throw new Error(error.message);
+      toast.success("Configuração salva");
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar configuração");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
 
   const review = async (decision: "approved" | "rejected") => {
     if (decision === "rejected" && !note.trim()) {
