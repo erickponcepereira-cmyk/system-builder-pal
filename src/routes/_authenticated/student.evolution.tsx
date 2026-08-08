@@ -271,6 +271,8 @@ function StudentEvolution() {
           </div>
         </div>
       )}
+      </>
+      )}
     </div>
   );
 }
