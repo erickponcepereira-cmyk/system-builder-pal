@@ -86,6 +86,7 @@ function PublicStorePage() {
   const [referral, setReferral] = useState<{ referralCode: string | null; sponsorName: string | null }>({
     referralCode: null, sponsorName: null,
   });
+  const [referralCoachId, setReferralCoachId] = useState<string | null>(null);
 
   /**
    * Storage e querystring só existem no cliente, e esta rota renderiza no
@@ -96,13 +97,16 @@ function PublicStorePage() {
     const updateReferral = (event: Event) => {
       const attribution = (event as CustomEvent<Atribuicao>).detail;
       setReferral({ referralCode: attribution?.codigo ?? null, sponsorName: attribution?.coachNome ?? null });
+      setReferralCoachId(attribution?.coachId ?? null);
     };
     window.addEventListener(ATTRIBUTION_CHANGED_EVENT, updateReferral);
     const context = readReferralContext();
     setReferral(context);
+    setReferralCoachId(lerAtribuicao()?.coachId ?? null);
     if (context.referralCode && !context.sponsorName) {
       void resolverCodigo(context.referralCode).then((row) => {
         if (row?.sponsor_name) setReferral({ referralCode: context.referralCode, sponsorName: row.sponsor_name });
+        if (row?.coach_id) setReferralCoachId(row.coach_id);
         return enriquecerAtribuicao();
       });
     }
@@ -112,6 +116,7 @@ function PublicStorePage() {
       const attribution = lerAtribuicao();
       if (attribution?.coachNome) {
         setReferral({ referralCode: attribution.codigo, sponsorName: attribution.coachNome });
+        setReferralCoachId(attribution.coachId ?? null);
         window.clearInterval(syncTimer);
       }
     }, 250);
@@ -120,6 +125,7 @@ function PublicStorePage() {
       window.removeEventListener(ATTRIBUTION_CHANGED_EVENT, updateReferral);
     };
   }, []);
+
 
   const cartCount = cart.reduce((s, l) => s + l.quantity, 0);
   const cartTotal = cart.reduce((s, l) => s + l.price * l.quantity, 0);
