@@ -283,6 +283,98 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
             </p>
           </div>
 
+          <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">
+              Disponibilidade e benefícios
+            </p>
+
+            <label className="flex items-center gap-2 text-sm text-white/85">
+              <input
+                type="checkbox"
+                checked={restrict}
+                onChange={(e) => setRestrict(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              Restringir a redes específicas (só alunos dos coaches abaixo veem este produto)
+            </label>
+
+            {restrict && (
+              <div className="mt-3">
+                <input
+                  value={coachSearch}
+                  onChange={(e) => setCoachSearch(e.target.value)}
+                  placeholder="Buscar coach pelo nome..."
+                  className="w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+                {allowedCoachIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {allowedCoachIds.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setAllowedCoachIds((prev) => prev.filter((x) => x !== id))}
+                        className="flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary"
+                      >
+                        {coaches.find((c) => c.id === id)?.name || id.slice(0, 8)}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-2 max-h-44 overflow-y-auto rounded border border-white/10">
+                  {coaches
+                    .filter((c) => c.name.toLowerCase().includes(coachSearch.trim().toLowerCase()))
+                    .filter((c) => !allowedCoachIds.includes(c.id))
+                    .slice(0, 40)
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setAllowedCoachIds((prev) => [...prev, c.id])}
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-white/80 hover:bg-white/5"
+                      >
+                        {c.name}
+                        <span className="text-[10px] text-primary">adicionar</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Dias de carteirinha</p>
+                <input
+                  value={cardDays}
+                  onChange={(e) => setCardDays(e.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  placeholder="automático"
+                  className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Tickets de desafio</p>
+                <input
+                  value={tickets}
+                  onChange={(e) => setTickets(e.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  placeholder="automático"
+                  className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-white/40">
+              Deixe em branco para usar o cálculo automático pelo valor do produto. Use 0 para não gerar o benefício.
+            </p>
+
+            <button
+              disabled={savingConfig}
+              onClick={salvarConfig}
+              className="mt-3 w-full rounded-lg bg-primary/20 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/30 disabled:opacity-50"
+            >
+              {savingConfig ? "Salvando..." : "Salvar configuração"}
+            </button>
+          </div>
+
+
           <div>
             <p className="text-[10px] uppercase tracking-wider text-white/40">
               Observação (obrigatória para reprovar)
