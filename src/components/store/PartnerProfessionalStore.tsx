@@ -62,6 +62,10 @@ export type PartnerStoreCard = {
   coachCommissionPct?: number | null;
   isPhysical?: boolean;
   deliveryDays?: number | null;
+  restrictToNetworks?: boolean;
+  allowedCoachIds?: string[];
+  perkCardDays?: number | null;
+  perkTickets?: number | null;
 };
 
 const money = (v: number) =>
