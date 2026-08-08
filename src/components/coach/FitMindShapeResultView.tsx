@@ -459,7 +459,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{client.name}</div>
             <div style={{ fontSize: 13, color: "#ffffff99" }}>
-              {client.gender === "male" ? "Masculino" : "Feminino"} · {currentAge || "—"} anos · {a.height}cm ·{" "}
+              {genderLabel(client.gender)} · {currentAge || "—"} anos · {a.height}cm ·{" "}
               {new Date(a.date || Date.now()).toLocaleDateString("pt-BR")}
             </div>
           </div>
