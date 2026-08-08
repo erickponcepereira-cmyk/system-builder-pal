@@ -12534,6 +12534,10 @@ export type Database = {
         Returns: undefined
       }
       bot_vincular_cartao: { Args: { _conversa_id: string }; Returns: string }
+      cadeia_coaches_do_perfil: {
+        Args: { _profile_id: string }
+        Returns: string[]
+      }
       can_create_fitmind_events: {
         Args: { _user_id: string }
         Returns: boolean
@@ -13022,6 +13026,7 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      minha_cadeia_coaches: { Args: never; Returns: string[] }
       minhas_unidades_parceiro: {
         Args: never
         Returns: {
