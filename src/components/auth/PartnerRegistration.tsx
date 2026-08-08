@@ -11,7 +11,7 @@ import { translateAuthError } from "@/lib/auth-errors";
 import { maskCNPJ, maskCPF, maskPhone, isValidCPF, isValidCNPJ } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
-import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { ConfirmarConta } from "@/components/auth/ConfirmarConta";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
@@ -263,7 +263,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
       clearReferralSignup();
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
+      toast.success("Cadastro criado! Escolha como confirmar sua conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
@@ -273,7 +273,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     }
   };
 
-  if (registeredEmail) return <CheckEmailNotice email={registeredEmail} />;
+  if (registeredEmail) return <ConfirmarConta email={registeredEmail} password={password} />;
 
   if (createdForExisting) {
     return (

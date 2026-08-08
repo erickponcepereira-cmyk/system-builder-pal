@@ -16,7 +16,7 @@ import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
-import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { ConfirmarConta } from "@/components/auth/ConfirmarConta";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
 import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
@@ -215,7 +215,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
       await supabase.auth.signOut().catch(() => {});
       sessionStorage.removeItem("fitmind_selected_area");
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
+      toast.success("Cadastro criado! Escolha como confirmar sua conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
@@ -226,7 +226,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
   };
 
   if (registeredEmail) {
-    return <CheckEmailNotice email={registeredEmail} />;
+    return <ConfirmarConta email={registeredEmail} password={password} />;
   }
 
   return (
