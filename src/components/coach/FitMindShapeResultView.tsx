@@ -284,13 +284,13 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const waistRef = a.circumferences?.waist ?? a.circumferences?.abdomen;
   const hipRef = a.circumferences?.hip;
   const rcq = waistRef && hipRef ? +(waistRef / hipRef).toFixed(2) : null;
-  const rcqCat = rcq ? classifyRCQ(rcq, client.gender) : null;
-  const refRcq = client.gender === "male" ? "0,90–0,95" : "0,80–0,85";
+  const rcqCat = rcq ? classifyRCQ(rcq, clientGenderBin) : null;
+  const refRcq = clientGenderBin === "male" ? "0,90–0,95" : "0,80–0,85";
   // Harris-Benedict original (1919) — alinhado ao FineShape
   const harrisBenedictFor = (w: number) => {
     if (!w || !a.height || !currentAge) return 0;
     return Math.round(
-      client.gender === "male"
+      clientGenderBin === "male"
         ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * currentAge
         : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * currentAge,
     );
