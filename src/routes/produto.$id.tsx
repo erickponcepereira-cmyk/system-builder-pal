@@ -29,9 +29,9 @@ import {
  * retângulo cinza e a conversão morre antes da página abrir.
  */
 export const Route = createFileRoute("/produto/$id")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    ref: typeof search["ref"] === "string" ? (search["ref"] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { ref?: string } =>
+    typeof search["ref"] === "string" ? { ref: search["ref"] as string } : {},
+
   loaderDeps: ({ search }) => ({ ref: search.ref }),
   loader: async ({ params, deps }) => {
     // Produto restrito a rede só aparece quando o visitante chega pelo link
