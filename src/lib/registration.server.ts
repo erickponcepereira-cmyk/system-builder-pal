@@ -86,6 +86,62 @@ async function getFallbackCoachId() {
   throw new Error("Não há coach ativo para vincular o perfil de aluno automaticamente.");
 }
 
+/**
+ * Coach responsável definitivo da conta. Uma vez vinculado (como aluno,
+ * coach/profissional ou parceiro), o vínculo não muda em novos perfis.
+ */
+export async function resolveBoundCoachId(profileId: string): Promise<string | null> {
+  const { data: student } = await supabaseAdmin
+    .from("students")
+    .select("coach_id, coach_assignment_pending")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const studentRow = student as { coach_id?: string | null; coach_assignment_pending?: boolean | null } | null;
+  if (studentRow?.coach_id && studentRow.coach_assignment_pending === false) return studentRow.coach_id;
+
+  const { data: coach } = await supabaseAdmin
+    .from("coaches")
+    .select("upline_coach_id")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (coach?.upline_coach_id) return coach.upline_coach_id;
+
+  const { data: partner } = await supabaseAdmin
+    .from("partners")
+    .select("upline_coach_id")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (partner?.upline_coach_id) return partner.upline_coach_id;
+
+  return studentRow?.coach_id ?? null;
+}
+
+export async function getBoundCoachForUser(userId: string) {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!profile?.id) return { coachId: null as string | null, coachName: null as string | null };
+
+  const coachId = await resolveBoundCoachId(profile.id);
+  if (!coachId) return { coachId: null as string | null, coachName: null as string | null };
+
+  const { data: coach } = await supabaseAdmin
+    .from("coaches")
+    .select("id, profile_id, profiles:profile_id(name)")
+    .eq("id", coachId)
+    .maybeSingle();
+  // Nunca devolve o próprio usuário como coach responsável.
+  if (!coach?.id || coach.profile_id === profile.id) {
+    return { coachId: null as string | null, coachName: null as string | null };
+  }
+  const name = (coach as { profiles?: { name?: string | null } | null }).profiles?.name ?? null;
+  return { coachId, coachName: name };
+}
+
 export async function ensureStudentForProfile(
   profileId: string,
   preferredCoachId?: string | null,
@@ -564,6 +620,10 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
+  const boundCoachId = await resolveBoundCoachId(profile.id);
+  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
+  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
+
   const activationPatch = input.alreadyProfessional
     ? {
         already_coach: true,
@@ -583,7 +643,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
     specialty_pending_setup: !!input.specialtyPendingSetup,
     approved_at: null as string | null,
     onboarding_stage: "awaiting_admin" as const,
-    upline_coach_id: input.uplineCoachId,
+    upline_coach_id: uplineCoachId,
   };
 
   const { data: existingCoach } = await supabaseAdmin
@@ -619,7 +679,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   }
 
   await supabaseAdmin.from("profiles").update({ status: "pending", role: "coach" }).eq("id", profile.id);
-  await ensureStudentForProfile(profile.id, input.uplineCoachId);
+  await ensureStudentForProfile(profile.id, uplineCoachId);
   return { ok: true, profileId: profile.id };
 }
 export type UpgradeExistingToCoachInput = {
@@ -650,7 +710,9 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
   if (profileErr) throw new Error(profileErr.message);
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
-  if (!clean(input.uplineCoachId)) throw new Error("Selecione um coach indicador para continuar.");
+  const boundCoachId = await resolveBoundCoachId(profile.id);
+  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
+  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
 
   const { data: existingCoach } = await supabaseAdmin
     .from("coaches")
@@ -675,7 +737,7 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
     : {};
 
   const coachPatch = {
-    upline_coach_id: input.uplineCoachId,
+    upline_coach_id: uplineCoachId,
     pix_key: clean(input.pixKey),
     pix_key_type: clean(input.pixKeyType),
     bank_name: clean(input.bankName),
@@ -721,7 +783,7 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
     .update({ role: "coach", status: profile.status === "active" ? "active" : "pending" })
     .eq("id", profile.id);
 
-  await ensureStudentForProfile(profile.id, input.uplineCoachId);
+  await ensureStudentForProfile(profile.id, uplineCoachId);
   return { ok: true, profileId: profile.id };
 }
 
@@ -750,8 +812,6 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
   if (input.documentType === "cpf" && !isValidCPF(docDigits)) {
     throw new Error("CPF inválido. Verifique os dados informados.");
   }
-  if (!clean(input.uplineCoachId)) throw new Error("Selecione um coach indicador para continuar.");
-
   const { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
     .select("id, role")
@@ -760,6 +820,10 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
   if (profileErr) throw new Error(profileErr.message);
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
+
+  const boundCoachId = await resolveBoundCoachId(profile.id);
+  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
+  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
 
   const nowIso = new Date().toISOString();
   const activationPatch: {
@@ -787,7 +851,7 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
     business_area: clean(input.businessArea),
     specialty: clean(input.specialty),
     status: "pending",
-    upline_coach_id: clean(input.uplineCoachId),
+    upline_coach_id: uplineCoachId,
     ...activationPatch,
   };
 
@@ -816,6 +880,6 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
     await supabaseAdmin.from("profiles").update({ role: "partner" }).eq("id", profile.id);
   }
 
-  await ensureStudentForProfile(profile.id, input.uplineCoachId, partnerId);
+  await ensureStudentForProfile(profile.id, uplineCoachId, partnerId);
   return { ok: true, profileId: profile.id, partnerId };
 }
