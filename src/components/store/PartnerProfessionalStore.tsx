@@ -204,6 +204,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           }
         }
       }
+      // Cadeia de coaches do usuário (coach próprio ou coach do aluno + uplines).
+      // É ela que decide quem enxerga produtos restritos a uma rede.
+      {
+        const { data: chain, error: chainErr } = await supabase.rpc("minha_cadeia_coaches" as never);
+        if (chainErr) console.error("[store] cadeia de coaches", chainErr);
+        setMyCoachChain(((chain as unknown as string[]) || []).filter(Boolean));
+      }
 
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
