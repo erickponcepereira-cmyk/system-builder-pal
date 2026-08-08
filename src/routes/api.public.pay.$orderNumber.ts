@@ -5,16 +5,20 @@ export const Route = createFileRoute("/api/public/pay/$orderNumber")({
   server: {
     handlers: {
       GET: async ({ params }) => {
+        const orderNumber = decodeURIComponent(params.orderNumber).trim().toUpperCase();
+        if (!/^(PP-[A-Z0-9]+|[A-Z]+-[A-Z0-9]+)$/.test(orderNumber)) {
+          return new Response(JSON.stringify({ error: "invalid_order_number" }), { status: 400, headers: { "content-type": "application/json" } });
+        }
         const { data: order } = await supabaseAdmin
           .from("store_orders")
           .select("id, order_number, status, payment_method, total_amount, created_at, student_id, notes")
-          .eq("order_number", params.orderNumber)
+          .eq("order_number", orderNumber)
           .maybeSingle();
         if (!order) {
           const { data: partnerOrder } = await supabaseAdmin
             .from("partner_product_orders" as never)
             .select("id, order_number, status, payment_method, gross_amount, created_at, student_id, professional_product_id, partner_product_id, professional_product:professional_product_id(name), partner_product:partner_product_id(name)" as never)
-            .eq("order_number" as never, params.orderNumber as never)
+            .eq("order_number" as never, orderNumber as never)
             .maybeSingle();
           const po = partnerOrder as unknown as { id: string; order_number: string; status: string; payment_method: string; gross_amount: number; created_at: string; student_id: string; professional_product_id?: string | null; partner_product_id?: string | null; professional_product?: { name: string | null } | null; partner_product?: { name: string | null } | null } | null;
           if (!po) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { "content-type": "application/json" } });

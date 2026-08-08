@@ -6,7 +6,14 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
 
 export const Route = createFileRoute("/pay/$orderNumber")({
-  head: () => ({ meta: [{ title: "Pagamento — FitMind Club" }] }),
+  head: () => ({ meta: [
+    { title: "Pagamento seguro | FitMind Club" },
+    { name: "description", content: "Finalize com segurança o pagamento do seu pedido FitMind Club." },
+    { property: "og:title", content: "Pagamento seguro | FitMind Club" },
+    { property: "og:description", content: "Finalize com segurança o pagamento do seu pedido FitMind Club." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: PayPage,
 });
 

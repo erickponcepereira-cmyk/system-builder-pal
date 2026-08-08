@@ -388,6 +388,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     try {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
+      let createdOrderNumber: string | null = null;
       const buyerStudentId = mode === "reseller" ? resellerStudent!.id : ownStudentId;
       let refStudent: string | null = null;
       if (mode === "student") {
@@ -420,14 +421,16 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
       } else {
-        const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
+        const { data, error } = await supabase.rpc("create_partner_product_order_checkout" as never, {
           _professional_product_id: selected.id,
           _payment_method: method,
           _referred_by_student_id: refStudent,
           ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
-        ppId = data as unknown as string;
+        const created = data as unknown as { order_id?: string; order_number?: string } | null;
+        ppId = created?.order_id || null;
+        createdOrderNumber = created?.order_number || null;
       }
       if (!ppId) throw new Error("Pedido não retornado");
       if (selected.isPhysical) {
@@ -452,11 +455,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         .eq("id" as never, ppId as never)
         .maybeSingle();
       const o = od as unknown as { id: string; order_number: string; gross_amount: number } | null;
-      const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), o?.order_number);
+      const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), createdOrderNumber || o?.order_number);
+      if (!ppNumber || !/^PP-[A-Z0-9]+$/.test(ppNumber)) {
+        throw new Error("O número real do pedido não foi retornado. Tente novamente antes de compartilhar o pagamento.");
+      }
       setPayOrder({
         id: o?.id || String(ppId),
         total: Number(o?.gross_amount || selected.price),
-        number: ppNumber || "",
+        number: ppNumber,
         email: userData.user?.email || "",
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
         productId: selected.id,
