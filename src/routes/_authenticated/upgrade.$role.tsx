@@ -298,7 +298,7 @@ function UpgradePage() {
         <CoachSelector value={upline} onChange={setUpline} locked={uplineLocked} />
       </div>
 
-      <Button size="lg" className="w-full gap-2" disabled={loading} onClick={submit}>
+      <Button size="lg" className="w-full gap-2" disabled={loading || !uplineReady} onClick={submit}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         Enviar cadastro
       </Button>
