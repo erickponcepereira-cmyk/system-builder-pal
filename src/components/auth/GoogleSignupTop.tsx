@@ -17,6 +17,9 @@ export function GoogleSignupTop({
           Mais rápido — 1 toque
         </p>
         <GoogleSignInButton label="Cadastrar com Google" role={role} />
+        <div className="mt-2">
+          <AppleSignInButton label="Cadastrar com Apple" role={role} />
+        </div>
         <p className="mt-2 text-center text-[10px] text-white/50">
           Sem criar senha. Se você já tem conta com este e-mail, ela é vinculada.
         </p>
