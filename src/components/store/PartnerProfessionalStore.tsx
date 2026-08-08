@@ -198,7 +198,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         if (u.user) {
           const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
           if (prof?.id) {
-            const { data: stu } = await supabase.from("students").select("id").eq("profile_id", prof.id).maybeSingle();
+            const { data: stu } = await supabase.from("students").select("id,coach_id").eq("profile_id", prof.id).maybeSingle();
+            if (stu?.id) setOwnStudentId(stu.id);
+            setMyCoachId((stu as { coach_id?: string | null } | null)?.coach_id ?? null);
             if (stu?.id) setOwnStudentId(stu.id);
           }
         }
