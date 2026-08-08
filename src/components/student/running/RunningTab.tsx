@@ -349,21 +349,48 @@ function LevelShield({
   icon?: "run" | "pace";
 }) {
   const Icon = icon === "pace" ? Timer : Activity;
+  const surface = useSurfaceColor();
+  // A cor do nível precisa ser vista tanto no tema escuro quanto num tema
+  // claro (rosa da Carol, por exemplo) — daí o ajuste pelo fundo real.
+  const visivel = ensureContrast(color, surface, 2.6);
+  const iconColor = bestForeground(visivel);
   return (
     <div
-      className={`rounded-xl border p-2 text-center transition-all ${current ? "border-primary bg-primary/10" : "border-white/5 bg-white/[0.02]"} ${reached ? "" : "opacity-35 grayscale"}`}
+      className={`rounded-xl border p-2 text-center transition-all ${
+        current ? "border-primary bg-primary/15" : "border-border bg-muted"
+      } ${reached ? "" : "opacity-60"}`}
     >
       <div
         className="mx-auto flex h-10 w-9 items-center justify-center"
         style={{
-          background: color,
+          background: reached || current ? visivel : "var(--muted-foreground)",
           clipPath: "polygon(50% 0%, 100% 15%, 100% 65%, 50% 100%, 0% 65%, 0% 15%)",
         }}
       >
-        <Icon className="h-4 w-4" style={{ color: color === "#F5F5F5" ? "#111" : "#fff" }} />
+        <Icon className="h-4 w-4" style={{ color: reached || current ? iconColor : "var(--card)" }} />
       </div>
-      <p className="mt-1 text-[9px] font-bold uppercase" style={{ color }}>{label}</p>
+      <p className="mt-1 text-[9px] font-bold uppercase" style={{ color: visivel }}>{label}</p>
       <p className="text-[8px] leading-tight text-muted-foreground">{caption}</p>
     </div>
   );
 }
+
+/** Lê a cor real do cartão para calcular contraste dos escudos. */
+function useSurfaceColor() {
+  const [cor, setCor] = useState("#161212");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const probe = document.createElement("div");
+    probe.style.cssText = "background:var(--card);position:absolute;opacity:0;pointer-events:none";
+    document.body.appendChild(probe);
+    const rgb = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const m = rgb.match(/\d+/g);
+    if (m && m.length >= 3) {
+      const hex = `#${m.slice(0, 3).map((v) => Number(v).toString(16).padStart(2, "0")).join("")}`;
+      setCor(hex.toUpperCase());
+    }
+  }, []);
+  return cor;
+}
+
