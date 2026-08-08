@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/student/MobileShell";
-import { PendingCoachGate } from "@/components/student/PendingCoachGate";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -88,7 +87,6 @@ function StudentLayout() {
 
   return (
     <MobileShell>
-      <PendingCoachGate />
       <Outlet />
     </MobileShell>
   );
