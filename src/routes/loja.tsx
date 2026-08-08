@@ -144,7 +144,7 @@ function PublicStorePage() {
     let cancelled = false;
     (async () => {
       const [cat, ben, tax] = await Promise.all([
-        fetchPublicCatalog(referral.referralCode),
+        fetchPublicCatalog(referral.referralCode, referralCoachId),
         fetchPublicBenefits(referral.referralCode),
         fetchPublicTaxonomy().catch(() => TAXONOMIA_VAZIA),
       ]);
@@ -155,7 +155,7 @@ function PublicStorePage() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [montado, referral.referralCode]);
+  }, [montado, referral.referralCode, referralCoachId]);
 
   /**
    * Abre o produto vindo de `?produto={id}` assim que o catálogo chega.
