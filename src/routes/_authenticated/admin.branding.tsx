@@ -102,6 +102,26 @@ function AdminBranding() {
   const [edicao, setEdicao] = useState<TemaMarcaInput | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  const [basePrimaria, setBasePrimaria] = useState("#FF4A3D");
+  const [baseApoio, setBaseApoio] = useState("");
+  const [baseDestaque, setBaseDestaque] = useState("");
+  const [manual, setManual] = useState(false);
+
+  const auditoria = useMemo(() => (edicao ? auditarContraste(edicao) : []), [edicao]);
+  const reprovados = useMemo(() => auditoria.filter((p) => !p.ok), [auditoria]);
+
+  const aplicarPaleta = () => {
+    if (!edicao) return;
+    const tokens = gerarPaleta({
+      mode: edicao.mode,
+      primaria: basePrimaria,
+      apoio: baseApoio || null,
+      destaque: baseDestaque || null,
+    });
+    setEdicao({ ...edicao, ...tokens });
+    toast.success("Paleta gerada a partir das cores da marca.");
+  };
+
   const [busca, setBusca] = useState("");
   const [alvos, setAlvos] = useState<AlvoMarca[]>([]);
   const [buscando, setBuscando] = useState(false);
