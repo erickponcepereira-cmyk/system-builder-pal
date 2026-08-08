@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "`nFitMind - reparando a instalacao do conector...`n" -ForegroundColor Cyan
 
-# Fecha somente navegadores que podem manter arquivos da instalacao bloqueados.
-Get-Process chrome, msedge -ErrorAction SilentlyContinue | Stop-Process -Force
+# Fecha processos antigos que podem manter arquivos da instalacao bloqueados.
+Get-Process chrome, msedge, node -ErrorAction SilentlyContinue | Stop-Process -Force
 
 $nodeModules = Join-Path $PSScriptRoot "node_modules"
 $puppeteerCache = Join-Path $env:USERPROFILE ".cache\puppeteer"
