@@ -17,7 +17,7 @@ import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent"
 
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
-import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { ConfirmarConta } from "@/components/auth/ConfirmarConta";
 import { useBranding } from "@/components/theme-provider";
 import { resolveBrandTheme } from "@/lib/branding";
 import { isTestEmailClient, markSelfAsTest } from "@/lib/test-accounts.functions";
@@ -192,7 +192,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   };
 
   if (registeredEmail) {
-    return <CheckEmailNotice email={registeredEmail} />;
+    return <ConfirmarConta email={registeredEmail} password={password} />;
   }
 
   return (
