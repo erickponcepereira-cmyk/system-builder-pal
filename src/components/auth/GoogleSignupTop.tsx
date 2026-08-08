@@ -1,4 +1,5 @@
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 
 /**
  * Bloco de cadastro rápido com Google, no topo de cada formulário.
