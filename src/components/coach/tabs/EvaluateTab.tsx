@@ -8,6 +8,7 @@ import { linkFitmindAssessmentToChallenge } from "@/lib/fitmind-challenge.functi
 // Google Calendar desativado temporariamente — usando agenda interna
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
+import { clientGenderToProfile, profileGenderToClient } from "@/lib/gender";
 
 // PERF: no carregamento inicial usamos apenas contagem agregada por cliente (RPC).
 // Payload completo por avaliação (photos, segment_analysis, notas) é lazy-loaded em
@@ -121,7 +122,7 @@ export function EvaluateTab() {
     fullAssessmentsCacheRef.current?.clear();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
-    const { data: profile } = await supabase.from("profiles").select("id,name,email,phone,instagram").eq("user_id", userData.user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("id,name,email,phone,instagram,gender").eq("user_id", userData.user.id).maybeSingle();
     const { data: coach } = profile?.id
       ? await supabase.from("coaches").select("id,instagram,tiktok,website").eq("profile_id", profile.id).maybeSingle()
       : { data: null };
@@ -177,7 +178,7 @@ export function EvaluateTab() {
             email: p.email || null,
             whatsapp: p.phone || null,
             language: "pt",
-            gender: "other",
+            gender: profileGenderToClient((p as any).gender),
             groups: ["self"],
           } as never);
       }
@@ -487,7 +488,7 @@ export function EvaluateTab() {
     if (!preferredClientId) {
       const { data: st } = await supabase
         .from("students" as never)
-        .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
+        .select("height, current_weight, profile:profile_id ( name, email, phone, avatar_url, gender )")
         .eq("id" as never, studentId as never)
         .maybeSingle();
       const s = st as any;
@@ -497,7 +498,8 @@ export function EvaluateTab() {
           coach_id: coachInfo.id,
           student_id: studentId,
           name: s?.profile?.name || studentName,
-          gender: s?.gender === "F" ? "female" : s?.gender === "M" ? "male" : "other",
+          // O sexo vem do CADASTRO (profiles.gender = M/F/O), nunca de students.
+          gender: profileGenderToClient(s?.profile?.gender),
           height: s?.height || null,
           height_unit: "cm",
           language: "pt",
@@ -1061,6 +1063,27 @@ export function EvaluateTab() {
             .select("*" as never)
             .single();
           if (error) { toast.error("Erro ao atualizar aluno"); throw error; }
+          // Mantém o CADASTRO do aluno em sincronia com a ficha (evita divergência de sexo).
+          const profileGender = clientGenderToProfile(client.gender);
+          const linkedStudentId = (client as any).studentId as string | undefined;
+          if (profileGender && linkedStudentId) {
+            try {
+              const { data: st } = await supabase
+                .from("students" as never)
+                .select("profile_id" as never)
+                .eq("id" as never, linkedStudentId as never)
+                .maybeSingle();
+              const pid = (st as any)?.profile_id;
+              if (pid) {
+                await supabase
+                  .from("profiles")
+                  .update({ gender: profileGender } as never)
+                  .eq("id", pid);
+              }
+            } catch (e) {
+              console.warn("sync profile gender:", e);
+            }
+          }
           toast.success("Aluno atualizado");
           clientSummaryCache.delete(coachInfo.id);
           const updated = data as any;
@@ -1080,6 +1103,7 @@ export function EvaluateTab() {
             avatar: updated.avatar_url || undefined,
             assessments: client.assessments || [],
             coachId: (updated as any).coach_id || (client as any).coachId,
+            studentId: (updated as any).student_id || (client as any).studentId,
             coachName: (client as any).coachName,
           };
           setClients((current) => current.map((it) => (it.id === mapped.id ? mapped : it)));
