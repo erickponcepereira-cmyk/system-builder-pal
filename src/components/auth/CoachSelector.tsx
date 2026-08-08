@@ -111,7 +111,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *", lo
         </div>
         {locked && (
           <p className="text-[11px] text-white/40">
-            Coach indicador vinculado pela sua conta/indicação. Não pode ser alterado.
+            Coach responsável definitivo da sua conta. Vale para todos os seus perfis e não pode ser alterado.
           </p>
         )}
       </div>

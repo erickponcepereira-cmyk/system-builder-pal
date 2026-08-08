@@ -144,3 +144,11 @@ export const upgradeExistingToPartnerFn = createServerFn({ method: "POST" })
     const { upgradeExistingToPartner } = await import("./registration.server");
     return upgradeExistingToPartner(data);
   });
+
+/** Coach responsável já vinculado à conta logada (definitivo). */
+export const getMyBoundCoachFn = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ userId: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { getBoundCoachForUser } = await import("./registration.server");
+    return getBoundCoachForUser(data.userId);
+  });
