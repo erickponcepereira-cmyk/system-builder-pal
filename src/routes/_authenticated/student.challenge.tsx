@@ -15,6 +15,8 @@ import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummar
 import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTicketAcceptModal";
+import { RunChallengesSection } from "@/components/challenge/running/RunChallengesSection";
+
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 const TRADITIONAL_TICKET_PRODUCT_ID = "1a5b055d-5842-4b7a-b856-7f0babd1c04f";
