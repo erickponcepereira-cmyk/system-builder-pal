@@ -155,14 +155,14 @@ export function gerarPaleta({ mode, primaria, apoio, destaque }: EntradaPaleta):
 
   const claro = mode === "light";
 
-  const background = hslToHex(matizSuperficie, satSuperficie, claro ? 97 : 7);
+  const background = hslToHex(matizSuperficie, satSuperficie, claro ? 95 : 7);
   const card = hslToHex(matizSuperficie, satSuperficie * 0.55, claro ? 100 : 11);
   const popover = card;
-  const muted = hslToHex(matizSuperficie, satSuperficie * 0.8, claro ? 93 : 15);
-  const input = hslToHex(matizSuperficie, satSuperficie * 0.7, claro ? 95 : 14);
-  const border = hslToHex(matizSuperficie, satSuperficie, claro ? 82 : 24);
-  const sidebar = hslToHex(matizSuperficie, satSuperficie, claro ? 95 : 5);
-  const sidebarBorder = hslToHex(matizSuperficie, satSuperficie, claro ? 84 : 22);
+  const muted = hslToHex(matizSuperficie, satSuperficie * 0.8, claro ? 90 : 15);
+  const input = hslToHex(matizSuperficie, satSuperficie * 0.7, claro ? 92 : 14);
+  const border = hslToHex(matizSuperficie, satSuperficie, claro ? 80 : 24);
+  const sidebar = hslToHex(matizSuperficie, satSuperficie, claro ? 93 : 5);
+  const sidebarBorder = hslToHex(matizSuperficie, satSuperficie, claro ? 82 : 22);
 
   const textoBase = claro
     ? hslToHex(matizSuperficie, Math.min(45, p.s * 0.5), 14)
