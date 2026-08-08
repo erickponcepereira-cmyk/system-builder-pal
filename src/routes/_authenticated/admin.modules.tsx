@@ -41,7 +41,7 @@ function AdminModules() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchSettings({ data: {} });
+      const res = await fetchSettings();
       setSettings(res.settings as ModuleSetting[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao carregar módulos");
