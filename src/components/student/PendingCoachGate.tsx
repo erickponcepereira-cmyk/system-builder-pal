@@ -8,6 +8,7 @@ import {
   submitMyPendingCoach,
   type PendingCoachStatus,
 } from "@/lib/pending-coach.functions";
+import { enriquecerAtribuicao, lerAtribuicao } from "@/lib/atribuicao";
 
 /**
  * Alunos cuja conta foi recuperada automaticamente (cadastro incompleto)
