@@ -314,7 +314,7 @@ function ProgressRing({ percent, color }: { percent: number; color: string }) {
   return (
     <div className="relative h-[76px] w-[76px] shrink-0">
       <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
-        <circle cx="38" cy="38" r={radius} fill="none" stroke="var(--muted)" strokeWidth="6" />
+        <circle cx="38" cy="38" r={radius} fill="none" stroke="var(--border)" strokeWidth="6" />
         <circle
           cx="38"
           cy="38"
