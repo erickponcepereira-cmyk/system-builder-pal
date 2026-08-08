@@ -170,8 +170,16 @@ function AdminWhatsapp() {
           por WhatsApp nem aparece no cadastro.
         </p>
         <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
-          <li>Copie a pasta <span className="font-mono">conector-whatsapp</span> do projeto para esse computador.</li>
-          <li>Instale o Node.js (nodejs.org, versão LTS) e rode <span className="font-mono">npm install</span> dentro da pasta.</li>
+          <li>
+            Copie a pasta <span className="font-mono">conector-whatsapp</span> do projeto para esse computador,
+            <b> fora do OneDrive</b> (ex.: <span className="font-mono">C:\conector-whatsapp</span>) — dentro do
+            OneDrive a instalação falha com erro <span className="font-mono">EPERM</span>.
+          </li>
+          <li>
+            Instale o Node.js (nodejs.org, versão LTS) e o Google Chrome, depois rode{" "}
+            <span className="font-mono">npm install</span> dentro da pasta. O conector usa o Chrome já instalado —
+            não baixa navegador.
+          </li>
           <li>Cadastre o número aqui em cima e copie o <b>ID da conexão</b> e a <b>chave de conexão</b>.</li>
           <li>
             Preencha o arquivo <span className="font-mono">.env</span> com esses dois valores. No Windows,
