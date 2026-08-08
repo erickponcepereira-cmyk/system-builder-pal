@@ -112,6 +112,7 @@ import { Route as AuthenticatedAdminNutritionistWalletRouteImport } from './rout
 import { Route as AuthenticatedAdminNetworkUnlockHistoryRouteImport } from './routes/_authenticated/admin.network-unlock-history'
 import { Route as AuthenticatedAdminNetworkUnlockRouteImport } from './routes/_authenticated/admin.network-unlock'
 import { Route as AuthenticatedAdminNetworkRankingRouteImport } from './routes/_authenticated/admin.network-ranking'
+import { Route as AuthenticatedAdminModulesRouteImport } from './routes/_authenticated/admin.modules'
 import { Route as AuthenticatedAdminLibraryRouteImport } from './routes/_authenticated/admin.library'
 import { Route as AuthenticatedAdminHerbalifeBoletosRouteImport } from './routes/_authenticated/admin.herbalife-boletos'
 import { Route as AuthenticatedAdminFreebiesRouteImport } from './routes/_authenticated/admin.freebies'
@@ -728,6 +729,12 @@ const AuthenticatedAdminNetworkRankingRoute =
     path: '/network-ranking',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminModulesRoute =
+  AuthenticatedAdminModulesRouteImport.update({
+    id: '/modules',
+    path: '/modules',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminLibraryRoute =
   AuthenticatedAdminLibraryRouteImport.update({
     id: '/library',
@@ -1018,6 +1025,7 @@ export interface FileRoutesByFullPath {
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
   '/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/admin/library': typeof AuthenticatedAdminLibraryRoute
+  '/admin/modules': typeof AuthenticatedAdminModulesRoute
   '/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
   '/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
@@ -1159,6 +1167,7 @@ export interface FileRoutesByTo {
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
   '/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/admin/library': typeof AuthenticatedAdminLibraryRoute
+  '/admin/modules': typeof AuthenticatedAdminModulesRoute
   '/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
   '/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
@@ -1304,6 +1313,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
   '/_authenticated/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/_authenticated/admin/library': typeof AuthenticatedAdminLibraryRoute
+  '/_authenticated/admin/modules': typeof AuthenticatedAdminModulesRoute
   '/_authenticated/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/_authenticated/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
   '/_authenticated/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
@@ -1449,6 +1459,7 @@ export interface FileRouteTypes {
     | '/admin/freebies'
     | '/admin/herbalife-boletos'
     | '/admin/library'
+    | '/admin/modules'
     | '/admin/network-ranking'
     | '/admin/network-unlock'
     | '/admin/network-unlock-history'
@@ -1590,6 +1601,7 @@ export interface FileRouteTypes {
     | '/admin/freebies'
     | '/admin/herbalife-boletos'
     | '/admin/library'
+    | '/admin/modules'
     | '/admin/network-ranking'
     | '/admin/network-unlock'
     | '/admin/network-unlock-history'
@@ -1734,6 +1746,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/freebies'
     | '/_authenticated/admin/herbalife-boletos'
     | '/_authenticated/admin/library'
+    | '/_authenticated/admin/modules'
     | '/_authenticated/admin/network-ranking'
     | '/_authenticated/admin/network-unlock'
     | '/_authenticated/admin/network-unlock-history'
@@ -2588,6 +2601,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminNetworkRankingRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/modules': {
+      id: '/_authenticated/admin/modules'
+      path: '/modules'
+      fullPath: '/admin/modules'
+      preLoaderRoute: typeof AuthenticatedAdminModulesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/library': {
       id: '/_authenticated/admin/library'
       path: '/library'
@@ -2903,6 +2923,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminFreebiesRoute: typeof AuthenticatedAdminFreebiesRoute
   AuthenticatedAdminHerbalifeBoletosRoute: typeof AuthenticatedAdminHerbalifeBoletosRoute
   AuthenticatedAdminLibraryRoute: typeof AuthenticatedAdminLibraryRoute
+  AuthenticatedAdminModulesRoute: typeof AuthenticatedAdminModulesRoute
   AuthenticatedAdminNetworkRankingRoute: typeof AuthenticatedAdminNetworkRankingRoute
   AuthenticatedAdminNetworkUnlockRoute: typeof AuthenticatedAdminNetworkUnlockRoute
   AuthenticatedAdminNetworkUnlockHistoryRoute: typeof AuthenticatedAdminNetworkUnlockHistoryRoute
@@ -2968,6 +2989,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminHerbalifeBoletosRoute:
     AuthenticatedAdminHerbalifeBoletosRoute,
   AuthenticatedAdminLibraryRoute: AuthenticatedAdminLibraryRoute,
+  AuthenticatedAdminModulesRoute: AuthenticatedAdminModulesRoute,
   AuthenticatedAdminNetworkRankingRoute: AuthenticatedAdminNetworkRankingRoute,
   AuthenticatedAdminNetworkUnlockRoute: AuthenticatedAdminNetworkUnlockRoute,
   AuthenticatedAdminNetworkUnlockHistoryRoute:
