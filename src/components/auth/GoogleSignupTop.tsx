@@ -1,4 +1,5 @@
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 
 /**
  * Bloco de cadastro rápido com Google, no topo de cada formulário.
@@ -17,6 +18,9 @@ export function GoogleSignupTop({
           Mais rápido — 1 toque
         </p>
         <GoogleSignInButton label="Cadastrar com Google" role={role} />
+        <div className="mt-2">
+          <AppleSignInButton label="Cadastrar com Apple" role={role} />
+        </div>
         <p className="mt-2 text-center text-[10px] text-white/50">
           Sem criar senha. Se você já tem conta com este e-mail, ela é vinculada.
         </p>

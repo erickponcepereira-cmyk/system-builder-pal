@@ -8,6 +8,7 @@ import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { readPublicCart, type PublicCartLine } from "@/lib/public-store";
 
 
@@ -161,6 +162,9 @@ function RegisterPage() {
 
         <div className="mt-4">
           <GoogleSignInButton label="Cadastrar com Google" />
+          <div className="mt-2">
+            <AppleSignInButton label="Cadastrar com Apple" />
+          </div>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
             Se você já tem conta com este e-mail, ela será vinculada — sem cadastro duplicado.
           </p>
