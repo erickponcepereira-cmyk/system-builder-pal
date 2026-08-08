@@ -51,6 +51,7 @@ import bodyFAcima3 from "@/assets/body-f-acima-3.png";
 import bodyFAlto1 from "@/assets/body-f-alto-1.png";
 import bodyFAlto2 from "@/assets/body-f-alto-2.png";
 import bodyFAlto3 from "@/assets/body-f-alto-3.png";
+import { normalizeGender, genderLabel } from "@/lib/gender";
 
 const BODY_AVATAR_IMAGES = [bodyAbaixo, bodyNormal, bodyAcima1, bodyAcima2, bodyAcima3, bodyAlto1, bodyAlto2, bodyAlto3];
 const BODY_AVATAR_IMAGES_FEMALE = [bodyFAbaixo, bodyFNormal, bodyFAcima1, bodyFAcima2, bodyFAcima3, bodyFAlto1, bodyFAlto2, bodyFAlto3];
