@@ -121,6 +121,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [myCoachId, setMyCoachId] = useState<string | null>(null);
+  const [myCoachChain, setMyCoachChain] = useState<string[]>([]);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
   const [purchased, setPurchased] = useState<{ productId: string; productName: string; price: number; kind: CardKind; buyerName?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
@@ -203,6 +204,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             setMyCoachId((stu as { coach_id?: string | null } | null)?.coach_id ?? null);
           }
         }
+      }
+      // Cadeia de coaches do usuário (coach próprio ou coach do aluno + uplines).
+      // É ela que decide quem enxerga produtos restritos a uma rede.
+      {
+        const { data: chain, error: chainErr } = await supabase.rpc("minha_cadeia_coaches" as never);
+        if (chainErr) console.error("[store] cadeia de coaches", chainErr);
+        setMyCoachChain(((chain as unknown as string[]) || []).filter(Boolean));
       }
 
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
@@ -474,10 +482,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleCards = cards.filter((c) => {
     const cProductKind = productKindFor(c.kind);
     const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
-    // Produto restrito: só aparece para alunos da rede autorizada.
+    // Produto restrito: aparece para quem está na rede autorizada (aluno direto ou
+    // qualquer nível abaixo do coach autorizado) e também para o próprio criador.
     if (c.restrictToNetworks) {
       const allowed = c.allowedCoachIds || [];
-      if (!myCoachId || !allowed.includes(myCoachId)) return false;
+      const naRede = allowed.some((id) => id === myCoachId || myCoachChain.includes(id));
+      const souCriador = !!creator && myCoachChain.includes(creator);
+      if (!naRede && !souCriador) return false;
     }
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
     // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.

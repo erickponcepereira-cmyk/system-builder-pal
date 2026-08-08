@@ -247,6 +247,16 @@ function AdminDashboard() {
         </Link>
       )}
 
+      {/* Atalho para módulos por rede (Corrida, Nutrição, Treinos...) */}
+      <Link
+        to="/admin/modules"
+        className="block mb-6 rounded-2xl border border-primary/30 bg-primary/10 p-5 transition-colors hover:bg-primary/15"
+      >
+        <p className="text-sm font-bold text-white">Módulos por Rede (Corrida, Nutrição, Treinos)</p>
+        <p className="text-xs text-white/60">Ligue ou desligue módulos do painel de Evolução por coach, rede, parceiro ou pessoa →</p>
+      </Link>
+
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Revenue chart */}
         <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>

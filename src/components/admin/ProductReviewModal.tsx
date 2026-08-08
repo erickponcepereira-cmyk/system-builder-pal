@@ -45,7 +45,7 @@ interface ProductFull {
   perk_challenge_tickets_override?: number | null;
 }
 
-type CoachOption = { id: string; name: string };
+type CoachOption = { id: string; name: string; email: string | null; number: number | null };
 
 
 const money = (v: number | null | undefined) =>
@@ -108,12 +108,17 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
     (async () => {
       const { data } = await supabase
         .from("coaches")
-        .select("id,profiles:profile_id(name)")
+        .select("id,coach_number,profiles:profile_id(name,email)")
         .limit(2000);
-      const rows = (data as unknown as Array<{ id: string; profiles?: { name: string | null } | null }>) || [];
+      const rows = (data as unknown as Array<{ id: string; coach_number: number | null; profiles?: { name: string | null; email: string | null } | null }>) || [];
       setCoaches(
         rows
-          .map((r) => ({ id: r.id, name: r.profiles?.name || "Coach sem nome" }))
+          .map((r) => ({
+            id: r.id,
+            name: r.profiles?.name || "Coach sem nome",
+            email: r.profiles?.email ?? null,
+            number: r.coach_number ?? null,
+          }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       );
     })();
@@ -303,36 +308,58 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
                 <input
                   value={coachSearch}
                   onChange={(e) => setCoachSearch(e.target.value)}
-                  placeholder="Buscar coach pelo nome..."
+                  placeholder="Buscar coach por nome, e-mail ou número..."
                   className="w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
                 />
                 {allowedCoachIds.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {allowedCoachIds.map((id) => (
-                      <button
-                        key={id}
-                        onClick={() => setAllowedCoachIds((prev) => prev.filter((x) => x !== id))}
-                        className="flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary"
-                      >
-                        {coaches.find((c) => c.id === id)?.name || id.slice(0, 8)}
-                        <X className="h-3 w-3" />
-                      </button>
-                    ))}
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">Redes autorizadas</p>
+                    {allowedCoachIds.map((id) => {
+                      const c = coaches.find((x) => x.id === id);
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setAllowedCoachIds((prev) => prev.filter((x) => x !== id))}
+                          className="flex w-full items-center justify-between gap-2 rounded bg-primary/15 px-2.5 py-1.5 text-left text-[11px] text-primary"
+                        >
+                          <span>
+                            {c?.name || id.slice(0, 8)}
+                            <span className="ml-1 text-white/50">
+                              {c?.email || ""}{c?.number != null ? ` · nº ${c.number}` : ""}
+                            </span>
+                          </span>
+                          <X className="h-3 w-3 shrink-0" />
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
                 <div className="mt-2 max-h-44 overflow-y-auto rounded border border-white/10">
                   {coaches
-                    .filter((c) => c.name.toLowerCase().includes(coachSearch.trim().toLowerCase()))
+                    .filter((c) => {
+                      const q = coachSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return (
+                        c.name.toLowerCase().includes(q) ||
+                        (c.email || "").toLowerCase().includes(q) ||
+                        String(c.number ?? "").includes(q)
+                      );
+                    })
                     .filter((c) => !allowedCoachIds.includes(c.id))
                     .slice(0, 40)
                     .map((c) => (
                       <button
                         key={c.id}
                         onClick={() => setAllowedCoachIds((prev) => [...prev, c.id])}
-                        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-white/80 hover:bg-white/5"
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs text-white/80 hover:bg-white/5"
                       >
-                        {c.name}
-                        <span className="text-[10px] text-primary">adicionar</span>
+                        <span>
+                          {c.name}
+                          <span className="block text-[10px] text-white/45">
+                            {c.email || "sem e-mail"}{c.number != null ? ` · nº ${c.number}` : ""}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-primary shrink-0">adicionar</span>
                       </button>
                     ))}
                 </div>
