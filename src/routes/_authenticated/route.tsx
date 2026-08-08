@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <>
+      <PendingCoachGate />
       <Outlet />
       <SupportCoachFab />
     </>
