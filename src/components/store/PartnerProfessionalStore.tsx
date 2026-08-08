@@ -208,7 +208,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,is_physical,delivery_days,partners(fantasy_name,upline_coach_id)")
+          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,is_physical,delivery_days,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,partners(fantasy_name,upline_coach_id)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
