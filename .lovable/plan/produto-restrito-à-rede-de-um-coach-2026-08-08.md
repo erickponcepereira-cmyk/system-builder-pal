@@ -17,6 +17,7 @@ Permitir que um produto (de parceiro ou de profissional) só apareça para os al
 ## Detalhes técnicos
 
 Migração:
+
 - Adicionar em `partner_products` e `professional_products`:
   - `restrict_to_networks boolean not null default false`
   - `allowed_coach_ids uuid[] not null default '{}'`
@@ -24,9 +25,12 @@ Migração:
 - Atualizar `create_partner_product_order`, `create_scheduled_professional_order` e `create_partner_company_order` para rejeitar a compra quando o produto for restrito e o `coach_id` do aluno comprador não estiver em `allowed_coach_ids`.
 
 Frontend:
+
 - `src/components/admin/ProductReviewModal.tsx`: novo bloco de visibilidade por rede, com seletor de coaches (consulta `coaches` + `profiles.name`) e persistência dos dois campos novos.
 - `src/components/store/PartnerProfessionalStore.tsx`: buscar os campos novos e filtrar os cards pelo `coach_id` do aluno logado.
 - `src/routes/loja.tsx` e `src/routes/produto.$id.tsx`: repassar o coach da indicação (código já resolvido em `atribuicao.ts`) para as RPCs públicas e tratar o caso "indisponível".
 - Selo "Restrito à rede" nos cards dos painéis de parceiro e profissional.
 
 Após aplicar, configuro o produto do Adriano com a restrição ligada apontando para o coach dele.
+
+nesse mesmo painel deve poder editar manualmente a quantidade de dias de carteirinha e de ticket do desafio que esse produto especifico deve gerar, nao sendo apenas algo visual, mas que altere realmente pelo admin nas configurações e ative para quem comprar de forma correta. mostrando o atual e para quantos será alterado apos aprovação. alem disso, o pedido de aprovação hoje nao mostra os dados reais do produto, valor, comissoes, categoria, seção, nome, descrição, imagem como vai aparecer, como foi configurado. tudo isso deve aparecer para o admin aprovar corretamente.
