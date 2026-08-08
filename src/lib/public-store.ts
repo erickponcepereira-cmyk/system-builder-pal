@@ -330,6 +330,7 @@ export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
  */
 export async function fetchPublicCatalog(
   referralCode: string | null,
+  coachId?: string | null,
 ): Promise<PublicProduct[]> {
   void referralCode; // ordenação por coach/parceiro entra junto com a RPC
   const tax = await carregarTaxonomia().catch(() => TAXONOMIA_VAZIA);
