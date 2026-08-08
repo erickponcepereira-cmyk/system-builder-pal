@@ -9708,6 +9708,227 @@ export type Database = {
           },
         ]
       }
+      run_challenge_entries: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          goal_reached_at: string | null
+          id: string
+          joined_at: string
+          km_at_goal: number | null
+          profile_id: string
+          tier_id: string
+          updated_at: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          goal_reached_at?: string | null
+          id?: string
+          joined_at?: string
+          km_at_goal?: number | null
+          profile_id: string
+          tier_id: string
+          updated_at?: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          goal_reached_at?: string | null
+          id?: string
+          joined_at?: string
+          km_at_goal?: number | null
+          profile_id?: string
+          tier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_challenge_entries_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "run_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenge_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenge_entries_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "run_challenge_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_challenge_tickets: {
+        Row: {
+          challenge_id: string | null
+          consumed_at: string | null
+          consumed_entry_id: string | null
+          created_at: string
+          granted_by: string
+          id: string
+          notes: string | null
+          owner_coach_id: string
+          profile_id: string
+          source_order_id: string | null
+        }
+        Insert: {
+          challenge_id?: string | null
+          consumed_at?: string | null
+          consumed_entry_id?: string | null
+          created_at?: string
+          granted_by?: string
+          id?: string
+          notes?: string | null
+          owner_coach_id: string
+          profile_id: string
+          source_order_id?: string | null
+        }
+        Update: {
+          challenge_id?: string | null
+          consumed_at?: string | null
+          consumed_entry_id?: string | null
+          created_at?: string
+          granted_by?: string
+          id?: string
+          notes?: string | null
+          owner_coach_id?: string
+          profile_id?: string
+          source_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_challenge_tickets_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "run_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenge_tickets_owner_coach_id_fkey"
+            columns: ["owner_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenge_tickets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_challenge_tiers: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          target_km: number
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          target_km: number
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          target_km?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_challenge_tiers_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "run_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_challenges: {
+        Row: {
+          created_at: string
+          description: string | null
+          ends_on: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_coach_id: string
+          partner_product_id: string | null
+          professional_product_id: string | null
+          requires_ticket: boolean
+          starts_on: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ends_on: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_coach_id: string
+          partner_product_id?: string | null
+          professional_product_id?: string | null
+          requires_ticket?: boolean
+          starts_on: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ends_on?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_coach_id?: string
+          partner_product_id?: string | null
+          professional_product_id?: string | null
+          requires_ticket?: boolean
+          starts_on?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_challenges_owner_coach_id_fkey"
+            columns: ["owner_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenges_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_challenges_professional_product_id_fkey"
+            columns: ["professional_product_id"]
+            isOneToOne: false
+            referencedRelation: "professional_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       run_logs: {
         Row: {
           activity_type: string
@@ -9724,6 +9945,8 @@ export type Database = {
           photo_url: string | null
           profile_id: string
           race_name: string | null
+          review_note: string | null
+          review_status: string
           run_date: string
           source: string
           updated_at: string
@@ -9743,6 +9966,8 @@ export type Database = {
           photo_url?: string | null
           profile_id: string
           race_name?: string | null
+          review_note?: string | null
+          review_status?: string
           run_date: string
           source?: string
           updated_at?: string
@@ -9762,6 +9987,8 @@ export type Database = {
           photo_url?: string | null
           profile_id?: string
           race_name?: string | null
+          review_note?: string | null
+          review_status?: string
           run_date?: string
           source?: string
           updated_at?: string
@@ -12914,6 +13141,10 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      grant_run_challenge_tickets: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_coach_badge: {
         Args: {
@@ -13469,6 +13700,14 @@ export type Database = {
           _application_id: string
           _status: string
         }
+        Returns: undefined
+      }
+      run_challenge_progress: {
+        Args: { _challenge_id: string; _profile_id: string }
+        Returns: number
+      }
+      run_challenge_sync_goals: {
+        Args: { _profile_id: string }
         Returns: undefined
       }
       run_stats: { Args: { _profile_id: string }; Returns: Json }
