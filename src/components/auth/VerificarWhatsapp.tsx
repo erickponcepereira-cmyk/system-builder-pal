@@ -19,21 +19,26 @@ export function VerificarWhatsapp({
   finalidade = "cadastro",
   onToken,
   onVerificado,
+  onPreferirEmail,
 }: {
   email?: string;
   profileId?: string;
   finalidade?: "cadastro" | "login" | "trocar_telefone" | "lead";
   onToken?: (token: string) => void;
   onVerificado?: (telefone: string | null) => void;
+  onPreferirEmail?: () => void;
 }) {
   const [dados, setDados] = useState<VerificacaoIniciada | null>(null);
   const [estado, setEstado] = useState<"iniciando" | "esperando" | "pronto" | "expirado" | "erro">("iniciando");
   const [erro, setErro] = useState<string | null>(null);
+  const [demorou, setDemorou] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
 
   const iniciar = useCallback(async () => {
     setEstado("iniciando");
     setErro(null);
+    setDemorou(false);
     try {
       const r = await iniciarVerificacaoWhatsapp({ data: { email, profileId, finalidade } });
       setDados(r);
@@ -47,6 +52,14 @@ export function VerificarWhatsapp({
 
 
   useEffect(() => { void iniciar(); }, [iniciar]);
+
+  // demorou demais: em vez de girar para sempre, oferece o caminho do e-mail
+  useEffect(() => {
+    if (estado !== "esperando") return;
+    const t = setTimeout(() => setDemorou(true), 300000);
+    return () => clearTimeout(t);
+  }, [estado]);
+
 
   // pergunta ao servidor se a mensagem já chegou
   useEffect(() => {
@@ -147,6 +160,23 @@ export function VerificarWhatsapp({
         <p className="text-xs text-white/50">Se o botão não abrir, mande esta mensagem para {dados!.numero}:</p>
         <p className="mt-1 font-mono text-xs text-white">{dados!.mensagem}</p>
       </div>
+
+      {demorou && onPreferirEmail && (
+        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="text-xs text-white">Ainda não recebemos sua mensagem.</p>
+          <p className="mt-1 text-xs text-white/50">
+            Se preferir não esperar, dá para confirmar pelo e-mail agora mesmo.
+          </p>
+          <button
+            type="button"
+            onClick={onPreferirEmail}
+            className="mt-3 w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Confirmar por e-mail
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }

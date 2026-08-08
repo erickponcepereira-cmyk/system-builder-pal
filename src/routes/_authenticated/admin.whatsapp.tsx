@@ -157,10 +157,33 @@ function AdminWhatsapp() {
           Cadastrar
         </Button>
         <p className="text-[11px] text-muted-foreground">
-          Depois de cadastrar, use a chave de conexão no aplicativo que fica pareado com o celular.
-          Ele envia o status e o número passa a aparecer como conectado.
+          Depois de cadastrar, use o ID e a chave de conexão no programa conector que fica pareado
+          com o celular. Ele envia o status e o número passa a aparecer como conectado.
         </p>
       </section>
+
+      <section className="space-y-2 rounded-lg border border-border bg-card p-4">
+        <p className="text-sm font-bold text-foreground">Como deixar o número conectado</p>
+        <p className="text-xs text-muted-foreground">
+          Quem lê as mensagens do WhatsApp é um programa (o conector) que roda num computador
+          ligado e fica pareado com o celular, igual ao WhatsApp Web. Sem ele no ar, a confirmação
+          por WhatsApp nem aparece no cadastro.
+        </p>
+        <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+          <li>Copie a pasta <span className="font-mono">conector-whatsapp</span> do projeto para esse computador.</li>
+          <li>Instale o Node.js (nodejs.org, versão LTS) e rode <span className="font-mono">npm install</span> dentro da pasta.</li>
+          <li>Cadastre o número aqui em cima e copie o <b>ID da conexão</b> e a <b>chave de conexão</b>.</li>
+          <li>Renomeie <span className="font-mono">.env.example</span> para <span className="font-mono">.env</span> e cole os dois valores.</li>
+          <li>Rode <span className="font-mono">npm start</span>: aparece um QR Code no terminal.</li>
+          <li>No celular: WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho → leia o QR.</li>
+        </ol>
+        <p className="text-[11px] text-muted-foreground">
+          Se o número cair, basta rodar <span className="font-mono">npm start</span> de novo — o pareamento fica
+          salvo. Não use o mesmo número em outro WhatsApp Web: isso derruba a sessão. Instruções completas
+          no arquivo <span className="font-mono">LEIAME.md</span> dentro da pasta.
+        </p>
+      </section>
+
 
       <section className="space-y-3">
         <p className="text-sm font-bold text-foreground">Números cadastrados</p>
@@ -198,6 +221,9 @@ function AdminWhatsapp() {
                 último sinal: {n.visto_em ? new Date(n.visto_em).toLocaleString("pt-BR") : "nunca"}
               </p>
               <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => void copiar(n.id)}>
+                  <Copy className="mr-2 h-3.5 w-3.5" /> ID da conexão
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -206,6 +232,7 @@ function AdminWhatsapp() {
                 >
                   <Copy className="mr-2 h-3.5 w-3.5" /> Chave de conexão
                 </Button>
+
                 <Button
                   size="sm"
                   variant="outline"

@@ -133,3 +133,29 @@ export const conferirVerificacaoWhatsapp = createServerFn({ method: "POST" })
       profileId: linha.profile_id,
     };
   });
+
+/**
+ * A tela de cadastro pergunta isto antes de oferecer o WhatsApp.
+ *
+ * Sem nenhum número de plantão realmente conectado, oferecer o caminho seria
+ * uma promessa quebrada: a pessoa manda a mensagem e ninguém escuta. Melhor
+ * mostrar só o e-mail.
+ */
+export const whatsappConfirmacaoDisponivel = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as unknown as { from: (t: string) => any };
+
+  const limite = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { data } = await db
+    .from("bot_conexoes")
+    .select("id")
+    .eq("escopo", "admin")
+    .eq("uso", "plataforma")
+    .eq("status", "conectado")
+    .is("arquivado_em", null)
+    .not("numero", "is", null)
+    .gte("visto_em", limite)
+    .limit(1);
+
+  return { disponivel: ((data as unknown[]) || []).length > 0 };
+});
