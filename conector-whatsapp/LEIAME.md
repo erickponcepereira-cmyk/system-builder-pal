@@ -53,10 +53,24 @@ sem pedir QR de novo.
 
 ## Se algo der errado
 
+- **`EPERM: operation not permitted` no `npm install`**: a pasta está no OneDrive
+  (ou o antivírus travou os arquivos). Mova para `C:\conector-whatsapp` e repita.
+- **`Failed to set up chrome ...` no `npm install`**: sobrou um download quebrado do
+  Puppeteer. No PowerShell:
+
+  ```
+  Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+  Remove-Item -Recurse -Force "$env:USERPROFILE\.cache\puppeteer" -ErrorAction SilentlyContinue
+  npm install
+  ```
+
+  O conector não baixa mais navegador: ele usa o Chrome já instalado.
+- **"Não encontrei o Google Chrome"**: instale o Chrome ou preencha `CHROME_PATH`
+  no arquivo de configuração com o caminho completo do `chrome.exe`.
 - **"faltam dados de configuração"**: o conector mostra a pasta, o arquivo que leu e
   quais campos estão vazios. Preencha-os ou rode `Copy-Item .env.example .env`.
 - **"conexao ou segredo invalido"**: o ID ou a chave no `.env` estão errados.
-
 - **Fica pedindo QR toda hora**: apague a pasta `sessao/` e pareie de novo.
 - **Número aparece desconectado no painel**: confira se o terminal ainda está
   aberto e se o computador está na internet.
+
