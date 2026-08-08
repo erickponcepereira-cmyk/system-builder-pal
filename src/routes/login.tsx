@@ -317,6 +317,9 @@ function LoginPage() {
                 </div>
 
                 <GoogleSignInButton nextPath={getNextParam()} />
+                <div className="mt-2">
+                  <AppleSignInButton nextPath={getNextParam()} />
+                </div>
 
                 <div className="mt-6 space-y-3 text-center">
 
