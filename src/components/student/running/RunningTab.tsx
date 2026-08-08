@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranding } from "@/components/theme-provider";
+import { bestForeground, ensureContrast } from "@/lib/palette";
 import {
   DISTANCE_LEVELS,
   PACE_LEVELS,
