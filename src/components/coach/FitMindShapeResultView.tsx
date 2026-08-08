@@ -51,6 +51,7 @@ import bodyFAcima3 from "@/assets/body-f-acima-3.png";
 import bodyFAlto1 from "@/assets/body-f-alto-1.png";
 import bodyFAlto2 from "@/assets/body-f-alto-2.png";
 import bodyFAlto3 from "@/assets/body-f-alto-3.png";
+import { normalizeGender, genderLabel } from "@/lib/gender";
 
 const BODY_AVATAR_IMAGES = [bodyAbaixo, bodyNormal, bodyAcima1, bodyAcima2, bodyAcima3, bodyAlto1, bodyAlto2, bodyAlto3];
 const BODY_AVATAR_IMAGES_FEMALE = [bodyFAbaixo, bodyFNormal, bodyFAcima1, bodyFAcima2, bodyFAcima3, bodyFAlto1, bodyFAlto2, bodyFAlto3];
@@ -204,8 +205,12 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const bmiCat = getBMICategory(a.bmi || computedBMI);
   const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
   const avatarIndex = avatarEntry.index;
-  const clientGenderBin: "male" | "female" = client.gender === "female" ? "female" : "male";
-  const fatCat = getBodyFatCategory(a.bodyFat, client.gender, currentAge || 30);
+  const genderNorm = normalizeGender(client.gender);
+  const genderUnknown = genderNorm === "unknown";
+  // Sem sexo definido, mantemos referência masculina apenas para não quebrar o layout,
+  // mas o aviso abaixo deixa claro que os índices não são confiáveis.
+  const clientGenderBin: "male" | "female" = genderNorm === "female" ? "female" : "male";
+  const fatCat = getBodyFatCategory(a.bodyFat, clientGenderBin, currentAge || 30);
   const viscCat = getVisceralCategory(a.visceralFat);
   const ageBodyDiff = a.bodyAge && currentAge ? a.bodyAge - currentAge : 0;
 
@@ -279,13 +284,13 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const waistRef = a.circumferences?.waist ?? a.circumferences?.abdomen;
   const hipRef = a.circumferences?.hip;
   const rcq = waistRef && hipRef ? +(waistRef / hipRef).toFixed(2) : null;
-  const rcqCat = rcq ? classifyRCQ(rcq, client.gender) : null;
-  const refRcq = client.gender === "male" ? "0,90–0,95" : "0,80–0,85";
+  const rcqCat = rcq ? classifyRCQ(rcq, clientGenderBin) : null;
+  const refRcq = clientGenderBin === "male" ? "0,90–0,95" : "0,80–0,85";
   // Harris-Benedict original (1919) — alinhado ao FineShape
   const harrisBenedictFor = (w: number) => {
     if (!w || !a.height || !currentAge) return 0;
     return Math.round(
-      client.gender === "male"
+      clientGenderBin === "male"
         ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * currentAge
         : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * currentAge,
     );
@@ -327,8 +332,8 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const muscleKg = a.muscleMass && a.weight ? +((a.muscleMass / 100) * a.weight).toFixed(1) : 0;
   const muscleEval = (() => {
     if (!a.muscleMass) return { c: "var(--muted-foreground)", t: "—" };
-    const min = client.gender === "male" ? 33 : 24;
-    const max = client.gender === "male" ? 39 : 30;
+    const min = clientGenderBin === "male" ? 33 : 24;
+    const max = clientGenderBin === "male" ? 39 : 30;
     if (a.muscleMass < min) return { c: "#facc15", t: "Baixo" };
     if (a.muscleMass <= max) return { c: "#22c55e", t: "Ótimo" };
     return { c: "#16a34a", t: "Alto" };
@@ -454,7 +459,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{client.name}</div>
             <div style={{ fontSize: 13, color: "#ffffff99" }}>
-              {client.gender === "male" ? "Masculino" : "Feminino"} · {currentAge || "—"} anos · {a.height}cm ·{" "}
+              {genderLabel(client.gender)} · {currentAge || "—"} anos · {a.height}cm ·{" "}
               {new Date(a.date || Date.now()).toLocaleDateString("pt-BR")}
             </div>
           </div>
@@ -462,6 +467,23 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
       </div>
 
       <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+        {genderUnknown && (
+          <div
+            style={{
+              marginBottom: 12,
+              borderRadius: 14,
+              border: "1px solid #eab30855",
+              background: "#eab30818",
+              padding: "10px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#eab308",
+            }}
+          >
+            Sexo não definido no cadastro. As classificações de gordura, RCQ e metabolismo
+            usam referência masculina por padrão e podem estar incorretas — defina o sexo do aluno.
+          </div>
+        )}
         {/* Resumo */}
         <div className="fm-card" style={{ marginBottom: 12 }}>
           <div className="fm-section-title">Resumo</div>

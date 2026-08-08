@@ -112,6 +112,7 @@ import bodyFAcima3 from "@/assets/body-f-acima-3.png";
 import bodyFAlto1 from "@/assets/body-f-alto-1.png";
 import bodyFAlto2 from "@/assets/body-f-alto-2.png";
 import bodyFAlto3 from "@/assets/body-f-alto-3.png";
+import { normalizeGender, genderShortLabel } from "@/lib/gender";
 
 const BODY_AVATAR_IMAGES = [
   bodyAbaixo,
@@ -451,7 +452,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const setBioUnit = (key: string, unit: "%" | "kg" | "cm" | "num") =>
     setBioUnits((prev) => ({ ...prev, [key]: unit }));
   const [newClientData, setNewClientData] = useState<Partial<FitMindClient>>({
-    gender: "female",
+    gender: undefined,
     ethnicity: "white",
     language: "pt",
     heightUnit: "cm",
@@ -587,6 +588,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   useEffect(() => {
     if (assessment.method !== "measurements" && assessment.method !== "both") return;
     if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) return;
+    // Sem sexo definido, os cálculos ficam errados (fórmulas diferentes por sexo).
+    if (normalizeGender(selectedClient.gender) === "unknown") {
+      setCalcWarnings(["Defina o sexo do aluno no cadastro para calcular os índices."]);
+      setCalcDone(false);
+      return;
+    }
     const circs = assessment.circumferences || {};
     const hasAny = Object.values(circs).some((v) => v != null && (v as number) > 0);
     if (!hasAny) return;
@@ -594,7 +601,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       weight: assessment.weight,
       height: assessment.height,
       age: assessment.age,
-      gender: selectedClient.gender === "female" ? "female" : "male",
+      gender: normalizeGender(selectedClient.gender) === "female" ? "female" : "male",
       ethnicity: (selectedClient.ethnicity as MeasurementInput["ethnicity"]) ?? "white",
       waist: circs.waist,
       abdomen: circs.abdomen,
@@ -1360,7 +1367,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                   {c.assessments?.length ?? 0} avaliação(ões) ·{" "}
-                  {c.gender === "male" ? "Masc." : "Fem."}
+                  {genderShortLabel(c.gender)}
                 </div>
               </div>
               <ChevronRight size={16} color="var(--border)" />
@@ -1734,12 +1741,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
-              <label className="fm-label">Gênero</label>
+              <label className="fm-label">Sexo *</label>
               <select
                 className="fm-select"
-                value={newClientData.gender || "female"}
+                value={normalizeGender(newClientData.gender) === "unknown" ? "" : (newClientData.gender as string)}
                 onChange={(e) => updateNewClient("gender", e.target.value)}
               >
+                <option value="">Selecione…</option>
                 <option value="female">Feminino</option>
                 <option value="male">Masculino</option>
               </select>
@@ -1969,15 +1977,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
-              <label className="fm-label">Gênero</label>
+              <label className="fm-label">Sexo *</label>
               <select
                 className="fm-select"
-                value={c.gender || "female"}
+                value={normalizeGender(c.gender) === "unknown" ? "" : (c.gender as string)}
                 onChange={(e) => updateEditingClient("gender", e.target.value)}
               >
+                <option value="">Selecione…</option>
                 <option value="female">Feminino</option>
                 <option value="male">Masculino</option>
               </select>
+              {normalizeGender(c.gender) === "unknown" && (
+                <div style={{ marginTop: 6, fontSize: 11, color: "#eab308", fontWeight: 600 }}>
+                  Defina o sexo — gordura, RCQ e classificações dependem dele.
+                </div>
+              )}
             </div>
             <div>
               <label className="fm-label">Etnia</label>
@@ -2370,11 +2384,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         alert("Preencha Peso, Altura e Idade antes de calcular.");
         return;
       }
+      if (normalizeGender(selectedClient.gender) === "unknown") {
+        alert("Defina o sexo do aluno (Masculino/Feminino) no cadastro antes de calcular — todas as métricas dependem disso.");
+        return;
+      }
       const input: MeasurementInput = {
         weight: assessment.weight,
         height: assessment.height,
         age: assessment.age,
-        gender: selectedClient.gender === "female" ? "female" : "male",
+        gender: normalizeGender(selectedClient.gender) === "female" ? "female" : "male",
         ethnicity: (selectedClient.ethnicity as MeasurementInput["ethnicity"]) ?? "white",
         waist: assessment.circumferences?.waist,
         abdomen: assessment.circumferences?.abdomen,
@@ -2501,7 +2519,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   const h = assessment.circumferences?.hip;
                   if (!w || !h || h === 0) return [] as Array<[string, any, string]>;
                   const rcqVal = +(w / h).toFixed(2);
-                  const limits = selectedClient?.gender === "male"
+                  const limits = normalizeGender(selectedClient?.gender) === "male"
                     ? { low: 0.90, mod: 0.95 }
                     : { low: 0.80, mod: 0.85 };
                   const rcqLabel = rcqVal < limits.low

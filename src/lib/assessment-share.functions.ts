@@ -219,12 +219,23 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
     if (clientId) {
       const { data: clientRow } = await supabaseAdmin
         .from("coach_evaluation_clients")
-        .select("whatsapp,gender")
+        .select("whatsapp,gender,student_id")
         .eq("id", clientId)
         .maybeSingle();
       clientPhone = (clientRow?.whatsapp as string | null) ?? null;
       const g = (clientRow?.gender as string | null) ?? "other";
       clientGender = g === "male" || g === "female" ? g : "other";
+      // Fallback: o sexo oficial vive no CADASTRO (profiles.gender = M/F/O).
+      if (clientGender === "other" && clientRow?.student_id) {
+        const { data: stRow } = await supabaseAdmin
+          .from("students" as never)
+          .select("profile:profile_id ( gender )" as never)
+          .eq("id" as never, clientRow.student_id as never)
+          .maybeSingle();
+        const pg = ((stRow as any)?.profile?.gender as string | null) ?? null;
+        if (pg === "M") clientGender = "male";
+        else if (pg === "F") clientGender = "female";
+      }
     }
 
     // History: all assessments for the same client
