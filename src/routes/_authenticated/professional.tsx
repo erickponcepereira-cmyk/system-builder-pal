@@ -29,6 +29,8 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { CrmBoard } from "@/components/crm/CrmBoard";
+import { RunChallengesPanel } from "@/components/professional/RunChallengesPanel";
+import { Footprints } from "lucide-react";
 import { meusQuadrosCrm } from "@/lib/admin-crm.functions";
 
 
@@ -94,6 +96,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   collab: { label: "Colaboração", icon: Share2 },
   collaborators: { label: "Colaboradores", icon: Users },
   crm: { label: "CRM", icon: KanbanSquare },
+  run_challenges: { label: "Desafios de Corrida", icon: Footprints },
 };
 
 function ProfessionalPanel() {
@@ -203,7 +206,7 @@ function ProfessionalPanel() {
 
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
-  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collaborators", "collab", "settings", "fitmind_calendar"];
+  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collaborators", "collab", "run_challenges", "settings", "fitmind_calendar"];
   const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription", ...(crmQuadroId ? ["crm"] : [])])).filter((t) => t !== "network" && t !== "overview")];
 
 
@@ -315,6 +318,7 @@ function TabContent({ tab, info, assignments, crmQuadroId }: { tab: string; info
   if (tab === "collab") return <CollabWorkspace ownerType="professional" ownerId={info.coachId} />;
   if (tab === "collaborators") return <ProfessionalCollaboratorsPanel referralCode={info.referralCode} professionalName={info.name} />;
 
+  if (tab === "run_challenges") return <RunChallengesPanel />;
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
