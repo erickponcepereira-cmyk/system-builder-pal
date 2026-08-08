@@ -8,11 +8,15 @@ Sem ele rodando, a tela de cadastro fica esperando para sempre.
 
 - Um computador que fique ligado com internet.
 - O Node.js instalado (baixe em https://nodejs.org — versão LTS).
+- O Google Chrome instalado (o conector usa o Chrome que já existe na máquina;
+  se não houver, ele tenta o Microsoft Edge).
 - O celular com o número oficial da plataforma, com WhatsApp ativo.
 
 ## Passo a passo
 
-1. Copie esta pasta (`conector-whatsapp`) para o computador.
+1. Copie esta pasta (`conector-whatsapp`) para o computador, **fora do OneDrive**
+   (por exemplo `C:\conector-whatsapp`). Dentro do OneDrive a instalação falha
+   com erros `EPERM`, porque a sincronização trava os arquivos.
 2. Abra o terminal dentro dela e rode:
 
    ```
@@ -26,6 +30,7 @@ Sem ele rodando, a tela de cadastro fica esperando para sempre.
    `Copy-Item .env.example .env` (renomear pelo Explorer costuma criar `.env.txt`).
    Se preferir, pode simplesmente preencher o próprio `.env.example`: o conector
    também lê dele quando não existe `.env`.
+
 
 5. Rode:
 
