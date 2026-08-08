@@ -66,6 +66,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/referral-links", label: "Links de Indicação", icon: Search, perm: "users" },
   { to: "/admin/branding", label: "Identidade Visual", icon: Palette, perm: "settings" },
   { to: "/admin/modules", label: "Módulos por Rede", icon: Blocks, perm: "settings" },
+  { to: "/admin/whatsapp", label: "WhatsApp da Plataforma", icon: MessageCircle, perm: "settings" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 
 ];
