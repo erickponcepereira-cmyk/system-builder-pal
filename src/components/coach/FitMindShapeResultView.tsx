@@ -467,6 +467,23 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
       </div>
 
       <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+        {genderUnknown && (
+          <div
+            style={{
+              marginBottom: 12,
+              borderRadius: 14,
+              border: "1px solid #eab30855",
+              background: "#eab30818",
+              padding: "10px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#eab308",
+            }}
+          >
+            Sexo não definido no cadastro. As classificações de gordura, RCQ e metabolismo
+            usam referência masculina por padrão e podem estar incorretas — defina o sexo do aluno.
+          </div>
+        )}
         {/* Resumo */}
         <div className="fm-card" style={{ marginBottom: 12 }}>
           <div className="fm-section-title">Resumo</div>
