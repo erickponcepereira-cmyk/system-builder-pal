@@ -13,6 +13,7 @@ import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent"
 
 import { useBranding } from "@/components/theme-provider";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 
 
