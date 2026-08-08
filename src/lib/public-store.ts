@@ -377,12 +377,23 @@ export async function fetchPublicCatalog(
     fitmind = [...linhas(legado), ...linhas(novo)];
   }
 
+  /**
+   * Produto restrito a redes só aparece quando o visitante chegou pelo link
+   * de um dos coaches autorizados.
+   */
+  const permitido = (r: Linha) => {
+    if (!r.restrict_to_networks) return true;
+    const lista = Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [];
+    return !!coachId && lista.includes(coachId);
+  };
+
   return [
     ...fitmind.map((r) => mapearProduto(r, tax, "fitmind")),
-    ...linhas(parceiro).map((r) => mapearProduto(r, tax, "partner")),
-    ...linhas(profissional).map((r) => mapearProduto(r, tax, "professional")),
+    ...linhas(parceiro).filter(permitido).map((r) => mapearProduto(r, tax, "partner")),
+    ...linhas(profissional).filter(permitido).map((r) => mapearProduto(r, tax, "professional")),
   ];
 }
+
 
 
 /**
