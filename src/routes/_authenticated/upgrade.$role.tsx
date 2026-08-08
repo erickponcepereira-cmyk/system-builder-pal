@@ -58,14 +58,31 @@ function UpgradePage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id ?? null);
-    })();
 
-    // Indicação vinda do link /r/{code} (inclusive via loja pública e Google).
-    const ref = readReferralSignup();
-    if (ref.coachId) {
-      setUpline({ id: ref.coachId, profileId: "", name: ref.sponsorName || "Coach indicador" });
-      setUplineLocked(true);
-    }
+      // Coach responsável já vinculado à conta: definitivo, não pode mudar.
+      if (user?.id) {
+        try {
+          const { getMyBoundCoachFn } = await import("@/lib/registration.functions");
+          const bound = await getMyBoundCoachFn({ data: { userId: user.id } });
+          if (bound?.coachId) {
+            setUpline({ id: bound.coachId, profileId: "", name: bound.coachName || "Coach responsável" });
+            setUplineLocked(true);
+            setUplineReady(true);
+            return;
+          }
+        } catch (e) {
+          console.error("[upgrade] falha ao buscar coach vinculado:", e);
+        }
+      }
+
+      // Indicação vinda do link /r/{code} (inclusive via loja pública e Google).
+      const ref = readReferralSignup();
+      if (ref.coachId) {
+        setUpline({ id: ref.coachId, profileId: "", name: ref.sponsorName || "Coach indicador" });
+        setUplineLocked(true);
+      }
+      setUplineReady(true);
+    })();
   }, []);
 
   useEffect(() => {
