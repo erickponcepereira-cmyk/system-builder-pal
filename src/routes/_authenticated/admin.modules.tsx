@@ -186,6 +186,50 @@ function AdminModules() {
           </div>
         )}
       </section>
+      <section className="rounded-2xl bg-card p-4">
+        <h2 className="text-sm font-bold text-foreground">Testar por pessoa</h2>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Veja exatamente o que a pessoa enxerga hoje e por qual regra.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={testQuery}
+            onChange={(e) => setTestQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runTest()}
+            placeholder="Nome ou e-mail da pessoa"
+            className="field-control flex-1"
+          />
+          <button onClick={runTest} disabled={testing} className="rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Testar"}
+          </button>
+        </div>
+        {resolution && (
+          <div className="mt-3 rounded-xl bg-white/[0.03] p-3">
+            {resolution.profile ? (
+              <>
+                <p className="text-sm font-semibold text-foreground">{resolution.profile.name}</p>
+                <p className="text-[11px] text-muted-foreground">{resolution.profile.email}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Rede considerada: {resolution.chain.length} nível(is) acima
+                </p>
+                <div className="mt-2 space-y-1">
+                  {resolution.modules.map((m) => (
+                    <div key={m.module_key} className="flex items-center justify-between text-[12px]">
+                      <span className="text-foreground">{MODULE_LABELS[m.module_key as ModuleKey] || m.module_key}</span>
+                      <span className={m.enabled ? "font-bold text-primary" : "text-muted-foreground"}>
+                        {m.enabled ? "Liberado" : "Bloqueado"} · {m.source}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Ninguém encontrado com esse nome ou e-mail.</p>
+            )}
+          </div>
+        )}
+      </section>
+
 
       <section className="rounded-2xl bg-card p-4">
         <h2 className="mb-3 text-sm font-bold text-foreground">Regras específicas ({specifics.length})</h2>
