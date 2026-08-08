@@ -13308,6 +13308,16 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      renovar_pedido_recorrente: {
+        Args: {
+          _amount?: number
+          _mp_payment_id?: string
+          _product_id: string
+          _product_kind: string
+          _student_id: string
+        }
+        Returns: string
+      }
       reserve_partner_freebie: {
         Args: { _product_id: string; _slot_start: string }
         Returns: {
