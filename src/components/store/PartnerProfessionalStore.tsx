@@ -268,6 +268,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           coachCommissionPct: r.coach_commission_percentage ?? null,
           isPhysical: !!r.is_physical,
           deliveryDays: r.delivery_days ?? null,
+          restrictToNetworks: !!r.restrict_to_networks,
+          allowedCoachIds: r.allowed_coach_ids || [],
+          perkCardDays: r.perk_card_days_override ?? null,
+          perkTickets: r.perk_challenge_tickets_override ?? null,
         }));
       };
 
