@@ -176,9 +176,10 @@ function AdminWhatsapp() {
             OneDrive a instalação falha com erro <span className="font-mono">EPERM</span>.
           </li>
           <li>
-            Instale o Node.js (nodejs.org, versão LTS) e o Google Chrome, depois rode{" "}
-            <span className="font-mono">npm install</span> dentro da pasta. O conector usa o Chrome já instalado —
-            não baixa navegador.
+            Instale o Node.js (nodejs.org, versão LTS) e o Google Chrome. No PowerShell, dentro da pasta,
+            rode <span className="font-mono">powershell -NoProfile -ExecutionPolicy Bypass -File
+            .\instalar-windows.ps1</span>. O reparador limpa instalações incompletas e usa o Chrome já
+            instalado — não baixa navegador.
           </li>
           <li>Cadastre o número aqui em cima e copie o <b>ID da conexão</b> e a <b>chave de conexão</b>.</li>
           <li>

@@ -17,11 +17,14 @@ Sem ele rodando, a tela de cadastro fica esperando para sempre.
 1. Copie esta pasta (`conector-whatsapp`) para o computador, **fora do OneDrive**
    (por exemplo `C:\conector-whatsapp`). Dentro do OneDrive a instalação falha
    com erros `EPERM`, porque a sincronização trava os arquivos.
-2. Abra o terminal dentro dela e rode:
+2. Abra o **PowerShell** dentro dela e rode o instalador preparado para Windows:
 
    ```
-   npm install
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\instalar-windows.ps1
    ```
+
+   Ele limpa instalações incompletas e instala as dependências sem baixar outro
+   navegador. Em uma pasta nova, `npm install` também funciona normalmente.
 
 3. No FitMind, entre em **Admin → WhatsApp da plataforma**, cadastre o número
    (se ainda não existir) e copie o **ID da conexão** e a **Chave de conexão**.
@@ -53,15 +56,18 @@ sem pedir QR de novo.
 
 ## Se algo der errado
 
-- **`EPERM: operation not permitted` no `npm install`**: a pasta está no OneDrive
-  (ou o antivírus travou os arquivos). Mova para `C:\conector-whatsapp` e repita.
-- **`Failed to set up chrome ...` no `npm install`**: sobrou um download quebrado do
-  Puppeteer. No PowerShell:
+- **`EPERM: operation not permitted` no `npm install`**: feche terminais antigos e
+  navegadores, confirme que a pasta está em `C:\conector-whatsapp` e execute:
 
   ```
-  Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-  Remove-Item -Recurse -Force "$env:USERPROFILE\.cache\puppeteer" -ErrorAction SilentlyContinue
-  npm install
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\instalar-windows.ps1
+  ```
+
+- **`Failed to set up chrome ...` no `npm install`**: sobrou um download quebrado do
+  Puppeteer. O mesmo reparador limpa esse cache e impede uma nova tentativa:
+
+  ```
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\instalar-windows.ps1
   ```
 
   O conector não baixa mais navegador: ele usa o Chrome já instalado.

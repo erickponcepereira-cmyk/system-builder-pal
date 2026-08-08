@@ -219,7 +219,7 @@ async function girarFila() {
 setInterval(() => void girarFila(), 5000);
 setInterval(() => void enviarEvento({ tipo: "batimento" }), 60000);
 
-log("iniciando… (a primeira vez baixa o navegador interno e pode demorar)");
+log("iniciando com o navegador instalado no computador…");
 cliente.initialize().catch((e) => {
   console.error("Não consegui iniciar:", e.message);
   process.exit(1);
