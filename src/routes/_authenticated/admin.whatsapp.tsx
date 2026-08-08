@@ -173,7 +173,13 @@ function AdminWhatsapp() {
           <li>Copie a pasta <span className="font-mono">conector-whatsapp</span> do projeto para esse computador.</li>
           <li>Instale o Node.js (nodejs.org, versão LTS) e rode <span className="font-mono">npm install</span> dentro da pasta.</li>
           <li>Cadastre o número aqui em cima e copie o <b>ID da conexão</b> e a <b>chave de conexão</b>.</li>
-          <li>Renomeie <span className="font-mono">.env.example</span> para <span className="font-mono">.env</span> e cole os dois valores.</li>
+          <li>
+            Preencha o arquivo <span className="font-mono">.env</span> com esses dois valores. No Windows,
+            crie-o pelo PowerShell com <span className="font-mono">Copy-Item .env.example .env</span> —
+            renomear pelo Explorer costuma gerar <span className="font-mono">.env.txt</span>. Se preferir,
+            pode preencher o próprio <span className="font-mono">.env.example</span>: o conector também lê dele.
+          </li>
+
           <li>Rode <span className="font-mono">npm start</span>: aparece um QR Code no terminal.</li>
           <li>No celular: WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho → leia o QR.</li>
         </ol>

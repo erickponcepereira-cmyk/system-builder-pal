@@ -6,20 +6,57 @@
 //
 // Uso: copie .env.example para .env, preencha e rode `npm start`.
 
-import "dotenv/config";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import qrcode from "qrcode-terminal";
 import pkg from "whatsapp-web.js";
 
 const { Client, LocalAuth } = pkg;
 
+// No Windows é comum o arquivo continuar como .env.example ou virar .env.txt
+// (o Explorer esconde a extensão). Aceitamos as variações para não travar.
+const PASTA = path.dirname(fileURLToPath(import.meta.url));
+const CANDIDATOS = [".env", ".env.txt", ".env.example.txt", ".env.example"];
+
+let arquivoUsado = null;
+for (const nome of CANDIDATOS) {
+  const caminho = path.join(PASTA, nome);
+  if (!fs.existsSync(caminho)) continue;
+  dotenv.config({ path: caminho, override: false });
+  if (!arquivoUsado) arquivoUsado = nome;
+  if (process.env.FITMIND_URL && process.env.FITMIND_CONEXAO_ID && process.env.FITMIND_SEGREDO) break;
+}
+
 const BASE = (process.env.FITMIND_URL || "").replace(/\/+$/, "");
 const CONEXAO = process.env.FITMIND_CONEXAO_ID || "";
 const SEGREDO = process.env.FITMIND_SEGREDO || "";
 
-if (!BASE || !CONEXAO || !SEGREDO) {
-  console.error("Faltam dados no .env (FITMIND_URL, FITMIND_CONEXAO_ID, FITMIND_SEGREDO).");
+const faltando = [
+  !BASE && "FITMIND_URL",
+  !CONEXAO && "FITMIND_CONEXAO_ID",
+  !SEGREDO && "FITMIND_SEGREDO",
+].filter(Boolean);
+
+if (faltando.length) {
+  console.error("\nNão consegui iniciar: faltam dados de configuração.\n");
+  console.error("Pasta:", PASTA);
+  if (arquivoUsado) {
+    console.error(`Arquivo lido: ${arquivoUsado}`);
+    console.error("Campos vazios:", faltando.join(", "));
+    console.error("Abra esse arquivo, preencha os campos acima (sem espaços antes do =) e rode de novo.");
+  } else {
+    console.error("Nenhum arquivo de configuração encontrado.");
+    console.error("Esperava um destes nomes:", CANDIDATOS.join(", "));
+    console.error('No PowerShell, dentro desta pasta, rode: Copy-Item .env.example .env');
+  }
+  console.error("");
   process.exit(1);
 }
+
+console.log(`configuração lida de ${arquivoUsado}`);
+
 
 const cabecalhos = {
   "Content-Type": "application/json",
