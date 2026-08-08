@@ -57,6 +57,42 @@ if (faltando.length) {
 
 console.log(`configuração lida de ${arquivoUsado}`);
 
+// Em vez de baixar um Chrome só para o conector (150 MB que costumam falhar no
+// meio), usamos o navegador que já existe na máquina.
+function acharNavegador() {
+  const manual = (process.env.CHROME_PATH || "").trim();
+  if (manual) {
+    if (fs.existsSync(manual)) return manual;
+    console.error(`CHROME_PATH aponta para um arquivo inexistente: ${manual}`);
+  }
+
+  const pf = process.env["ProgramFiles"] || "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  const local = process.env["LOCALAPPDATA"] || "";
+
+  const candidatos = [
+    `${pf}\\Google\\Chrome\\Application\\chrome.exe`,
+    `${pf86}\\Google\\Chrome\\Application\\chrome.exe`,
+    local && `${local}\\Google\\Chrome\\Application\\chrome.exe`,
+    `${pf}\\Microsoft\\Edge\\Application\\msedge.exe`,
+    `${pf86}\\Microsoft\\Edge\\Application\\msedge.exe`,
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  ].filter(Boolean);
+
+  return candidatos.find((c) => fs.existsSync(c)) || null;
+}
+
+const NAVEGADOR = acharNavegador();
+if (!NAVEGADOR) {
+  console.error("\nNão encontrei o Google Chrome (nem o Edge) neste computador.");
+  console.error("Instale o Chrome em https://www.google.com/chrome e rode de novo,");
+  console.error("ou preencha CHROME_PATH no arquivo de configuração com o caminho do chrome.exe.\n");
+  process.exit(1);
+}
+console.log(`navegador: ${NAVEGADOR}`);
 
 const cabecalhos = {
   "Content-Type": "application/json",
@@ -95,6 +131,7 @@ const cliente = new Client({
   authStrategy: new LocalAuth({ dataPath: "./sessao" }),
   puppeteer: {
     headless: true,
+    executablePath: NAVEGADOR,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   },
 });
