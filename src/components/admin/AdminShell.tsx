@@ -4,7 +4,7 @@ import {
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
   Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare, Bot,
 
-  Blocks,
+  Blocks, MessageCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
