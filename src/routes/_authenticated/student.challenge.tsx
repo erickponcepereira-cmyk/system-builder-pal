@@ -15,6 +15,8 @@ import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummar
 import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTicketAcceptModal";
+import { RunChallengesSection } from "@/components/challenge/running/RunChallengesSection";
+
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 const TRADITIONAL_TICKET_PRODUCT_ID = "1a5b055d-5842-4b7a-b856-7f0babd1c04f";
@@ -383,10 +385,11 @@ function StudentChallengePage() {
       tokens.blocked.reason === "aluno_profissional" ? "profissional" :
       tokens.blocked.reason === "aluno_coach" ? "coach" : "parceiro";
     return (
-      <div className="max-w-lg mx-auto px-4 pb-24 pt-8">
+      <div className="max-w-lg mx-auto px-4 pb-24 pt-8 space-y-4">
+        <RunChallengesSection />
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-8 text-center space-y-4">
           <Lock className="h-12 w-12 text-amber-400 mx-auto" />
-          <h1 className="text-xl font-bold text-foreground">Desafio indisponível para {reasonLabel}s</h1>
+          <h1 className="text-xl font-bold text-foreground">Desafio FitMind indisponível para {reasonLabel}s</h1>
           <p className="text-sm text-muted-foreground">
             O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar tickets de desafio por compras.
           </p>
@@ -397,6 +400,7 @@ function StudentChallengePage() {
       </div>
     );
   }
+
 
   // Bioimpedância (pesagem inicial) pendente?
   const initialDone = !!enrollment && ["weighed_initial", "scheduled_final", "weighed_final"].includes(enrollment.status);
@@ -421,7 +425,11 @@ function StudentChallengePage() {
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
+          {/* Desafios de corrida (em destaque) */}
+          <RunChallengesSection />
+
           {/* Painel de tickets de desafio */}
+
           {tokens && (tokens.balance > 0 || tokens.totalEarned > 0) && (
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
               <div className="flex items-center justify-between">
