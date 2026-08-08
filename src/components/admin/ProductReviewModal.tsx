@@ -108,12 +108,17 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
     (async () => {
       const { data } = await supabase
         .from("coaches")
-        .select("id,profiles:profile_id(name)")
+        .select("id,coach_number,profiles:profile_id(name,email)")
         .limit(2000);
-      const rows = (data as unknown as Array<{ id: string; profiles?: { name: string | null } | null }>) || [];
+      const rows = (data as unknown as Array<{ id: string; coach_number: number | null; profiles?: { name: string | null; email: string | null } | null }>) || [];
       setCoaches(
         rows
-          .map((r) => ({ id: r.id, name: r.profiles?.name || "Coach sem nome" }))
+          .map((r) => ({
+            id: r.id,
+            name: r.profiles?.name || "Coach sem nome",
+            email: r.profiles?.email ?? null,
+            number: r.coach_number ?? null,
+          }))
           .sort((a, b) => a.name.localeCompare(b.name)),
       );
     })();
