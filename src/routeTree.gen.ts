@@ -140,6 +140,8 @@ import { Route as AuthenticatedAdminAchievementsRouteImport } from './routes/_au
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
@@ -896,6 +898,16 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPayOrderNumberRoute = ApiPublicPayOrderNumberRouteImport.update({
   id: '/api/public/pay/$orderNumber',
   path: '/api/public/pay/$orderNumber',
@@ -1112,6 +1124,8 @@ export interface FileRoutesByFullPath {
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -1255,6 +1269,8 @@ export interface FileRoutesByTo {
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -1402,6 +1418,8 @@ export interface FileRoutesById {
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -1549,6 +1567,8 @@ export interface FileRouteTypes {
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1692,6 +1712,8 @@ export interface FileRouteTypes {
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -1838,6 +1860,8 @@ export interface FileRouteTypes {
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -1888,6 +1912,8 @@ export interface RootRouteChildren {
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
   ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
   ApiPublicPayOrderNumberRoute: typeof ApiPublicPayOrderNumberRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -2810,6 +2836,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pay/$orderNumber': {
       id: '/api/public/pay/$orderNumber'
       path: '/api/public/pay/$orderNumber'
@@ -3260,6 +3300,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
   ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
   ApiPublicPayOrderNumberRoute: ApiPublicPayOrderNumberRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
