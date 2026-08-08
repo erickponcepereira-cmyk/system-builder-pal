@@ -32,6 +32,10 @@ function StudentEvolution() {
   const [week, setWeek] = useState("1");
   const [viewerTag, setViewerTag] = useState<string>("");
   const { cropToBlob } = useImageCrop();
+  const { isEnabled, profileId } = useEnabledModules();
+  const runningEnabled = isEnabled("corrida");
+  const [tab, setTab] = useState<"evolucao" | "corrida">("evolucao");
+
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
