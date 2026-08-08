@@ -215,7 +215,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
       await supabase.auth.signOut().catch(() => {});
       sessionStorage.removeItem("fitmind_selected_area");
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
+      toast.success("Cadastro criado! Escolha como confirmar sua conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);

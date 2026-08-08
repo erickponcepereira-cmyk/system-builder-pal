@@ -179,8 +179,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
       setRegisteredEmail(email.trim().toLowerCase());
       toast.success(
         referral
-          ? `Cadastro criado! Confira seu e-mail para confirmar a conta. Você foi vinculado(a) a ${referral.sponsorName}.`
-          : "Cadastro criado! Confira seu e-mail para confirmar a conta."
+          ? `Cadastro criado! Escolha como confirmar sua conta. Você foi vinculado(a) a ${referral.sponsorName}.`
+          : "Cadastro criado! Escolha como confirmar sua conta."
       );
     } catch (error) {
       const friendly = translateAuthError(error);

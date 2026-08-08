@@ -263,7 +263,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
       clearReferralSignup();
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
+      toast.success("Cadastro criado! Escolha como confirmar sua conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
