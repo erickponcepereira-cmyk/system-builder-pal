@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mail, MessageCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { VerificarWhatsapp } from "@/components/auth/VerificarWhatsapp";
 import { confirmarContaPorWhatsapp } from "@/lib/signup-channel.functions";
+import { whatsappConfirmacaoDisponivel } from "@/lib/verificacao-whatsapp.functions";
 
 /**
  * Depois do cadastro a pessoa escolhe por onde confirmar a conta.
@@ -17,6 +18,17 @@ export function ConfirmarConta({ email, password }: { email: string; password?: 
   const [enviando, setEnviando] = useState(false);
   const [entrando, setEntrando] = useState(false);
   const [tokenAtual, setTokenAtual] = useState<string | null>(null);
+  // null = ainda perguntando ao servidor se existe número de plantão
+  const [temWhatsapp, setTemWhatsapp] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    void whatsappConfirmacaoDisponivel()
+      .then((r) => { if (ativo) setTemWhatsapp(r.disponivel); })
+      .catch(() => { if (ativo) setTemWhatsapp(false); });
+    return () => { ativo = false; };
+  }, []);
+
 
   async function escolherEmail() {
     if (enviando) return;
@@ -72,7 +84,9 @@ export function ConfirmarConta({ email, password }: { email: string; password?: 
             finalidade="cadastro"
             onToken={setTokenAtual}
             onVerificado={() => void aoVerificar()}
+            onPreferirEmail={() => void escolherEmail()}
           />
+
           {entrando && (
             <p className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Liberando seu acesso…
@@ -106,23 +120,26 @@ export function ConfirmarConta({ email, password }: { email: string; password?: 
             Falta só confirmar quem é você.
           </p>
 
-          <button
-            type="button"
-            onClick={() => setCanal("whatsapp")}
-            className="group mt-6 w-full rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-primary/50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#25D366]/15 text-[#25D366]">
-                <MessageCircle className="h-5 w-5" />
+          {temWhatsapp && (
+            <button
+              type="button"
+              onClick={() => setCanal("whatsapp")}
+              className="group mt-6 w-full rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-primary/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#25D366]/15 text-[#25D366]">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-card-foreground">
+                    Pelo WhatsApp <span className="ml-1 text-[10px] uppercase tracking-wider text-primary">recomendado</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Um toque e a mensagem já vai pronta. Confirmação na hora.</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-card-foreground">
-                  Pelo WhatsApp <span className="ml-1 text-[10px] uppercase tracking-wider text-primary">recomendado</span>
-                </p>
-                <p className="text-xs text-muted-foreground">Um toque e a mensagem já vai pronta. Confirmação na hora.</p>
-              </div>
-            </div>
-          </button>
+            </button>
+          )}
+
 
           <button
             type="button"
