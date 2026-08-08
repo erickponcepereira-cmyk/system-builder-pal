@@ -17,11 +17,13 @@ export function VerificarWhatsapp({
   email,
   profileId,
   finalidade = "cadastro",
+  onToken,
   onVerificado,
 }: {
   email?: string;
   profileId?: string;
   finalidade?: "cadastro" | "login" | "trocar_telefone" | "lead";
+  onToken?: (token: string) => void;
   onVerificado?: (telefone: string | null) => void;
 }) {
   const [dados, setDados] = useState<VerificacaoIniciada | null>(null);
@@ -35,12 +37,14 @@ export function VerificarWhatsapp({
     try {
       const r = await iniciarVerificacaoWhatsapp({ data: { email, profileId, finalidade } });
       setDados(r);
+      onToken?.(r.token);
       setEstado("esperando");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não consegui preparar a confirmação");
       setEstado("erro");
     }
-  }, [email, profileId, finalidade]);
+  }, [email, profileId, finalidade, onToken]);
+
 
   useEffect(() => { void iniciar(); }, [iniciar]);
 
