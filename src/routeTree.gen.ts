@@ -81,6 +81,7 @@ import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from '.
 import { Route as AuthenticatedProfessionalHerbalifeBoletosRouteImport } from './routes/_authenticated/professional.herbalife-boletos'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
 import { Route as AuthenticatedPartnerHerbalifeBoletosRouteImport } from './routes/_authenticated/partner.herbalife-boletos'
+import { Route as AuthenticatedAdminWhatsappRouteImport } from './routes/_authenticated/admin.whatsapp'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
 import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
@@ -545,6 +546,12 @@ const AuthenticatedPartnerHerbalifeBoletosRoute =
     id: '/herbalife-boletos',
     path: '/herbalife-boletos',
     getParentRoute: () => AuthenticatedPartnerRoute,
+  } as any)
+const AuthenticatedAdminWhatsappRoute =
+  AuthenticatedAdminWhatsappRouteImport.update({
+    id: '/whatsapp',
+    path: '/whatsapp',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/users',
@@ -1057,6 +1064,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1199,6 +1207,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1345,6 +1354,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/_authenticated/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/_authenticated/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1491,6 +1501,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/admin/whatsapp'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/herbalife-boletos'
@@ -1633,6 +1644,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/admin/whatsapp'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/herbalife-boletos'
@@ -1778,6 +1790,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/subscriptions'
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
+    | '/_authenticated/admin/whatsapp'
     | '/_authenticated/partner/herbalife-boletos'
     | '/_authenticated/partner/orders-in-progress'
     | '/_authenticated/professional/herbalife-boletos'
@@ -2384,6 +2397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartnerHerbalifeBoletosRouteImport
       parentRoute: typeof AuthenticatedPartnerRoute
     }
+    '/_authenticated/admin/whatsapp': {
+      id: '/_authenticated/admin/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AuthenticatedAdminWhatsappRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/users': {
       id: '/_authenticated/admin/users'
       path: '/users'
@@ -2955,6 +2975,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminSubscriptionsRoute: typeof AuthenticatedAdminSubscriptionsRoute
   AuthenticatedAdminTestSalesRoute: typeof AuthenticatedAdminTestSalesRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedAdminWhatsappRoute: typeof AuthenticatedAdminWhatsappRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -3030,6 +3051,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminSubscriptionsRoute: AuthenticatedAdminSubscriptionsRoute,
   AuthenticatedAdminTestSalesRoute: AuthenticatedAdminTestSalesRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedAdminWhatsappRoute: AuthenticatedAdminWhatsappRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
