@@ -8,6 +8,7 @@ import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { readPublicCart, type PublicCartLine } from "@/lib/public-store";
 
 
