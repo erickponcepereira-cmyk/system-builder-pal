@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { bootstrapTestSignup, isTestEmailClient } from "@/lib/test-accounts.functions";
-import { getAuthRedirectUrl } from "@/lib/auth-redirects";
+import { criarContaSemEmail } from "@/lib/signup-channel.functions";
 
 export async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student" | "partner", extraMeta: Record<string, unknown> = {}) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -14,29 +14,16 @@ export async function createAuthUser(email: string, password: string, name: stri
     return { id: userId } as { id: string };
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password,
-    options: {
-      data: { name: name.trim(), role, ...extraMeta },
-      emailRedirectTo: getAuthRedirectUrl("/login"),
+  // A conta nasce sem confirmação e sem e-mail disparado: quem escolhe o canal
+  // (WhatsApp ou e-mail) é a tela logo após o cadastro.
+  const { userId } = await criarContaSemEmail({
+    data: {
+      email: normalizedEmail,
+      password,
+      metadata: { name: name.trim(), role, ...extraMeta },
     },
   });
 
-  if (error) {
-    if (error.message.toLowerCase().includes("already")) {
-      throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
-    }
-    throw new Error(error.message || "Não foi possível criar a conta de acesso.");
-  }
-
-  if (!data.user) {
-    throw new Error("Não foi possível criar a conta. Tente novamente em instantes.");
-  }
-
-  if (data.user.identities && data.user.identities.length === 0) {
-    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
-  }
-
-  return data.user;
+  return { id: userId } as { id: string };
 }
+
