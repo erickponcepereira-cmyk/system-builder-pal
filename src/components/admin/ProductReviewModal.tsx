@@ -45,7 +45,7 @@ interface ProductFull {
   perk_challenge_tickets_override?: number | null;
 }
 
-type CoachOption = { id: string; name: string };
+type CoachOption = { id: string; name: string; email: string | null; number: number | null };
 
 
 const money = (v: number | null | undefined) =>
