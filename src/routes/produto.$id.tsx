@@ -29,9 +29,20 @@ import {
  * retângulo cinza e a conversão morre antes da página abrir.
  */
 export const Route = createFileRoute("/produto/$id")({
-  loader: async ({ params }) => ({
-    produto: await fetchPublicProduct(params.id),
+  validateSearch: (search: Record<string, unknown>) => ({
+    ref: typeof search["ref"] === "string" ? (search["ref"] as string) : undefined,
   }),
+  loaderDeps: ({ search }) => ({ ref: search.ref }),
+  loader: async ({ params, deps }) => {
+    // Produto restrito a rede só aparece quando o visitante chega pelo link
+    // de um coach autorizado — por isso o `?ref=` precisa ser resolvido AQUI,
+    // no servidor, antes da consulta.
+    const indicacao = deps.ref ? await resolverCodigo(deps.ref) : null;
+    return {
+      produto: await fetchPublicProduct(params.id, indicacao?.coach_id ?? null),
+    };
+  },
+
   head: ({ loaderData }) => {
     const p = loaderData?.produto;
     if (!p) {
