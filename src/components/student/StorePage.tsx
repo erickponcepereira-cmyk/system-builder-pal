@@ -18,6 +18,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { ensureOrderNumber } from "@/lib/order-number";
 import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 
@@ -714,11 +715,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
         setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
-          number: od?.order_number || "pedido",
+          number: ppNumber || "",
           email: userData.user?.email || "",
           name: userData.user?.user_metadata?.name || "",
           sourceKind: "partner_product_order",
@@ -772,9 +774,10 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           });
         } catch (e) { console.warn("attach fitmind shipping", e); }
       }
+      const storeNumber = await ensureOrderNumber("store_order", String(orderId), od?.order_number);
       setCartOpen(false);
       setPayOrder({
-        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
+        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: storeNumber || "",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
         sourceKind: "store_order",
@@ -837,11 +840,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
         setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
-          number: od?.order_number || "pedido",
+          number: ppNumber || "",
           email: selectedClient.email || "",
           name: selectedClient.name,
           sourceKind: "partner_product_order",
@@ -869,8 +873,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
       if (rpcErr) throw new Error(rpcErr.message);
       const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
       const orderId = row?.order_id || row?.orderId;
-      const orderNumber = row?.order_number || row?.orderNumber || "pedido";
       if (!orderId) throw new Error("Pedido não retornado pelo servidor");
+      const orderNumber = (await ensureOrderNumber("store_order", String(orderId), row?.order_number || row?.orderNumber)) || "";
       setCartOpen(false);
       setPayOrder({
         id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
@@ -1097,7 +1101,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-foreground">Pagamento</h2>
-                  <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                  <p className="text-xs text-muted-foreground">Pedido {payOrder.number || "—"}</p>
                 </div>
                 <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
               </div>
@@ -1117,7 +1121,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
                 onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
-              {coachMode && (() => {
+              {coachMode && !payOrder.number && (
+                <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
+                  Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+                </p>
+              )}
+              {coachMode && !!payOrder.number && (() => {
                 const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
                 const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
                 const waMsg = encodeURIComponent(
@@ -1609,7 +1618,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
             <div className="modal-head -mx-5 -mt-5 mb-4 px-5 pt-5 pb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-foreground">Pagamento</h2>
-                <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                <p className="text-xs text-muted-foreground">Pedido {payOrder.number || "—"}</p>
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
             </div>
@@ -1630,7 +1639,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
               onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
-            {coachMode && (() => {
+            {coachMode && !payOrder.number && (
+              <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
+                Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+              </p>
+            )}
+            {coachMode && !!payOrder.number && (() => {
               const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
               const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
               const waMsg = encodeURIComponent(

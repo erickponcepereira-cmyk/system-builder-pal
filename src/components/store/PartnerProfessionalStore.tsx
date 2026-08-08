@@ -14,6 +14,7 @@ import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
 import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
 import { useServerFn } from "@tanstack/react-start";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
+import { ensureOrderNumber } from "@/lib/order-number";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { PurchaseSuccessModal } from "@/components/store/PurchaseSuccessModal";
 
@@ -451,10 +452,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         .eq("id" as never, ppId as never)
         .maybeSingle();
       const o = od as unknown as { id: string; order_number: string; gross_amount: number } | null;
+      const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), o?.order_number);
       setPayOrder({
         id: o?.id || String(ppId),
         total: Number(o?.gross_amount || selected.price),
-        number: o?.order_number || "pedido",
+        number: ppNumber || "",
         email: userData.user?.email || "",
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
         productId: selected.id,
@@ -824,7 +826,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             <div className="modal-head -mx-5 -mt-5 mb-4 flex items-center justify-between bg-[#1A1A1A] px-5 pb-3 pt-5">
               <div>
                 <h2 className="text-base font-bold text-white">Pagamento</h2>
-                <p className="text-xs text-white/50">Pedido {payOrder.number}</p>
+                <p className="text-xs text-white/50">Pedido {payOrder.number || "—"}</p>
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white">Fechar</button>
             </div>
@@ -871,6 +873,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
 function PayLinkShare({ orderNumber, clientName }: { orderNumber: string; clientName?: string | null }) {
   if (typeof window === "undefined") return null;
+  if (!orderNumber) {
+    return (
+      <p className="mt-4 rounded-xl bg-white/5 p-3 text-[11px] text-white/60">
+        Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+      </p>
+    );
+  }
   const payLink = `${getShareOrigin()}/pay/${orderNumber}`;
   const waMsg = encodeURIComponent(
     `Olá ${clientName || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
