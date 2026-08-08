@@ -28,7 +28,34 @@ export function PendingCoachGate() {
     (async () => {
       try {
         const res = await getMyPendingCoachStatus();
-        if (active && res.pending) setStatus(res);
+        if (!active || !res.pending) return;
+
+        // Recuperação automática: se a indicação do link ainda está guardada
+        // no aparelho, o coach volta sozinho — sem depender da pessoa lembrar.
+        let atribuicao = lerAtribuicao();
+        if (atribuicao?.codigo && !atribuicao.coachId) {
+          atribuicao = await enriquecerAtribuicao();
+        }
+        const coachIdSalvo = atribuicao?.coachId ?? null;
+
+        if (coachIdSalvo) {
+          const faltaAlgo = res.missing.phone || res.missing.gender || res.missing.birthdate;
+          if (!faltaAlgo) {
+            try {
+              await submitMyPendingCoach({ data: { coachId: coachIdSalvo } });
+              return; // coach restaurado, nada a perguntar
+            } catch {
+              /* cai no formulário abaixo */
+            }
+          }
+          setCoach({
+            id: coachIdSalvo,
+            profileId: "",
+            name: atribuicao?.coachNome || "Coach da sua indicação",
+          });
+        }
+
+        if (active) setStatus(res);
       } catch {
         /* silencioso */
       }
