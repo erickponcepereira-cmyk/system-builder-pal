@@ -5921,6 +5921,36 @@ export type Database = {
         }
         Relationships: []
       }
+      module_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          module_key: string
+          scope_id: string | null
+          scope_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          module_key: string
+          scope_id?: string | null
+          scope_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          module_key?: string
+          scope_id?: string | null
+          scope_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_rankings: {
         Row: {
           coach_id: string
@@ -9654,6 +9684,74 @@ export type Database = {
           },
         ]
       }
+      run_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          distance_km: number
+          duration_seconds: number
+          external_id: string | null
+          external_payload: Json | null
+          id: string
+          is_race: boolean
+          location: string | null
+          notes: string | null
+          pace_seconds: number
+          photo_url: string | null
+          profile_id: string
+          race_name: string | null
+          run_date: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type?: string
+          created_at?: string
+          distance_km: number
+          duration_seconds: number
+          external_id?: string | null
+          external_payload?: Json | null
+          id?: string
+          is_race?: boolean
+          location?: string | null
+          notes?: string | null
+          pace_seconds: number
+          photo_url?: string | null
+          profile_id: string
+          race_name?: string | null
+          run_date: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          distance_km?: number
+          duration_seconds?: number
+          external_id?: string | null
+          external_payload?: Json | null
+          id?: string
+          is_race?: boolean
+          location?: string | null
+          notes?: string | null
+          pace_seconds?: number
+          photo_url?: string | null
+          profile_id?: string
+          race_name?: string | null
+          run_date?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_nutritionist_assignments: {
         Row: {
           assignment_method: string
@@ -13231,6 +13329,14 @@ export type Database = {
         Args: { _coach_id: string; _student_id: string }
         Returns: string
       }
+      resolver_modulos: {
+        Args: { _profile_id: string }
+        Returns: {
+          enabled: boolean
+          module_key: string
+          source: string
+        }[]
+      }
       resolver_tema_marca: {
         Args: { _coach_id?: string; _profile_id?: string }
         Returns: {
@@ -13326,6 +13432,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      run_stats: { Args: { _profile_id: string }; Returns: Json }
       search_approved_coaches: {
         Args: { _limit?: number; _query?: string }
         Returns: {
