@@ -383,10 +383,11 @@ function StudentChallengePage() {
       tokens.blocked.reason === "aluno_profissional" ? "profissional" :
       tokens.blocked.reason === "aluno_coach" ? "coach" : "parceiro";
     return (
-      <div className="max-w-lg mx-auto px-4 pb-24 pt-8">
+      <div className="max-w-lg mx-auto px-4 pb-24 pt-8 space-y-4">
+        <RunChallengesSection />
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-8 text-center space-y-4">
           <Lock className="h-12 w-12 text-amber-400 mx-auto" />
-          <h1 className="text-xl font-bold text-foreground">Desafio indisponível para {reasonLabel}s</h1>
+          <h1 className="text-xl font-bold text-foreground">Desafio FitMind indisponível para {reasonLabel}s</h1>
           <p className="text-sm text-muted-foreground">
             O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar tickets de desafio por compras.
           </p>
@@ -397,6 +398,7 @@ function StudentChallengePage() {
       </div>
     );
   }
+
 
   // Bioimpedância (pesagem inicial) pendente?
   const initialDone = !!enrollment && ["weighed_initial", "scheduled_final", "weighed_final"].includes(enrollment.status);
