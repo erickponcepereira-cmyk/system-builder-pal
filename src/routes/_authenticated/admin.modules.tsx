@@ -37,6 +37,22 @@ function AdminModules() {
   const [query, setQuery] = useState("");
   const [targets, setTargets] = useState<ModuleTarget[]>([]);
   const [searching, setSearching] = useState(false);
+  const resolveForUser = useServerFn(resolveModulesForUser);
+  const [testQuery, setTestQuery] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [resolution, setResolution] = useState<ModuleResolution | null>(null);
+
+  const runTest = async () => {
+    if (testQuery.trim().length < 2) return;
+    setTesting(true);
+    try {
+      setResolution(await resolveForUser({ data: { q: testQuery } }) as ModuleResolution);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao testar");
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
