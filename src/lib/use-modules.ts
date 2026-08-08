@@ -28,6 +28,7 @@ export function useEnabledModules() {
   const [modules, setModules] = useState<Record<string, boolean>>({});
   const [profileId, setProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -35,22 +36,27 @@ export function useEnabledModules() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
-        const { data: profile } = await supabase
+        const { data: profile, error: profErr } = await supabase
           .from("profiles")
           .select("id")
           .eq("user_id", userData.user.id)
           .maybeSingle();
+        if (profErr) throw new Error(`perfil: ${profErr.message}`);
         const pid = (profile as { id?: string } | null)?.id ?? null;
         if (!alive) return;
         setProfileId(pid);
-        if (!pid) return;
-        const { data } = await supabase.rpc("resolver_modulos" as never, { _profile_id: pid } as never);
+        if (!pid) throw new Error("Perfil não encontrado para o usuário logado.");
+        const { data, error: rpcErr } = await supabase.rpc("resolver_modulos" as never, { _profile_id: pid } as never);
         if (!alive) return;
+        if (rpcErr) throw new Error(`resolver_modulos: ${rpcErr.message}`);
         const map: Record<string, boolean> = {};
         for (const row of ((data as unknown as ModuleRow[]) || [])) map[row.module_key] = row.enabled;
         setModules(map);
+        setError(null);
       } catch (err) {
-        console.error("[useEnabledModules]", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[useEnabledModules]", msg);
+        if (alive) setError(msg);
       } finally {
         if (alive) setLoading(false);
       }
@@ -60,6 +66,7 @@ export function useEnabledModules() {
 
   return {
     loading,
+    error,
     profileId,
     modules,
     isEnabled: (key: ModuleKey) => modules[key] === true,
