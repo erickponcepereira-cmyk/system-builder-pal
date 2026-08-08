@@ -31,7 +31,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "fitmindclub"
+const SITE_NAME = "FitMind Club"
 const SENDER_DOMAIN = "confirme.fitmindclub.com.br"
 const ROOT_DOMAIN = "fitmindclub.com.br"
 const FROM_DOMAIN = "fitmindclub.com.br"
