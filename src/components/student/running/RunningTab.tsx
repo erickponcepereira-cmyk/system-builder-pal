@@ -129,7 +129,7 @@ export function RunningTab({ profileId }: Props) {
                 : "Nível máximo alcançado"}
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-2 flex-1 overflow-hidden rounded-full border border-border bg-muted">
                 <div className="h-full rounded-full" style={{ width: `${progress.percent}%`, background: progress.level.color }} />
               </div>
               <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
