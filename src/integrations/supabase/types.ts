@@ -6903,6 +6903,7 @@ export type Database = {
       partner_products: {
         Row: {
           admin_notes: string | null
+          allowed_coach_ids: string[]
           approved_at: string | null
           approved_by: string | null
           benefit_end_time: string | null
@@ -6940,6 +6941,8 @@ export type Database = {
           original_price: number | null
           partner_id: string | null
           partner_net_amount: number | null
+          perk_card_days_override: number | null
+          perk_challenge_tickets_override: number | null
           pix_fee_percentage: number
           price: number | null
           price_input_mode: string
@@ -6952,6 +6955,7 @@ export type Database = {
           redemption_location_name: string | null
           redemption_location_url: string | null
           redemption_mode: string
+          restrict_to_networks: boolean
           section_id: string | null
           sort_order: number
           status: string
@@ -6965,6 +6969,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          allowed_coach_ids?: string[]
           approved_at?: string | null
           approved_by?: string | null
           benefit_end_time?: string | null
@@ -7002,6 +7007,8 @@ export type Database = {
           original_price?: number | null
           partner_id?: string | null
           partner_net_amount?: number | null
+          perk_card_days_override?: number | null
+          perk_challenge_tickets_override?: number | null
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
@@ -7014,6 +7021,7 @@ export type Database = {
           redemption_location_name?: string | null
           redemption_location_url?: string | null
           redemption_mode?: string
+          restrict_to_networks?: boolean
           section_id?: string | null
           sort_order?: number
           status?: string
@@ -7027,6 +7035,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          allowed_coach_ids?: string[]
           approved_at?: string | null
           approved_by?: string | null
           benefit_end_time?: string | null
@@ -7064,6 +7073,8 @@ export type Database = {
           original_price?: number | null
           partner_id?: string | null
           partner_net_amount?: number | null
+          perk_card_days_override?: number | null
+          perk_challenge_tickets_override?: number | null
           pix_fee_percentage?: number
           price?: number | null
           price_input_mode?: string
@@ -7076,6 +7087,7 @@ export type Database = {
           redemption_location_name?: string | null
           redemption_location_url?: string | null
           redemption_mode?: string
+          restrict_to_networks?: boolean
           section_id?: string | null
           sort_order?: number
           status?: string
@@ -8714,6 +8726,7 @@ export type Database = {
       professional_products: {
         Row: {
           admin_notes: string | null
+          allowed_coach_ids: string[]
           availability_hours: Json
           availability_recurrence: string
           availability_validity_days: number | null
@@ -8760,6 +8773,8 @@ export type Database = {
           network_l3_pct_override: number | null
           original_price: number | null
           payment_timing: string
+          perk_card_days_override: number | null
+          perk_challenge_tickets_override: number | null
           price: number
           price_input_mode: string
           professional_net_amount: number | null
@@ -8772,6 +8787,7 @@ export type Database = {
           redemption_location_name: string | null
           redemption_location_url: string | null
           redemption_mode: string
+          restrict_to_networks: boolean
           section_id: string | null
           skip_tax: boolean
           sort_order: number
@@ -8785,6 +8801,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          allowed_coach_ids?: string[]
           availability_hours?: Json
           availability_recurrence?: string
           availability_validity_days?: number | null
@@ -8831,6 +8848,8 @@ export type Database = {
           network_l3_pct_override?: number | null
           original_price?: number | null
           payment_timing?: string
+          perk_card_days_override?: number | null
+          perk_challenge_tickets_override?: number | null
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
@@ -8843,6 +8862,7 @@ export type Database = {
           redemption_location_name?: string | null
           redemption_location_url?: string | null
           redemption_mode?: string
+          restrict_to_networks?: boolean
           section_id?: string | null
           skip_tax?: boolean
           sort_order?: number
@@ -8856,6 +8876,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          allowed_coach_ids?: string[]
           availability_hours?: Json
           availability_recurrence?: string
           availability_validity_days?: number | null
@@ -8902,6 +8923,8 @@ export type Database = {
           network_l3_pct_override?: number | null
           original_price?: number | null
           payment_timing?: string
+          perk_card_days_override?: number | null
+          perk_challenge_tickets_override?: number | null
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
@@ -8914,6 +8937,7 @@ export type Database = {
           redemption_location_name?: string | null
           redemption_location_url?: string | null
           redemption_mode?: string
+          restrict_to_networks?: boolean
           section_id?: string | null
           skip_tax?: boolean
           sort_order?: number
@@ -12556,7 +12580,7 @@ export type Database = {
         }[]
       }
       catalogo_publico_produto: {
-        Args: { _id: string }
+        Args: { _coach_id?: string; _id: string }
         Returns: {
           badge: string
           categoria_id: string

@@ -144,7 +144,7 @@ const COLUNAS_VITRINE =
 /** Parceiro/profissional têm um subconjunto menor — sem faixa de preço. */
 const COLUNAS_VITRINE_TERCEIROS =
   "id,name,description,price,original_price,image_url,section_id,category_id," +
-  "subcategory_id,stock,sort_order";
+  "subcategory_id,stock,sort_order,restrict_to_networks,allowed_coach_ids";
 
 const KINDS_VALIDOS: PublicProductKind[] = [
   "challenge",
@@ -330,6 +330,7 @@ export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
  */
 export async function fetchPublicCatalog(
   referralCode: string | null,
+  coachId?: string | null,
 ): Promise<PublicProduct[]> {
   void referralCode; // ordenação por coach/parceiro entra junto com a RPC
   const tax = await carregarTaxonomia().catch(() => TAXONOMIA_VAZIA);
@@ -376,12 +377,23 @@ export async function fetchPublicCatalog(
     fitmind = [...linhas(legado), ...linhas(novo)];
   }
 
+  /**
+   * Produto restrito a redes só aparece quando o visitante chegou pelo link
+   * de um dos coaches autorizados.
+   */
+  const permitido = (r: Linha) => {
+    if (!r.restrict_to_networks) return true;
+    const lista = Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [];
+    return !!coachId && lista.includes(coachId);
+  };
+
   return [
     ...fitmind.map((r) => mapearProduto(r, tax, "fitmind")),
-    ...linhas(parceiro).map((r) => mapearProduto(r, tax, "partner")),
-    ...linhas(profissional).map((r) => mapearProduto(r, tax, "professional")),
+    ...linhas(parceiro).filter(permitido).map((r) => mapearProduto(r, tax, "partner")),
+    ...linhas(profissional).filter(permitido).map((r) => mapearProduto(r, tax, "professional")),
   ];
 }
+
 
 
 /**
@@ -396,6 +408,7 @@ export async function fetchPublicCatalog(
  */
 export async function fetchPublicProduct(
   id: string,
+  coachId?: string | null,
 ): Promise<PublicProduct | null> {
   if (!id) return null;
 
@@ -404,8 +417,9 @@ export async function fetchPublicProduct(
   // proprietário/admin transforme um produto válido em 401 para visitantes.
   const { data, error } = await supabase.rpc(
     "catalogo_publico_produto" as never,
-    { _id: id } as never,
+    { _id: id, _coach_id: coachId ?? null } as never,
   );
+
 
   if (error) {
     throw new Error(`Falha ao consultar o produto público: ${error.message}`);

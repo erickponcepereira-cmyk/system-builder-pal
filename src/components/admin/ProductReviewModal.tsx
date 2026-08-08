@@ -39,7 +39,14 @@ interface ProductFull {
   network_l1_amount: number | null;
   network_l2_amount: number | null;
   network_l3_amount: number | null;
+  restrict_to_networks?: boolean | null;
+  allowed_coach_ids?: string[] | null;
+  perk_card_days_override?: number | null;
+  perk_challenge_tickets_override?: number | null;
 }
+
+type CoachOption = { id: string; name: string };
+
 
 const money = (v: number | null | undefined) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -53,6 +60,14 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const [sectionName, setSectionName] = useState<string>("—");
   const [categoryName, setCategoryName] = useState<string>("—");
   const [note, setNote] = useState("");
+  // Restrição por rede + benefícios manuais
+  const [restrict, setRestrict] = useState(false);
+  const [allowedCoachIds, setAllowedCoachIds] = useState<string[]>([]);
+  const [cardDays, setCardDays] = useState<string>("");
+  const [tickets, setTickets] = useState<string>("");
+  const [coaches, setCoaches] = useState<CoachOption[]>([]);
+  const [coachSearch, setCoachSearch] = useState("");
+  const [savingConfig, setSavingConfig] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -65,6 +80,10 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       const p = data as unknown as ProductFull | null;
       setProduct(p);
       setNote(p?.admin_notes || "");
+      setRestrict(!!p?.restrict_to_networks);
+      setAllowedCoachIds(p?.allowed_coach_ids || []);
+      setCardDays(p?.perk_card_days_override != null ? String(p.perk_card_days_override) : "");
+      setTickets(p?.perk_challenge_tickets_override != null ? String(p.perk_challenge_tickets_override) : "");
       if (p?.section_id) {
         const { data: s } = await supabase
           .from("store_sections" as never)
@@ -84,6 +103,45 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       setLoading(false);
     })();
   }, [table, productId]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("coaches")
+        .select("id,profiles:profile_id(name)")
+        .limit(2000);
+      const rows = (data as unknown as Array<{ id: string; profiles?: { name: string | null } | null }>) || [];
+      setCoaches(
+        rows
+          .map((r) => ({ id: r.id, name: r.profiles?.name || "Coach sem nome" }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    })();
+  }, []);
+
+  const salvarConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const patch: Record<string, unknown> = {
+        restrict_to_networks: restrict,
+        allowed_coach_ids: restrict ? allowedCoachIds : [],
+        perk_card_days_override: cardDays.trim() === "" ? null : Number(cardDays),
+        perk_challenge_tickets_override: tickets.trim() === "" ? null : Number(tickets),
+      };
+      const { error } = await supabase
+        .from(table as never)
+        .update(patch as never)
+        .eq("id" as never, productId);
+      if (error) throw new Error(error.message);
+      toast.success("Configuração salva");
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar configuração");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
 
   const review = async (decision: "approved" | "rejected") => {
     if (decision === "rejected" && !note.trim()) {
@@ -224,6 +282,98 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
               recebe bônus adicional sobre essa comissão quando vende.
             </p>
           </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">
+              Disponibilidade e benefícios
+            </p>
+
+            <label className="flex items-center gap-2 text-sm text-white/85">
+              <input
+                type="checkbox"
+                checked={restrict}
+                onChange={(e) => setRestrict(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              Restringir a redes específicas (só alunos dos coaches abaixo veem este produto)
+            </label>
+
+            {restrict && (
+              <div className="mt-3">
+                <input
+                  value={coachSearch}
+                  onChange={(e) => setCoachSearch(e.target.value)}
+                  placeholder="Buscar coach pelo nome..."
+                  className="w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+                {allowedCoachIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {allowedCoachIds.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setAllowedCoachIds((prev) => prev.filter((x) => x !== id))}
+                        className="flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[11px] text-primary"
+                      >
+                        {coaches.find((c) => c.id === id)?.name || id.slice(0, 8)}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-2 max-h-44 overflow-y-auto rounded border border-white/10">
+                  {coaches
+                    .filter((c) => c.name.toLowerCase().includes(coachSearch.trim().toLowerCase()))
+                    .filter((c) => !allowedCoachIds.includes(c.id))
+                    .slice(0, 40)
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setAllowedCoachIds((prev) => [...prev, c.id])}
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-white/80 hover:bg-white/5"
+                      >
+                        {c.name}
+                        <span className="text-[10px] text-primary">adicionar</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Dias de carteirinha</p>
+                <input
+                  value={cardDays}
+                  onChange={(e) => setCardDays(e.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  placeholder="automático"
+                  className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Tickets de desafio</p>
+                <input
+                  value={tickets}
+                  onChange={(e) => setTickets(e.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  placeholder="automático"
+                  className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-white/40">
+              Deixe em branco para usar o cálculo automático pelo valor do produto. Use 0 para não gerar o benefício.
+            </p>
+
+            <button
+              disabled={savingConfig}
+              onClick={salvarConfig}
+              className="mt-3 w-full rounded-lg bg-primary/20 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/30 disabled:opacity-50"
+            >
+              {savingConfig ? "Salvando..." : "Salvar configuração"}
+            </button>
+          </div>
+
 
           <div>
             <p className="text-[10px] uppercase tracking-wider text-white/40">

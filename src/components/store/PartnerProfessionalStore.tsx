@@ -17,8 +17,10 @@ import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { PurchaseSuccessModal } from "@/components/store/PurchaseSuccessModal";
 
-function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
-  const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
+function BenefitsBadges({ price, compact = false, cardDaysOverride, ticketsOverride }: { price: number; compact?: boolean; cardDaysOverride?: number | null; ticketsOverride?: number | null }) {
+  const base = computePartnerProductBenefits(price);
+  const cardDays = cardDaysOverride ?? base.cardDays;
+  const challengeTickets = ticketsOverride ?? base.challengeTickets;
   const size = compact ? "text-[10px] px-1.5 py-0.5" : "text-[11px] px-2 py-1";
   return (
     <div className="mt-1 flex flex-wrap gap-1">
@@ -60,6 +62,10 @@ export type PartnerStoreCard = {
   coachCommissionPct?: number | null;
   isPhysical?: boolean;
   deliveryDays?: number | null;
+  restrictToNetworks?: boolean;
+  allowedCoachIds?: string[];
+  perkCardDays?: number | null;
+  perkTickets?: number | null;
 };
 
 const money = (v: number) =>
@@ -114,6 +120,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
+  const [myCoachId, setMyCoachId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
   const [purchased, setPurchased] = useState<{ productId: string; productName: string; price: number; kind: CardKind; buyerName?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
@@ -191,8 +198,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         if (u.user) {
           const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
           if (prof?.id) {
-            const { data: stu } = await supabase.from("students").select("id").eq("profile_id", prof.id).maybeSingle();
+            const { data: stu } = await supabase.from("students").select("id,coach_id").eq("profile_id", prof.id).maybeSingle();
             if (stu?.id) setOwnStudentId(stu.id);
+            setMyCoachId((stu as { coach_id?: string | null } | null)?.coach_id ?? null);
           }
         }
       }
@@ -200,7 +208,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,is_physical,delivery_days,partners(fantasy_name,upline_coach_id)")
+          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,is_physical,delivery_days,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,partners(fantasy_name,upline_coach_id)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
@@ -209,7 +217,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .order("sort_order" as never, { ascending: true } as never)
           .limit(1000);
         if (error) console.error("[partner store]", error);
-        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; restrict_to_networks?: boolean | null; allowed_coach_ids?: string[] | null; perk_card_days_override?: number | null; perk_challenge_tickets_override?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
           id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
           section_id: r.section_id, category_id: r.category_id,
           seller: r.partners?.fantasy_name || "Parceiro",
@@ -218,18 +226,22 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           creatorCoachId: r.partners?.upline_coach_id ?? null,
           isPhysical: !!r.is_physical,
           deliveryDays: r.delivery_days ?? null,
+          restrictToNetworks: !!r.restrict_to_networks,
+          allowedCoachIds: r.allowed_coach_ids || [],
+          perkCardDays: r.perk_card_days_override ?? null,
+          perkTickets: r.perk_challenge_tickets_override ?? null,
         }));
       };
 
       const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
         // Paginação: o limite default do PostgREST é 1000; buscamos em lotes até esgotar.
         const PAGE = 1000;
-        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
+        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; restrict_to_networks?: boolean | null; allowed_coach_ids?: string[] | null; perk_card_days_override?: number | null; perk_challenge_tickets_override?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("professional_products" as never)
             .select(
-              "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,is_physical,delivery_days,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+              "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,is_physical,delivery_days,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
             )
             .eq("status" as never, "approved")
             .eq("is_active_by_professional" as never, true)
@@ -256,6 +268,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           coachCommissionPct: r.coach_commission_percentage ?? null,
           isPhysical: !!r.is_physical,
           deliveryDays: r.delivery_days ?? null,
+          restrictToNetworks: !!r.restrict_to_networks,
+          allowedCoachIds: r.allowed_coach_ids || [],
+          perkCardDays: r.perk_card_days_override ?? null,
+          perkTickets: r.perk_challenge_tickets_override ?? null,
         }));
       };
 
@@ -458,6 +474,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleCards = cards.filter((c) => {
     const cProductKind = productKindFor(c.kind);
     const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
+    // Produto restrito: só aparece para alunos da rede autorizada.
+    if (c.restrictToNetworks) {
+      const allowed = c.allowedCoachIds || [];
+      if (!myCoachId || !allowed.includes(myCoachId)) return false;
+    }
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
     // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.
     if (vis.isHiddenByUpline("product", cProductKind, c.id, creator)) return false;
@@ -594,7 +615,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                          : `${stockById[p.id].remaining} de ${stockById[p.id].stock} vagas restantes`}
                      </p>
                    )}
-                   <BenefitsBadges price={p.price} compact />
+                   <BenefitsBadges price={p.price} compact cardDaysOverride={p.perkCardDays} ticketsOverride={p.perkTickets} />
                  </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
                   {mode === "reseller" && (
@@ -695,7 +716,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                       : `${stockById[selected.id].remaining} de ${stockById[selected.id].stock} vagas restantes`}
                   </p>
                 )}
-                <BenefitsBadges price={selected.price} />
+                <BenefitsBadges price={selected.price} cardDaysOverride={selected.perkCardDays} ticketsOverride={selected.perkTickets} />
               </div>
               {selected.description && (
                 <div>
