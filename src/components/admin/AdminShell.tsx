@@ -4,7 +4,7 @@ import {
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
   Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare, Bot,
 
-  Blocks,
+  Blocks, MessageCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +66,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/referral-links", label: "Links de Indicação", icon: Search, perm: "users" },
   { to: "/admin/branding", label: "Identidade Visual", icon: Palette, perm: "settings" },
   { to: "/admin/modules", label: "Módulos por Rede", icon: Blocks, perm: "settings" },
+  { to: "/admin/whatsapp", label: "WhatsApp da Plataforma", icon: MessageCircle, perm: "settings" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 
 ];

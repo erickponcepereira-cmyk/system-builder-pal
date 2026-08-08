@@ -178,6 +178,27 @@ async function chargeOne(sub: Sub): Promise<ChargeOutcome> {
   return { state: "rejected", reason: mp?.status_detail || "Pagamento recusado" };
 }
 
+/**
+ * Renovação de produto de parceiro/profissional precisa gerar um NOVO pedido
+ * pago: é o pedido que dispara a entrega (dias de carteirinha, tickets) e as
+ * comissões. Sem isso a cobrança acontece mas o benefício não é renovado.
+ */
+async function entregarRenovacao(sub: Sub) {
+  if (sub.product_kind !== "professional_product" && sub.product_kind !== "partner_product") return;
+  if (!sub.student_id || !sub.product_id) return;
+  try {
+    await supabaseAdmin.rpc("renovar_pedido_recorrente" as never, {
+      _student_id: sub.student_id,
+      _product_kind: sub.product_kind,
+      _product_id: sub.product_id,
+      _amount: Number(sub.amount) || null,
+      _mp_payment_id: null,
+    } as never);
+  } catch (e) {
+    console.error("[recurring] falha ao renovar pedido", sub.id, e);
+  }
+}
+
 async function markSuccess(sub: Sub) {
   await supabaseAdmin
     .from("recurring_subscriptions" as never)
@@ -191,7 +212,9 @@ async function markSuccess(sub: Sub) {
       pending_since: null,
     } as never)
     .eq("id" as never, sub.id as never);
+  await entregarRenovacao(sub);
 }
+
 
 async function markFailure(sub: Sub, reason: string) {
   const failures = sub.failure_count + 1;
