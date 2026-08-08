@@ -1,6 +1,9 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SupportCoachFab } from "@/components/support/SupportCoachFab";
+import { PendingCoachGate } from "@/components/student/PendingCoachGate";
+
+
 
 
 /**
