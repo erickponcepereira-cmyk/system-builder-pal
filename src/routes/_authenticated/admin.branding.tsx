@@ -267,23 +267,112 @@ function AdminBranding() {
             </Campo>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CAMPOS.map(({ campo, label }) => (
-              <Campo key={campo} label={label}>
-                <CorInput value={(edicao[campo] as string) || "#000000"} onChange={(v) => setEdicao({ ...edicao, [campo]: v })} />
+          {/* Montar paleta automaticamente */}
+          <div className="rounded-xl border border-border p-3 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Wand2 className="h-4 w-4 text-primary" /> Montar paleta
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Escolha o modo e de 1 a 3 cores da marca. O restante das 25 cores sai pronto, já com contraste de
+                leitura garantido.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Campo label="Modo do tema">
+                <select
+                  value={edicao.mode}
+                  onChange={(e) => setEdicao({ ...edicao, mode: e.target.value as "dark" | "light" })}
+                  className="w-full rounded-lg bg-input border border-border px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="light">Claro</option>
+                  <option value="dark">Escuro</option>
+                </select>
               </Campo>
-            ))}
-          </div>
-
-          <div className="rounded-xl p-4 border border-border" style={{ backgroundColor: edicao.background, color: edicao.foreground }}>
-            <p className="text-sm font-semibold">Prévia — {edicao.nome || "sem nome"}</p>
-            <div className="mt-2 rounded-lg p-3" style={{ backgroundColor: edicao.card, color: edicao.card_foreground }}>
-              <p className="text-xs">Cartão de conteúdo</p>
-              <span className="mt-2 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: edicao.primary_color, color: edicao.primary_foreground }}>
-                Botão principal
-              </span>
+              <Campo label="Cor principal">
+                <CorInput value={basePrimaria} onChange={setBasePrimaria} />
+              </Campo>
+              <Campo label="Cor de apoio (opcional)">
+                <CorInput value={baseApoio} onChange={setBaseApoio} />
+              </Campo>
+              <Campo label="Cor de destaque (opcional)">
+                <CorInput value={baseDestaque} onChange={setBaseDestaque} />
+              </Campo>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={aplicarPaleta}
+                className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+              >
+                <Wand2 className="h-4 w-4" /> Gerar paleta
+              </button>
+              <button
+                onClick={() => setManual((v) => !v)}
+                className="rounded-lg bg-muted px-3 py-1.5 text-sm text-foreground"
+              >
+                {manual ? "Esconder ajuste manual" : "Ajustar manualmente"}
+              </button>
             </div>
           </div>
+
+          {manual && (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {CAMPOS.map(({ campo, label }) => (
+                <Campo key={campo} label={label}>
+                  <CorInput value={(edicao[campo] as string) || "#000000"} onChange={(v) => setEdicao({ ...edicao, [campo]: v })} />
+                </Campo>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-xl p-4 border border-border space-y-3" style={{ backgroundColor: edicao.background, color: edicao.foreground }}>
+            <p className="text-sm font-semibold">Prévia — {edicao.nome || "sem nome"}</p>
+            <p className="text-xs" style={{ color: edicao.muted_foreground }}>Texto de apoio (neutro)</p>
+            <div className="rounded-lg p-3 border" style={{ backgroundColor: edicao.card, color: edicao.card_foreground, borderColor: edicao.border }}>
+              <p className="text-xs">Cartão de conteúdo</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="inline-block rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: edicao.primary_color, color: edicao.primary_foreground }}>
+                  Botão principal
+                </span>
+                <span className="inline-block rounded-lg px-3 py-1.5 text-xs font-semibold" style={{ backgroundColor: edicao.secondary, color: edicao.secondary_foreground }}>
+                  Secundário
+                </span>
+                <span className="inline-block rounded-full px-3 py-1 text-[11px] font-semibold" style={{ backgroundColor: edicao.accent, color: edicao.accent_foreground }}>
+                  Destaque
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-sm font-semibold text-foreground">Conferência de contraste</p>
+              {reprovados.length > 0 && (
+                <button
+                  onClick={() => setEdicao({ ...edicao, ...corrigirContraste(edicao) })}
+                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                >
+                  <Wand2 className="h-3.5 w-3.5" /> Corrigir contraste
+                </button>
+              )}
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {auditoria.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-2 py-1.5">
+                  <span className="text-[11px] text-foreground truncate">{p.label}</span>
+                  <span className={`text-[11px] font-bold ${p.ok ? "text-muted-foreground" : "text-destructive"}`}>
+                    {p.razao.toFixed(2)}:1 {p.ok ? "OK" : `< ${p.minimo}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {reprovados.length > 0 && (
+              <p className="text-[11px] text-destructive">
+                {reprovados.length} {reprovados.length === 1 ? "combinação está" : "combinações estão"} difíceis de ler.
+              </p>
+            )}
+          </div>
+
 
           <div className="flex gap-2">
             <button onClick={salvar} disabled={salvando || !edicao.key || !edicao.nome} className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium disabled:opacity-50">
