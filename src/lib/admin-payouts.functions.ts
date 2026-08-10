@@ -294,21 +294,34 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     }
     const creatorRowsDash = creatorQ ? await creatorQ : { data: [] as unknown };
     const nowMsDash = Date.now();
+    const creatorOrdersDash = ((creatorRowsDash.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []);
+    const coprodDash = await fetchCoprodIndex(creatorOrdersDash.map((o) => o.id));
     const creatorAggDash = new Map<string, { available: number; blocked: number; earned: number }>();
-    ((creatorRowsDash.data as unknown as Array<{ partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
-      const amt = n(o.partner_net_amount);
+    const bumpDash = (pid: string, amt: number, released: boolean) => {
       if (amt <= 0) return;
-      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
-        || (o.professional_coach_id && coachProfileById.get(o.professional_coach_id))
-        || null;
-      if (!pid) return;
       const cur = creatorAggDash.get(pid) || { available: 0, blocked: 0, earned: 0 };
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-      const released = availableAt <= nowMsDash;
       cur.earned += amt;
       if (released) cur.available += amt; else cur.blocked += amt;
       creatorAggDash.set(pid, cur);
+    };
+    creatorOrdersDash.forEach((o) => {
+      const released = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000 <= nowMsDash;
+      // criador: líquido menos o repasse de co-produção
+      const amt = n(o.partner_net_amount) - coprodDeduction(coprodDash, o.partner_id, o.professional_coach_id, o.id);
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById.get(o.professional_coach_id))
+        || null;
+      if (pid) bumpDash(pid, amt, released);
+      // co-produtores: crédito recebido
+      for (const [key, byOrder] of coprodDash.credit) {
+        const entry = byOrder.get(o.id);
+        if (!entry) continue;
+        const [kind, id] = key.split(":");
+        const cpid = kind === "partner" ? partnerProfileById.get(id) : coachProfileById.get(id);
+        if (cpid) bumpDash(cpid, entry.amount, released);
+      }
     });
+
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
