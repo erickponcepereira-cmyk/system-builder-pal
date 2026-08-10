@@ -21,6 +21,71 @@ export type SellerRole = "all" | "coach" | "partner" | "professional";
 
 const n = (v: unknown) => Number(v || 0);
 
+// ============= Co-produção =============
+// Créditos de co-produção alteram quem fica com o líquido do criador:
+// - criador do produto: o valor do repasse SAI do líquido dele
+// - co-produtor: o valor ENTRA como ganho dele
+// Mesma regra usada em public.recalc_wallets_for_owner.
+export interface CoprodCreditRow {
+  order_id: string;
+  amount_brl: number | null;
+  collaborator_type: string;
+  collaborator_id: string;
+  coproduction?: { creator_type: string; creator_id: string; percent_of_net: number | null; split_kind: string } | null;
+}
+
+export interface CoprodIndex {
+  /** ownerKey (partner:<id> | professional:<id>) -> orderId -> valor repassado (a descontar do criador) */
+  deduction: Map<string, Map<string, number>>;
+  /** ownerKey -> orderId -> crédito recebido como co-produtor */
+  credit: Map<string, Map<string, { amount: number; pct: number | null }>>;
+}
+
+const ownerKey = (type: string, id: string) =>
+  `${type === "partner" ? "partner" : "professional"}:${id}`;
+
+async function fetchCoprodIndex(orderIds: string[]): Promise<CoprodIndex> {
+  const idx: CoprodIndex = { deduction: new Map(), credit: new Map() };
+  const unique = Array.from(new Set(orderIds.filter(Boolean)));
+  if (!unique.length) return idx;
+  const rows: CoprodCreditRow[] = [];
+  for (let i = 0; i < unique.length; i += 300) {
+    const chunk = unique.slice(i, i + 300);
+    const { data } = await supabaseAdmin
+      .from("product_coproduction_credits" as never)
+      .select(
+        "order_id,amount_brl,collaborator_type,collaborator_id,is_cost,coproduction:coproduction_id(creator_type,creator_id,percent_of_net,split_kind)" as never,
+      )
+      .in("order_id" as never, chunk as never);
+    rows.push(...(((data as unknown as CoprodCreditRow[]) || [])));
+  }
+  for (const r of rows) {
+    const amount = n(r.amount_brl);
+    if (amount <= 0) continue;
+    const ck = ownerKey(r.collaborator_type, r.collaborator_id);
+    const cm = idx.credit.get(ck) || new Map<string, { amount: number; pct: number | null }>();
+    const prevC = cm.get(r.order_id);
+    cm.set(r.order_id, {
+      amount: (prevC?.amount || 0) + amount,
+      pct: r.coproduction?.split_kind === "percent" ? n(r.coproduction?.percent_of_net) : null,
+    });
+    idx.credit.set(ck, cm);
+
+    const creator = r.coproduction;
+    if (creator?.creator_id) {
+      const dk = ownerKey(creator.creator_type, creator.creator_id);
+      const dm = idx.deduction.get(dk) || new Map<string, number>();
+      dm.set(r.order_id, (dm.get(r.order_id) || 0) + amount);
+      idx.deduction.set(dk, dm);
+    }
+  }
+  return idx;
+}
+
+const coprodDeduction = (idx: CoprodIndex, partnerId: string | null, coachId: string | null, orderId: string) =>
+  (partnerId ? idx.deduction.get(`partner:${partnerId}`)?.get(orderId) || 0 : 0)
+  + (coachId ? idx.deduction.get(`professional:${coachId}`)?.get(orderId) || 0 : 0);
+
 // ============= Helpers =============
 
 interface ClassifiedProfiles {
