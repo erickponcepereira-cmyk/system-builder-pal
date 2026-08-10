@@ -850,6 +850,46 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       return { isMasterCoachSale: true, masterCoachName: masterCoachNameById.get(mcId) || null };
     };
 
+    // ===== Co-produção: pedidos em que a pessoa é co-produtora + índice de repasses =====
+    const collabFilters = [
+      partnerId ? `and(collaborator_type.eq.partner,collaborator_id.eq.${partnerId})` : null,
+      coachId ? `and(collaborator_type.eq.professional,collaborator_id.eq.${coachId})` : null,
+    ].filter(Boolean).join(",");
+    if (collabFilters) {
+      const { data: cc } = await supabaseAdmin
+        .from("product_coproduction_credits" as never)
+        .select("order_id" as never)
+        .or(collabFilters as never);
+      const ids = Array.from(new Set(((cc as unknown as Array<{ order_id: string }>) || []).map((r) => r.order_id).filter(Boolean)))
+        .filter((id) => !partnerOrdersById.has(id));
+      if (ids.length) {
+        let q = supabaseAdmin
+          .from("partner_product_orders" as never)
+          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+          .in("id" as never, ids as never);
+        if (fromDate) q = (q as any).gte("created_at", fromDate);
+        if (data.toDate) q = (q as any).lte("created_at", data.toDate);
+        const { data: rows } = await q;
+        ((rows as unknown as typeof partnerOrderRows) || []).forEach(upsertPartnerOrder);
+      }
+    }
+    const coprodIdx = await fetchCoprodIndex(Array.from(partnerOrdersById.keys()));
+    const myCoprodCredits = new Map<string, { amount: number; pct: number | null }>();
+    for (const key of [partnerId ? `partner:${partnerId}` : null, coachId ? `professional:${coachId}` : null]) {
+      if (!key) continue;
+      for (const [oid, entry] of (coprodIdx.credit.get(key) || new Map())) {
+        const prev = myCoprodCredits.get(oid);
+        myCoprodCredits.set(oid, { amount: (prev?.amount || 0) + entry.amount, pct: entry.pct ?? prev?.pct ?? null });
+      }
+    }
+    const myCoprodDeduction = (o: { id: string; partner_id: string | null; professional_coach_id: string | null }) =>
+      coprodDeduction(
+        coprodIdx,
+        o.partner_id === partnerId ? partnerId : null,
+        o.professional_coach_id === coachId ? coachId : null,
+        o.id,
+      );
+
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
       const mc = mcInfoForOrder(o);
       return {
