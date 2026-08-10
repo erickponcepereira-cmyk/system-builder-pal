@@ -892,6 +892,11 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
       const mc = mcInfoForOrder(o);
+      const isCreator = o.partner_id === partnerId || o.professional_coach_id === coachId;
+      const coprodIn = myCoprodCredits.get(o.id)?.amount || 0;
+      const creatorAmount = isCreator
+        ? n(o.partner_net_amount) - myCoprodDeduction(o)
+        : (coprodIn > 0 ? coprodIn : null);
       return {
         id: o.id,
         date: o.paid_at || o.created_at,
@@ -899,11 +904,12 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         status: o.status,
         product: partnerOrderProductName(o),
         student: partnerOrderStudent(o)?.name ?? null,
-        tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
-        creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
+        tag: isCreator ? "Produto criado" : (coprodIn > 0 ? "Co-produção" : "Venda parceiro/profissional"),
+        creatorAmount,
         isMasterCoachSale: mc.isMasterCoachSale,
         masterCoachName: mc.masterCoachName,
       };
+
     });
     sales = [...sales, ...ppoSales]
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
