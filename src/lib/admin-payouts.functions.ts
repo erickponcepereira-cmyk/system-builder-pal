@@ -21,6 +21,71 @@ export type SellerRole = "all" | "coach" | "partner" | "professional";
 
 const n = (v: unknown) => Number(v || 0);
 
+// ============= Co-produção =============
+// Créditos de co-produção alteram quem fica com o líquido do criador:
+// - criador do produto: o valor do repasse SAI do líquido dele
+// - co-produtor: o valor ENTRA como ganho dele
+// Mesma regra usada em public.recalc_wallets_for_owner.
+export interface CoprodCreditRow {
+  order_id: string;
+  amount_brl: number | null;
+  collaborator_type: string;
+  collaborator_id: string;
+  coproduction?: { creator_type: string; creator_id: string; percent_of_net: number | null; split_kind: string } | null;
+}
+
+export interface CoprodIndex {
+  /** ownerKey (partner:<id> | professional:<id>) -> orderId -> valor repassado (a descontar do criador) */
+  deduction: Map<string, Map<string, number>>;
+  /** ownerKey -> orderId -> crédito recebido como co-produtor */
+  credit: Map<string, Map<string, { amount: number; pct: number | null }>>;
+}
+
+const ownerKey = (type: string, id: string) =>
+  `${type === "partner" ? "partner" : "professional"}:${id}`;
+
+async function fetchCoprodIndex(orderIds: string[]): Promise<CoprodIndex> {
+  const idx: CoprodIndex = { deduction: new Map(), credit: new Map() };
+  const unique = Array.from(new Set(orderIds.filter(Boolean)));
+  if (!unique.length) return idx;
+  const rows: CoprodCreditRow[] = [];
+  for (let i = 0; i < unique.length; i += 300) {
+    const chunk = unique.slice(i, i + 300);
+    const { data } = await supabaseAdmin
+      .from("product_coproduction_credits" as never)
+      .select(
+        "order_id,amount_brl,collaborator_type,collaborator_id,is_cost,coproduction:coproduction_id(creator_type,creator_id,percent_of_net,split_kind)" as never,
+      )
+      .in("order_id" as never, chunk as never);
+    rows.push(...(((data as unknown as CoprodCreditRow[]) || [])));
+  }
+  for (const r of rows) {
+    const amount = n(r.amount_brl);
+    if (amount <= 0) continue;
+    const ck = ownerKey(r.collaborator_type, r.collaborator_id);
+    const cm = idx.credit.get(ck) || new Map<string, { amount: number; pct: number | null }>();
+    const prevC = cm.get(r.order_id);
+    cm.set(r.order_id, {
+      amount: (prevC?.amount || 0) + amount,
+      pct: r.coproduction?.split_kind === "percent" ? n(r.coproduction?.percent_of_net) : null,
+    });
+    idx.credit.set(ck, cm);
+
+    const creator = r.coproduction;
+    if (creator?.creator_id) {
+      const dk = ownerKey(creator.creator_type, creator.creator_id);
+      const dm = idx.deduction.get(dk) || new Map<string, number>();
+      dm.set(r.order_id, (dm.get(r.order_id) || 0) + amount);
+      idx.deduction.set(dk, dm);
+    }
+  }
+  return idx;
+}
+
+const coprodDeduction = (idx: CoprodIndex, partnerId: string | null, coachId: string | null, orderId: string) =>
+  (partnerId ? idx.deduction.get(`partner:${partnerId}`)?.get(orderId) || 0 : 0)
+  + (coachId ? idx.deduction.get(`professional:${coachId}`)?.get(orderId) || 0 : 0);
+
 // ============= Helpers =============
 
 interface ClassifiedProfiles {
@@ -229,21 +294,34 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     }
     const creatorRowsDash = creatorQ ? await creatorQ : { data: [] as unknown };
     const nowMsDash = Date.now();
+    const creatorOrdersDash = ((creatorRowsDash.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []);
+    const coprodDash = await fetchCoprodIndex(creatorOrdersDash.map((o) => o.id));
     const creatorAggDash = new Map<string, { available: number; blocked: number; earned: number }>();
-    ((creatorRowsDash.data as unknown as Array<{ partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
-      const amt = n(o.partner_net_amount);
+    const bumpDash = (pid: string, amt: number, released: boolean) => {
       if (amt <= 0) return;
-      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
-        || (o.professional_coach_id && coachProfileById.get(o.professional_coach_id))
-        || null;
-      if (!pid) return;
       const cur = creatorAggDash.get(pid) || { available: 0, blocked: 0, earned: 0 };
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-      const released = availableAt <= nowMsDash;
       cur.earned += amt;
       if (released) cur.available += amt; else cur.blocked += amt;
       creatorAggDash.set(pid, cur);
+    };
+    creatorOrdersDash.forEach((o) => {
+      const released = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000 <= nowMsDash;
+      // criador: líquido menos o repasse de co-produção
+      const amt = n(o.partner_net_amount) - coprodDeduction(coprodDash, o.partner_id, o.professional_coach_id, o.id);
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById.get(o.professional_coach_id))
+        || null;
+      if (pid) bumpDash(pid, amt, released);
+      // co-produtores: crédito recebido
+      for (const [key, byOrder] of coprodDash.credit) {
+        const entry = byOrder.get(o.id);
+        if (!entry) continue;
+        const [kind, id] = key.split(":");
+        const cpid = kind === "partner" ? partnerProfileById.get(id) : coachProfileById.get(id);
+        if (cpid) bumpDash(cpid, entry.amount, released);
+      }
     });
+
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
@@ -254,7 +332,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
         if (agg) { sellerAvail += agg.available; sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerAvail += cre.available; sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       } else {
-        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance) + cre.available;
+        // saldo disponível já vem das carteiras (que incluem o ganho como criador) — não somar cre.available aqui
+        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
         if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       }
@@ -426,21 +505,32 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     }
     const creatorRowsRes = creatorOrdersQ ? await creatorOrdersQ : { data: [] as unknown };
     const nowMs = Date.now();
+    const creatorOrdersRes = ((creatorRowsRes.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []);
+    const coprodRes = await fetchCoprodIndex(creatorOrdersRes.map((o) => o.id));
     const creatorAgg = new Map<string, { available: number; blocked: number; earned: number }>();
-    ((creatorRowsRes.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
-      const amt = n(o.partner_net_amount);
+    const bumpRes = (pid: string, amt: number, released: boolean) => {
       if (amt <= 0) return;
-      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
-        || (o.professional_coach_id && coachProfileById2.get(o.professional_coach_id))
-        || null;
-      if (!pid) return;
       const cur = creatorAgg.get(pid) || { available: 0, blocked: 0, earned: 0 };
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-      const released = availableAt <= nowMs;
       cur.earned += amt;
       if (released) cur.available += amt; else cur.blocked += amt;
       creatorAgg.set(pid, cur);
+    };
+    creatorOrdersRes.forEach((o) => {
+      const released = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000 <= nowMs;
+      const amt = n(o.partner_net_amount) - coprodDeduction(coprodRes, o.partner_id, o.professional_coach_id, o.id);
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById2.get(o.professional_coach_id))
+        || null;
+      if (pid) bumpRes(pid, amt, released);
+      for (const [key, byOrder] of coprodRes.credit) {
+        const entry = byOrder.get(o.id);
+        if (!entry) continue;
+        const [kind, id] = key.split(":");
+        const cpid = kind === "partner" ? partnerProfileById.get(id) : coachProfileById2.get(id);
+        if (cpid) bumpRes(cpid, entry.amount, released);
+      }
     });
+
 
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
@@ -760,8 +850,53 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       return { isMasterCoachSale: true, masterCoachName: masterCoachNameById.get(mcId) || null };
     };
 
+    // ===== Co-produção: pedidos em que a pessoa é co-produtora + índice de repasses =====
+    const collabFilters = [
+      partnerId ? `and(collaborator_type.eq.partner,collaborator_id.eq.${partnerId})` : null,
+      coachId ? `and(collaborator_type.eq.professional,collaborator_id.eq.${coachId})` : null,
+    ].filter(Boolean).join(",");
+    if (collabFilters) {
+      const { data: cc } = await supabaseAdmin
+        .from("product_coproduction_credits" as never)
+        .select("order_id" as never)
+        .or(collabFilters as never);
+      const ids = Array.from(new Set(((cc as unknown as Array<{ order_id: string }>) || []).map((r) => r.order_id).filter(Boolean)))
+        .filter((id) => !partnerOrdersById.has(id));
+      if (ids.length) {
+        let q = supabaseAdmin
+          .from("partner_product_orders" as never)
+          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+          .in("id" as never, ids as never);
+        if (fromDate) q = (q as any).gte("created_at", fromDate);
+        if (data.toDate) q = (q as any).lte("created_at", data.toDate);
+        const { data: rows } = await q;
+        ((rows as unknown as typeof partnerOrderRows) || []).forEach(upsertPartnerOrder);
+      }
+    }
+    const coprodIdx = await fetchCoprodIndex(Array.from(partnerOrdersById.keys()));
+    const myCoprodCredits = new Map<string, { amount: number; pct: number | null }>();
+    for (const key of [partnerId ? `partner:${partnerId}` : null, coachId ? `professional:${coachId}` : null]) {
+      if (!key) continue;
+      for (const [oid, entry] of (coprodIdx.credit.get(key) || new Map())) {
+        const prev = myCoprodCredits.get(oid);
+        myCoprodCredits.set(oid, { amount: (prev?.amount || 0) + entry.amount, pct: entry.pct ?? prev?.pct ?? null });
+      }
+    }
+    const myCoprodDeduction = (o: { id: string; partner_id: string | null; professional_coach_id: string | null }) =>
+      coprodDeduction(
+        coprodIdx,
+        o.partner_id === partnerId ? partnerId : null,
+        o.professional_coach_id === coachId ? coachId : null,
+        o.id,
+      );
+
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
       const mc = mcInfoForOrder(o);
+      const isCreator = o.partner_id === partnerId || o.professional_coach_id === coachId;
+      const coprodIn = myCoprodCredits.get(o.id)?.amount || 0;
+      const creatorAmount = isCreator
+        ? n(o.partner_net_amount) - myCoprodDeduction(o)
+        : (coprodIn > 0 ? coprodIn : null);
       return {
         id: o.id,
         date: o.paid_at || o.created_at,
@@ -769,11 +904,12 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         status: o.status,
         product: partnerOrderProductName(o),
         student: partnerOrderStudent(o)?.name ?? null,
-        tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
-        creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
+        tag: isCreator ? "Produto criado" : (coprodIn > 0 ? "Co-produção" : "Venda parceiro/profissional"),
+        creatorAmount,
         isMasterCoachSale: mc.isMasterCoachSale,
         masterCoachName: mc.masterCoachName,
       };
+
     });
     sales = [...sales, ...ppoSales]
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
@@ -816,27 +952,64 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     });
 
     const nowMs = Date.now();
-    const productEarnings = Array.from(partnerOrdersById.values())
-      .filter((o) => o.status === "paid" && (o.partner_id === partnerId || o.professional_coach_id === coachId) && n(o.partner_net_amount) > 0)
-      .map((o) => {
-        const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-        const released = availableAt <= nowMs;
-        const poStudent = partnerOrderStudent(o);
-        const mc = mcInfoForOrder(o);
-        return {
-          id: o.id,
-          date: o.paid_at || o.created_at,
-          amount: n(o.partner_net_amount),
-          status: released ? "available" : "pending",
-          availableAt: new Date(availableAt).toISOString(),
-          studentName: poStudent?.name ?? null,
-          studentEmail: poStudent?.email ?? null,
-          productName: partnerOrderProductName(o),
-          sourceLabel: "Produto criado",
-          isMasterCoachSale: mc.isMasterCoachSale,
-          masterCoachName: mc.masterCoachName,
-        };
-      });
+    const paidOrders = Array.from(partnerOrdersById.values()).filter((o) => o.status === "paid");
+    const releaseInfo = (o: typeof partnerOrderRows[number]) => {
+      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      return { availableAt, released: availableAt <= nowMs };
+    };
+    const productEarnings = [
+      // 1) Ganhos como criador — já líquidos do repasse de co-produção
+      ...paidOrders
+        .filter((o) => o.partner_id === partnerId || o.professional_coach_id === coachId)
+        .map((o) => {
+          const { availableAt, released } = releaseInfo(o);
+          const deduction = myCoprodDeduction(o);
+          const amount = n(o.partner_net_amount) - deduction;
+          const poStudent = partnerOrderStudent(o);
+          const mc = mcInfoForOrder(o);
+          return {
+            id: o.id,
+            date: o.paid_at || o.created_at,
+            amount,
+            status: released ? "available" : "pending",
+            availableAt: new Date(availableAt).toISOString(),
+            studentName: poStudent?.name ?? null,
+            studentEmail: poStudent?.email ?? null,
+            productName: partnerOrderProductName(o),
+            sourceLabel: deduction > 0
+              ? `Produto criado (repasse co-produção −R$ ${deduction.toFixed(2)})`
+              : "Produto criado",
+            isMasterCoachSale: mc.isMasterCoachSale,
+            masterCoachName: mc.masterCoachName,
+          };
+        })
+        .filter((e) => e.amount > 0),
+      // 2) Créditos recebidos como co-produtor
+      ...paidOrders
+        .filter((o) => (myCoprodCredits.get(o.id)?.amount || 0) > 0)
+        .map((o) => {
+          const { availableAt, released } = releaseInfo(o);
+          const entry = myCoprodCredits.get(o.id)!;
+          const poStudent = partnerOrderStudent(o);
+          const mc = mcInfoForOrder(o);
+          return {
+            id: `${o.id}:coprod`,
+            date: o.paid_at || o.created_at,
+            amount: entry.amount,
+            status: released ? "available" : "pending",
+            availableAt: new Date(availableAt).toISOString(),
+            studentName: poStudent?.name ?? null,
+            studentEmail: poStudent?.email ?? null,
+            productName: partnerOrderProductName(o),
+            sourceLabel: entry.pct != null
+              ? `Co-produção recebida (${entry.pct}% do líquido)`
+              : "Co-produção recebida",
+            isMasterCoachSale: mc.isMasterCoachSale,
+            masterCoachName: mc.masterCoachName,
+          };
+        }),
+    ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
 
 
     // Saques: canal escolhido pelo grupo — não mistura seller e student_referrer.
