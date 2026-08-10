@@ -332,7 +332,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
         if (agg) { sellerAvail += agg.available; sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerAvail += cre.available; sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       } else {
-        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance) + cre.available;
+        // saldo disponível já vem das carteiras (que incluem o ganho como criador) — não somar cre.available aqui
+        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
         if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       }
