@@ -505,21 +505,32 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     }
     const creatorRowsRes = creatorOrdersQ ? await creatorOrdersQ : { data: [] as unknown };
     const nowMs = Date.now();
+    const creatorOrdersRes = ((creatorRowsRes.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []);
+    const coprodRes = await fetchCoprodIndex(creatorOrdersRes.map((o) => o.id));
     const creatorAgg = new Map<string, { available: number; blocked: number; earned: number }>();
-    ((creatorRowsRes.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
-      const amt = n(o.partner_net_amount);
+    const bumpRes = (pid: string, amt: number, released: boolean) => {
       if (amt <= 0) return;
-      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
-        || (o.professional_coach_id && coachProfileById2.get(o.professional_coach_id))
-        || null;
-      if (!pid) return;
       const cur = creatorAgg.get(pid) || { available: 0, blocked: 0, earned: 0 };
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-      const released = availableAt <= nowMs;
       cur.earned += amt;
       if (released) cur.available += amt; else cur.blocked += amt;
       creatorAgg.set(pid, cur);
+    };
+    creatorOrdersRes.forEach((o) => {
+      const released = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000 <= nowMs;
+      const amt = n(o.partner_net_amount) - coprodDeduction(coprodRes, o.partner_id, o.professional_coach_id, o.id);
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById2.get(o.professional_coach_id))
+        || null;
+      if (pid) bumpRes(pid, amt, released);
+      for (const [key, byOrder] of coprodRes.credit) {
+        const entry = byOrder.get(o.id);
+        if (!entry) continue;
+        const [kind, id] = key.split(":");
+        const cpid = kind === "partner" ? partnerProfileById.get(id) : coachProfileById2.get(id);
+        if (cpid) bumpRes(cpid, entry.amount, released);
+      }
     });
+
 
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
