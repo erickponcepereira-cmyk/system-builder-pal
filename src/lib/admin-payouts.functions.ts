@@ -952,27 +952,64 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     });
 
     const nowMs = Date.now();
-    const productEarnings = Array.from(partnerOrdersById.values())
-      .filter((o) => o.status === "paid" && (o.partner_id === partnerId || o.professional_coach_id === coachId) && n(o.partner_net_amount) > 0)
-      .map((o) => {
-        const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
-        const released = availableAt <= nowMs;
-        const poStudent = partnerOrderStudent(o);
-        const mc = mcInfoForOrder(o);
-        return {
-          id: o.id,
-          date: o.paid_at || o.created_at,
-          amount: n(o.partner_net_amount),
-          status: released ? "available" : "pending",
-          availableAt: new Date(availableAt).toISOString(),
-          studentName: poStudent?.name ?? null,
-          studentEmail: poStudent?.email ?? null,
-          productName: partnerOrderProductName(o),
-          sourceLabel: "Produto criado",
-          isMasterCoachSale: mc.isMasterCoachSale,
-          masterCoachName: mc.masterCoachName,
-        };
-      });
+    const paidOrders = Array.from(partnerOrdersById.values()).filter((o) => o.status === "paid");
+    const releaseInfo = (o: typeof partnerOrderRows[number]) => {
+      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      return { availableAt, released: availableAt <= nowMs };
+    };
+    const productEarnings = [
+      // 1) Ganhos como criador — já líquidos do repasse de co-produção
+      ...paidOrders
+        .filter((o) => o.partner_id === partnerId || o.professional_coach_id === coachId)
+        .map((o) => {
+          const { availableAt, released } = releaseInfo(o);
+          const deduction = myCoprodDeduction(o);
+          const amount = n(o.partner_net_amount) - deduction;
+          const poStudent = partnerOrderStudent(o);
+          const mc = mcInfoForOrder(o);
+          return {
+            id: o.id,
+            date: o.paid_at || o.created_at,
+            amount,
+            status: released ? "available" : "pending",
+            availableAt: new Date(availableAt).toISOString(),
+            studentName: poStudent?.name ?? null,
+            studentEmail: poStudent?.email ?? null,
+            productName: partnerOrderProductName(o),
+            sourceLabel: deduction > 0
+              ? `Produto criado (repasse co-produção −R$ ${deduction.toFixed(2)})`
+              : "Produto criado",
+            isMasterCoachSale: mc.isMasterCoachSale,
+            masterCoachName: mc.masterCoachName,
+          };
+        })
+        .filter((e) => e.amount > 0),
+      // 2) Créditos recebidos como co-produtor
+      ...paidOrders
+        .filter((o) => (myCoprodCredits.get(o.id)?.amount || 0) > 0)
+        .map((o) => {
+          const { availableAt, released } = releaseInfo(o);
+          const entry = myCoprodCredits.get(o.id)!;
+          const poStudent = partnerOrderStudent(o);
+          const mc = mcInfoForOrder(o);
+          return {
+            id: `${o.id}:coprod`,
+            date: o.paid_at || o.created_at,
+            amount: entry.amount,
+            status: released ? "available" : "pending",
+            availableAt: new Date(availableAt).toISOString(),
+            studentName: poStudent?.name ?? null,
+            studentEmail: poStudent?.email ?? null,
+            productName: partnerOrderProductName(o),
+            sourceLabel: entry.pct != null
+              ? `Co-produção recebida (${entry.pct}% do líquido)`
+              : "Co-produção recebida",
+            isMasterCoachSale: mc.isMasterCoachSale,
+            masterCoachName: mc.masterCoachName,
+          };
+        }),
+    ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
 
 
     // Saques: canal escolhido pelo grupo — não mistura seller e student_referrer.
