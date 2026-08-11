@@ -4,9 +4,12 @@ import { ChevronDown, FlaskConical, Repeat, ShieldCheck, Stethoscope, Store, Use
 import { supabase } from "@/integrations/supabase/client";
 
 type RoleOption = {
-  key: "admin" | "coach" | "professional" | "partner" | "student" | "student_test" | "coach_test";
+  key: "admin" | "coach" | "professional" | "partner" | "student"
+     | "student_test" | "coach_test" | "partner_test" | "professional_test";
   label: string;
-  to: "/admin" | "/coach" | "/professional" | "/partner" | "/student" | "/student/loja-teste" | "/coach/loja-teste";
+  to: "/admin" | "/coach" | "/professional" | "/partner" | "/student"
+    | "/student/loja-teste" | "/coach/loja-teste"
+    | "/partner/cursos-teste" | "/professional/cursos-teste";
   icon: typeof Users;
   color: string;
 };
@@ -21,6 +24,8 @@ const ALL: RoleOption[] = [
   // admin — ver o carregamento de `is_master_admin` abaixo.
   { key: "student_test", label: "Aluno (teste)", to: "/student/loja-teste", icon: FlaskConical, color: "text-fuchsia-400" },
   { key: "coach_test", label: "Coach (teste)", to: "/coach/loja-teste", icon: FlaskConical, color: "text-fuchsia-400" },
+  { key: "partner_test", label: "Parceiro (teste)", to: "/partner/cursos-teste", icon: FlaskConical, color: "text-fuchsia-400" },
+  { key: "professional_test", label: "Profissional (teste)", to: "/professional/cursos-teste", icon: FlaskConical, color: "text-fuchsia-400" },
 ];
 
 export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
@@ -58,7 +63,7 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
 
       // Loja unificada em avaliação: aparece só para master admin.
       if ((profile as { is_master_admin?: boolean }).is_master_admin) {
-        found.push("student_test", "coach_test");
+        found.push("student_test", "coach_test", "partner_test", "professional_test");
       }
 
       if (active) setRoles(found);
