@@ -55,6 +55,7 @@ export function PartnerReports() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.top_coaches), "Top Coaches");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.coupons_recent), "Cupons");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.freebie_reservations), "Reservas Gratuitas");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.recent_sales), "Vendas Detalhadas");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.recent_visits), "Visitas");
     XLSX.writeFile(wb, `relatorio-parceiro-${from}-a-${to}.xlsx`);
   };
@@ -141,8 +142,28 @@ export function PartnerReports() {
                   </Table>
                 )}
               </Section>
+              <Section title="Vendas detalhadas (cliente por cliente)">
+                {data.recent_sales.length === 0 ? <Empty msg="Sem vendas no período." /> : (
+                  <Table cols={["Data", "Pedido", "Produto", "Cliente", "Vendido por", "Pgto", "Status", "Bruto", "Seu líquido"]}>
+                    {data.recent_sales.map((s) => (
+                      <tr key={s.id} className="border-t border-white/5">
+                        <td className="py-1.5 px-2 text-xs">{new Date(s.paid_at || s.created_at).toLocaleDateString("pt-BR")}</td>
+                        <td className="py-1.5 px-2 text-xs">{s.order_number}</td>
+                        <td className="py-1.5 px-2 text-xs">{s.product_name}</td>
+                        <td className="py-1.5 px-2">{s.student_name}</td>
+                        <td className="py-1.5 px-2 text-xs">{s.seller_name || "—"}</td>
+                        <td className="py-1.5 px-2 text-xs">{(s.payment_method || "—").toUpperCase()}</td>
+                        <td className="py-1.5 px-2 text-xs">{s.status}</td>
+                        <td className="py-1.5 px-2 text-right">{brl(s.gross_amount)}</td>
+                        <td className="py-1.5 px-2 text-right">{brl(s.net_amount)}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+              </Section>
             </div>
           )}
+
 
           {tab === "reservas" && (
             <Section title={`Reservas gratuitas (${summary.freebies_reserved} reservadas • ${summary.freebies_redeemed} confirmadas)`}>
