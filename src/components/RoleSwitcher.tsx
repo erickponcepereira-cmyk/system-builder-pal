@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, Repeat, ShieldCheck, Stethoscope, Store, UserRound, Users } from "lucide-react";
+import { ChevronDown, FlaskConical, Repeat, ShieldCheck, Stethoscope, Store, UserRound, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type RoleOption = {
-  key: "admin" | "coach" | "professional" | "partner" | "student";
+  key: "admin" | "coach" | "professional" | "partner" | "student" | "student_test" | "coach_test";
   label: string;
-  to: "/admin" | "/coach" | "/professional" | "/partner" | "/student";
+  to: "/admin" | "/coach" | "/professional" | "/partner" | "/student" | "/student/loja-teste" | "/coach/loja-teste";
   icon: typeof Users;
   color: string;
 };
@@ -17,6 +17,10 @@ const ALL: RoleOption[] = [
   { key: "professional", label: "Profissional", to: "/professional", icon: Stethoscope, color: "text-cyan-400" },
   { key: "partner", label: "Parceiro", to: "/partner", icon: Store, color: "text-emerald-400" },
   { key: "student", label: "Aluno", to: "/student", icon: UserRound, color: "text-white" },
+  // Superfícies de teste da loja unificada. Só entram na lista para master
+  // admin — ver o carregamento de `is_master_admin` abaixo.
+  { key: "student_test", label: "Aluno (teste)", to: "/student/loja-teste", icon: FlaskConical, color: "text-fuchsia-400" },
+  { key: "coach_test", label: "Coach (teste)", to: "/coach/loja-teste", icon: FlaskConical, color: "text-fuchsia-400" },
 ];
 
 export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
@@ -31,7 +35,7 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       if (!user || !active) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, role")
+        .select("id, role, is_master_admin")
         .eq("user_id", user.id)
         .maybeSingle();
       if (!profile?.id || !active) return;
@@ -51,6 +55,12 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       if ((Array.isArray(partner) ? partner.length : 0) > 0 || membro) found.push("partner");
 
       if (student) found.push("student");
+
+      // Loja unificada em avaliação: aparece só para master admin.
+      if ((profile as { is_master_admin?: boolean }).is_master_admin) {
+        found.push("student_test", "coach_test");
+      }
+
       if (active) setRoles(found);
     })();
     return () => { active = false; };
@@ -86,7 +96,10 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
                   disabled={isCurrent}
                   onClick={() => {
                     setOpen(false);
-                    if (r.to === "/student") sessionStorage.setItem("fitmind_selected_area", "student");
+                    // Qualquer rota sob /student precisa marcar a área: o
+                    // StudentLayout devolve admin e coach para o painel deles
+                    // quando `fitmind_selected_area` não é "student".
+                    if (r.to.startsWith("/student")) sessionStorage.setItem("fitmind_selected_area", "student");
                     else sessionStorage.removeItem("fitmind_selected_area");
                     navigate({ to: r.to });
                   }}
