@@ -13,6 +13,7 @@ import { money, type CoachContext } from "@/routes/_authenticated/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
 import { BadgeImage } from "@/components/coach/BadgeImage";
 import { getCoachProfileSummary, type ActivityItemRow, type CoachProfileSummary } from "@/lib/coach-profile-summary.functions";
+import { getMyCoachPayoutInfo } from "@/lib/sensitive-fields.functions";
 import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 const EMPTY_SUMMARY: CoachProfileSummary = {
@@ -32,6 +33,7 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   const [activeView, setActiveView] = useState<"profile" | "top">("profile");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fetchSummary = useServerFn(getCoachProfileSummary);
+  const fetchPayoutInfo = useServerFn(getMyCoachPayoutInfo);
   const [summary, setSummary] = useState<CoachProfileSummary>(EMPTY_SUMMARY);
   const [modal, setModal] = useState<{ title: string; rows: ActivityItemRow[] } | null>(null);
   const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
@@ -47,13 +49,14 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (!coach) return;
     (async () => {
       const { data } = await supabase.from("coaches")
-        .select("instagram,facebook,youtube,tiktok,website,pix_key,pix_key_type")
+        .select("instagram,facebook,youtube,tiktok,website")
         .eq("id", coach.coachId).maybeSingle();
       const d = (data as any) || {};
+      const payout = await fetchPayoutInfo({}).catch(() => null);
       setForm((current) => ({
         ...current,
         name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio,
-        pix_key: d.pix_key || "", pix_key_type: d.pix_key_type || "cpf",
+        pix_key: payout?.pix_key || "", pix_key_type: payout?.pix_key_type || "cpf",
         instagram: d.instagram || "", facebook: d.facebook || "", youtube: d.youtube || "",
         tiktok: d.tiktok || "", website: d.website || "",
       }));

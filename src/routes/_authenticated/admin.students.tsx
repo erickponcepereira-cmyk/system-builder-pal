@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { adminDeleteUser, adminUpdateProfile } from "@/lib/admin-users.functions";
+import { fetchProfileCpfs } from "@/lib/sensitive-fields.functions";
 
 
 export const Route = createFileRoute("/_authenticated/admin/students")({
@@ -43,6 +44,7 @@ function AdminStudents() {
   const [savingProfile, setSavingProfile] = useState(false);
   const deleteUserFn = useServerFn(adminDeleteUser);
   const updateProfileFn = useServerFn(adminUpdateProfile);
+  const fetchCpfsFn = useServerFn(fetchProfileCpfs);
 
   const openProfileEdit = (row: StudentRow) => {
     setEditingProfile(row);
@@ -104,7 +106,7 @@ function AdminStudents() {
           .from("students")
           .select(`
             id, coach_id, current_weight, goal_weight, created_at, is_influencer,
-            profiles!students_profile_id_fkey(id, user_id, name, email, phone, city, cpf, birthdate),
+            profiles!students_profile_id_fkey(id, user_id, name, email, phone, city, birthdate),
             coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
           `)
           .eq("is_test", false)
@@ -144,7 +146,7 @@ function AdminStudents() {
           const coachIds = Array.from(new Set(flat.map((s: any) => s.coach_id).filter(Boolean)));
           const [profRes, coachRes] = await Promise.all([
             profileIds.length
-              ? supabase.from("profiles").select("id, user_id, name, email, phone, city, cpf, birthdate").in("id", profileIds)
+              ? supabase.from("profiles").select("id, user_id, name, email, phone, city, birthdate").in("id", profileIds)
               : Promise.resolve({ data: [], error: null } as any),
             coachIds.length
               ? supabase.from("coaches").select("id, profiles!coaches_profile_id_fkey(name)").in("id", coachIds)
@@ -162,6 +164,18 @@ function AdminStudents() {
             profiles: pMap.get(s.profile_id) || null,
             coaches: s.coach_id ? cMap.get(s.coach_id) || null : null,
           })) as StudentRow[];
+        }
+      }
+
+      const cpfProfileIds = Array.from(new Set(students.map((s) => s.profiles?.id).filter(Boolean))) as string[];
+      if (cpfProfileIds.length > 0) {
+        try {
+          const cpfMap = await fetchCpfsFn({ data: { profileIds: cpfProfileIds } });
+          students = students.map((s) =>
+            s.profiles ? { ...s, profiles: { ...s.profiles, cpf: cpfMap[s.profiles.id] ?? null } } : s
+          );
+        } catch (err) {
+          console.error("[admin.students] cpf fetch", err);
         }
       }
 

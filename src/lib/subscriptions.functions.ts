@@ -122,11 +122,14 @@ export const getMyBillingOverview = createServerFn({ method: "GET" })
     const [subRes, invsRes, profRes] = await Promise.all([
       supabase.from("user_subscriptions").select("*, plan:subscription_plans(*)").eq("user_id", userId).maybeSingle(),
       supabase.from("subscription_invoices").select("*").eq("user_id", userId).order("reference_month", { ascending: false }).limit(36),
-      supabase.from("profiles").select("id, name, email, created_at, cpf").eq("user_id", userId).maybeSingle(),
+      supabase.from("profiles").select("id, name, email, created_at").eq("user_id", userId).maybeSingle(),
     ]);
     const sub = subRes.data;
     const invs = invsRes.data ?? [];
-    const profile = profRes.data;
+    // CPF não é legível pelo cliente/RLS: buscamos no servidor, só do próprio usuário.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cpfRow } = await supabaseAdmin.from("profiles").select("cpf").eq("user_id", userId).maybeSingle();
+    const profile = profRes.data ? { ...profRes.data, cpf: (cpfRow as { cpf: string | null } | null)?.cpf ?? null } : null;
 
     const firstInvoice = invs[invs.length - 1] ?? null;
     const lastPaid = invs.find((i: any) => i.status === "paid") ?? null;
@@ -166,7 +169,8 @@ export const getInvoiceReceiptData = createServerFn({ method: "GET" })
     const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
     if (inv.user_id !== userId && !isAdmin) throw new Error("Sem acesso a esta fatura");
     if (inv.status !== "paid" && inv.status !== "exempted") throw new Error("Apenas faturas pagas geram recibo");
-    const { data: profile } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
       .from("profiles").select("name, email, cpf").eq("user_id", inv.user_id).maybeSingle();
     return { invoice: inv, profile };
   });

@@ -5,6 +5,7 @@ import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRi
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { approveCoachAndConfirmEmail } from "@/lib/admin-users.functions";
+import { listAdminCoaches } from "@/lib/sensitive-fields.functions";
 
 interface TransferRow {
   id: string;
@@ -49,6 +50,7 @@ interface CoachRow {
 
 function AdminCoaches() {
   const approveCoachFn = useServerFn(approveCoachAndConfirmEmail);
+  const listCoachesFn = useServerFn(listAdminCoaches);
   const [coaches, setCoaches] = useState<CoachRow[]>([]);
   const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
   const [search, setSearch] = useState("");
@@ -84,11 +86,13 @@ function AdminCoaches() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("coaches")
-      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,status)")
-      .order("created_at", { ascending: false });
-    setCoaches((data as unknown as CoachRow[]) || []);
+    try {
+      const rows = await listCoachesFn({});
+      setCoaches((rows as unknown as CoachRow[]) || []);
+    } catch (error) {
+      console.error("[admin.coaches] load", error);
+      toast.error("Erro ao carregar coaches");
+    }
     setLoading(false);
   };
 
