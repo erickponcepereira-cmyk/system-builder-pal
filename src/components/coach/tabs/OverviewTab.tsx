@@ -8,6 +8,7 @@ import { getClientCutoffIso } from "@/lib/test-mode";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
 import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { NetworkWhatsappGroups } from "@/components/NetworkWhatsappGroups";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { dedupeCommissions } from "@/lib/financial-dedupe";
 
@@ -120,7 +121,7 @@ export function OverviewTab({
       </div>
       {coachId && <CoachAlertsCard coachId={coachId} onOpenStudents={onOpenStudents} />}
 
-      <div className="mb-4"><WhatsAppGroupCard /></div>
+      <div className="mb-4 space-y-2"><WhatsAppGroupCard /><NetworkWhatsappGroups /></div>
 
 
       {/* Stats */}

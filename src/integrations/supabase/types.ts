@@ -12023,6 +12023,63 @@ export type Database = {
           },
         ]
       }
+      whatsapp_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          invite_url: string | null
+          is_active: boolean
+          name: string
+          owner_coach_id: string | null
+          owner_kind: string
+          owner_partner_id: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_url?: string | null
+          is_active?: boolean
+          name: string
+          owner_coach_id?: string | null
+          owner_kind: string
+          owner_partner_id?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_url?: string | null
+          is_active?: boolean
+          name?: string
+          owner_coach_id?: string | null
+          owner_kind?: string
+          owner_partner_id?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_groups_owner_coach_id_fkey"
+            columns: ["owner_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_groups_owner_partner_id_fkey"
+            columns: ["owner_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       window_method_logs: {
         Row: {
           created_at: string
