@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
+import { CityField, validateCity } from "@/components/auth/CityField";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -45,6 +46,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState<"M" | "F" | "O" | "">("");
   const [instagram, setInstagram] = useState("");
+  const [city, setCity] = useState("");
+  const [uf, setUf] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -117,6 +120,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     }
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
+    const cityError = validateCity(city, uf);
+    if (cityError) return setErr(cityError);
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
     setLoading(true);
@@ -133,6 +138,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           phone,
           gender,
           instagram: instagram.trim() || null,
+          city: city.trim(),
+          state: uf,
           student: {
             coachId: coachIdToUse,
             referredByStudentId: referral?.referredByStudentId || null,
@@ -259,6 +266,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-muted-foreground">Instagram <span className="text-muted-foreground/60 text-xs">(opcional)</span></Label>
               <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@seuusuario" maxLength={100} className="bg-input border-border text-foreground placeholder:text-muted-foreground/60" />
             </div>
+            <CityField city={city} uf={uf} onCity={setCity} onUf={setUf} dark={false} />
             {referral ? (
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Coach indicador</Label>

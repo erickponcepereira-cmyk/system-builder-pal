@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { validateCity } from "@/components/auth/CityField";
 import { TERMS_VERSION } from "@/lib/terms";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -151,6 +152,12 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
   };
 
   const handleSubmit = async () => {
+    // Cidade passa a ser obrigatória: a loja e os gratuitos filtram por local.
+    const cityError = validateCity(city, state);
+    if (cityError) {
+      setFormError(cityError); toast.error(cityError);
+      return;
+    }
     if (!acceptTerms) {
       const m = "Aceite os Termos de Uso para continuar.";
       setFormError(m); toast.error(m);

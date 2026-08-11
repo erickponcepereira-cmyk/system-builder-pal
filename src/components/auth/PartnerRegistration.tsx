@@ -15,6 +15,7 @@ import { ConfirmarConta } from "@/components/auth/ConfirmarConta";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { validateCity } from "@/components/auth/CityField";
 import { TERMS_VERSION } from "@/lib/terms";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
 import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
@@ -143,6 +144,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
+    const cityError = validateCity(city, state);
+    if (cityError) return setErr(cityError);
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
     const isAlreadyPartner = false;

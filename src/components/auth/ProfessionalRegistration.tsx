@@ -12,6 +12,7 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { finalizeRegistrationFn, upgradeExistingToProfessionalFn } from "@/lib/registration.functions";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { CityField, validateCity } from "@/components/auth/CityField";
 import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskCNPJ, maskPhone, generateReferralCode, isValidCPF, isValidCNPJ } from "@/lib/masks";
@@ -44,6 +45,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [phone, setPhone] = useState("");
   const [birthdate, setBirthdate] = useState("");
+  const [city, setCity] = useState("");
+  const [uf, setUf] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [existingMode, setExistingMode] = useState(false); // vinculação a conta existente
@@ -157,6 +160,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   };
 
   const handleSubmit = async () => {
+    const cityError = validateCity(city, uf);
+    if (cityError) return fail(cityError);
     if (!acceptTerms) return fail("Aceite os Termos de Uso para continuar.");
     const isAlreadyPro = false;
     const activationExtras = {};
@@ -243,6 +248,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
         data: {
           userId: user.id, role: "coach",
           name, email, phone, cpf: docType === "cpf" ? doc : null, birthdate,
+          city: city.trim(),
+          state: uf,
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
@@ -404,6 +411,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                       <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
                     </div>
                   </div>
+                  <CityField city={city} uf={uf} onCity={setCity} onUf={setUf} />
                 </>
               )}
 
