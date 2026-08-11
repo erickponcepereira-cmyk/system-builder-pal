@@ -64,6 +64,7 @@ import { Route as AuthenticatedStudentPartnerTrackRouteImport } from './routes/_
 import { Route as AuthenticatedStudentOrdersInProgressRouteImport } from './routes/_authenticated/student.orders-in-progress'
 import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated/student.notifications'
 import { Route as AuthenticatedStudentMedicalRecordRouteImport } from './routes/_authenticated/student.medical-record'
+import { Route as AuthenticatedStudentLojaTesteRouteImport } from './routes/_authenticated/student.loja-teste'
 import { Route as AuthenticatedStudentLibraryRouteImport } from './routes/_authenticated/student.library'
 import { Route as AuthenticatedStudentHealthRouteImport } from './routes/_authenticated/student.health'
 import { Route as AuthenticatedStudentGroupRouteImport } from './routes/_authenticated/student.group'
@@ -81,6 +82,7 @@ import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from '.
 import { Route as AuthenticatedProfessionalHerbalifeBoletosRouteImport } from './routes/_authenticated/professional.herbalife-boletos'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
 import { Route as AuthenticatedPartnerHerbalifeBoletosRouteImport } from './routes/_authenticated/partner.herbalife-boletos'
+import { Route as AuthenticatedCoachLojaTesteRouteImport } from './routes/_authenticated/coach.loja-teste'
 import { Route as AuthenticatedAdminWhatsappRouteImport } from './routes/_authenticated/admin.whatsapp'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
@@ -447,6 +449,12 @@ const AuthenticatedStudentMedicalRecordRoute =
     path: '/medical-record',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedStudentLojaTesteRoute =
+  AuthenticatedStudentLojaTesteRouteImport.update({
+    id: '/loja-teste',
+    path: '/loja-teste',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedStudentLibraryRoute =
   AuthenticatedStudentLibraryRouteImport.update({
     id: '/library',
@@ -548,6 +556,12 @@ const AuthenticatedPartnerHerbalifeBoletosRoute =
     id: '/herbalife-boletos',
     path: '/herbalife-boletos',
     getParentRoute: () => AuthenticatedPartnerRoute,
+  } as any)
+const AuthenticatedCoachLojaTesteRoute =
+  AuthenticatedCoachLojaTesteRouteImport.update({
+    id: '/loja-teste',
+    path: '/loja-teste',
+    getParentRoute: () => AuthenticatedCoachRoute,
   } as any)
 const AuthenticatedAdminWhatsappRoute =
   AuthenticatedAdminWhatsappRouteImport.update({
@@ -1005,7 +1019,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/assinatura': typeof AuthenticatedAssinaturaRoute
-  '/coach': typeof AuthenticatedCoachRoute
+  '/coach': typeof AuthenticatedCoachRouteWithChildren
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
@@ -1077,6 +1091,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1094,6 +1109,7 @@ export interface FileRoutesByFullPath {
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
   '/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
@@ -1151,7 +1167,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
-  '/coach': typeof AuthenticatedCoachRoute
+  '/coach': typeof AuthenticatedCoachRouteWithChildren
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
@@ -1222,6 +1238,7 @@ export interface FileRoutesByTo {
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1239,6 +1256,7 @@ export interface FileRoutesByTo {
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
   '/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
@@ -1299,7 +1317,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
-  '/_authenticated/coach': typeof AuthenticatedCoachRoute
+  '/_authenticated/coach': typeof AuthenticatedCoachRouteWithChildren
   '/_authenticated/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
@@ -1371,6 +1389,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
+  '/_authenticated/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
   '/_authenticated/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/_authenticated/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
@@ -1388,6 +1407,7 @@ export interface FileRoutesById {
   '/_authenticated/student/group': typeof AuthenticatedStudentGroupRoute
   '/_authenticated/student/health': typeof AuthenticatedStudentHealthRoute
   '/_authenticated/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/_authenticated/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/_authenticated/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/_authenticated/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
@@ -1520,6 +1540,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/admin/whatsapp'
+    | '/coach/loja-teste'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/herbalife-boletos'
@@ -1537,6 +1558,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/loja-teste'
     | '/student/medical-record'
     | '/student/notifications'
     | '/student/orders-in-progress'
@@ -1665,6 +1687,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/admin/whatsapp'
+    | '/coach/loja-teste'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/herbalife-boletos'
@@ -1682,6 +1705,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/loja-teste'
     | '/student/medical-record'
     | '/student/notifications'
     | '/student/orders-in-progress'
@@ -1813,6 +1837,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/whatsapp'
+    | '/_authenticated/coach/loja-teste'
     | '/_authenticated/partner/herbalife-boletos'
     | '/_authenticated/partner/orders-in-progress'
     | '/_authenticated/professional/herbalife-boletos'
@@ -1830,6 +1855,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/group'
     | '/_authenticated/student/health'
     | '/_authenticated/student/library'
+    | '/_authenticated/student/loja-teste'
     | '/_authenticated/student/medical-record'
     | '/_authenticated/student/notifications'
     | '/_authenticated/student/orders-in-progress'
@@ -2304,6 +2330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentMedicalRecordRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/student/loja-teste': {
+      id: '/_authenticated/student/loja-teste'
+      path: '/loja-teste'
+      fullPath: '/student/loja-teste'
+      preLoaderRoute: typeof AuthenticatedStudentLojaTesteRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/student/library': {
       id: '/_authenticated/student/library'
       path: '/library'
@@ -2422,6 +2455,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/partner/herbalife-boletos'
       preLoaderRoute: typeof AuthenticatedPartnerHerbalifeBoletosRouteImport
       parentRoute: typeof AuthenticatedPartnerRoute
+    }
+    '/_authenticated/coach/loja-teste': {
+      id: '/_authenticated/coach/loja-teste'
+      path: '/loja-teste'
+      fullPath: '/coach/loja-teste'
+      preLoaderRoute: typeof AuthenticatedCoachLojaTesteRouteImport
+      parentRoute: typeof AuthenticatedCoachRoute
     }
     '/_authenticated/admin/whatsapp': {
       id: '/_authenticated/admin/whatsapp'
@@ -3098,6 +3138,17 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedCoachRouteChildren {
+  AuthenticatedCoachLojaTesteRoute: typeof AuthenticatedCoachLojaTesteRoute
+}
+
+const AuthenticatedCoachRouteChildren: AuthenticatedCoachRouteChildren = {
+  AuthenticatedCoachLojaTesteRoute: AuthenticatedCoachLojaTesteRoute,
+}
+
+const AuthenticatedCoachRouteWithChildren =
+  AuthenticatedCoachRoute._addFileChildren(AuthenticatedCoachRouteChildren)
+
 interface AuthenticatedPartnerRouteChildren {
   AuthenticatedPartnerHerbalifeBoletosRoute: typeof AuthenticatedPartnerHerbalifeBoletosRoute
   AuthenticatedPartnerOrdersInProgressRoute: typeof AuthenticatedPartnerOrdersInProgressRoute
@@ -3174,6 +3225,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentGroupRoute: typeof AuthenticatedStudentGroupRoute
   AuthenticatedStudentHealthRoute: typeof AuthenticatedStudentHealthRoute
   AuthenticatedStudentLibraryRoute: typeof AuthenticatedStudentLibraryRoute
+  AuthenticatedStudentLojaTesteRoute: typeof AuthenticatedStudentLojaTesteRoute
   AuthenticatedStudentMedicalRecordRoute: typeof AuthenticatedStudentMedicalRecordRoute
   AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
   AuthenticatedStudentOrdersInProgressRoute: typeof AuthenticatedStudentOrdersInProgressRoute
@@ -3202,6 +3254,7 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentGroupRoute: AuthenticatedStudentGroupRoute,
   AuthenticatedStudentHealthRoute: AuthenticatedStudentHealthRoute,
   AuthenticatedStudentLibraryRoute: AuthenticatedStudentLibraryRoute,
+  AuthenticatedStudentLojaTesteRoute: AuthenticatedStudentLojaTesteRoute,
   AuthenticatedStudentMedicalRecordRoute:
     AuthenticatedStudentMedicalRecordRoute,
   AuthenticatedStudentNotificationsRoute:
@@ -3228,7 +3281,7 @@ const AuthenticatedStudentRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
-  AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
+  AuthenticatedCoachRoute: typeof AuthenticatedCoachRouteWithChildren
   AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRouteWithChildren
   AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
   AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRouteWithChildren
@@ -3239,7 +3292,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
-  AuthenticatedCoachRoute: AuthenticatedCoachRoute,
+  AuthenticatedCoachRoute: AuthenticatedCoachRouteWithChildren,
   AuthenticatedPartnerRoute: AuthenticatedPartnerRouteWithChildren,
   AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,
   AuthenticatedProfessionalRoute: AuthenticatedProfessionalRouteWithChildren,
