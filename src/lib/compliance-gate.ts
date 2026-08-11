@@ -23,7 +23,7 @@ export type PendingCompliance = {
   profileId: string | null;
   /** Termos cuja versão vigente ainda não foi aceita por esta pessoa. */
   pendingTerms: Exclude<TermType, "desafio">[];
-  /** true quando `profiles.city` está vazia. */
+  /** true quando falta cidade OU estado — a loja por localização precisa dos dois. */
   needsCity: boolean;
   currentCity: string | null;
   currentState: string | null;
@@ -58,7 +58,13 @@ export async function loadPendingCompliance(): Promise<PendingCompliance> {
   result.profileId = profile.id;
   result.currentCity = (profile as { city?: string | null }).city ?? null;
   result.currentState = (profile as { state?: string | null }).state ?? null;
-  result.needsCity = !String(result.currentCity || "").trim();
+  // Exige os dois. Cidade sozinha não resolve: existem dezenas de "Santa Luzia"
+  // e "Bom Jesus" no Brasil, e o cadastro por CEP do coach preenchia a cidade
+  // sem garantir a UF — perfil com cidade e sem estado não serve para filtrar
+  // loja nem gratuitos.
+  const hasCity = !!String(result.currentCity || "").trim();
+  const hasState = String(result.currentState || "").trim().length === 2;
+  result.needsCity = !hasCity || !hasState;
 
   // Papéis ativos — mesma leitura que o RoleSwitcher faz.
   const [{ data: coach }, { data: partner }, { data: student }, { data: membro }] = await Promise.all([

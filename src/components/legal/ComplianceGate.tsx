@@ -103,12 +103,16 @@ export function ComplianceGate() {
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background/95 p-4 backdrop-blur-sm sm:items-center">
       <div className="my-auto w-full max-w-md rounded-2xl border border-border bg-card p-5">
         <h2 className="text-lg font-bold text-foreground">
-          {needsTerms ? "Atualizamos nossos termos" : "Falta a sua cidade"}
+          {needsTerms
+            ? "Atualizamos nossos termos"
+            : pending.currentCity ? "Falta o seu estado" : "Falta a sua cidade"}
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {needsTerms
             ? "Para continuar, revise e aceite a versão atual. Leva um minuto e vale para o seu perfil."
-            : "Precisamos da sua cidade para mostrar a loja e os gratuitos disponíveis perto de você."}
+            : pending.currentCity
+              ? "Confirme seu estado para a gente mostrar a loja e os gratuitos disponíveis perto de você."
+              : "Precisamos da sua cidade para mostrar a loja e os gratuitos disponíveis perto de você."}
         </p>
 
         {needsTerms && (
