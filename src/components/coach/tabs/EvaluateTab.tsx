@@ -54,6 +54,9 @@ export function EvaluateTab() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [challengeBannerOpen, setChallengeBannerOpen] = useState(false);
+  const [challengeSearch, setChallengeSearch] = useState("");
+  const [challengeCoachFilter, setChallengeCoachFilter] = useState("all");
+  const [challengeTypeFilter, setChallengeTypeFilter] = useState<"all" | "initial" | "final">("all");
   // Confirmação irreversível de vinculação
   const [confirmLink, setConfirmLink] = useState<{
     client: FitMindClient;
