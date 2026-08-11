@@ -79,6 +79,33 @@ const productCategory = (type?: string | null) => ({
   physical: "Herbalife", challenge: "Planos 30d",
 }[type || ""] || "Planos 30d");
 
+/**
+ * Em quantos pedidos este carrinho se transforma, e em que ordem.
+ *
+ * Não é escolha de layout: é o que o backend já impõe. Cada RPC de
+ * parceiro/profissional (`create_partner_product_order` e irmãs) cria um
+ * pedido para um produto, porque cada pedido carrega a própria cadeia de
+ * comissão e o próprio repasse. Os itens FitMind, ao contrário, entram todos
+ * num `create_store_order` só.
+ *
+ * O checkout sempre trabalhou assim — ele só nunca disse. Esta função existe
+ * para a tela conseguir dizer, e a ordem espelha exatamente a do checkout:
+ * parceiro/profissional primeiro, um por item, FitMind por último num pedido.
+ */
+type OrderStep = { key: string; label: string; items: CartItem[] };
+
+export function planOrderSteps(cart: CartItem[]): OrderStep[] {
+  const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
+  const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
+  const steps: OrderStep[] = partnerItems.map((item) => ({
+    key: item.id,
+    label: item.tag || item.category || "Parceiro",
+    items: [item],
+  }));
+  if (fitmindItems.length > 0) steps.push({ key: "fitmind", label: "FitMind", items: fitmindItems });
+  return steps;
+}
+
 interface StorePageProps {
   /** Quando true, modo coach: seleciona aluno e cria venda como coach. */
   coachMode?: boolean;
@@ -893,6 +920,43 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
 
   const checkout = coachMode ? checkoutAsCoach : checkoutAsStudent;
 
+  // Quantos pedidos este carrinho gera. Enquanto a cobrança for uma por
+  // pedido, a tela paga um de cada vez — e precisa avisar antes, não depois.
+  const orderSteps = planOrderSteps(cart);
+  const multiOrder = orderSteps.length > 1;
+
+  const orderPlanNotice = multiOrder ? (
+    <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+      <p className="text-[11px] font-bold text-amber-500">
+        Este carrinho vira {orderSteps.length} pedidos
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-amber-500/80">
+        Cada vendedor recebe o pedido dele. Você paga um de cada vez — ao concluir um, o próximo abre em seguida.
+      </p>
+      <ul className="mt-2 space-y-0.5">
+        {orderSteps.map((step, index) => (
+          <li key={step.key} className="text-[10px] text-amber-500/80">
+            {index + 1}. {step.label} · {fmt(step.items.reduce((sum, item) => sum + item.price * item.quantity, 0))}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
+  /** Sobrou item no carrinho depois de pagar: reabre para o próximo pedido. */
+  const closePurchasedModal = () => {
+    setPurchased(null);
+    if (cart.length > 0) setCartOpen(true);
+  };
+
+  const checkoutLabel = checkingOut
+    ? "Processando..."
+    : coachMode && !selectedClient
+      ? "Selecionar Aluno →"
+      : multiOrder
+        ? `Pagar 1 de ${orderSteps.length}`
+        : "Finalizar";
+
 
 
   const tabsBar = (
@@ -1069,6 +1133,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                   ))}
                 </div>
               )}
+              {orderPlanNotice}
               <div className="my-4 grid grid-cols-3 gap-2">
                 {(["pix", "credit_card", "debit_card"] as PaymentMethod[]).map((method) => (
                   <button key={method} onClick={() => setPaymentMethod(method)} className={`rounded-xl px-2 py-2 text-xs font-bold ${paymentMethod === method ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
@@ -1089,7 +1154,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                   disabled={checkingOut || cart.length === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
                 >
-                  <CheckCircle2 className="h-4 w-4" /> {checkingOut ? "Processando..." : (coachMode && !selectedClient ? "Selecionar Aluno →" : "Finalizar")}
+                  <CheckCircle2 className="h-4 w-4" /> {checkoutLabel}
                 </button>
               </div>
             </div>
@@ -1168,7 +1233,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
           </div>
         )}
         {purchased && (
-          <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={() => setPurchased(null)} />
+          <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={closePurchasedModal} />
         )}
       </div>
     );
@@ -1563,6 +1628,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 ))}
               </div>
             )}
+            {orderPlanNotice}
             <div className="my-4 grid grid-cols-3 gap-2">
               {(["pix", "credit_card", "debit_card"] as PaymentMethod[]).map((method) => (
                 <button key={method} onClick={() => setPaymentMethod(method)} className={`rounded-xl px-2 py-2 text-xs font-bold ${paymentMethod === method ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
@@ -1605,7 +1671,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 disabled={checkingOut || cart.length === 0}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
               >
-                <CheckCircle2 className="h-4 w-4" /> {checkingOut ? "Processando..." : (coachMode && !selectedClient ? "Selecionar Aluno →" : "Finalizar")}
+                <CheckCircle2 className="h-4 w-4" /> {checkoutLabel}
               </button>
             </div>
           </div>
@@ -1686,7 +1752,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
         </div>
       )}
       {purchased && (
-        <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={() => setPurchased(null)} />
+        <PurchaseSuccessModal items={purchased.items} buyerName={purchased.buyerName} onClose={closePurchasedModal} />
       )}
     </div>
   );
