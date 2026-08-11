@@ -13,6 +13,9 @@ import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-
 import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
 import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent";
 import { resolverCodigo } from "@/lib/atribuicao";
+import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
+import { CURATION_DOC, TERMS_PDF_URL, TERMS_VERSION } from "@/lib/terms";
+import { UFS } from "@/lib/compliance-gate";
 
 /** Destino guardado antes do login (loja/produto) — consumido uma vez. */
 function goAfterSignup(navigate: ReturnType<typeof useNavigate>) {
@@ -55,6 +58,9 @@ function CompleteSignupPage() {
   const [gender, setGender] = useState<"M" | "F" | "O" | "">("");
   const [birthdate, setBirthdate] = useState("");
   const [coach, setCoach] = useState<CoachOption | null>(null);
+  const [city, setCity] = useState("");
+  const [uf, setUf] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,6 +135,8 @@ function CompleteSignupPage() {
     if (!gender) return setError("Selecione o sexo.");
     if (!birthdate) return setError("Informe a data de nascimento.");
     if (!coach) return setError("Selecione o coach indicador.");
+    if (city.trim().length < 2 || uf.length !== 2) return setError("Informe sua cidade e o estado.");
+    if (!acceptTerms) return setError("Aceite o Termo de Adesão e a Política de Privacidade para continuar.");
 
     setSaving(true);
     try {
@@ -144,6 +152,35 @@ function CompleteSignupPage() {
           partnerId: referral?.partnerId ?? null,
         },
       });
+
+      // Cidade e aceite: o cadastro por Google/Apple não registrava nenhum dos
+      // dois. Vão depois do cadastro porque dependem do perfil já criado.
+      try {
+        const { data: sess } = await supabase.auth.getUser();
+        if (sess.user) {
+          await supabase
+            .from("profiles")
+            .update({ city: city.trim(), state: uf })
+            .eq("user_id", sess.user.id);
+        }
+      } catch (cityErr) {
+        // Não derruba o cadastro: o ComplianceGate cobra a cidade no próximo acesso.
+        console.error("[complete-signup] cidade", cityErr);
+      }
+
+      try {
+        await recordTermsAcceptance({
+          data: {
+            termType: "aluno",
+            termVersion: TERMS_VERSION.aluno,
+            context: { origin: "complete_signup_oauth", curation_doc: CURATION_DOC.url },
+          },
+        });
+      } catch (termsErr) {
+        // Idem: o gate cobra o aceite na entrada seguinte em vez de perder o cadastro.
+        console.error("[complete-signup] aceite", termsErr);
+      }
+
       clearReferralSignup();
       toast.success("Cadastro concluído! Bem-vindo à FitMind Club.");
       if (intendedRole) {
@@ -220,6 +257,26 @@ function CompleteSignupPage() {
               <Input id="birthdate" type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
             </div>
 
+            {/* Cidade: sem ela a loja e os gratuitos por localização não funcionam. */}
+            <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="city">Cidade *</Label>
+                <Input id="city" value={city} autoComplete="address-level2" onChange={(e) => setCity(e.target.value)} placeholder="Sua cidade" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="uf">UF *</Label>
+                <select
+                  id="uf"
+                  value={uf}
+                  onChange={(e) => setUf(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
+                >
+                  <option value="">--</option>
+                  {UFS.map((sigla) => <option key={sigla} value={sigla}>{sigla}</option>)}
+                </select>
+              </div>
+            </div>
+
             {referral?.coachId ? (
               <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-white/80">
                 Você foi indicado(a) por{" "}
@@ -229,6 +286,24 @@ function CompleteSignupPage() {
             ) : (
               <CoachSelector value={coach} onChange={setCoach} />
             )}
+
+            {/* Aceite: o cadastro por Google/Apple entrava sem registrar nada. */}
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                className="mt-1 shrink-0"
+              />
+              <span className="text-[11px] leading-relaxed text-white/70">
+                Li e aceito o{" "}
+                <a href={TERMS_PDF_URL.aluno} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">Termo de Adesão FitMind — Aluno</a>,{" "}
+                os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
+                os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a>,{" "}
+                a <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>{" "}
+                e os <a href={CURATION_DOC.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{CURATION_DOC.title}</a>.
+              </span>
+            </label>
 
             {error && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>

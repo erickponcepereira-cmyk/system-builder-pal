@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SupportCoachFab } from "@/components/support/SupportCoachFab";
 import { PendingCoachGate } from "@/components/student/PendingCoachGate";
+import { ComplianceGate } from "@/components/legal/ComplianceGate";
 
 
 
@@ -37,6 +38,7 @@ export const Route = createFileRoute("/_authenticated")({
   component: () => (
     <>
       <PendingCoachGate />
+      <ComplianceGate />
       <Outlet />
       <SupportCoachFab />
     </>

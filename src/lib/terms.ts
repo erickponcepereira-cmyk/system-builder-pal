@@ -9,13 +9,56 @@ import termoProfissionalAsset from "@/assets/legal/termo-profissional.pdf.asset.
 
 export type TermType = "aluno" | "coach" | "parceiro" | "profissional" | "desafio";
 
+/**
+ * Versão 2.0.0: incorporação dos Termos de Curadoria e Natureza Cristocêntrica.
+ *
+ * Incrementar aqui é o que dispara o re-aceite: o TermsGate compara a versão
+ * vigente com a última aceita por pessoa e bloqueia o app até o aceite novo.
+ * Quem aceitou 1.0.0 precisa aceitar de novo; quem se cadastra a partir de
+ * agora já entra na 2.0.0.
+ *
+ * O termo do desafio não muda — segue em 1.0.0 e tem fluxo próprio.
+ */
 export const TERMS_VERSION: Record<TermType, string> = {
-  aluno: "1.0.0",
-  coach: "1.0.0",
-  parceiro: "1.0.0",
-  profissional: "1.0.0",
+  aluno: "2.0.0",
+  coach: "2.0.0",
+  parceiro: "2.0.0",
+  profissional: "2.0.0",
   desafio: "1.0.0",
 };
+
+/**
+ * Documento institucional referenciado por todos os termos de adesão.
+ * Servido de `public/legal` — não passa pelo pipeline de assets.
+ */
+export const CURATION_DOC = {
+  title: "Termos de Curadoria e Natureza Cristocêntrica",
+  url: "/legal/termos-curadoria-cristocentrica.pdf",
+} as const;
+
+/** Papéis ativos da pessoa, lidos das tabelas de cadastro. */
+export type ActiveRoles = {
+  student: boolean;
+  coach: boolean;
+  professional: boolean;
+  partner: boolean;
+};
+
+/**
+ * Quais termos a pessoa precisa aceitar, de forma cumulativa pelo que tem ativo.
+ *
+ * A regra é do Erick: só aluno aceita aluno; aluno+coach aceita os dois; quem é
+ * profissional aceita aluno, coach e profissional. Parceiro soma o termo de
+ * empresa parceira ao que já tiver.
+ */
+export function requiredTermTypes(roles: ActiveRoles): Exclude<TermType, "desafio">[] {
+  const out: Exclude<TermType, "desafio">[] = [];
+  if (roles.student || roles.coach || roles.professional) out.push("aluno");
+  if (roles.coach || roles.professional) out.push("coach");
+  if (roles.professional) out.push("profissional");
+  if (roles.partner) out.push("parceiro");
+  return out;
+}
 
 export const TERMS_ROUTES: Record<Exclude<TermType, "desafio">, string> = {
   aluno: "/termos-aluno",
