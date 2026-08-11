@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { NetworkWhatsappGroups } from "@/components/NetworkWhatsappGroups";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { getShareOrigin } from "@/lib/auth-redirects";
@@ -214,6 +215,7 @@ function StudentHome() {
 
       {/* Grupo WhatsApp */}
       <WhatsAppGroupCard />
+      <NetworkWhatsappGroups />
 
       {/* Alerta: bioimpedância pendente */}
       {showInitialDeadlineAlert && (

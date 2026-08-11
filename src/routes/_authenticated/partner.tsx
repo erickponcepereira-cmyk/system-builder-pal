@@ -30,6 +30,8 @@ import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
 
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { WhatsappGroupSettings } from "@/components/shared/WhatsappGroupSettings";
+import { MessageCircle } from "lucide-react";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
@@ -57,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
 
 
 interface Partner {
@@ -258,6 +260,7 @@ function PartnerPanel() {
     reports: "reports.ver",
     fitmind_calendar: "agenda.ver",
     collaborators: "members.gerenciar",
+    wa_group: "profile.editar",
     collab: "collab.ver",
     crm: "crm",
   robo: "robo",
@@ -290,6 +293,7 @@ function PartnerPanel() {
     ...(crmQuadroId ? [{ key: "crm" as Tab, label: "CRM", icon: KanbanSquare }] : []),
     { key: "robo" as Tab, label: "Rob\u00f4 WhatsApp", icon: Bot },
     { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
+    { key: "wa_group" as Tab, label: "Meu grupo WhatsApp", icon: MessageCircle },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
 
@@ -436,6 +440,7 @@ function PartnerPanel() {
         {abaAtiva === "crm" && crmQuadroId && <CrmBoard quadroId={crmQuadroId} />}
             {abaAtiva === "robo" && partner?.id && <PartnerRoboPanel partnerId={partner.id} />}
         {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
+        {abaAtiva === "wa_group" && partner && <WhatsappGroupSettings ownerKind="partner" ownerId={partner.id} ownerName={partner.fantasy_name} />}
 
 
       </main>
