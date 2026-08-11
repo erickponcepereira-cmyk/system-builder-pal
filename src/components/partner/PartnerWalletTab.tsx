@@ -50,13 +50,15 @@ type OrderRow = {
   payment_method: string;
   paid_at: string | null;
   created_at: string;
-  student_id: string | null;
-  partner_product_id: string | null;
-  professional_product_id: string | null;
+  student_id?: string | null;
+  partner_product_id?: string | null;
+  professional_product_id?: string | null;
   sale_channel: SaleChannel;
   student_name?: string | null;
+  seller_name?: string | null;
   product_name?: string | null;
   coprod_amount?: number;
+
 };
 
 type WithdrawRow = {
