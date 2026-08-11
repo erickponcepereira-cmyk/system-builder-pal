@@ -252,7 +252,9 @@ export function PartnerWalletTab() {
                   </div>
                   <p className="text-[11px] text-white/60 truncate">
                     Cliente: {o.student_name || "—"}
+                    {o.seller_name ? ` · Vendido por ${o.seller_name}` : ""}
                   </p>
+
                   <p className="text-[11px] text-white/40">
                     {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · <span className={`font-semibold ${st.label}`}>{o.status}</span>
                   </p>
