@@ -37,6 +37,10 @@ export type UnifiedProduct = {
   originalPrice: number | null;
   /** Quem vende: "FitMind", o nome fantasia do parceiro ou o nome do profissional. */
   sellerName: string;
+  /** Coach dono do produto — é o que casa com o coach do aluno e com a rede dele. */
+  sellerCoachId: string | null;
+  /** Cidade do parceiro, para o bloco de proximidade. */
+  sellerCity: string | null;
   sectionId: string | null;
   categoryId: string | null;
   cardDays: number;
@@ -166,7 +170,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .order("sort_order"),
     supabase
       .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partners(fantasy_name)" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partners(fantasy_name,city,upline_coach_id)" as never)
       .eq("status" as never, "approved" as never)
       .eq("kind" as never, "paid" as never)
       .eq("is_active_by_partner" as never, true as never)
@@ -176,7 +180,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .limit(1000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,is_schedulable,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
@@ -212,6 +216,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
+      sellerCoachId: null,
+      sellerCity: null,
       sectionId: null,
       categoryId: null,
       cardDays: num(r.card_access_days),
@@ -234,6 +240,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
+      sellerCoachId: null,
+      sellerCity: null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: num(r.card_access_days),
@@ -256,6 +264,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
+      sellerCoachId: null,
+      sellerCity: null,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -278,6 +288,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
+      sellerCoachId: null,
+      sellerCity: null,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -291,7 +303,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
   for (const r of (partnerRes.data as unknown as Array<Record<string, unknown>>) || []) {
     const price = num(r.price);
     const base = computePartnerProductBenefits(price);
-    const partner = r.partners as { fantasy_name?: string | null } | null;
+    const partner = r.partners as { fantasy_name?: string | null; city?: string | null; upline_coach_id?: string | null } | null;
     push({
       id: `partner_company-${r.id}`,
       sourceId: String(r.id),
@@ -303,6 +315,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price,
       originalPrice: numOrNull(r.original_price),
       sellerName: partner?.fantasy_name || "Parceiro",
+      sellerCoachId: partner?.upline_coach_id ?? null,
+      sellerCity: partner?.city ?? null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,
@@ -328,6 +342,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       price,
       originalPrice: numOrNull(r.original_price),
       sellerName: coach?.profile?.name || "Profissional",
+      sellerCoachId: (r.coach_id as string) || null,
+      sellerCity: null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,

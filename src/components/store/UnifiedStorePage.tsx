@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, IdCard, Loader2, Search, ShoppingBag, Ticket, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertTriangle, IdCard, Loader2, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
   foldText,
@@ -10,6 +10,16 @@ import {
   type UnifiedOrigin,
   type UnifiedProduct,
 } from "@/lib/unified-store";
+import {
+  buildNetwork,
+  buildRecommendations,
+  buildScarcity,
+  EMPTY_CONTEXT,
+  loadStockStatus,
+  loadStoreContext,
+  sortShowcase,
+  type StoreContext,
+} from "@/lib/store-personalization";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -19,15 +29,20 @@ const ORIGIN_LABEL: Record<UnifiedOrigin, string> = {
   professional: "Profissional",
 };
 
+type StockMap = Record<string, { stock: number; remaining: number }>;
+
 /**
  * Vitrine unificada — superfície de teste.
  *
- * Junta os quatro catálogos numa lista só, com busca que atravessa todos eles
- * e a taxonomia virando filtro em vez de pasta. Ainda não compra: o carrinho
- * depende da extração do checkout, que é etapa própria.
+ * A ordem dos blocos é a sequência de conversão, não estética: carteirinha,
+ * escassez e renovação acima; exploração por seção no fim. Cada bloco some
+ * sozinho quando não tem dado — vitrine sem "Perto de você" é melhor que
+ * "Perto de você" vazio.
  */
 export function UnifiedStorePage({ audience = "student" }: { audience?: "student" | "coach" }) {
   const [catalog, setCatalog] = useState<UnifiedCatalog | null>(null);
+  const [ctx, setCtx] = useState<StoreContext>(EMPTY_CONTEXT);
+  const [stock, setStock] = useState<StockMap>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -38,7 +53,20 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     (async () => {
       try {
         const data = await loadUnifiedCatalog();
-        if (active) setCatalog(data);
+        if (!active) return;
+        setCatalog(data);
+
+        const partnerIds = data.products
+          .filter((p) => p.origin === "partner")
+          .map((p) => p.sourceId);
+
+        const [context, stockMap] = await Promise.all([
+          loadStoreContext(data),
+          loadStockStatus(partnerIds),
+        ]);
+        if (!active) return;
+        setCtx(context);
+        setStock(stockMap);
       } catch (error) {
         console.error("[unified-store] carga", error);
       } finally {
@@ -50,35 +78,29 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
 
   const products = catalog?.products ?? [];
 
-  /** Só mostra chip de seção que tem produto — seção vazia é a pasta vazia de novo. */
   const usableSections = useMemo(() => {
     const used = new Set(products.map((p) => p.sectionId).filter(Boolean) as string[]);
     return (catalog?.sections ?? []).filter((s) => used.has(s.id));
   }, [catalog, products]);
 
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      if (sectionId && p.sectionId !== sectionId) return false;
-      return matchesQuery(p, query);
-    });
-  }, [products, query, sectionId]);
+  const filtered = useMemo(
+    () => products.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
+    [products, query, sectionId],
+  );
 
   const searching = foldText(query).length > 0;
+  const browsing = !searching && !sectionId;
 
-  /** Na busca, agrupa por origem para provar que o resultado atravessa as duas lojas. */
+  const scarcity = useMemo(() => buildScarcity(filtered, stock), [filtered, stock]);
+  const recommendations = useMemo(() => buildRecommendations(filtered, ctx), [filtered, ctx]);
+  const network = useMemo(() => buildNetwork(filtered, ctx), [filtered, ctx]);
+  const showcase = useMemo(() => sortShowcase(filtered, ctx, stock), [filtered, ctx, stock]);
+
   const byOrigin = useMemo(() => {
-    const groups: Array<{ origin: UnifiedOrigin; items: UnifiedProduct[] }> = [];
-    (["fitmind", "partner", "professional"] as UnifiedOrigin[]).forEach((origin) => {
-      const items = filtered.filter((p) => p.origin === origin);
-      if (items.length) groups.push({ origin, items });
-    });
-    return groups;
-  }, [filtered]);
-
-  const sellerCount = useMemo(
-    () => groupBySeller(filtered).length,
-    [filtered],
-  );
+    return (["fitmind", "partner", "professional"] as UnifiedOrigin[])
+      .map((origin) => ({ origin, items: showcase.filter((p) => p.origin === origin) }))
+      .filter((group) => group.items.length > 0);
+  }, [showcase]);
 
   if (loading) {
     return (
@@ -118,6 +140,32 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
         </div>
       ) : null}
 
+      {/* 1. Carteirinha — o argumento de compra mais forte, e o número já está no banco. */}
+      {browsing && !ctx.cardActive && ctx.freebiesValue > 0 && (
+        <section className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-primary">{fmt(ctx.freebiesValue)}</span>
+            <span className="text-[11px] leading-tight text-muted-foreground">
+              em {ctx.freebiesCount} gratuitos<br />esperando você
+            </span>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            Sua carteirinha está inativa. Ela ativa na primeira compra e libera o resgate dos
+            gratuitos dos parceiros — cadastrar-se sozinho não basta.
+          </p>
+        </section>
+      )}
+
+      {browsing && ctx.cardActive && ctx.freebiesValue > 0 && (
+        <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+          <p className="text-[11px] leading-relaxed text-emerald-500">
+            <b>Carteirinha ativa</b> até {new Date(ctx.cardValidUntil as string).toLocaleDateString("pt-BR")} ·
+            {" "}{fmt(ctx.freebiesValue)} em gratuitos disponíveis para resgate.
+          </p>
+        </section>
+      )}
+
+      {/* 2. Busca */}
       <div className="flex items-center gap-2 rounded-full bg-card px-4 py-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
@@ -134,6 +182,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
         )}
       </div>
 
+      {/* 3. Taxonomia como filtro, não como pasta */}
       {usableSections.length > 0 && (
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
@@ -175,24 +224,81 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             {filtered.length} {filtered.length === 1 ? "resultado" : "resultados"} em toda a loja.
           </p>
           {byOrigin.map((group) => (
-            <section key={group.origin} className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-sm font-bold text-foreground">{ORIGIN_LABEL[group.origin]}</h2>
-                <span className="text-[10px] text-muted-foreground">{group.items.length}</span>
-              </div>
-              <ProductGrid items={group.items} onOpen={setDetail} />
-            </section>
+            <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
+              <Grid items={group.items} stock={stock} onOpen={setDetail} />
+            </Block>
           ))}
         </>
       ) : (
         <>
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-foreground">Vitrine</h2>
-            <span className="text-[10px] text-muted-foreground">
-              {filtered.length} itens · {sellerCount} vendedores
-            </span>
-          </div>
-          <ProductGrid items={filtered} onOpen={setDetail} />
+          {/* 4. Escassez verdadeira — só produto com vaga contada */}
+          {scarcity.length > 0 && (
+            <Block title="Acaba em breve" hint="vagas reais">
+              <Rail>
+                {scarcity.map(({ product, remaining, stock: total }) => (
+                  <Card
+                    key={product.id}
+                    product={product}
+                    onOpen={setDetail}
+                    variant="rail"
+                    flag={`${remaining} de ${total} vagas`}
+                  />
+                ))}
+              </Rail>
+            </Block>
+          )}
+
+          {/* 5. Recomendação por regra, com o motivo escrito no card */}
+          {recommendations.length > 0 && (
+            <Block title="Para você" hint="por regra, não por palpite">
+              <Rail>
+                {recommendations.map(({ product, reason }) => (
+                  <Card key={product.id} product={product} onOpen={setDetail} reason={reason} variant="rail" />
+                ))}
+              </Rail>
+            </Block>
+          )}
+
+          {/* 6. A rede do aluno */}
+          {network.length > 0 && (
+            <Block title="Da sua rede" hint="seu coach e a rede dele">
+              <Rail>
+                {network.map((product) => (
+                  <Card key={product.id} product={product} onOpen={setDetail} variant="rail" />
+                ))}
+              </Rail>
+            </Block>
+          )}
+
+          {/* 7. Vitrine ordenada por score, empate em ordem alfabética */}
+          <Block title="Vitrine" hint={`${showcase.length} itens`}>
+            <Grid items={showcase} stock={stock} onOpen={setDetail} />
+          </Block>
+
+          {/* 8. A navegação de hoje, preservada para quem já sabe usar */}
+          {browsing && usableSections.length > 0 && (
+            <Block title="Explorar por seção" hint="navegação de hoje">
+              <div className="grid grid-cols-2 gap-3">
+                {usableSections.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSectionId(s.id)}
+                    className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+                  >
+                    {s.imageUrl ? (
+                      <img src={s.imageUrl} alt="" className="h-24 w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="flex h-24 w-full items-center justify-center bg-muted">
+                        <ShoppingBag className="h-6 w-6 text-muted-foreground opacity-50" />
+                      </div>
+                    )}
+                    <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
+                  </button>
+                ))}
+              </div>
+            </Block>
+          )}
         </>
       )}
 
@@ -201,12 +307,37 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   );
 }
 
-function ProductGrid({ items, onOpen }: { items: UnifiedProduct[]; onOpen: (p: UnifiedProduct) => void }) {
+function Block({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-bold text-foreground">{title}</h2>
+        {hint && <span className="shrink-0 text-[10px] text-muted-foreground">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Trilho horizontal: mantém o bloco curto sem esconder o que vem depois. */
+function Rail({ children }: { children: ReactNode }) {
+  return (
+    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {children}
+    </div>
+  );
+}
+
+function Grid({ items, stock, onOpen }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {items.map((item) => (
-        <ProductCard key={item.id} product={item} onOpen={onOpen} />
-      ))}
+      {items.map((item) => {
+        const info = stock[item.sourceId];
+        const flag = info && info.stock > 0 && info.remaining > 0 && info.remaining <= 3
+          ? `${info.remaining} de ${info.stock} vagas`
+          : undefined;
+        return <Card key={item.id} product={item} onOpen={onOpen} flag={flag} />;
+      })}
     </div>
   );
 }
@@ -215,22 +346,42 @@ function ProductGrid({ items, onOpen }: { items: UnifiedProduct[]; onOpen: (p: U
  * Card único para as quatro origens. O selo de vendedor é o que substitui a
  * aba de parceiros: o crédito aparece dentro do fluxo principal.
  *
- * Sem largura fixa e sem breakpoint de viewport — o grid do pai manda. Foi
- * exatamente `xl:grid-cols-5` dentro do shell de 430px que espremia os cards
- * da loja de parceiros em cinco colunas na tela grande.
+ * Sem largura fixa e sem breakpoint de viewport — quem manda é o container.
+ * Foi `xl:grid-cols-5` dentro do shell de 430px que espremia os cards da loja
+ * de parceiros em cinco colunas na tela grande.
  */
-function ProductCard({ product, onOpen }: { product: UnifiedProduct; onOpen: (p: UnifiedProduct) => void }) {
+function Card({
+  product,
+  onOpen,
+  reason,
+  flag,
+  variant = "grid",
+}: {
+  product: UnifiedProduct;
+  onOpen: (p: UnifiedProduct) => void;
+  reason?: string;
+  flag?: string;
+  /** "rail" tem largura própria porque rola na horizontal; "grid" obedece a célula. */
+  variant?: "grid" | "rail";
+}) {
   return (
     <button
       type="button"
       onClick={() => onOpen(product)}
-      className="flex flex-col overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+      className={`flex flex-col overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${
+        variant === "rail" ? "w-[9.25rem] shrink-0" : "w-full"
+      }`}
     >
-      <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-muted">
+      <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted">
         {product.imageUrl ? (
           <img src={product.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           <ShoppingBag className="h-7 w-7 text-muted-foreground opacity-50" />
+        )}
+        {flag && (
+          <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+            <Timer className="h-2.5 w-2.5" />{flag}
+          </span>
         )}
       </div>
 
@@ -266,6 +417,12 @@ function ProductCard({ product, onOpen }: { product: UnifiedProduct; onOpen: (p:
           )}
         </div>
       </div>
+
+      {reason && (
+        <p className="border-t border-border bg-primary/10 px-2.5 py-1.5 text-[9.5px] leading-snug text-primary">
+          {reason}
+        </p>
+      )}
     </button>
   );
 }
@@ -288,6 +445,7 @@ function DetailSheet({ product, onClose }: { product: UnifiedProduct; onClose: (
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {ORIGIN_LABEL[product.origin]} · {product.sellerName}
+              {product.sellerCity ? ` · ${product.sellerCity}` : ""}
             </p>
             <h2 className="text-base font-bold text-foreground">{product.title}</h2>
           </div>
@@ -317,7 +475,7 @@ function DetailSheet({ product, onClose }: { product: UnifiedProduct; onClose: (
 
         <p className="rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
           Vitrine de teste: a compra continua na loja atual. Este ambiente serve para avaliar
-          busca, mistura de catálogos e leitura do card.
+          busca, ordenação, recomendação e leitura do card.
         </p>
       </div>
     </div>
