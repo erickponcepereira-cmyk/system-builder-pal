@@ -55,6 +55,7 @@ export function PartnerReports() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.top_coaches), "Top Coaches");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.coupons_recent), "Cupons");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.freebie_reservations), "Reservas Gratuitas");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.recent_sales), "Vendas Detalhadas");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.recent_visits), "Visitas");
     XLSX.writeFile(wb, `relatorio-parceiro-${from}-a-${to}.xlsx`);
   };
