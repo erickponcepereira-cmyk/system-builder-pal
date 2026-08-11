@@ -13,6 +13,7 @@ import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
 import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal, type WithdrawalRequestKind } from "@/lib/withdrawals.functions";
+import { getMyCoachPayoutInfo } from "@/lib/sensitive-fields.functions";
 
 const MIN_WITHDRAWAL = 50;
 
@@ -53,6 +54,7 @@ export function WalletTab() {
     bank_account_type: string;
   }>({ coachId: null, pix_key: "", pix_key_type: "cpf", bank_name: "", bank_agency: "", bank_account: "", bank_account_type: "corrente" });
   const [loadingBank, setLoadingBank] = useState(true);
+  const fetchPayoutInfo = useServerFn(getMyCoachPayoutInfo);
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -75,20 +77,16 @@ export function WalletTab() {
       if (!userData.user) { setLoadingBank(false); return; }
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
       if (!profile?.id) { setLoadingBank(false); return; }
-      const { data: c } = await supabase
-        .from("coaches")
-        .select("id,pix_key,pix_key_type,bank_name,bank_agency,bank_account,bank_account_type")
-        .eq("profile_id", profile.id)
-        .maybeSingle();
+      const c = await fetchPayoutInfo({}).catch(() => null);
       if (c) {
         setBank({
-          coachId: c.id,
-          pix_key: c.pix_key || "",
-          pix_key_type: c.pix_key_type || "cpf",
-          bank_name: c.bank_name || "",
-          bank_agency: c.bank_agency || "",
-          bank_account: c.bank_account || "",
-          bank_account_type: c.bank_account_type || "corrente",
+          coachId: c.coachId,
+          pix_key: c.pix_key,
+          pix_key_type: c.pix_key_type,
+          bank_name: c.bank_name,
+          bank_agency: c.bank_agency,
+          bank_account: c.bank_account,
+          bank_account_type: c.bank_account_type,
         });
       }
       setLoadingBank(false);
