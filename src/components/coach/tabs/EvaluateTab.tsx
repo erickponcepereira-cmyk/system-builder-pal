@@ -344,41 +344,50 @@ export function EvaluateTab() {
   };
 
   const loadChallengeCandidates = async (coachId: string, master: boolean) => {
-    let q = supabase
-      .from("competition_enrollments" as never)
-      .select(`
-        id, status, coach_id, initial_weight, final_weight,
-        student:student_id ( id, profile:profile_id ( name ) ),
-        competition:competition_id ( month, year ),
-        group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date )
-      `)
-      .not("status" as never, "in" as never, "(weighed_final,cancelled)" as never)
-      .limit(500);
-    if (!master) q = q.eq("coach_id" as never, coachId as never);
-    const { data, error } = await q;
-    if (error) { console.warn("challenge candidates:", error); return; }
+    // Paginação: sem teto prático de inscrições carregadas
+    const PAGE = 1000;
+    const rows: any[] = [];
+    for (let page = 0; page < 20; page++) {
+      let q = supabase
+        .from("competition_enrollments" as never)
+        .select(`
+          id, status, coach_id, initial_weight, final_weight,
+          student:student_id ( id, profile:profile_id ( name ) ),
+          competition:competition_id ( month, year ),
+          group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date )
+        `)
+        .not("status" as never, "in" as never, "(weighed_final,cancelled)" as never)
+        .range(page * PAGE, page * PAGE + PAGE - 1);
+      if (!master) q = q.eq("coach_id" as never, coachId as never);
+      const { data, error } = await q;
+      if (error) { console.warn("challenge candidates:", error); break; }
+      const chunk = (data as any[]) || [];
+      rows.push(...chunk);
+      if (chunk.length < PAGE) break;
+    }
     const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
     const today = new Date(); today.setHours(0,0,0,0);
     const out: ChallengeCandidate[] = [];
-    for (const r of (data as any[]) || []) {
+    for (const r of rows) {
       const g = r.group || {};
       const startD = g.initial_start_date ? new Date(g.initial_start_date + "T00:00:00") : null;
       const finalD = g.final_weigh_in_date ? new Date(g.final_weigh_in_date + "T23:59:59") : null;
-      // Janela: do início da pesagem inicial até 7 dias após pesagem final
-      const grace = finalD ? new Date(finalD.getTime() + 7*86400000) : null;
+      // Turmas ainda não iniciadas não aparecem; prazo vencido apenas sinaliza,
+      // nunca some da lista enquanto a pesagem estiver pendente.
       if (startD && today < startD) continue;
-      if (grace && today > grace) continue;
+      const grace = finalD ? new Date(finalD.getTime() + 7*86400000) : null;
+      const outOfWindow = !!(grace && today > grace);
       const compLabel = `${months[r.competition?.month || 1]}/${r.competition?.year || ""}`;
       const base = {
         enrollmentId: r.id,
-        studentId: r.student?.id,
-        studentName: r.student?.profile?.name || "Aluno",
+        studentId: r.student?.id || "",
+        studentName: r.student?.profile?.name || "Aluno sem cadastro completo",
         compLabel,
         groupNumber: g.group_number || 0,
         coachId: r.coach_id,
         finalWeighInDate: g.final_weigh_in_date || null,
+        outOfWindow,
       };
-      if (!base.studentId) continue;
       // Pesagem inicial pendente
       if (!r.initial_weight) {
         out.push({ ...base, type: "initial" });
@@ -389,9 +398,9 @@ export function EvaluateTab() {
         out.push({ ...base, type: "final" });
       }
     }
-    // Coach names (para master)
-    if (master && out.length) {
-      const ids = Array.from(new Set(out.map(o => o.coachId).filter(id => id && id !== coachId)));
+    // Nome do coach responsável (para agrupar/filtrar)
+    if (out.length) {
+      const ids = Array.from(new Set(out.map(o => o.coachId).filter(Boolean)));
       if (ids.length) {
         const { data: cs } = await supabase
           .from("coaches")
@@ -399,11 +408,12 @@ export function EvaluateTab() {
           .in("id", ids);
         const map = new Map<string,string>();
         ((cs as any[]) || []).forEach(c => map.set(c.id, c.profiles?.name || "Coach"));
-        out.forEach(o => { if (o.coachId !== coachId) o.coachName = map.get(o.coachId); });
+        out.forEach(o => { o.coachName = map.get(o.coachId) || "Sem coach"; });
       }
     }
     setChallengeCandidates(out);
   };
+
 
 
   const loadFullAssessmentsForClient = async (clientId: string): Promise<FitMindAssessment[]> => {
