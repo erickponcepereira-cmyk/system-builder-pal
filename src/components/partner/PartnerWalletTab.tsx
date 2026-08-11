@@ -70,6 +70,8 @@ type WithdrawRow = {
 export function PartnerWalletTab() {
   const sendWithdrawal = useServerFn(requestSellerWithdrawal);
   const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
+  const fetchMySales = useServerFn(listMyPartnerSales);
+
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletRow | null>(null);
