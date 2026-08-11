@@ -97,14 +97,6 @@ export function PartnerWalletTab() {
 
     const cutoff = await getClientCutoffIso();
 
-    let ordersQ = supabase
-      .from("partner_product_orders")
-      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id,sale_channel")
-      .eq("partner_id", partner.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (cutoff) ordersQ = ordersQ.gte("created_at", cutoff);
-
     let withdrawsQ = supabase
       .from("withdrawal_requests")
       .select("id,amount,status,requested_at,paid_at")
@@ -113,26 +105,26 @@ export function PartnerWalletTab() {
       .limit(20);
     if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
 
-    const [walletRes, ordersRes, withdrawsRes] = await Promise.all([
+    const [walletRes, salesRes, withdrawsRes] = await Promise.all([
       supabase
         .from("partner_wallets" as never)
         .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
         .eq("partner_id" as never, partner.id as never)
         .maybeSingle(),
-      ordersQ,
+      fetchMySales({ data: { limit: 100, fromIso: cutoff || null } }).catch(() => ({ sales: [] as any[] })),
       withdrawsQ,
     ]);
 
     let walletRow = ((walletRes.data as unknown as WalletRow | null)) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
     };
-    const baseOrders = (ordersRes.data as OrderRow[]) || [];
+    const baseOrders = ((salesRes as any)?.sales as OrderRow[]) || [];
     const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
 
     if (cutoff) {
       let avail = 0, pending = 0, earned = 0;
       for (const o of baseOrders) {
-        const net = Number(o.partner_net_amount || 0);
+        const net = Number(o.partner_net_amount || 0) - Number(o.coprod_amount || 0);
         if (o.status === "paid") {
           earned += net;
           const paid = o.paid_at ? new Date(o.paid_at).getTime() : 0;
@@ -151,52 +143,11 @@ export function PartnerWalletTab() {
       };
     }
     setWallet(walletRow);
-
-    // Resolve student names + product names
-    const studentIds = Array.from(new Set(baseOrders.map((o) => o.student_id).filter(Boolean))) as string[];
-    const partnerProductIds = Array.from(new Set(baseOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
-    const professionalProductIds = Array.from(new Set(baseOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
-    const [studentsRes, ppRes, profProdRes] = await Promise.all([
-      studentIds.length
-        ? supabase.from("students").select("id, profiles(name)").in("id", studentIds)
-        : Promise.resolve({ data: [] as any[] }),
-      partnerProductIds.length
-        ? supabase.from("partner_products" as never).select("id, name" as never).in("id" as never, partnerProductIds as never)
-        : Promise.resolve({ data: [] as any[] }),
-      professionalProductIds.length
-        ? supabase.from("professional_products" as never).select("id, name" as never).in("id" as never, professionalProductIds as never)
-        : Promise.resolve({ data: [] as any[] }),
-    ]);
-    const sMap = new Map<string, string>();
-    ((studentsRes.data as any[]) || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
-    const pMap = new Map<string, string>();
-    ((ppRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
-    ((profProdRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
-    // Repasses de co-producao das vendas destes produtos (saem do liquido do criador)
-    const coprodMap = new Map<string, number>();
-    if (baseOrders.length) {
-      const { data: credits } = await supabase
-        .from("product_coproduction_credits" as never)
-        .select("order_id, amount_brl" as never)
-        .in("order_id" as never, baseOrders.map((o) => o.id) as never);
-      ((credits as any[]) || []).forEach((c: any) => {
-        coprodMap.set(c.order_id, (coprodMap.get(c.order_id) || 0) + Number(c.amount_brl || 0));
-      });
-    }
-
-    const enriched = baseOrders.map((o) => ({
-      ...o,
-      coprod_amount: coprodMap.get(o.id) || 0,
-      student_name: o.student_id ? sMap.get(o.student_id) || null : null,
-      product_name:
-        (o.partner_product_id ? pMap.get(o.partner_product_id) : null) ||
-        (o.professional_product_id ? pMap.get(o.professional_product_id) : null) ||
-        null,
-    }));
-    setOrders(enriched);
+    setOrders(baseOrders);
     setWithdraws(withdrawsList);
     setLoading(false);
   }
+
 
   useEffect(() => { load(); }, []);
 
