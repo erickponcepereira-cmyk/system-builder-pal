@@ -926,6 +926,37 @@ export function EvaluateTab() {
     }
   };
 
+  const normalizeTxt = (s: string) =>
+    (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+
+  const challengeCoaches = useMemo(() => {
+    const map = new Map<string, string>();
+    challengeCandidates.forEach((c) => map.set(c.coachId || "none", c.coachName || "Sem coach"));
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [challengeCandidates]);
+
+  const filteredChallengeCandidates = useMemo(() => {
+    const term = normalizeTxt(challengeSearch);
+    return challengeCandidates.filter((c) => {
+      if (challengeTypeFilter !== "all" && c.type !== challengeTypeFilter) return false;
+      if (challengeCoachFilter !== "all" && (c.coachId || "none") !== challengeCoachFilter) return false;
+      if (!term) return true;
+      return normalizeTxt(c.studentName).includes(term) || normalizeTxt(c.coachName || "").includes(term);
+    });
+  }, [challengeCandidates, challengeSearch, challengeCoachFilter, challengeTypeFilter]);
+
+  const challengeGroupsByCoach = useMemo(() => {
+    const map = new Map<string, { coachId: string; coachName: string; items: ChallengeCandidate[] }>();
+    for (const c of filteredChallengeCandidates) {
+      const key = c.coachId || "none";
+      if (!map.has(key)) map.set(key, { coachId: key, coachName: c.coachName || "Sem coach", items: [] });
+      map.get(key)!.items.push(c);
+    }
+    const groups = Array.from(map.values());
+    groups.forEach((g) => g.items.sort((a, b) => a.studentName.localeCompare(b.studentName)));
+    return groups.sort((a, b) => a.coachName.localeCompare(b.coachName));
+  }, [filteredChallengeCandidates]);
+
   return (
     <>
       {challengeLink && (
