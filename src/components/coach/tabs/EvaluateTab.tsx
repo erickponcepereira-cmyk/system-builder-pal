@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ type ChallengeCandidate = {
   coachId: string;
   coachName?: string;
   finalWeighInDate?: string | null;
+  outOfWindow?: boolean;
 };
 
 const CLIENT_SUMMARY_CACHE_TTL_MS = 60_000;
@@ -53,6 +54,9 @@ export function EvaluateTab() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [challengeBannerOpen, setChallengeBannerOpen] = useState(false);
+  const [challengeSearch, setChallengeSearch] = useState("");
+  const [challengeCoachFilter, setChallengeCoachFilter] = useState("all");
+  const [challengeTypeFilter, setChallengeTypeFilter] = useState<"all" | "initial" | "final">("all");
   // Confirmação irreversível de vinculação
   const [confirmLink, setConfirmLink] = useState<{
     client: FitMindClient;
@@ -340,41 +344,50 @@ export function EvaluateTab() {
   };
 
   const loadChallengeCandidates = async (coachId: string, master: boolean) => {
-    let q = supabase
-      .from("competition_enrollments" as never)
-      .select(`
-        id, status, coach_id, initial_weight, final_weight,
-        student:student_id ( id, profile:profile_id ( name ) ),
-        competition:competition_id ( month, year ),
-        group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date )
-      `)
-      .not("status" as never, "in" as never, "(weighed_final,cancelled)" as never)
-      .limit(500);
-    if (!master) q = q.eq("coach_id" as never, coachId as never);
-    const { data, error } = await q;
-    if (error) { console.warn("challenge candidates:", error); return; }
+    // Paginação: sem teto prático de inscrições carregadas
+    const PAGE = 1000;
+    const rows: any[] = [];
+    for (let page = 0; page < 20; page++) {
+      let q = supabase
+        .from("competition_enrollments" as never)
+        .select(`
+          id, status, coach_id, initial_weight, final_weight,
+          student:student_id ( id, profile:profile_id ( name ) ),
+          competition:competition_id ( month, year ),
+          group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date )
+        `)
+        .not("status" as never, "in" as never, "(weighed_final,cancelled)" as never)
+        .range(page * PAGE, page * PAGE + PAGE - 1);
+      if (!master) q = q.eq("coach_id" as never, coachId as never);
+      const { data, error } = await q;
+      if (error) { console.warn("challenge candidates:", error); break; }
+      const chunk = (data as any[]) || [];
+      rows.push(...chunk);
+      if (chunk.length < PAGE) break;
+    }
     const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
     const today = new Date(); today.setHours(0,0,0,0);
     const out: ChallengeCandidate[] = [];
-    for (const r of (data as any[]) || []) {
+    for (const r of rows) {
       const g = r.group || {};
       const startD = g.initial_start_date ? new Date(g.initial_start_date + "T00:00:00") : null;
       const finalD = g.final_weigh_in_date ? new Date(g.final_weigh_in_date + "T23:59:59") : null;
-      // Janela: do início da pesagem inicial até 7 dias após pesagem final
-      const grace = finalD ? new Date(finalD.getTime() + 7*86400000) : null;
+      // Turmas ainda não iniciadas não aparecem; prazo vencido apenas sinaliza,
+      // nunca some da lista enquanto a pesagem estiver pendente.
       if (startD && today < startD) continue;
-      if (grace && today > grace) continue;
+      const grace = finalD ? new Date(finalD.getTime() + 7*86400000) : null;
+      const outOfWindow = !!(grace && today > grace);
       const compLabel = `${months[r.competition?.month || 1]}/${r.competition?.year || ""}`;
       const base = {
         enrollmentId: r.id,
-        studentId: r.student?.id,
-        studentName: r.student?.profile?.name || "Aluno",
+        studentId: r.student?.id || "",
+        studentName: r.student?.profile?.name || "Aluno sem cadastro completo",
         compLabel,
         groupNumber: g.group_number || 0,
         coachId: r.coach_id,
         finalWeighInDate: g.final_weigh_in_date || null,
+        outOfWindow,
       };
-      if (!base.studentId) continue;
       // Pesagem inicial pendente
       if (!r.initial_weight) {
         out.push({ ...base, type: "initial" });
@@ -385,9 +398,9 @@ export function EvaluateTab() {
         out.push({ ...base, type: "final" });
       }
     }
-    // Coach names (para master)
-    if (master && out.length) {
-      const ids = Array.from(new Set(out.map(o => o.coachId).filter(id => id && id !== coachId)));
+    // Nome do coach responsável (para agrupar/filtrar)
+    if (out.length) {
+      const ids = Array.from(new Set(out.map(o => o.coachId).filter(Boolean)));
       if (ids.length) {
         const { data: cs } = await supabase
           .from("coaches")
@@ -395,11 +408,12 @@ export function EvaluateTab() {
           .in("id", ids);
         const map = new Map<string,string>();
         ((cs as any[]) || []).forEach(c => map.set(c.id, c.profiles?.name || "Coach"));
-        out.forEach(o => { if (o.coachId !== coachId) o.coachName = map.get(o.coachId); });
+        out.forEach(o => { o.coachName = map.get(o.coachId) || "Sem coach"; });
       }
     }
     setChallengeCandidates(out);
   };
+
 
 
   const loadFullAssessmentsForClient = async (clientId: string): Promise<FitMindAssessment[]> => {
@@ -912,6 +926,37 @@ export function EvaluateTab() {
     }
   };
 
+  const normalizeTxt = (s: string) =>
+    (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+
+  const challengeCoaches = useMemo(() => {
+    const map = new Map<string, string>();
+    challengeCandidates.forEach((c) => map.set(c.coachId || "none", c.coachName || "Sem coach"));
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [challengeCandidates]);
+
+  const filteredChallengeCandidates = useMemo(() => {
+    const term = normalizeTxt(challengeSearch);
+    return challengeCandidates.filter((c) => {
+      if (challengeTypeFilter !== "all" && c.type !== challengeTypeFilter) return false;
+      if (challengeCoachFilter !== "all" && (c.coachId || "none") !== challengeCoachFilter) return false;
+      if (!term) return true;
+      return normalizeTxt(c.studentName).includes(term) || normalizeTxt(c.coachName || "").includes(term);
+    });
+  }, [challengeCandidates, challengeSearch, challengeCoachFilter, challengeTypeFilter]);
+
+  const challengeGroupsByCoach = useMemo(() => {
+    const map = new Map<string, { coachId: string; coachName: string; items: ChallengeCandidate[] }>();
+    for (const c of filteredChallengeCandidates) {
+      const key = c.coachId || "none";
+      if (!map.has(key)) map.set(key, { coachId: key, coachName: c.coachName || "Sem coach", items: [] });
+      map.get(key)!.items.push(c);
+    }
+    const groups = Array.from(map.values());
+    groups.forEach((g) => g.items.sort((a, b) => a.studentName.localeCompare(b.studentName)));
+    return groups.sort((a, b) => a.coachName.localeCompare(b.coachName));
+  }, [filteredChallengeCandidates]);
+
   return (
     <>
       {challengeLink && (
@@ -956,49 +1001,96 @@ export function EvaluateTab() {
           >
             <Trophy className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground flex-1">Alunos com Desafio ativo aguardando avaliação</h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">{challengeCandidates.length}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+              {filteredChallengeCandidates.length === challengeCandidates.length
+                ? challengeCandidates.length
+                : `${filteredChallengeCandidates.length} de ${challengeCandidates.length}`}
+            </span>
             <span className={`text-primary text-xs transition-transform ${challengeBannerOpen ? "rotate-180" : ""}`}>▼</span>
           </button>
           {challengeBannerOpen && (
-            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {challengeCandidates.map((c) => {
-                const isFinal = c.type === "final";
-                const tone = isFinal
-                  ? "bg-yellow-500/10 border-yellow-400/40"
-                  : "bg-red-500/10 border-red-400/40";
-                const btnTone = isFinal
-                  ? "bg-yellow-400 text-black hover:bg-yellow-300"
-                  : "bg-red-500 text-foreground hover:bg-red-400";
-                const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
-                const finalDate = c.finalWeighInDate
-                  ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
-                  : null;
-                return (
-                  <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{c.studentName}</p>
-                      <p className={`text-[11px] truncate ${labelTone}`}>
-                        {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
-                        {isFinal && finalDate ? ` em ${finalDate}` : ""}
-                        {c.coachName ? ` · Coach: ${c.coachName}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => linkChallengeCandidate({
-                        enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
-                        studentName: c.studentName, compLabel: c.compLabel,
-                      })}
-                      className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg ${btnTone}`}
-                    >
-                      Avaliar {isFinal ? "Final" : "Inicial"}
-                    </button>
+            <div className="px-4 pb-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  value={challengeSearch}
+                  onChange={(e) => setChallengeSearch(e.target.value)}
+                  placeholder="Buscar por nome do aluno ou coach..."
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+                <select
+                  value={challengeCoachFilter}
+                  onChange={(e) => setChallengeCoachFilter(e.target.value)}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">Todos os coaches</option>
+                  {challengeCoaches.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={challengeTypeFilter}
+                  onChange={(e) => setChallengeTypeFilter(e.target.value as "all" | "initial" | "final")}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">Inicial e Final</option>
+                  <option value="initial">Só Inicial</option>
+                  <option value="final">Só Final</option>
+                </select>
+              </div>
+
+              {challengeGroupsByCoach.length === 0 ? (
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhum aluno encontrado com esses filtros.</p>
+              ) : challengeGroupsByCoach.map((group) => (
+                <div key={group.coachId} className="rounded-xl border border-border/60 bg-background/40">
+                  <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+                    <span className="text-xs font-bold text-foreground">Coach: {group.coachName}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{group.items.length}</span>
                   </div>
-                );
-              })}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+                    {group.items.map((c) => {
+                      const isFinal = c.type === "final";
+                      const tone = isFinal
+                        ? "bg-yellow-500/10 border-yellow-400/40"
+                        : "bg-red-500/10 border-red-400/40";
+                      const btnTone = isFinal
+                        ? "bg-yellow-400 text-black hover:bg-yellow-300"
+                        : "bg-red-500 text-foreground hover:bg-red-400";
+                      const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
+                      const finalDate = c.finalWeighInDate
+                        ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
+                        : null;
+                      return (
+                        <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{c.studentName}</p>
+                            <p className={`text-[11px] truncate ${labelTone}`}>
+                              {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
+                              {isFinal && finalDate ? ` em ${finalDate}` : ""}
+                            </p>
+                            {c.outOfWindow && finalDate && (
+                              <p className="text-[10px] text-orange-300">Prazo encerrado em {finalDate} — pesagem ainda pendente</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => linkChallengeCandidate({
+                              enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
+                              studentName: c.studentName, compLabel: c.compLabel,
+                            })}
+                            className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg ${btnTone}`}
+                          >
+                            Avaliar {isFinal ? "Final" : "Inicial"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
+
 
 
       <FitMindShape

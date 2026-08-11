@@ -25,6 +25,8 @@ export type PartnerReport = {
   recent_visits: Array<{ id: string; visited_at: string; student_name: string; student_photo: string | null; coach_name: string | null }>;
   coupons_recent: Array<{ id: string; token: string; status: string; created_at: string; redeemed_at: string | null; product_name: string | null; student_name: string }>;
   freebie_reservations: Array<{ id: string; created_at: string; slot_start: string; slot_end: string; used_at: string | null; status: string; product_name: string; student_name: string }>;
+  recent_sales: Array<{ id: string; order_number: string; created_at: string; paid_at: string | null; status: string; product_name: string; student_name: string; seller_name: string | null; payment_method: string | null; gross_amount: number; net_amount: number }>;
+
 };
 
 const Range = z.object({
@@ -69,11 +71,11 @@ export const getPartnerReports = createServerFn({ method: "POST" })
     // Orders (paid)
     const { data: orders } = await supabaseAdmin
       .from("partner_product_orders")
-      .select("id, status, gross_amount, partner_net_amount, partner_product_id, student_id, selling_coach_id, paid_at, created_at")
+      .select("id, order_number, status, gross_amount, partner_net_amount, partner_product_id, student_id, selling_coach_id, payment_method, paid_at, created_at")
       .eq("partner_id", partnerId)
       .gte("created_at", fromTs)
       .lte("created_at", toTs);
-    type OrderRow = { id: string; status: string; gross_amount: number; partner_net_amount: number; partner_product_id: string | null; student_id: string; selling_coach_id: string | null; paid_at: string | null; created_at: string };
+    type OrderRow = { id: string; order_number: string; payment_method: string | null; status: string; gross_amount: number; partner_net_amount: number; partner_product_id: string | null; student_id: string; selling_coach_id: string | null; paid_at: string | null; created_at: string };
     const orderRows = (orders as OrderRow[]) || [];
     const paidOrders = orderRows.filter((o) => o.status === "paid");
 
@@ -106,7 +108,7 @@ export const getPartnerReports = createServerFn({ method: "POST" })
     // Resolve students for names/photos and coach mapping
     const studentIds = Array.from(new Set([
       ...visitRows.map((v) => v.student_id),
-      ...paidOrders.map((o) => o.student_id),
+      ...orderRows.map((o) => o.student_id),
       ...couponRows.map((c) => c.student_id),
       ...reservationRows.map((r) => r.student_id),
     ]));
@@ -136,9 +138,21 @@ export const getPartnerReports = createServerFn({ method: "POST" })
       coachNameMap = Object.fromEntries(((coaches as unknown as C[]) || []).map((c) => [c.id, c.profiles?.name || "Coach"]));
     }
 
+    // Vendedores (coach que realizou a venda) podem nao ser o coach do aluno
+    const sellerIds = Array.from(new Set(orderRows.map((o) => o.selling_coach_id).filter(Boolean))) as string[];
+    const missingSellers = sellerIds.filter((id) => !coachNameMap[id]);
+    if (missingSellers.length) {
+      const { data: sellers } = await supabaseAdmin
+        .from("coaches")
+        .select("id, profiles!coaches_profile_id_fkey(name)")
+        .in("id", missingSellers);
+      type SC = { id: string; profiles: { name: string } | null };
+      for (const s of ((sellers as unknown as SC[]) || [])) coachNameMap[s.id] = s.profiles?.name || "Coach";
+    }
+
     // Products / categories
     const productIds = Array.from(new Set([
-      ...paidOrders.map((o) => o.partner_product_id).filter(Boolean) as string[],
+      ...orderRows.map((o) => o.partner_product_id).filter(Boolean) as string[],
       ...reservationRows.map((r) => r.partner_product_id).filter(Boolean),
     ]));
     let productMap: Record<string, { name: string; kind: "free" | "paid"; category_id: string | null }> = {};
@@ -261,5 +275,22 @@ export const getPartnerReports = createServerFn({ method: "POST" })
         product_name: productMap[r.partner_product_id]?.name || "Produto gratuito",
         student_name: studentMap[r.student_id]?.name || "Aluno",
       })),
+      recent_sales: orderRows
+        .slice()
+        .sort((a, b) => new Date(b.paid_at || b.created_at).getTime() - new Date(a.paid_at || a.created_at).getTime())
+        .slice(0, 100)
+        .map((o) => ({
+          id: o.id,
+          order_number: o.order_number,
+          created_at: o.created_at,
+          paid_at: o.paid_at,
+          status: o.status,
+          product_name: o.partner_product_id ? productMap[o.partner_product_id]?.name || "Produto" : "Produto",
+          student_name: studentMap[o.student_id]?.name || "Cliente",
+          seller_name: o.selling_coach_id ? coachNameMap[o.selling_coach_id] || null : null,
+          payment_method: o.payment_method,
+          gross_amount: Number(o.gross_amount || 0),
+          net_amount: Number(o.partner_net_amount || 0),
+        })),
     };
   });
