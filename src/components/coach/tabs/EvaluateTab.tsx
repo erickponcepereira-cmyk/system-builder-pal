@@ -1001,49 +1001,96 @@ export function EvaluateTab() {
           >
             <Trophy className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground flex-1">Alunos com Desafio ativo aguardando avaliação</h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">{challengeCandidates.length}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+              {filteredChallengeCandidates.length === challengeCandidates.length
+                ? challengeCandidates.length
+                : `${filteredChallengeCandidates.length} de ${challengeCandidates.length}`}
+            </span>
             <span className={`text-primary text-xs transition-transform ${challengeBannerOpen ? "rotate-180" : ""}`}>▼</span>
           </button>
           {challengeBannerOpen && (
-            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {challengeCandidates.map((c) => {
-                const isFinal = c.type === "final";
-                const tone = isFinal
-                  ? "bg-yellow-500/10 border-yellow-400/40"
-                  : "bg-red-500/10 border-red-400/40";
-                const btnTone = isFinal
-                  ? "bg-yellow-400 text-black hover:bg-yellow-300"
-                  : "bg-red-500 text-foreground hover:bg-red-400";
-                const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
-                const finalDate = c.finalWeighInDate
-                  ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
-                  : null;
-                return (
-                  <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{c.studentName}</p>
-                      <p className={`text-[11px] truncate ${labelTone}`}>
-                        {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
-                        {isFinal && finalDate ? ` em ${finalDate}` : ""}
-                        {c.coachName ? ` · Coach: ${c.coachName}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => linkChallengeCandidate({
-                        enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
-                        studentName: c.studentName, compLabel: c.compLabel,
-                      })}
-                      className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg ${btnTone}`}
-                    >
-                      Avaliar {isFinal ? "Final" : "Inicial"}
-                    </button>
+            <div className="px-4 pb-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  value={challengeSearch}
+                  onChange={(e) => setChallengeSearch(e.target.value)}
+                  placeholder="Buscar por nome do aluno ou coach..."
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+                <select
+                  value={challengeCoachFilter}
+                  onChange={(e) => setChallengeCoachFilter(e.target.value)}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">Todos os coaches</option>
+                  {challengeCoaches.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={challengeTypeFilter}
+                  onChange={(e) => setChallengeTypeFilter(e.target.value as "all" | "initial" | "final")}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">Inicial e Final</option>
+                  <option value="initial">Só Inicial</option>
+                  <option value="final">Só Final</option>
+                </select>
+              </div>
+
+              {challengeGroupsByCoach.length === 0 ? (
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhum aluno encontrado com esses filtros.</p>
+              ) : challengeGroupsByCoach.map((group) => (
+                <div key={group.coachId} className="rounded-xl border border-border/60 bg-background/40">
+                  <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+                    <span className="text-xs font-bold text-foreground">Coach: {group.coachName}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{group.items.length}</span>
                   </div>
-                );
-              })}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+                    {group.items.map((c) => {
+                      const isFinal = c.type === "final";
+                      const tone = isFinal
+                        ? "bg-yellow-500/10 border-yellow-400/40"
+                        : "bg-red-500/10 border-red-400/40";
+                      const btnTone = isFinal
+                        ? "bg-yellow-400 text-black hover:bg-yellow-300"
+                        : "bg-red-500 text-foreground hover:bg-red-400";
+                      const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
+                      const finalDate = c.finalWeighInDate
+                        ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
+                        : null;
+                      return (
+                        <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{c.studentName}</p>
+                            <p className={`text-[11px] truncate ${labelTone}`}>
+                              {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
+                              {isFinal && finalDate ? ` em ${finalDate}` : ""}
+                            </p>
+                            {c.outOfWindow && finalDate && (
+                              <p className="text-[10px] text-orange-300">Prazo encerrado em {finalDate} — pesagem ainda pendente</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => linkChallengeCandidate({
+                              enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
+                              studentName: c.studentName, compLabel: c.compLabel,
+                            })}
+                            className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg ${btnTone}`}
+                          >
+                            Avaliar {isFinal ? "Final" : "Inicial"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
+
 
 
       <FitMindShape
