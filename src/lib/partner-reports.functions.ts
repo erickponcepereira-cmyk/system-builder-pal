@@ -25,6 +25,8 @@ export type PartnerReport = {
   recent_visits: Array<{ id: string; visited_at: string; student_name: string; student_photo: string | null; coach_name: string | null }>;
   coupons_recent: Array<{ id: string; token: string; status: string; created_at: string; redeemed_at: string | null; product_name: string | null; student_name: string }>;
   freebie_reservations: Array<{ id: string; created_at: string; slot_start: string; slot_end: string; used_at: string | null; status: string; product_name: string; student_name: string }>;
+  recent_sales: Array<{ id: string; order_number: string; created_at: string; paid_at: string | null; status: string; product_name: string; student_name: string; seller_name: string | null; payment_method: string | null; gross_amount: number; net_amount: number }>;
+
 };
 
 const Range = z.object({
