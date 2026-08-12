@@ -12866,6 +12866,23 @@ export type Database = {
           motivo: string
         }[]
       }
+      acesso_avaliar_academia: {
+        Args: { p_partner_id: string }
+        Returns: {
+          decisao: string
+          dias_restantes: number
+          motivo: string
+          student_id: string
+          valido_ate: string
+        }[]
+      }
+      acesso_classificar: {
+        Args: { p_carencia: number; p_dias: number }
+        Returns: {
+          decisao: string
+          motivo: string
+        }[]
+      }
       admin_advance_commission_release: {
         Args: {
           _admin_user_id: string

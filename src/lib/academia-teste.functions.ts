@@ -129,11 +129,10 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
 
     const { data: cfg } = await admin
       .from("partner_acesso_config")
-      .select("dias_carencia, timezone")
+      .select("dias_carencia")
       .eq("partner_id", data.partnerId)
       .maybeSingle();
     const carencia = Number((cfg as { dias_carencia?: number } | null)?.dias_carencia ?? 3);
-    const tz = (cfg as { timezone?: string } | null)?.timezone ?? "America/Sao_Paulo";
 
     const { data: rows, error } = await admin
       .from("academia_mensalidades")
@@ -167,18 +166,30 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
       }
     }
 
-    const hoje = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
-    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
-    const diff = (ate: string) =>
-      Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${hojeStr}T00:00:00Z`)) / 86400000);
+    // A régua vive só no banco (acesso_classificar). A tela pergunta em vez de
+    // recalcular, senão a listagem e a catraca podem discordar.
+    const { data: avaliacoes, error: erroAval } = await admin.rpc("acesso_avaliar_academia", {
+      p_partner_id: data.partnerId,
+    });
+    if (erroAval) throw new Error(erroAval.message);
+
+    const porStudent = new Map(
+      ((avaliacoes ?? []) as Array<{
+        student_id: string; decisao: string; motivo: string; dias_restantes: number | null;
+      }>).map((a) => [a.student_id, a]),
+    );
 
     return {
       carencia,
       alunos: Array.from(porAluno.values()).map((r) => {
-        const dias = diff(r.valido_ate);
-        const estado =
-          dias >= 4 ? "ativo" : dias >= 0 ? "vence_em_breve" : dias >= -carencia ? "em_carencia" : "bloqueado";
-        return { ...r, nome: nomes.get(r.student_id) ?? "Sem nome", dias_restantes: dias, estado };
+        const aval = porStudent.get(r.student_id);
+        return {
+          ...r,
+          nome: nomes.get(r.student_id) ?? "Sem nome",
+          dias_restantes: aval?.dias_restantes ?? null,
+          decisao: aval?.decisao ?? "negado",
+          motivo: aval?.motivo ?? "sem_mensalidade",
+        };
       }),
     };
   });

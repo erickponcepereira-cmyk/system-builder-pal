@@ -20,11 +20,14 @@ type SubAba = "alunos" | "mensalidade" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+// Chaveado pelos motivos que a função acesso_classificar devolve, para a tela
+// não manter uma segunda versão da régua.
 const ESTADOS: Record<string, { label: string; cls: string }> = {
-  ativo: { label: "Ativo", cls: "bg-green-500/15 text-green-400" },
-  vence_em_breve: { label: "Vence em breve", cls: "bg-amber-500/15 text-amber-400" },
+  contrato_ativo: { label: "Ativo", cls: "bg-green-500/15 text-green-400" },
+  vencimento_proximo: { label: "Vence em breve", cls: "bg-amber-500/15 text-amber-400" },
   em_carencia: { label: "Em carência", cls: "bg-orange-500/15 text-orange-400" },
-  bloqueado: { label: "Bloqueado", cls: "bg-red-500/15 text-red-400" },
+  vencido_bloqueado: { label: "Bloqueado", cls: "bg-red-500/15 text-red-400" },
+  sem_mensalidade: { label: "Sem mensalidade", cls: "bg-white/10 text-white/60" },
 };
 
 export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
@@ -71,7 +74,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
-    id: string; nome: string; plano: string; valido_ate: string; dias_restantes: number; estado: string; valor: number;
+    id: string; nome: string; plano: string; valido_ate: string;
+    dias_restantes: number | null; decisao: string; motivo: string; valor: number;
   }>>([]);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
@@ -118,7 +122,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   }, [partnerId]);
 
   const visiveis = useMemo(() => linhas.filter((l) =>
-    (filtro === "todos" || l.estado === filtro) &&
+    (filtro === "todos" || l.motivo === filtro) &&
     (!busca.trim() || l.nome.toLowerCase().includes(busca.trim().toLowerCase()))
   ), [linhas, filtro, busca]);
 
@@ -142,10 +146,10 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
           className="rounded-xl border border-white/10 bg-white/5 px-2 text-sm text-white"
         >
           <option value="todos">Todos</option>
-          <option value="ativo">Ativos</option>
-          <option value="vence_em_breve">Vence em breve</option>
+          <option value="contrato_ativo">Ativos</option>
+          <option value="vencimento_proximo">Vence em breve</option>
           <option value="em_carencia">Em carência</option>
-          <option value="bloqueado">Bloqueados</option>
+          <option value="vencido_bloqueado">Bloqueados</option>
         </select>
       </div>
 
@@ -154,7 +158,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
       ) : (
         <div className="space-y-2">
           {visiveis.map((l) => {
-            const e = ESTADOS[l.estado] ?? ESTADOS["bloqueado"];
+            const e = ESTADOS[l.motivo] ?? ESTADOS["sem_mensalidade"];
             return (
               <div key={l.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -162,8 +166,12 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     <p className="truncate font-semibold text-white">{l.nome}</p>
                     <p className="text-[11px] text-white/50">{l.plano} · {brl(Number(l.valor) || 0)}</p>
                     <p className="text-[11px] text-white/50">
-                      Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")} ·{" "}
-                      {l.dias_restantes >= 0 ? `${l.dias_restantes} dia(s) restante(s)` : `${Math.abs(l.dias_restantes)} dia(s) vencido(s)`}
+                      Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")}
+                      {l.dias_restantes !== null && (
+                        l.dias_restantes >= 0
+                          ? ` · ${l.dias_restantes} dia(s) restante(s)`
+                          : ` · ${Math.abs(l.dias_restantes)} dia(s) vencido(s)`
+                      )}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -184,7 +192,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                   <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
                     <p className="text-[11px] text-white/60">
                       O lançamento continua no histórico financeiro e deixa de valer para acesso.
-                      {l.dias_restantes >= 0 && " Este aluno perde a liberação imediatamente."}
+                      {l.decisao === "liberado" && " Este aluno perde a liberação imediatamente."}
                     </p>
                     <div className="flex gap-2">
                       <select
