@@ -16,14 +16,18 @@ export type Database = {
     Tables: {
       academia_mensalidades: {
         Row: {
+          cancelado_em: string | null
+          cancelado_por: string | null
           created_at: string
           forma_pagamento: string
           id: string
+          motivo_cancelamento: string | null
           observacao: string | null
           origem: string
           partner_id: string
           plano: string
           registrado_por: string | null
+          status: string
           student_id: string
           taxa_percentual: number
           taxa_valor: number
@@ -33,14 +37,18 @@ export type Database = {
           valor_liquido: number
         }
         Insert: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
           created_at?: string
           forma_pagamento: string
           id?: string
+          motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
           partner_id: string
           plano: string
           registrado_por?: string | null
+          status?: string
           student_id: string
           taxa_percentual?: number
           taxa_valor?: number
@@ -50,14 +58,18 @@ export type Database = {
           valor_liquido?: number
         }
         Update: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
           created_at?: string
           forma_pagamento?: string
           id?: string
+          motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
           partner_id?: string
           plano?: string
           registrado_por?: string | null
+          status?: string
           student_id?: string
           taxa_percentual?: number
           taxa_valor?: number

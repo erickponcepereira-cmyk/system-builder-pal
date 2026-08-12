@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
+  cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   obterConfigAcademia,
   previewTaxaAcademia,
@@ -67,12 +68,44 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
 
 function ListaAlunos({ partnerId }: { partnerId: string }) {
   const listar = useServerFn(listarAlunosAcademia);
+  const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
     id: string; nome: string; plano: string; valido_ate: string; dias_restantes: number; estado: string; valor: number;
   }>>([]);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
+  // id do lançamento com o formulário de cancelamento aberto
+  const [abertoId, setAbertoId] = useState<string | null>(null);
+  const [tipoCancel, setTipoCancel] = useState<"cancelada" | "estornada">("cancelada");
+  const [motivo, setMotivo] = useState("");
+  const [salvandoCancel, setSalvandoCancel] = useState(false);
+
+  const fecharCancelamento = () => {
+    setAbertoId(null);
+    setMotivo("");
+    setTipoCancel("cancelada");
+  };
+
+  const confirmarCancelamento = async (mensalidadeId: string) => {
+    if (motivo.trim().length < 3) {
+      toast.error("Descreva o motivo do cancelamento.");
+      return;
+    }
+    setSalvandoCancel(true);
+    try {
+      await cancelar({ data: { partnerId, mensalidadeId, status: tipoCancel, motivo: motivo.trim() } });
+      // O lançamento sai da lista porque ela mostra apenas os ativos; a linha
+      // continua existindo no banco para o histórico financeiro.
+      setLinhas((atual) => atual.filter((l) => l.id !== mensalidadeId));
+      fecharCancelamento();
+      toast.success(tipoCancel === "estornada" ? "Lançamento estornado." : "Lançamento cancelado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível cancelar.");
+    } finally {
+      setSalvandoCancel(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -133,8 +166,63 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                       {l.dias_restantes >= 0 ? `${l.dias_restantes} dia(s) restante(s)` : `${Math.abs(l.dias_restantes)} dia(s) vencido(s)`}
                     </p>
                   </div>
-                  <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
+                    {abertoId !== l.id && (
+                      <button
+                        type="button"
+                        onClick={() => { setAbertoId(l.id); setMotivo(""); setTipoCancel("cancelada"); }}
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                      >
+                        <Ban className="h-3 w-3" /> Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {abertoId === l.id && (
+                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                    <p className="text-[11px] text-white/60">
+                      O lançamento continua no histórico financeiro e deixa de valer para acesso.
+                      {l.dias_restantes >= 0 && " Este aluno perde a liberação imediatamente."}
+                    </p>
+                    <div className="flex gap-2">
+                      <select
+                        value={tipoCancel}
+                        onChange={(ev) => setTipoCancel(ev.target.value as "cancelada" | "estornada")}
+                        className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                      >
+                        <option value="cancelada">Cancelado</option>
+                        <option value="estornada">Estornado</option>
+                      </select>
+                      <input
+                        value={motivo}
+                        onChange={(ev) => setMotivo(ev.target.value)}
+                        placeholder="Motivo (obrigatório)"
+                        className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={fecharCancelamento}
+                        disabled={salvandoCancel}
+                        className="rounded-xl px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void confirmarCancelamento(l.id)}
+                        disabled={salvandoCancel}
+                        className="flex items-center gap-1.5 rounded-xl bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/25 disabled:opacity-50"
+                      >
+                        {salvandoCancel ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ban className="h-3 w-3" />}
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

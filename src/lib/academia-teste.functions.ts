@@ -139,6 +139,9 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
       .from("academia_mensalidades")
       .select("id, student_id, plano, valor, valido_ate, origem, forma_pagamento, taxa_percentual, taxa_valor, valor_liquido, created_at")
       .eq("partner_id", data.partnerId)
+      // Lançamento cancelado/estornado continua no histórico financeiro, mas não
+      // conta para acesso. Mesmo filtro aplicado em acesso_avaliar.
+      .eq("status", "ativa")
       .order("valido_ate", { ascending: false });
     if (error) throw new Error(error.message);
 
@@ -233,6 +236,55 @@ export const registrarMensalidadeAcademia = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { ok: true, ...taxa };
+  });
+
+/**
+ * Cancela um lançamento sem apagá-lo: a linha permanece para o histórico
+ * financeiro e para a conciliação de taxas, apenas deixa de valer para acesso.
+ */
+export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; mensalidadeId: string;
+    status: "cancelada" | "estornada"; motivo: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const motivo = (data.motivo || "").trim();
+    if (motivo.length < 3) throw new Error("Descreva o motivo do cancelamento.");
+    if (data.status !== "cancelada" && data.status !== "estornada") {
+      throw new Error("Status inválido.");
+    }
+
+    // O partner_id no filtro impede cancelar lançamento de outra academia mesmo
+    // com um id válido em mãos.
+    const { data: alvo, error: erroBusca } = await admin
+      .from("academia_mensalidades")
+      .select("id, status")
+      .eq("id", data.mensalidadeId)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+    if (erroBusca) throw new Error(erroBusca.message);
+    if (!alvo) throw new Error("Lançamento não encontrado nesta academia.");
+    if ((alvo as { status: string }).status !== "ativa") {
+      throw new Error("Este lançamento já não está ativo.");
+    }
+
+    const { error } = await admin
+      .from("academia_mensalidades")
+      .update({
+        status: data.status,
+        cancelado_em: new Date().toISOString(),
+        cancelado_por: profileId,
+        motivo_cancelamento: motivo,
+      })
+      .eq("id", data.mensalidadeId)
+      .eq("partner_id", data.partnerId)
+      .eq("status", "ativa");
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
   });
 
 export const obterConfigAcademia = createServerFn({ method: "POST" })
