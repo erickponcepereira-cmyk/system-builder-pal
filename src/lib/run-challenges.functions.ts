@@ -385,9 +385,12 @@ export type RunChallengeParticipant = {
   entryId: string;
   profileId: string;
   name: string | null;
+  coachName: string | null;
   tierLabel: string;
   targetKm: number;
   km: number;
+  pct: number;
+  remainingKm: number;
   goalReachedAt: string | null;
   logs: Array<{ id: string; run_date: string; distance_km: number; photo_url: string | null; review_status: string }>;
 };
@@ -414,6 +417,29 @@ export const listRunChallengeParticipants = createServerFn({ method: "POST" })
       profile: { name: string | null } | null;
     }> | null) || [];
 
+    // coach responsável de cada participante
+    const profileIds = rows.map((r) => r.profile_id);
+    const coachNameByProfile = new Map<string, string | null>();
+    if (profileIds.length) {
+      const { data: studs } = await supabaseAdmin
+        .from("students").select("profile_id, coach_id").in("profile_id", profileIds);
+      const students = ((studs as Array<{ profile_id: string; coach_id: string | null }> | null) || []);
+      const respIds = Array.from(new Set(students.map((s) => s.coach_id).filter(Boolean))) as string[];
+      const nameByCoach = new Map<string, string | null>();
+      if (respIds.length) {
+        const { data: cs } = await supabaseAdmin
+          .from("coaches").select("id, profile:profile_id(name)").in("id", respIds);
+        for (const cc of (cs as Array<{ id: string; profile: { name: string | null } | null }> | null) || []) {
+          nameByCoach.set(cc.id, cc.profile?.name ?? null);
+        }
+      }
+      for (const s of students) {
+        if (!coachNameByProfile.has(s.profile_id)) {
+          coachNameByProfile.set(s.profile_id, s.coach_id ? nameByCoach.get(s.coach_id) ?? null : null);
+        }
+      }
+    }
+
     const out: RunChallengeParticipant[] = [];
     for (const e of rows) {
       const [{ data: km }, { data: logs }] = await Promise.all([
@@ -424,21 +450,33 @@ export const listRunChallengeParticipants = createServerFn({ method: "POST" })
           .gte("run_date", c.starts_on).lte("run_date", c.ends_on)
           .order("run_date", { ascending: false }),
       ]);
+      const targetKm = Number(e.tier?.target_km ?? 0);
+      const done = Number(km ?? 0);
       out.push({
         entryId: e.id,
         profileId: e.profile_id,
         name: e.profile?.name ?? null,
+        coachName: coachNameByProfile.get(e.profile_id) ?? null,
         tierLabel: e.tier?.label ?? "—",
-        targetKm: Number(e.tier?.target_km ?? 0),
-        km: Number(km ?? 0),
+        targetKm,
+        km: done,
+        pct: targetKm > 0 ? Math.min(100, (done / targetKm) * 100) : 0,
+        remainingKm: Math.max(0, targetKm - done),
         goalReachedAt: e.goal_reached_at,
         logs: ((logs as Array<{ id: string; run_date: string; distance_km: number; photo_url: string | null; review_status: string }> | null) || [])
           .map((l) => ({ ...l, distance_km: Number(l.distance_km) })),
       });
     }
-    out.sort((a, b) => b.km - a.km);
+    out.sort((a, b) => {
+      const ga = a.goalReachedAt ? 1 : 0;
+      const gb = b.goalReachedAt ? 1 : 0;
+      if (ga !== gb) return gb - ga;
+      if (b.pct !== a.pct) return b.pct - a.pct;
+      return b.km - a.km;
+    });
     return out;
   });
+
 
 export const reviewRunLog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -7,7 +7,9 @@ export type ProductBuyerRow = {
   status: string;
   amount: number;
   coachName: string | null;
+  responsibleCoachName: string | null;
 };
+
 
 export type ProductBuyersResult = {
   productName: string;
@@ -105,22 +107,30 @@ export async function fetchProductBuyers(
   if (orders.length === 0) return [];
 
   const studentIds = Array.from(new Set(orders.map((o) => o.student_id).filter(Boolean))) as string[];
-  const coachIds = Array.from(new Set(orders.map((o) => o.selling_coach_id).filter(Boolean))) as string[];
+  const sellingCoachIds = Array.from(new Set(orders.map((o) => o.selling_coach_id).filter(Boolean))) as string[];
 
-  const [studentsRes, coachesRes] = await Promise.all([
+  const [studentsRes, sellingCoachesRes] = await Promise.all([
     studentIds.length
-      ? admin.from("students").select("id,profile_id").in("id", studentIds)
+      ? admin.from("students").select("id,profile_id,coach_id").in("id", studentIds)
       : Promise.resolve({ data: [] }),
-    coachIds.length
-      ? admin.from("coaches").select("id,profile_id").in("id", coachIds)
+    sellingCoachIds.length
+      ? admin.from("coaches").select("id,profile_id").in("id", sellingCoachIds)
       : Promise.resolve({ data: [] }),
   ]);
 
-  const students = ((studentsRes.data as Array<{ id: string; profile_id: string | null }>) || []);
-  const coaches = ((coachesRes.data as Array<{ id: string; profile_id: string | null }>) || []);
+  const students = ((studentsRes.data as Array<{ id: string; profile_id: string | null; coach_id: string | null }>) || []);
+  const sellingCoaches = ((sellingCoachesRes.data as Array<{ id: string; profile_id: string | null }>) || []);
+
+  const responsibleCoachIds = Array.from(
+    new Set(students.map((s) => s.coach_id).filter(Boolean)),
+  ) as string[];
+  const { data: respCoachesData } = responsibleCoachIds.length
+    ? await admin.from("coaches").select("id,profile_id").in("id", responsibleCoachIds)
+    : { data: [] };
+  const respCoaches = ((respCoachesData as Array<{ id: string; profile_id: string | null }>) || []);
 
   const profileIds = Array.from(
-    new Set([...students, ...coaches].map((r) => r.profile_id).filter(Boolean)),
+    new Set([...students, ...sellingCoaches, ...respCoaches].map((r) => r.profile_id).filter(Boolean)),
   ) as string[];
   const { data: profilesData } = profileIds.length
     ? await admin.from("profiles").select("id,name,phone").in("id", profileIds)
@@ -130,13 +140,20 @@ export async function fetchProductBuyers(
   );
 
   const studentProfile = new Map(students.map((s) => [s.id, s.profile_id]));
-  const coachProfile = new Map(coaches.map((c) => [c.id, c.profile_id]));
+  const studentCoach = new Map(students.map((s) => [s.id, s.coach_id]));
+  const coachProfile = new Map(
+    [...sellingCoaches, ...respCoaches].map((c) => [c.id, c.profile_id]),
+  );
+
+  const coachNameById = (coachId: string | null | undefined) => {
+    if (!coachId) return null;
+    const pid = coachProfile.get(coachId);
+    return (pid ? profiles.get(pid)?.name : null) || null;
+  };
 
   return orders.map((o) => {
     const sp = o.student_id ? studentProfile.get(o.student_id) : null;
     const buyer = sp ? profiles.get(sp) : null;
-    const cp = o.selling_coach_id ? coachProfile.get(o.selling_coach_id) : null;
-    const coach = cp ? profiles.get(cp) : null;
     return {
       orderId: o.id,
       orderNumber: o.order_number,
@@ -145,7 +162,9 @@ export async function fetchProductBuyers(
       purchasedAt: o.paid_at || o.created_at,
       status: o.status,
       amount: Number(o.gross_amount) || 0,
-      coachName: coach?.name || null,
+      coachName: coachNameById(o.selling_coach_id),
+      responsibleCoachName: coachNameById(o.student_id ? studentCoach.get(o.student_id) : null),
     };
   });
 }
+
