@@ -7,7 +7,9 @@ export type ProductBuyerRow = {
   status: string;
   amount: number;
   coachName: string | null;
+  responsibleCoachName: string | null;
 };
+
 
 export type ProductBuyersResult = {
   productName: string;
