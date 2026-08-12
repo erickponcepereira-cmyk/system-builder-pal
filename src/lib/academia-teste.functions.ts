@@ -157,8 +157,8 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
     if (studentIds.length > 0) {
       const { data: studs } = await admin.from("students").select("id, profile_id").in("id", studentIds);
       const profIds = ((studs ?? []) as Array<{ id: string; profile_id: string }>).map((s) => s.profile_id);
-      const { data: profs } = await admin.from("profiles").select("id, full_name").in("id", profIds);
-      const mapProf = new Map(((profs ?? []) as Array<{ id: string; full_name: string | null }>).map((p) => [p.id, p.full_name ?? "Sem nome"]));
+      const { data: profs } = await admin.from("profiles").select("id, name").in("id", profIds);
+      const mapProf = new Map(((profs ?? []) as Array<{ id: string; name: string | null }>).map((p) => [p.id, p.name ?? "Sem nome"]));
       for (const s of (studs ?? []) as Array<{ id: string; profile_id: string }>) {
         nomes.set(s.id, mapProf.get(s.profile_id) ?? "Sem nome");
       }
@@ -190,14 +190,14 @@ export const buscarAlunosParaMensalidade = createServerFn({ method: "POST" })
 
     const { data: profs } = await admin
       .from("profiles")
-      .select("id, full_name")
-      .ilike("full_name", `%${termo}%`)
+      .select("id, name")
+      .ilike("name", `%${termo}%`)
       .limit(20);
     const ids = ((profs ?? []) as Array<{ id: string }>).map((p) => p.id);
     if (ids.length === 0) return { alunos: [] };
 
     const { data: studs } = await admin.from("students").select("id, profile_id").in("profile_id", ids);
-    const mapProf = new Map(((profs ?? []) as Array<{ id: string; full_name: string | null }>).map((p) => [p.id, p.full_name ?? "Sem nome"]));
+    const mapProf = new Map(((profs ?? []) as Array<{ id: string; name: string | null }>).map((p) => [p.id, p.name ?? "Sem nome"]));
     return {
       alunos: ((studs ?? []) as Array<{ id: string; profile_id: string }>).map((s) => ({
         studentId: s.id,
