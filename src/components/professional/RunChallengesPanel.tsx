@@ -311,20 +311,67 @@ export function RunChallengesPanel() {
               <p className="text-xs text-muted-foreground">Ninguém inscrito ainda.</p>
             ) : (
               <div className="space-y-3">
-                {participants.map((p) => (
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-muted/40 p-2">
+                    <p className="text-base font-bold text-foreground">{participants.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Inscritos</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-2">
+                    <p className="text-base font-bold text-green-500">
+                      {participants.filter((p) => p.goalReachedAt).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Bateram a meta</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-2">
+                    <p className="text-base font-bold text-primary">
+                      {Math.round(participants.reduce((t, p) => t + p.pct, 0) / participants.length)}%
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Média da meta</p>
+                  </div>
+                </div>
+
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por nome ou coach..."
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                />
+
+                {participants
+                  .filter((p) => {
+                    const t = search.trim().toLowerCase();
+                    if (!t) return true;
+                    return (p.name || "").toLowerCase().includes(t) || (p.coachName || "").toLowerCase().includes(t);
+                  })
+                  .map((p, idx) => (
                   <div key={p.entryId} className="rounded-xl border border-border p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-foreground">{p.name || "Participante"}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                          {idx + 1}
+                        </span>
+                        {p.name || "Participante"}
+                      </p>
                       <p className="text-xs text-muted-foreground">{p.km.toFixed(1)} / {p.targetKm} km</p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Faixa {p.tierLabel}
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full ${p.goalReachedAt ? "bg-green-500" : "bg-primary"}`}
+                        style={{ width: `${Math.max(2, p.pct)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Faixa {p.tierLabel} • {p.pct.toFixed(0)}%
+                      {p.goalReachedAt ? "" : ` • faltam ${p.remainingKm.toFixed(1)} km`}
                       {p.goalReachedAt && (
                         <span className="ml-1 font-semibold text-green-500">
                           <Trophy className="mr-1 inline h-3 w-3" />
                           meta batida em {new Date(p.goalReachedAt).toLocaleDateString("pt-BR")}
                         </span>
                       )}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Coach responsável: <span className="font-medium text-foreground">{p.coachName || "—"}</span>
                     </p>
                     <div className="mt-2 space-y-1">
                       {p.logs.map((l) => (
@@ -355,6 +402,7 @@ export function RunChallengesPanel() {
               </div>
             )
           )}
+
         </div>
       ))}
     </div>
