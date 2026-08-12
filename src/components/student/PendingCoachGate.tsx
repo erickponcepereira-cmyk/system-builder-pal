@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ModalShell } from "@/components/ui/ModalShell";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
@@ -15,8 +15,9 @@ import { enriquecerAtribuicao, lerAtribuicao } from "@/lib/atribuicao";
  * precisam informar quem foi o coach que os trouxe e completar os dados
  * que ficaram faltando. Bloqueia o app até responder.
  */
-export function PendingCoachGate() {
+export function PendingCoachGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<PendingCoachStatus | null>(null);
+  const [checking, setChecking] = useState(true);
   const [coach, setCoach] = useState<CoachOption | null>(null);
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("");
@@ -28,7 +29,11 @@ export function PendingCoachGate() {
     (async () => {
       try {
         const res = await getMyPendingCoachStatus();
-        if (!active || !res.pending) return;
+        if (!active) return;
+        if (!res.pending) {
+          setChecking(false);
+          return;
+        }
 
         // Recuperação automática: se a indicação do link ainda está guardada
         // no aparelho, o coach volta sozinho — sem depender da pessoa lembrar.
@@ -43,6 +48,10 @@ export function PendingCoachGate() {
           if (!faltaAlgo) {
             try {
               await submitMyPendingCoach({ data: { coachId: coachIdSalvo } });
+              if (active) {
+                setStatus(null);
+                setChecking(false);
+              }
               return; // coach restaurado, nada a perguntar
             } catch {
               /* cai no formulário abaixo */
@@ -55,9 +64,22 @@ export function PendingCoachGate() {
           });
         }
 
-        if (active) setStatus(res);
+        if (active) {
+          setStatus(res);
+          setChecking(false);
+        }
       } catch {
-        /* silencioso */
+        if (active) {
+          // Falha fechada: nunca libera o app sem conseguir comprovar o vínculo.
+          setStatus({
+            pending: true,
+            studentId: null,
+            profileId: null,
+            name: null,
+            missing: { phone: false, gender: false, birthdate: false },
+          });
+          setChecking(false);
+        }
       }
     })();
     return () => {
@@ -65,7 +87,15 @@ export function PendingCoachGate() {
     };
   }, []);
 
-  if (!status?.pending) return null;
+  if (checking) {
+    return (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-background text-sm text-muted-foreground">
+        Verificando cadastro...
+      </div>
+    );
+  }
+
+  if (!status?.pending) return <>{children}</>;
 
   const handleSave = async () => {
     if (!coach?.id) return toast.error("Selecione o coach que te trouxe para o FitMind.");

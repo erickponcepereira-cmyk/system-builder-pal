@@ -3,12 +3,6 @@ import { z } from "zod";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/**
- * Coach usado no vínculo automático quando o cadastro nasce sem indicação.
- * Só quem continua nele é realmente "sem coach confirmado".
- */
-const DEFAULT_AUTO_COACH_ID = "f9a44c8a-31ea-4ca1-8cef-b9049733c5e1";
-
 export type PendingCoachStatus = {
   pending: boolean;
   studentId: string | null;
@@ -25,12 +19,15 @@ export const getMyPendingCoachStatus = createServerFn({ method: "POST" })
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("id, name, phone, gender, birthdate")
+      .select("id, role, name, phone, gender, birthdate")
       .eq("user_id", context.userId)
       .maybeSingle();
 
     if (!profile?.id) {
       return { pending: false, studentId: null, profileId: null, name: null, missing: { phone: false, gender: false, birthdate: false } };
+    }
+    if (profile.role === "admin") {
+      return { pending: false, studentId: null, profileId: profile.id, name: profile.name, missing: { phone: false, gender: false, birthdate: false } };
     }
 
     const { data: student } = await supabaseAdmin
@@ -40,8 +37,8 @@ export const getMyPendingCoachStatus = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const row = student as { coach_id?: string | null; coach_assignment_pending?: boolean } | null;
-    // Quem já foi vinculado a um coach real (fora o automático) não é pendente.
-    const pending = !!row?.coach_assignment_pending && row?.coach_id === DEFAULT_AUTO_COACH_ID;
+    // Sem linha de aluno ou com vínculo antigo pendente: bloqueia até confirmar.
+    const pending = !student?.id || !row?.coach_id || row.coach_assignment_pending === true;
 
     return {
       pending,
@@ -81,19 +78,43 @@ export const submitMyPendingCoach = createServerFn({ method: "POST" })
 
     const { data: coach } = await supabaseAdmin
       .from("coaches")
-      .select("id")
+      .select("id, profile_id, approved_at, blocked_at")
       .eq("id", data.coachId)
       .maybeSingle();
-    if (!coach?.id) throw new Error("Coach inválido. Selecione um coach da lista.");
+    if (!coach?.id || !coach.approved_at || coach.blocked_at) {
+      throw new Error("Coach inválido ou inativo. Selecione um coach da lista.");
+    }
+    if (coach.profile_id === profile.id) {
+      throw new Error("Você não pode selecionar a si próprio como coach responsável.");
+    }
 
     // Grava o coach ANTES do patch de perfil: a ficha de avaliação é criada por
     // trigger a partir do aluno, e precisa nascer já com o coach correto.
-    const { data: studentRow, error } = await supabaseAdmin
+    const { data: currentStudent } = await supabaseAdmin
       .from("students")
-      .update({ coach_id: data.coachId, coach_assignment_pending: false } as never)
+      .select("id, coach_id, coach_assignment_pending")
       .eq("profile_id", profile.id)
-      .select("id")
       .maybeSingle();
+
+    if (currentStudent?.id && currentStudent.coach_assignment_pending === false) {
+      if (currentStudent.coach_id !== data.coachId) {
+        throw new Error("O coach responsável desta conta já foi confirmado e não pode ser alterado.");
+      }
+    }
+
+    const studentWrite = currentStudent?.id
+      ? supabaseAdmin
+          .from("students")
+          .update({ coach_id: data.coachId, coach_assignment_pending: false } as never)
+          .eq("id", currentStudent.id)
+          .select("id")
+          .single()
+      : supabaseAdmin
+          .from("students")
+          .insert({ profile_id: profile.id, coach_id: data.coachId, coach_assignment_pending: false } as never)
+          .select("id")
+          .single();
+    const { data: studentRow, error } = await studentWrite;
     if (error) throw new Error(error.message);
 
     const patch: { phone?: string; gender?: string; birthdate?: string } = {};
@@ -140,7 +161,6 @@ export const adminListPendingCoachStudents = createServerFn({ method: "POST" })
       .from("students")
       .select("id, created_at, profile_id, profiles!students_profile_id_fkey(name, email, phone)")
       .eq("coach_assignment_pending" as never, true as never)
-      .eq("coach_id" as never, DEFAULT_AUTO_COACH_ID as never)
       .order("created_at", { ascending: false });
 
 
