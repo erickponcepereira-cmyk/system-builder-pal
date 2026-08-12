@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Download, Smartphone, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
