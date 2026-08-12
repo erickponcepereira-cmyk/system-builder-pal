@@ -63,6 +63,8 @@ export function RunChallengesPanel() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<RunChallengeParticipant[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [search, setSearch] = useState("");
+
 
   const load = useCallback(async () => {
     setLoading(true);
