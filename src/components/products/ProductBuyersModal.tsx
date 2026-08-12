@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Users, X, MessageCircle } from "lucide-react";
+import { Loader2, Users, X, MessageCircle, Download } from "lucide-react";
 import { ModalShell } from "@/components/ui/ModalShell";
-import { listProductBuyers, type ProductBuyersResult } from "@/lib/product-buyers.functions";
+import { listProductBuyers, type ProductBuyersResult, type ProductBuyerRow } from "@/lib/product-buyers.functions";
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
 
 type Props = {
@@ -19,6 +19,21 @@ function fmtDate(iso: string | null) {
   } catch {
     return "—";
   }
+}
+
+function monthKey(iso: string | null) {
+  if (!iso) return "0000-00";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "0000-00";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key: string) {
+  if (key === "0000-00") return "Sem data";
+  const [y, m] = key.split("-");
+  const d = new Date(Number(y), Number(m) - 1, 1);
+  const s = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 const CANCELLED = ["cancelled", "refunded", "failed", "rejected"];
@@ -54,6 +69,62 @@ export function ProductBuyersModal({ productType, productId, productName, onClos
             : b.status !== "paid" && !isCancelled(b.status),
     )
     .filter((b) => (q.trim() ? b.name.toLowerCase().includes(q.trim().toLowerCase()) : true));
+
+  const months = useMemo(() => {
+    const map = new Map<string, ProductBuyerRow[]>();
+    for (const b of buyers) {
+      const k = monthKey(b.purchasedAt);
+      const arr = map.get(k) || [];
+      arr.push(b);
+      map.set(k, arr);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, rows]) => {
+        const sorted = [...rows].sort((x, y) =>
+          new Date(y.purchasedAt || 0).getTime() - new Date(x.purchasedAt || 0).getTime());
+        const paid = sorted.filter((r) => r.status === "paid");
+        const cancelled = sorted.filter((r) => isCancelled(r.status));
+        const pending = sorted.filter((r) => r.status !== "paid" && !isCancelled(r.status));
+        const sum = (rs: ProductBuyerRow[]) => rs.reduce((t, r) => t + r.amount, 0);
+        return {
+          key,
+          label: monthLabel(key),
+          rows: sorted,
+          paidCount: paid.length,
+          paidTotal: sum(paid),
+          pendingCount: pending.length,
+          pendingTotal: sum(pending),
+          cancelledCount: cancelled.length,
+        };
+      });
+  }, [buyers]);
+
+  const exportCsv = () => {
+    const head = ["Mes", "Nome", "Telefone", "Data", "Valor", "Status", "Coach vendedor", "Coach responsavel"];
+    const lines = months.flatMap((m) =>
+      m.rows.map((b) => [
+        m.label,
+        b.name,
+        b.phone || "",
+        fmtDate(b.purchasedAt),
+        b.amount.toFixed(2).replace(".", ","),
+        b.status === "paid" ? "pago" : isCancelled(b.status) ? "cancelado" : b.status,
+        b.coachName || "",
+        b.responsibleCoachName || "",
+      ]),
+    );
+    const csv = [head, ...lines]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `compradores-${(data?.productName || "produto").replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
 
   return (
     <ModalShell
