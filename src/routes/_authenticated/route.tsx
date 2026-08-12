@@ -36,12 +36,11 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.session.user };
   },
   component: () => (
-    <>
-      <PendingCoachGate />
+    <PendingCoachGate>
       <ComplianceGate />
       <Outlet />
       <SupportCoachFab />
-    </>
+    </PendingCoachGate>
   ),
 });
 

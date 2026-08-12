@@ -54,38 +54,6 @@ const digits = (value?: string | null) => clean(value)?.replace(/\D/g, "") || nu
 const makeReferralCode = () =>
   `FC${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
-const SYSTEM_FALLBACK_COACH_ID = "f9a44c8a-31ea-4ca1-8cef-b9049733c5e1";
-
-async function getFallbackCoachId() {
-  const { data: configured } = await supabaseAdmin
-    .from("coaches")
-    .select("id")
-    .eq("id", SYSTEM_FALLBACK_COACH_ID)
-    .maybeSingle();
-  if (configured?.id) return configured.id;
-
-  const { data: adminCoach } = await supabaseAdmin
-    .from("coaches")
-    .select("id, profiles!coaches_profile_id_fkey(role)")
-    .not("approved_at", "is", null)
-    .is("blocked_at", null)
-    .eq("profiles.role", "admin")
-    .limit(1)
-    .maybeSingle();
-  if ((adminCoach as any)?.id) return (adminCoach as any).id as string;
-
-  const { data: anyCoach } = await supabaseAdmin
-    .from("coaches")
-    .select("id")
-    .not("approved_at", "is", null)
-    .is("blocked_at", null)
-    .limit(1)
-    .maybeSingle();
-  if (anyCoach?.id) return anyCoach.id;
-
-  throw new Error("Não há coach ativo para vincular o perfil de aluno automaticamente.");
-}
-
 /**
  * Coach responsável definitivo da conta. Uma vez vinculado (como aluno,
  * coach/profissional ou parceiro), o vínculo não muda em novos perfis.
@@ -149,18 +117,19 @@ export async function ensureStudentForProfile(
   referredByStudentId?: string | null,
 ) {
   const coachId = clean(preferredCoachId);
-  if (coachId) {
-    const { data: selectedCoach } = await supabaseAdmin
-      .from("coaches")
-      .select("id, profile_id")
-      .eq("id", coachId)
-      .maybeSingle();
-    if (!selectedCoach?.id) {
-      throw new Error("O coach indicador selecionado não foi encontrado.");
-    }
-    if (selectedCoach.profile_id === profileId) {
-      throw new Error("Você não pode selecionar a si próprio como coach indicador.");
-    }
+  if (!coachId) {
+    throw new Error("Selecione um coach responsável para concluir o cadastro.");
+  }
+  const { data: selectedCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id, profile_id, approved_at, blocked_at")
+    .eq("id", coachId)
+    .maybeSingle();
+  if (!selectedCoach?.id || !selectedCoach.approved_at || selectedCoach.blocked_at) {
+    throw new Error("O coach selecionado não está ativo.");
+  }
+  if (selectedCoach.profile_id === profileId) {
+    throw new Error("Você não pode selecionar a si próprio como coach responsável.");
   }
 
   const { data: existing } = await supabaseAdmin
@@ -169,7 +138,7 @@ export async function ensureStudentForProfile(
     .eq("profile_id", profileId)
     .maybeSingle();
   if (existing?.id) {
-    if (coachId && existing.coach_assignment_pending !== false) {
+    if (existing.coach_assignment_pending !== false) {
       const { error } = await supabaseAdmin
         .from("students")
         .update({
@@ -184,7 +153,6 @@ export async function ensureStudentForProfile(
     return existing.id;
   }
 
-  const confirmedCoachId = coachId || await getFallbackCoachId();
   let referralCode = makeReferralCode();
   let lastError: { code?: string; message: string } | null = null;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -192,12 +160,12 @@ export async function ensureStudentForProfile(
       .from("students")
       .insert({
         profile_id: profileId,
-        coach_id: confirmedCoachId,
+        coach_id: coachId,
         referral_code: referralCode,
         referral_link: `/i/${referralCode}`,
         partner_id: clean(partnerId),
         referred_by_student_id: clean(referredByStudentId),
-        coach_assignment_pending: !coachId,
+        coach_assignment_pending: false,
       })
       .select("id")
       .single();
