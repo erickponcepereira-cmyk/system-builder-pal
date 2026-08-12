@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_mensalidades: {
+        Row: {
+          created_at: string
+          forma_pagamento: string
+          id: string
+          observacao: string | null
+          origem: string
+          partner_id: string
+          plano: string
+          registrado_por: string | null
+          student_id: string
+          taxa_percentual: number
+          taxa_valor: number
+          updated_at: string
+          valido_ate: string
+          valor: number
+          valor_liquido: number
+        }
+        Insert: {
+          created_at?: string
+          forma_pagamento: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          partner_id: string
+          plano: string
+          registrado_por?: string | null
+          student_id: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          updated_at?: string
+          valido_ate: string
+          valor?: number
+          valor_liquido?: number
+        }
+        Update: {
+          created_at?: string
+          forma_pagamento?: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          partner_id?: string
+          plano?: string
+          registrado_por?: string | null
+          student_id?: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          updated_at?: string
+          valido_ate?: string
+          valor?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_mensalidades_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_mensalidades_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_mensalidades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       achievement_catalog: {
         Row: {
           active: boolean
@@ -6291,6 +6367,50 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_acesso_config: {
+        Row: {
+          created_at: string
+          dias_carencia: number
+          exige_senha_liberacao: boolean
+          id: string
+          modelo_catraca: string | null
+          partner_id: string
+          regra_dayuse: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dias_carencia?: number
+          exige_senha_liberacao?: boolean
+          id?: string
+          modelo_catraca?: string | null
+          partner_id: string
+          regra_dayuse?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dias_carencia?: number
+          exige_senha_liberacao?: boolean
+          id?: string
+          modelo_catraca?: string | null
+          partner_id?: string
+          regra_dayuse?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_acesso_config_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_benefits: {
         Row: {
           category: string | null
@@ -7147,6 +7267,44 @@ export type Database = {
             columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "store_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_taxas_externas: {
+        Row: {
+          created_at: string
+          forma_pagamento: string
+          id: string
+          partner_id: string
+          taxa_fixa: number
+          taxa_percentual: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          forma_pagamento: string
+          id?: string
+          partner_id: string
+          taxa_fixa?: number
+          taxa_percentual?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          forma_pagamento?: string
+          id?: string
+          partner_id?: string
+          taxa_fixa?: number
+          taxa_percentual?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_taxas_externas_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -12688,6 +12846,14 @@ export type Database = {
       }
     }
     Functions: {
+      acesso_avaliar: {
+        Args: { p_partner_id: string; p_student_id: string }
+        Returns: {
+          decisao: string
+          dias_restantes: number
+          motivo: string
+        }[]
+      }
       admin_advance_commission_release: {
         Args: {
           _admin_user_id: string
@@ -13227,6 +13393,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_master_admin_atual: { Args: never; Returns: boolean }
       is_master_coach: { Args: { _coach_id: string }; Returns: boolean }
       is_test_email: { Args: { _email: string }; Returns: boolean }
       is_user_blocked_by_subscription: {
