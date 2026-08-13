@@ -52,19 +52,29 @@ export async function loadSource(kind: SourceKind, id: string) {
   if (kind === "partner_product_order") {
     const { data, error } = await supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("id, order_number, gross_amount, student_id, status, mp_payment_id" as never)
+      .select("id, order_number, gross_amount, student_id, status, mp_payment_id, partner_product_id, professional_product_id" as never)
       .eq("id" as never, id as never)
       .maybeSingle();
-    const row = data as unknown as { id: string; order_number: string; gross_amount: number; student_id: string; status: string; mp_payment_id: string | null } | null;
+    const row = data as unknown as { id: string; order_number: string; gross_amount: number; student_id: string; status: string; mp_payment_id: string | null; partner_product_id: string | null; professional_product_id: string | null } | null;
     if (error || !row) throw new Error("Pedido de parceiro não encontrado");
+    let productName: string | null = null;
+    if (row.partner_product_id) {
+      const { data: pp } = await supabaseAdmin.from("partner_products").select("name").eq("id", row.partner_product_id).maybeSingle();
+      productName = (pp as { name?: string } | null)?.name ?? null;
+    } else if (row.professional_product_id) {
+      const { data: pp } = await supabaseAdmin.from("professional_products").select("name").eq("id", row.professional_product_id).maybeSingle();
+      productName = (pp as { name?: string } | null)?.name ?? null;
+    }
+    const short = productName ? productName.slice(0, 120) : null;
     return {
       amount: Number(row.gross_amount),
-      description: `Pedido parceiro ${row.order_number}`,
+      description: short ? `${short} (${row.order_number})` : `Pedido parceiro ${row.order_number}`,
       studentId: row.student_id,
       alreadyPaid: row.status === "paid",
       existingPaymentId: row.mp_payment_id,
     };
   }
+
   if (kind === "subscription_invoice") {
     const { data, error } = await supabaseAdmin
       .from("subscription_invoices" as never)
