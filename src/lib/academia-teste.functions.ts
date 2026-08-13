@@ -897,6 +897,93 @@ export const validarCredencialEvento = createServerFn({ method: "POST" })
     return linha ?? { decisao: "negado", motivo: "credencial_invalida", nome: null, evento: null };
   });
 
+export const POLITICAS_RENOVACAO = [
+  { value: "justa", label: "Em dia soma no fim do plano; vencido conta do pagamento" },
+  { value: "vencimento", label: "Sempre a partir do vencimento anterior" },
+  { value: "pagamento", label: "Sempre a partir do dia do pagamento" },
+] as const;
+
+/** Produtos da loja que liberam mensalidade nesta academia. */
+export const obterProdutosMensalidade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: vinculos } = await admin
+      .from("academia_produtos_mensalidade")
+      .select("id, product_id, plano, dias_validade, politica_renovacao, ativo")
+      .eq("partner_id", data.partnerId);
+
+    const ids = ((vinculos ?? []) as Array<{ product_id: string }>).map((v) => v.product_id);
+    const { data: nomes } = ids.length
+      ? await admin.from("products").select("id, name").in("id", ids)
+      : { data: [] };
+
+    return {
+      vinculos: (vinculos ?? []) as Array<{
+        id: string; product_id: string; plano: string;
+        dias_validade: number; politica_renovacao: string; ativo: boolean;
+      }>,
+      nomes: Object.fromEntries(
+        ((nomes ?? []) as Array<{ id: string; name: string }>).map((p) => [p.id, p.name]),
+      ),
+    };
+  });
+
+export const buscarProdutosParaVincular = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; termo: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const termo = (data.termo || "").trim();
+    if (termo.length < 3) return { produtos: [] as Array<{ id: string; name: string }> };
+
+    const { data: produtos } = await admin
+      .from("products").select("id, name").ilike("name", `%${termo}%`).limit(20);
+    return { produtos: (produtos ?? []) as Array<{ id: string; name: string }> };
+  });
+
+export const salvarProdutoMensalidade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; productId: string; plano: string;
+    diasValidade: number; politica: string; ativo: boolean;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    if (!Number.isFinite(data.diasValidade) || data.diasValidade < 1) {
+      throw new Error("Informe quantos dias a mensalidade vale.");
+    }
+    const { error } = await admin.from("academia_produtos_mensalidade").upsert(
+      {
+        partner_id: data.partnerId,
+        product_id: data.productId,
+        plano: (data.plano || "Mensalidade").trim(),
+        dias_validade: Math.floor(data.diasValidade),
+        politica_renovacao: data.politica,
+        ativo: data.ativo,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "partner_id,product_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Rede de segurança: compra confirmada que ficou sem mensalidade. */
+export const reprocessarMensalidadesPendentes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: n, error } = await admin.rpc("academia_mensalidades_pendentes_reprocessar", {
+      p_partner_id: data.partnerId,
+    });
+    if (error) throw new Error(error.message);
+    return { geradas: Number(n ?? 0) };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

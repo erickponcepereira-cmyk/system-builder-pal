@@ -208,6 +208,39 @@ export type Database = {
           },
         ]
       }
+      academia_produtos_mensalidade: {
+        Row: {
+          ativo: boolean
+          dias_validade: number
+          id: string
+          partner_id: string
+          plano: string
+          politica_renovacao: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          dias_validade?: number
+          id?: string
+          partner_id: string
+          plano?: string
+          politica_renovacao?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          dias_validade?: number
+          id?: string
+          partner_id?: string
+          plano?: string
+          politica_renovacao?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       academia_eventos: {
         Row: {
           aberto_a_nao_alunos: boolean
@@ -13454,6 +13487,10 @@ export type Database = {
           criados: number
           gatilho: string
         }[]
+      }
+      academia_mensalidades_pendentes_reprocessar: {
+        Args: { p_partner_id: string }
+        Returns: number
       }
       academia_crm_em_varios_funis: {
         Args: { p_partner_id: string }

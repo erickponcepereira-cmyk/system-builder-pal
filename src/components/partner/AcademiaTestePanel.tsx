@@ -16,9 +16,11 @@ import {
   OPCOES_FACE,
   OPCOES_PERIODO,
   OPCOES_VALIDACAO,
+  POLITICAS_RENOVACAO,
   ROTULO_MARCO,
   TIPOS_DAYUSE,
   avaliarDayUse,
+  buscarProdutosParaVincular,
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   aplicarModeloTreino,
@@ -29,12 +31,15 @@ import {
   obterCrmAcademia,
   obterFrequenciaAcademia,
   obterModelosAviso,
+  obterProdutosMensalidade,
   obterTreinosAluno,
   prepararAvisosAcademia,
   previewAvisosAcademia,
   previewTaxaAcademia,
   registrarDayUse,
   registrarMensalidadeAcademia,
+  reprocessarMensalidadesPendentes,
+  salvarProdutoMensalidade,
   salvarConfigAcademia,
   salvarConfigFrequencia,
   salvarModelosAviso,
@@ -45,7 +50,7 @@ import {
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "config";
+type SubAba = "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -81,6 +86,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["frequencia", "Frequência"],
             ["avisos", "Avisos de vencimento"],
             ["crm", "CRM"],
+            ["produtos", "Produtos que liberam"],
             ["dayuse", "Day-use"],
             ["eventos", "Eventos"],
             ["config", "Configurações"],
@@ -101,6 +107,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "frequencia" && <Frequencia partnerId={partnerId} />}
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
+        {sub === "produtos" && <ProdutosMensalidade partnerId={partnerId} />}
         {sub === "eventos" && <Eventos partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
@@ -767,6 +774,166 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterProdutosMensalidade);
+  const buscar = useServerFn(buscarProdutosParaVincular);
+  const salvar = useServerFn(salvarProdutoMensalidade);
+  const reprocessar = useServerFn(reprocessarMensalidadesPendentes);
+  const [loading, setLoading] = useState(true);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<Array<{ id: string; name: string }>>([]);
+  const [novo, setNovo] = useState<{ id: string; name: string } | null>(null);
+  const [dias, setDias] = useState(30);
+  const [politica, setPolitica] = useState("justa");
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+  useEffect(carregar, [partnerId]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setAchados([]); return; }
+    const t = setTimeout(() => {
+      buscar({ data: { partnerId, termo } })
+        .then((r) => setAchados(r.produtos))
+        .catch(() => setAchados([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [termo, partnerId]);
+
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          Nada de loja, checkout ou produto é criado aqui — tudo isso já existe.
+          Isto só diz <strong className="text-white/80">quais produtos liberam mensalidade</strong> nesta
+          academia quando a compra é confirmada.
+        </p>
+        <p className="mt-1.5 text-[11px] text-white/60">
+          A liberação exige o pagamento aprovado pelo gateway configurado, não só
+          o pedido criado.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white">Vincular um produto</p>
+        {novo ? (
+          <>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+              <span className="truncate text-sm text-white">{novo.name}</span>
+              <button type="button" onClick={() => setNovo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number" min={1} value={dias}
+                onChange={(e) => setDias(Number(e.target.value))}
+                placeholder="Dias"
+                className="w-24 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+              />
+              <select
+                value={politica} onChange={(e) => setPolitica(e.target.value)}
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              >
+                {POLITICAS_RENOVACAO.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await salvar({ data: { partnerId, productId: novo.id, plano: novo.name, diasValidade: dias, politica, ativo: true } });
+                  setNovo(null); setTermo(""); carregar();
+                  toast.success("Produto vinculado.");
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+              }}
+              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+            >
+              Vincular
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              value={termo} onChange={(e) => setTermo(e.target.value)}
+              placeholder="Buscar produto pelo nome"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            {achados.map((p) => (
+              <button
+                key={p.id} type="button" onClick={() => setNovo(p)}
+                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+              >
+                {p.name}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+
+      {dados.vinculos.length > 0 && (
+        <div className="space-y-2">
+          {dados.vinculos.map((v) => (
+            <div key={v.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-white">
+                    {dados.nomes[v.product_id] ?? v.plano}
+                  </p>
+                  <p className="text-[11px] text-white/50">
+                    {v.dias_validade} dia(s) ·{" "}
+                    {POLITICAS_RENOVACAO.find((p) => p.value === v.politica_renovacao)?.label ?? v.politica_renovacao}
+                  </p>
+                </div>
+                <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-white/60">
+                  <input
+                    type="checkbox" checked={v.ativo}
+                    onChange={async (e) => {
+                      try {
+                        await salvar({
+                          data: {
+                            partnerId, productId: v.product_id, plano: v.plano,
+                            diasValidade: v.dias_validade, politica: v.politica_renovacao,
+                            ativo: e.target.checked,
+                          },
+                        });
+                        carregar();
+                      } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                    }}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  Ativo
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const r = await reprocessar({ data: { partnerId } });
+            toast.success(r.geradas > 0
+              ? `${r.geradas} mensalidade(s) gerada(s) de compras que ficaram para trás.`
+              : "Nenhuma compra pendente — está tudo liberado.");
+          } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+        }}
+        className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15"
+      >
+        Procurar compras pagas sem mensalidade
+      </button>
     </div>
   );
 }
