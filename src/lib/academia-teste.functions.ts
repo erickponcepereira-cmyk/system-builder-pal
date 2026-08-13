@@ -605,6 +605,56 @@ export const sincronizarCrmAcademia = createServerFn({ method: "POST" })
     return { criados: linhas.reduce((s, l) => s + Number(l.criados || 0), 0), porGatilho: linhas };
   });
 
+/** Treinos do aluno + modelos disponíveis + de quem é o aluno. */
+export const obterTreinosAluno = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; studentId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: planos, error }, { data: modelos }] = await Promise.all([
+      admin.rpc("academia_treinos_do_aluno", {
+        p_partner_id: data.partnerId,
+        p_student_id: data.studentId,
+      }),
+      admin.from("workout_templates")
+        .select("id, name, goal, level")
+        .eq("is_active", true)
+        .eq("is_global", true)
+        .order("name"),
+    ]);
+    if (error) throw new Error(error.message);
+
+    return {
+      planos: (planos ?? []) as Array<{
+        plano_id: string; nome: string; dia_semana: number | null; ativo: boolean;
+        criado_em: string; exercicios: number; montado_por_nome: string; coach_do_aluno: string;
+      }>,
+      modelos: (modelos ?? []) as Array<{ id: string; name: string; goal: string; level: string | null }>,
+    };
+  });
+
+export const aplicarModeloTreino = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; studentId: string; templateId: string;
+    nome?: string; diaSemana?: number | null;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const { data: id, error } = await admin.rpc("academia_treino_do_modelo", {
+      p_partner_id: data.partnerId,
+      p_student_id: data.studentId,
+      p_template_id: data.templateId,
+      p_montado_por: profileId,
+      p_nome: data.nome ?? "",
+      p_dia: data.diaSemana ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, planoId: id as unknown as string };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

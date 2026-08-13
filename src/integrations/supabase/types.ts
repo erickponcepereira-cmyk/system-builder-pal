@@ -13042,6 +13042,30 @@ export type Database = {
         Args: { p_marco: string }
         Returns: string
       }
+      academia_treino_do_modelo: {
+        Args: {
+          p_dia: number | null
+          p_montado_por: string
+          p_nome: string
+          p_partner_id: string
+          p_student_id: string
+          p_template_id: string
+        }
+        Returns: string
+      }
+      academia_treinos_do_aluno: {
+        Args: { p_partner_id: string; p_student_id: string }
+        Returns: {
+          ativo: boolean
+          coach_do_aluno: string
+          criado_em: string
+          dia_semana: number
+          exercicios: number
+          montado_por_nome: string
+          nome: string
+          plano_id: string
+        }[]
+      }
       academia_crm_sincronizar: {
         Args: { p_partner_id: string }
         Returns: {

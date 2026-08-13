@@ -15,9 +15,11 @@ import {
   avaliarDayUse,
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
+  aplicarModeloTreino,
   obterConfigAcademia,
   obterCrmAcademia,
   obterModelosAviso,
+  obterTreinosAluno,
   prepararAvisosAcademia,
   previewAvisosAcademia,
   previewTaxaAcademia,
@@ -237,6 +239,145 @@ function DayUse({ partnerId }: { partnerId: string }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
+  partnerId: string; studentId: string; nomeAluno: string; onClose: () => void;
+}) {
+  const obter = useServerFn(obterTreinosAluno);
+  const aplicar = useServerFn(aplicarModeloTreino);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [planos, setPlanos] = useState<Array<{
+    plano_id: string; nome: string; dia_semana: number | null; ativo: boolean;
+    exercicios: number; montado_por_nome: string; coach_do_aluno: string;
+  }>>([]);
+  const [modelos, setModelos] = useState<Array<{ id: string; name: string; level: string | null }>>([]);
+  const [modeloId, setModeloId] = useState("");
+  const [dia, setDia] = useState<string>("");
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId, studentId } })
+      .then((r) => { setPlanos(r.planos as never); setModelos(r.modelos as never); })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(carregar, [partnerId, studentId]);
+
+  const criar = async () => {
+    if (!modeloId) return;
+    setSalvando(true);
+    try {
+      await aplicar({
+        data: {
+          partnerId, studentId, templateId: modeloId,
+          diaSemana: dia === "" ? null : Number(dia),
+        },
+      });
+      toast.success("Treino criado para o aluno.");
+      setModeloId(""); setDia("");
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const coach = planos[0]?.coach_do_aluno;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-[#12171C] p-4 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-white">Treinos de {nomeAluno}</p>
+            {coach && (
+              <p className="text-[11px] text-white/50">
+                Aluno de <strong className="text-white/80">{coach}</strong> — o vínculo e a comissão não mudam.
+              </p>
+            )}
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-lg p-1 text-white/60 hover:bg-white/10">✕</button>
+        </div>
+
+        {loading ? (
+          <Loader2 className="mx-auto my-8 h-6 w-6 animate-spin text-primary" />
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-[11px] font-bold text-white">Aplicar um treino pronto</p>
+              <select
+                value={modeloId}
+                onChange={(e) => setModeloId(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              >
+                <option value="">Escolha um modelo…</option>
+                {modelos.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}{m.level ? ` · ${m.level}` : ""}</option>
+                ))}
+              </select>
+              <select
+                value={dia}
+                onChange={(e) => setDia(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              >
+                <option value="">Sem dia fixo</option>
+                {DIAS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => void criar()}
+                disabled={salvando || !modeloId}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+              >
+                {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Dumbbell className="h-4 w-4" />}
+                Criar treino
+              </button>
+              {modelos.length === 0 && (
+                <p className="text-[11px] text-white/50">
+                  Nenhum modelo global cadastrado ainda. Os modelos vêm da biblioteca de treinos prontos.
+                </p>
+              )}
+            </div>
+
+            {planos.length === 0 ? (
+              <p className="py-6 text-center text-sm text-white/50">Este aluno ainda não tem treino.</p>
+            ) : (
+              <div className="space-y-2">
+                {planos.map((p) => (
+                  <div key={p.plano_id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">{p.nome}</p>
+                        <p className="text-[11px] text-white/50">
+                          {p.exercicios} exercício(s)
+                          {p.dia_semana != null && ` · ${DIAS[p.dia_semana]}`}
+                        </p>
+                        <p className="text-[11px] text-white/50">
+                          Montado por <strong className="text-white/80">{p.montado_por_nome}</strong>
+                        </p>
+                      </div>
+                      {!p.ativo && (
+                        <span className="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/60">Inativo</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -594,6 +735,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
+  const [treinoDe, setTreinoDe] = useState<{ id: string; nome: string } | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
   // id do lançamento com o formulário de cancelamento aberto
@@ -701,13 +843,22 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
                     {abertoId !== l.id && (
-                      <button
-                        type="button"
-                        onClick={() => { setAbertoId(l.id); setMotivo(""); setTipoCancel("cancelada"); }}
-                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
-                      >
-                        <Ban className="h-3 w-3" /> Cancelar
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setTreinoDe({ id: l.student_id, nome: l.nome })}
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                        >
+                          <Dumbbell className="h-3 w-3" /> Treino
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAbertoId(l.id); setMotivo(""); setTipoCancel("cancelada"); }}
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                        >
+                          <Ban className="h-3 w-3" /> Cancelar
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -762,6 +913,14 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
       )}
 
       {fichaId && <StudentDetailsModal studentId={fichaId} onClose={() => setFichaId(null)} />}
+      {treinoDe && (
+        <TreinosAluno
+          partnerId={partnerId}
+          studentId={treinoDe.id}
+          nomeAluno={treinoDe.nome}
+          onClose={() => setTreinoDe(null)}
+        />
+      )}
     </div>
   );
 }
