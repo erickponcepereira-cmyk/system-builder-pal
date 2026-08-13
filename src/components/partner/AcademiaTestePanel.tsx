@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
@@ -446,9 +447,12 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
-    id: string; nome: string; plano: string; valido_ate: string;
+    id: string; student_id: string; nome: string; plano: string; valido_ate: string;
     dias_restantes: number | null; decisao: string; motivo: string; valor: number;
   }>>([]);
+  // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
+  // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
+  const [fichaId, setFichaId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
   // id do lançamento com o formulário de cancelamento aberto
@@ -535,7 +539,14 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
               <div key={l.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-white">{l.nome}</p>
+                    <button
+                      type="button"
+                      onClick={() => setFichaId(l.student_id)}
+                      className="flex items-center gap-1.5 text-left font-semibold text-white hover:text-primary"
+                    >
+                      <span className="truncate">{l.nome}</span>
+                      <FileText className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                    </button>
                     <p className="text-[11px] text-white/50">{l.plano} · {brl(Number(l.valor) || 0)}</p>
                     <p className="text-[11px] text-white/50">
                       Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")}
@@ -608,6 +619,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
           })}
         </div>
       )}
+
+      {fichaId && <StudentDetailsModal studentId={fichaId} onClose={() => setFichaId(null)} />}
     </div>
   );
 }
