@@ -1,22 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
+  ROTULO_MARCO,
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   obterConfigAcademia,
+  obterModelosAviso,
+  prepararAvisosAcademia,
+  previewAvisosAcademia,
   previewTaxaAcademia,
   registrarMensalidadeAcademia,
   salvarConfigAcademia,
+  salvarModelosAviso,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "config";
+type SubAba = "alunos" | "mensalidade" | "avisos" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -49,6 +54,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           {([
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
+            ["avisos", "Avisos de vencimento"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
@@ -63,9 +69,217 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
 
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
+        {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
     </TestSurfaceGate>
+  );
+}
+
+function ModelosAviso({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterModelosAviso);
+  const salvar = useServerFn(salvarModelosAviso);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [automatico, setAutomatico] = useState(false);
+  const [modelos, setModelos] = useState<Array<{ marco: string; texto: string; ativo: boolean }>>([]);
+
+  useEffect(() => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => {
+        setAutomatico(r.automatico);
+        setModelos(r.modelos.map((m) => ({ marco: m.marco, texto: m.texto, ativo: m.ativo })));
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  }, [partnerId]);
+
+  const gravar = async () => {
+    setSalvando(true);
+    try {
+      await salvar({ data: { partnerId, automatico, modelos } });
+      toast.success("Mensagens salvas.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  if (loading) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-primary" />;
+
+  return (
+    <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+      <p className="text-sm font-bold text-white">Mensagens e automação</p>
+
+      <label className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5">
+        <input
+          type="checkbox"
+          checked={automatico}
+          onChange={(e) => setAutomatico(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+        />
+        <span className="text-[11px] text-white/70">
+          <strong className="text-white">Montar campanhas automaticamente todo dia</strong>
+          <br />
+          Mesmo ligado, nada é enviado sozinho: as campanhas aparecem prontas na
+          aba Robô e alguém precisa disparar.
+        </span>
+      </label>
+
+      {modelos.map((m, i) => (
+        <div key={m.marco} className="space-y-1.5 rounded-xl border border-white/10 bg-white/5 p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold text-white">{ROTULO_MARCO[m.marco] ?? m.marco}</span>
+            <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+              <input
+                type="checkbox"
+                checked={m.ativo}
+                onChange={(e) => setModelos((a) => a.map((x, j) => j === i ? { ...x, ativo: e.target.checked } : x))}
+                className="h-3.5 w-3.5 accent-primary"
+              />
+              Ativo
+            </label>
+          </div>
+          <textarea
+            value={m.texto}
+            onChange={(e) => setModelos((a) => a.map((x, j) => j === i ? { ...x, texto: e.target.value } : x))}
+            rows={2}
+            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/40"
+          />
+        </div>
+      ))}
+
+      <p className="text-[11px] text-white/50">
+        <code className="rounded bg-white/10 px-1">{"{nome}"}</code> vira o primeiro nome de quem recebe.{" "}
+        <code className="rounded bg-white/10 px-1">{"{data}"}</code> vira a data de vencimento.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => void gravar()}
+        disabled={salvando}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+      >
+        {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        Salvar mensagens
+      </button>
+    </div>
+  );
+}
+
+function AvisosVencimento({ partnerId }: { partnerId: string }) {
+  const preview = useServerFn(previewAvisosAcademia);
+  const preparar = useServerFn(prepararAvisosAcademia);
+  const [loading, setLoading] = useState(true);
+  const [preparando, setPreparando] = useState(false);
+  const [dados, setDados] = useState<{
+    comTelefone: Array<{ student_id: string; nome: string; telefone: string | null; marco: string; valido_ate: string }>;
+    semTelefone: Array<{ student_id: string; nome: string; marco: string }>;
+    conexao: { nome: string; status: string } | null;
+  } | null>(null);
+
+  const carregar = () => {
+    setLoading(true);
+    preview({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(carregar, [partnerId]);
+
+  const confirmar = async () => {
+    setPreparando(true);
+    try {
+      const r = await preparar({ data: { partnerId } });
+      toast.success(
+        `${r.disparos} campanha(s) criada(s) com ${r.preparados} contato(s). Abra a aba Robô para disparar.`,
+      );
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível preparar.");
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (!dados) return null;
+
+  const conectado = dados.conexao?.status === "conectado";
+  const total = dados.comTelefone.length;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          Usa a mesma régua que libera a catraca. Cada pessoa entra uma única vez
+          por vencimento — rodar de novo não repete ninguém.
+        </p>
+        <p className="mt-1.5 text-[11px] text-white/60">
+          Este botão <strong className="text-white/80">monta a campanha</strong> e
+          para aí. O envio acontece na aba <strong className="text-white/80">Robô</strong>,
+          que é onde ficam o limite diário do número e o intervalo entre
+          mensagens — mandar por fora disso queima o chip da academia.
+        </p>
+      </div>
+
+      {!dados.conexao && (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+          Esta academia não tem conexão de WhatsApp configurada. Sem ela não há como enviar.
+        </p>
+      )}
+      {dados.conexao && !conectado && (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+          A conexão "{dados.conexao.nome}" está {dados.conexao.status}. Reconecte antes de enviar.
+        </p>
+      )}
+
+      {total === 0 ? (
+        <p className="py-8 text-center text-sm text-white/50">Ninguém para avisar hoje.</p>
+      ) : (
+        <div className="space-y-2">
+          {dados.comTelefone.map((a) => (
+            <div key={`${a.student_id}-${a.marco}`} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-white">{a.nome}</p>
+                <p className="text-[11px] text-white/50">{a.telefone}</p>
+              </div>
+              <span className="shrink-0 rounded bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                {ROTULO_MARCO[a.marco] ?? a.marco}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {dados.semTelefone.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[11px] font-semibold text-white/70">
+            {dados.semTelefone.length} sem telefone cadastrado — não serão avisados
+          </p>
+          <p className="mt-1 text-[11px] text-white/40">
+            {dados.semTelefone.map((a) => a.nome).join(", ")}
+          </p>
+        </div>
+      )}
+
+      {total > 0 && (
+        <button
+          type="button"
+          onClick={() => void confirmar()}
+          disabled={preparando || !conectado}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+        >
+          {preparando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          Montar campanha com {total} contato(s)
+        </button>
+      )}
+
+      <ModelosAviso partnerId={partnerId} />
+    </div>
   );
 }
 

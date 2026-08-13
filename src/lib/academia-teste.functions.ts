@@ -298,6 +298,163 @@ export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const MARCOS = ["d3", "d2", "d1", "d0", "ultimo_dia"] as const;
+
+export const ROTULO_MARCO: Record<string, string> = {
+  d3: "Faltam 3 dias",
+  d2: "Faltam 2 dias",
+  d1: "Vence amanhã",
+  d0: "Vence hoje",
+  ultimo_dia: "Último dia de acesso",
+};
+
+type AvisoPendente = {
+  student_id: string; nome: string; telefone: string | null;
+  marco: string; dias_restantes: number; valido_ate: string;
+};
+
+/** Quem receberia aviso hoje, sem enviar nada. */
+export const previewAvisosAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: pendentes, error } = await admin.rpc("academia_avisos_pendentes", {
+      p_partner_id: data.partnerId,
+    });
+    if (error) throw new Error(error.message);
+
+    const { data: conexao } = await admin
+      .from("bot_conexoes")
+      .select("id, nome, status")
+      .eq("escopo", "parceiro")
+      .eq("owner_id", data.partnerId)
+      .is("arquivado_em", null)
+      .maybeSingle();
+
+    const lista = (pendentes ?? []) as AvisoPendente[];
+    return {
+      // Sem telefone não há como avisar; separar deixa isso visível em vez de
+      // sumir silenciosamente da contagem.
+      comTelefone: lista.filter((a) => (a.telefone ?? "").trim().length >= 8),
+      semTelefone: lista.filter((a) => (a.telefone ?? "").trim().length < 8),
+      conexao: (conexao as { nome: string; status: string } | null) ?? null,
+    };
+  });
+
+/**
+ * Cria um disparo por marco no robô que já existe, em rascunho.
+ *
+ * NÃO envia. Quem envia é `dispararCampanha`, na aba Robô — e é lá que ficam as
+ * proteções do chip: limite diário do número, intervalo entre mensagens e
+ * deduplicação de conversa. Passar por fora disso queimaria o número da
+ * academia.
+ *
+ * O registro em `academia_avisos` diz que o aviso foi gerado, não que chegou:
+ * quem sabe disso é `bot_disparo_alvos.status`.
+ */
+export const prepararAvisosAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: conexao } = await admin
+      .from("bot_conexoes")
+      .select("id, status")
+      .eq("escopo", "parceiro")
+      .eq("owner_id", data.partnerId)
+      .is("arquivado_em", null)
+      .maybeSingle();
+    if (!conexao) throw new Error("Esta academia não tem conexão de WhatsApp configurada.");
+    if ((conexao as { status: string }).status !== "conectado") {
+      throw new Error("A conexão de WhatsApp desta academia não está conectada.");
+    }
+
+    // Toda a montagem vive em academia_avisos_preparar, no banco. O botão manual
+    // e a automação diária chamam a mesma função — duas implementações
+    // divergiriam, que foi exatamente o problema que a régua já teve.
+    const { data: resultado, error } = await admin.rpc("academia_avisos_preparar", {
+      p_partner_id: data.partnerId,
+    });
+    if (error) throw new Error(error.message);
+
+    const linhas = (resultado ?? []) as Array<{ marco: string; contatos: number; disparo_id: string }>;
+    return {
+      ok: true,
+      preparados: linhas.reduce((s, l) => s + Number(l.contatos || 0), 0),
+      disparos: linhas.length,
+    };
+  });
+
+/** Textos de cada marco desta academia, já com o padrão preenchido. */
+export const obterModelosAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: modelos }, { data: cfg }] = await Promise.all([
+      admin.from("academia_avisos_modelos")
+        .select("marco, texto, ativo").eq("partner_id", data.partnerId),
+      admin.from("partner_acesso_config")
+        .select("avisos_automaticos").eq("partner_id", data.partnerId).maybeSingle(),
+    ]);
+
+    const salvos = new Map(
+      ((modelos ?? []) as Array<{ marco: string; texto: string; ativo: boolean }>)
+        .map((m) => [m.marco, m]),
+    );
+
+    // O padrão vem do banco para não existir uma segunda cópia do texto aqui.
+    const padroes = await Promise.all(
+      MARCOS.map(async (marco) => {
+        const { data: t } = await admin.rpc("academia_aviso_texto_padrao", { p_marco: marco });
+        return [marco, String(t ?? "")] as const;
+      }),
+    );
+    const padrao = new Map(padroes);
+
+    return {
+      automatico: Boolean((cfg as { avisos_automaticos?: boolean } | null)?.avisos_automaticos),
+      modelos: MARCOS.map((marco) => ({
+        marco,
+        texto: salvos.get(marco)?.texto ?? padrao.get(marco) ?? "",
+        ativo: salvos.get(marco)?.ativo ?? true,
+        personalizado: salvos.has(marco),
+      })),
+    };
+  });
+
+export const salvarModelosAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; automatico: boolean;
+    modelos: Array<{ marco: string; texto: string; ativo: boolean }>;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    for (const m of data.modelos) {
+      const texto = (m.texto || "").trim();
+      if (!texto) throw new Error(`O texto de "${ROTULO_MARCO[m.marco] ?? m.marco}" não pode ficar vazio.`);
+      const { error } = await admin.from("academia_avisos_modelos").upsert(
+        { partner_id: data.partnerId, marco: m.marco, texto, ativo: m.ativo, updated_at: new Date().toISOString() },
+        { onConflict: "partner_id,marco" },
+      );
+      if (error) throw new Error(error.message);
+    }
+
+    const { error: e2 } = await admin.from("partner_acesso_config").upsert(
+      { partner_id: data.partnerId, avisos_automaticos: data.automatico },
+      { onConflict: "partner_id" },
+    );
+    if (e2) throw new Error(e2.message);
+
+    return { ok: true };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

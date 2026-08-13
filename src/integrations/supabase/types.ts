@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_avisos_modelos: {
+        Row: {
+          ativo: boolean
+          id: string
+          marco: string
+          partner_id: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          id?: string
+          marco: string
+          partner_id: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          id?: string
+          marco?: string
+          partner_id?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      academia_avisos: {
+        Row: {
+          disparo_id: string | null
+          gerado_em: string
+          id: string
+          marco: string
+          partner_id: string
+          student_id: string
+          telefone: string | null
+          valido_ate: string
+        }
+        Insert: {
+          disparo_id?: string | null
+          gerado_em?: string
+          id?: string
+          marco: string
+          partner_id: string
+          student_id: string
+          telefone?: string | null
+          valido_ate: string
+        }
+        Update: {
+          disparo_id?: string | null
+          gerado_em?: string
+          id?: string
+          marco?: string
+          partner_id?: string
+          student_id?: string
+          telefone?: string | null
+          valido_ate?: string
+        }
+        Relationships: []
+      }
       academia_mensalidades: {
         Row: {
           cancelado_em: string | null
@@ -6381,6 +6441,7 @@ export type Database = {
       }
       partner_acesso_config: {
         Row: {
+          avisos_automaticos: boolean
           created_at: string
           dias_carencia: number
           exige_senha_liberacao: boolean
@@ -6392,6 +6453,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avisos_automaticos?: boolean
           created_at?: string
           dias_carencia?: number
           exige_senha_liberacao?: boolean
@@ -6403,6 +6465,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avisos_automaticos?: boolean
           created_at?: string
           dias_carencia?: number
           exige_senha_liberacao?: boolean
@@ -12858,6 +12921,37 @@ export type Database = {
       }
     }
     Functions: {
+      academia_aviso_texto_padrao: {
+        Args: { p_marco: string }
+        Returns: string
+      }
+      academia_avisos_preparar: {
+        Args: { p_partner_id: string }
+        Returns: {
+          contatos: number
+          disparo_id: string
+          marco: string
+        }[]
+      }
+      academia_avisos_preparar_automaticos: {
+        Args: never
+        Returns: number
+      }
+      academia_pode_ver: {
+        Args: { p_partner_id: string }
+        Returns: boolean
+      }
+      academia_avisos_pendentes: {
+        Args: { p_partner_id: string }
+        Returns: {
+          dias_restantes: number
+          marco: string
+          nome: string
+          student_id: string
+          telefone: string
+          valido_ate: string
+        }[]
+      }
       acesso_avaliar: {
         Args: { p_partner_id: string; p_student_id: string }
         Returns: {
