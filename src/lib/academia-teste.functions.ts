@@ -525,6 +525,86 @@ export const registrarDayUse = createServerFn({ method: "POST" })
     return { ok: true, id: id as unknown as string, ...taxa };
   });
 
+export const GATILHOS_CRM = [
+  { value: "vencimento_proximo", label: "Vencimento próximo (3 dias ou menos)" },
+  { value: "em_carencia", label: "Em carência (já venceu, ainda entra)" },
+  { value: "vencido_bloqueado", label: "Bloqueado por inadimplência" },
+] as const;
+
+/** Funis e colunas da academia, mais as regras já salvas. */
+export const obterCrmAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: quadros } = await admin
+      .from("crm_quadros")
+      .select("id, nome")
+      .eq("escopo", "parceiro")
+      .eq("owner_id", data.partnerId)
+      .is("arquivado_em", null)
+      .order("created_at");
+
+    const ids = ((quadros ?? []) as Array<{ id: string }>).map((q) => q.id);
+    const { data: colunas } = ids.length
+      ? await admin.from("crm_colunas").select("id, quadro_id, nome, posicao").in("quadro_id", ids).order("posicao")
+      : { data: [] };
+
+    const { data: regras } = await admin
+      .from("academia_crm_regras")
+      .select("gatilho, quadro_id, coluna_id, ativo")
+      .eq("partner_id", data.partnerId);
+
+    return {
+      quadros: (quadros ?? []) as Array<{ id: string; nome: string }>,
+      colunas: (colunas ?? []) as Array<{ id: string; quadro_id: string; nome: string }>,
+      regras: (regras ?? []) as Array<{ gatilho: string; quadro_id: string; coluna_id: string; ativo: boolean }>,
+    };
+  });
+
+export const salvarRegraCrm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; gatilho: string;
+    quadroId: string | null; colunaId: string | null; ativo: boolean;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    // Sem funil escolhido a regra deixa de existir, em vez de ficar meio salva.
+    if (!data.quadroId || !data.colunaId) {
+      const { error } = await admin.from("academia_crm_regras")
+        .delete().eq("partner_id", data.partnerId).eq("gatilho", data.gatilho);
+      if (error) throw new Error(error.message);
+      return { ok: true, removida: true };
+    }
+
+    const { error } = await admin.from("academia_crm_regras").upsert(
+      {
+        partner_id: data.partnerId, gatilho: data.gatilho,
+        quadro_id: data.quadroId, coluna_id: data.colunaId,
+        ativo: data.ativo, updated_at: new Date().toISOString(),
+      },
+      { onConflict: "partner_id,gatilho" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true, removida: false };
+  });
+
+export const sincronizarCrmAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_crm_sincronizar", {
+      p_partner_id: data.partnerId,
+    });
+    if (error) throw new Error(error.message);
+    const linhas = (r ?? []) as Array<{ gatilho: string; criados: number }>;
+    return { criados: linhas.reduce((s, l) => s + Number(l.criados || 0), 0), porGatilho: linhas };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

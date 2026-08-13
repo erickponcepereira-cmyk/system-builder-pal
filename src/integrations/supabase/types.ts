@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_crm_regras: {
+        Row: {
+          ativo: boolean
+          coluna_id: string
+          gatilho: string
+          id: string
+          partner_id: string
+          quadro_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          coluna_id: string
+          gatilho: string
+          id?: string
+          partner_id: string
+          quadro_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          coluna_id?: string
+          gatilho?: string
+          id?: string
+          partner_id?: string
+          quadro_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      academia_crm_cartoes: {
+        Row: {
+          cartao_id: string | null
+          criado_em: string
+          gatilho: string
+          id: string
+          partner_id: string
+          referencia: string
+          student_id: string
+        }
+        Insert: {
+          cartao_id?: string | null
+          criado_em?: string
+          gatilho: string
+          id?: string
+          partner_id: string
+          referencia: string
+          student_id: string
+        }
+        Update: {
+          cartao_id?: string | null
+          criado_em?: string
+          gatilho?: string
+          id?: string
+          partner_id?: string
+          referencia?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       academia_dayuse: {
         Row: {
           cpf_final: string | null
@@ -12981,6 +13041,13 @@ export type Database = {
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
+      }
+      academia_crm_sincronizar: {
+        Args: { p_partner_id: string }
+        Returns: {
+          criados: number
+          gatilho: string
+        }[]
       }
       academia_cpf_hash: {
         Args: { p_cpf: string; p_partner_id: string }

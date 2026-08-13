@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
+  GATILHOS_CRM,
   MOTIVO_DAYUSE,
   ROTULO_MARCO,
   TIPOS_DAYUSE,
@@ -15,6 +16,7 @@ import {
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   obterConfigAcademia,
+  obterCrmAcademia,
   obterModelosAviso,
   prepararAvisosAcademia,
   previewAvisosAcademia,
@@ -23,10 +25,12 @@ import {
   registrarMensalidadeAcademia,
   salvarConfigAcademia,
   salvarModelosAviso,
+  salvarRegraCrm,
+  sincronizarCrmAcademia,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "avisos" | "dayuse" | "config";
+type SubAba = "alunos" | "mensalidade" | "avisos" | "crm" | "dayuse" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -60,6 +64,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
             ["avisos", "Avisos de vencimento"],
+            ["crm", "CRM"],
             ["dayuse", "Day-use"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
@@ -76,6 +81,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
         {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
+        {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
@@ -230,6 +236,141 @@ function DayUse({ partnerId }: { partnerId: string }) {
             Liberar e registrar
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+function CrmAcademia({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterCrmAcademia);
+  const salvarRegra = useServerFn(salvarRegraCrm);
+  const sincronizar = useServerFn(sincronizarCrmAcademia);
+  const [loading, setLoading] = useState(true);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [quadros, setQuadros] = useState<Array<{ id: string; nome: string }>>([]);
+  const [colunas, setColunas] = useState<Array<{ id: string; quadro_id: string; nome: string }>>([]);
+  const [regras, setRegras] = useState<Record<string, { quadroId: string; colunaId: string; ativo: boolean }>>({});
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => {
+        setQuadros(r.quadros);
+        setColunas(r.colunas);
+        const mapa: Record<string, { quadroId: string; colunaId: string; ativo: boolean }> = {};
+        for (const g of r.regras) mapa[g.gatilho] = { quadroId: g.quadro_id, colunaId: g.coluna_id, ativo: g.ativo };
+        setRegras(mapa);
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(carregar, [partnerId]);
+
+  const aplicar = async (gatilho: string, next: { quadroId: string; colunaId: string; ativo: boolean }) => {
+    setRegras((a) => ({ ...a, [gatilho]: next }));
+    try {
+      await salvarRegra({
+        data: {
+          partnerId, gatilho,
+          quadroId: next.quadroId || null,
+          colunaId: next.colunaId || null,
+          ativo: next.ativo,
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+      carregar();
+    }
+  };
+
+  const rodar = async () => {
+    setSincronizando(true);
+    try {
+      const r = await sincronizar({ data: { partnerId } });
+      toast.success(r.criados > 0 ? `${r.criados} cartão(ões) criado(s).` : "Nenhum cartão novo — já estava tudo em dia.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível sincronizar.");
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          Usa os funis que já existem no CRM da unidade. Cada situação manda o
+          aluno para o funil e a coluna que você escolher.
+        </p>
+        <p className="mt-1.5 text-[11px] text-white/60">
+          A automação <strong className="text-white/80">só cria cartão novo</strong>.
+          Ela nunca move nem apaga cartão existente — depois de criado, quem manda
+          é quem está tratando o aluno.
+        </p>
+      </div>
+
+      {quadros.length === 0 ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+          Esta unidade ainda não tem nenhum funil no CRM. Crie um na aba CRM
+          (por exemplo, "Retenção") e volte aqui.
+        </p>
+      ) : (
+        <>
+          {GATILHOS_CRM.map((g) => {
+            const atual = regras[g.value] ?? { quadroId: "", colunaId: "", ativo: true };
+            const colunasDoQuadro = colunas.filter((c) => c.quadro_id === atual.quadroId);
+            return (
+              <div key={g.value} className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-white">{g.label}</span>
+                  {atual.quadroId && (
+                    <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+                      <input
+                        type="checkbox"
+                        checked={atual.ativo}
+                        onChange={(e) => void aplicar(g.value, { ...atual, ativo: e.target.checked })}
+                        className="h-3.5 w-3.5 accent-primary"
+                      />
+                      Ativa
+                    </label>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={atual.quadroId}
+                    onChange={(e) => void aplicar(g.value, { quadroId: e.target.value, colunaId: "", ativo: atual.ativo })}
+                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                  >
+                    <option value="">Não criar cartão</option>
+                    {quadros.map((q) => <option key={q.id} value={q.id}>{q.nome}</option>)}
+                  </select>
+                  <select
+                    value={atual.colunaId}
+                    onChange={(e) => void aplicar(g.value, { ...atual, colunaId: e.target.value })}
+                    disabled={!atual.quadroId}
+                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white disabled:opacity-40"
+                  >
+                    <option value="">Coluna…</option>
+                    {colunasDoQuadro.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => void rodar()}
+            disabled={sincronizando}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {sincronizando ? <Loader2 className="h-4 w-4 animate-spin" /> : <KanbanSquare className="h-4 w-4" />}
+            Gerar cartões agora
+          </button>
+        </>
       )}
     </div>
   );
