@@ -761,6 +761,142 @@ export const salvarTurma = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const OPCOES_ACESSO_EVENTO = [
+  { value: "qrcode", label: "QR code" },
+  { value: "facial", label: "Reconhecimento facial" },
+  { value: "ambos", label: "QR ou facial" },
+] as const;
+
+export const OPCOES_FACE = [
+  { value: "uma_leitura", label: "Apagar o rosto assim que entrar" },
+  { value: "apagar_24h", label: "Apagar o rosto em 24 horas" },
+] as const;
+
+export const MOTIVO_EVENTO: Record<string, string> = {
+  entrada_liberada: "Entrada liberada",
+  credencial_invalida: "Credencial não encontrada",
+  ja_utilizada: "Esta credencial já foi usada",
+  fora_da_data: "Credencial de outra data",
+};
+
+export const obterEventosAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: eventos }, { data: faces }] = await Promise.all([
+      admin.from("academia_eventos")
+        .select("id, nome, data_evento, hora_inicio, valor, acesso, face_politica, ativo")
+        .eq("partner_id", data.partnerId).order("data_evento", { ascending: false }).limit(30),
+      admin.rpc("academia_faces_a_remover", { p_partner_id: data.partnerId }),
+    ]);
+
+    const ids = ((eventos ?? []) as Array<{ id: string }>).map((e) => e.id);
+    const { data: inscricoes } = ids.length
+      ? await admin.from("academia_evento_inscricoes")
+          .select("id, evento_id, nome, credencial, usado_em, valor").in("evento_id", ids)
+      : { data: [] };
+
+    return {
+      eventos: (eventos ?? []) as Array<{
+        id: string; nome: string; data_evento: string; hora_inicio: string | null;
+        valor: number; acesso: string; face_politica: string; ativo: boolean;
+      }>,
+      inscricoes: (inscricoes ?? []) as Array<{
+        id: string; evento_id: string; nome: string; credencial: string;
+        usado_em: string | null; valor: number;
+      }>,
+      facesPendentes: (faces ?? []) as Array<{
+        inscricao_id: string; nome: string; evento: string; politica: string; vencido_desde: string | null;
+      }>,
+    };
+  });
+
+export const criarEventoAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; nome: string; data: string; hora?: string | null;
+    valor: number; acesso: string; facePolitica: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const nome = (data.nome || "").trim();
+    if (nome.length < 3) throw new Error("Informe o nome do evento.");
+    if (!data.data) throw new Error("Informe a data do evento.");
+
+    const { error } = await admin.from("academia_eventos").insert({
+      partner_id: data.partnerId,
+      nome,
+      data_evento: data.data,
+      hora_inicio: data.hora || null,
+      valor: Number(data.valor) || 0,
+      acesso: data.acesso,
+      face_politica: data.facePolitica,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const inscreverNoEvento = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; eventoId: string; nome: string; cpf?: string;
+    telefone?: string; valor: number; formaPagamento?: FormaPagamento;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const nome = (data.nome || "").trim();
+    if (nome.length < 3) throw new Error("Informe o nome do participante.");
+
+    const valor = Number(data.valor) || 0;
+    const taxa = valor > 0 && data.formaPagamento
+      ? await calcularTaxa(admin, data.partnerId, "externa", data.formaPagamento, valor)
+      : { taxaPercentual: 0, taxaValor: 0, valorLiquido: valor };
+
+    const digitos = (data.cpf || "").replace(/\D/g, "");
+    let cpfHash: string | null = null;
+    if (digitos.length === 11) {
+      const { data: h } = await admin.rpc("academia_cpf_hash", {
+        p_partner_id: data.partnerId, p_cpf: digitos,
+      });
+      cpfHash = (h as unknown as string) ?? null;
+    }
+
+    const { data: row, error } = await admin.from("academia_evento_inscricoes").insert({
+      evento_id: data.eventoId,
+      partner_id: data.partnerId,
+      nome,
+      cpf_hash: cpfHash,
+      cpf_final: digitos ? digitos.slice(-3) : null,
+      telefone: data.telefone?.trim() || null,
+      valor,
+      forma_pagamento: valor > 0 ? (data.formaPagamento ?? null) : null,
+      taxa_percentual: taxa.taxaPercentual,
+      taxa_valor: taxa.taxaValor,
+      valor_liquido: taxa.valorLiquido,
+    }).select("credencial").single();
+    if (error) throw new Error(error.message);
+
+    return { ok: true, credencial: (row as { credencial: string }).credencial };
+  });
+
+export const validarCredencialEvento = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; credencial: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_evento_validar", {
+      p_partner_id: data.partnerId,
+      p_credencial: data.credencial,
+    });
+    if (error) throw new Error(error.message);
+    const linha = ((r ?? []) as Array<{
+      decisao: string; motivo: string; nome: string | null; evento: string | null;
+    }>)[0];
+    return linha ?? { decisao: "negado", motivo: "credencial_invalida", nome: null, evento: null };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

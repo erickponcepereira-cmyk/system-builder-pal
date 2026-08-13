@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_eventos: {
+        Row: {
+          aberto_a_nao_alunos: boolean
+          acesso: string
+          ativo: boolean
+          created_at: string
+          data_evento: string
+          descricao: string | null
+          face_politica: string
+          hora_inicio: string | null
+          id: string
+          nome: string
+          partner_id: string
+          valor: number
+        }
+        Insert: {
+          aberto_a_nao_alunos?: boolean
+          acesso?: string
+          ativo?: boolean
+          created_at?: string
+          data_evento: string
+          descricao?: string | null
+          face_politica?: string
+          hora_inicio?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          valor?: number
+        }
+        Update: {
+          aberto_a_nao_alunos?: boolean
+          acesso?: string
+          ativo?: boolean
+          created_at?: string
+          data_evento?: string
+          descricao?: string | null
+          face_politica?: string
+          hora_inicio?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      academia_evento_inscricoes: {
+        Row: {
+          cpf_final: string | null
+          cpf_hash: string | null
+          created_at: string
+          credencial: string
+          evento_id: string
+          face_enviada_em: string | null
+          face_removida_em: string | null
+          face_remover_ate: string | null
+          forma_pagamento: string | null
+          id: string
+          nome: string
+          partner_id: string
+          student_id: string | null
+          taxa_percentual: number
+          taxa_valor: number
+          telefone: string | null
+          usado_em: string | null
+          valor: number
+          valor_liquido: number
+        }
+        Insert: {
+          cpf_final?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          credencial?: string
+          evento_id: string
+          face_enviada_em?: string | null
+          face_removida_em?: string | null
+          face_remover_ate?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          student_id?: string | null
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          usado_em?: string | null
+          valor?: number
+          valor_liquido?: number
+        }
+        Update: {
+          cpf_final?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          credencial?: string
+          evento_id?: string
+          face_enviada_em?: string | null
+          face_removida_em?: string | null
+          face_remover_ate?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          student_id?: string | null
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          usado_em?: string | null
+          valor?: number
+          valor_liquido?: number
+        }
+        Relationships: []
+      }
       academia_turmas: {
         Row: {
           ativo: boolean
@@ -13125,6 +13236,25 @@ export type Database = {
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
+      }
+      academia_evento_validar: {
+        Args: { p_credencial: string; p_partner_id: string }
+        Returns: {
+          decisao: string
+          evento: string
+          motivo: string
+          nome: string
+        }[]
+      }
+      academia_faces_a_remover: {
+        Args: { p_partner_id: string }
+        Returns: {
+          evento: string
+          inscricao_id: string
+          nome: string
+          politica: string
+          vencido_desde: string
+        }[]
       }
       academia_frequencia_contador: {
         Args: { p_partner_id: string; p_student_id: string }

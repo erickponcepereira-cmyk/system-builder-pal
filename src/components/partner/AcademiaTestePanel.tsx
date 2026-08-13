@@ -10,7 +10,10 @@ import {
   buscarAlunosParaMensalidade,
   GATILHOS_CRM,
   MOTIVO_DAYUSE,
+  MOTIVO_EVENTO,
+  OPCOES_ACESSO_EVENTO,
   OPCOES_CONTA,
+  OPCOES_FACE,
   OPCOES_PERIODO,
   OPCOES_VALIDACAO,
   ROTULO_MARCO,
@@ -19,7 +22,10 @@ import {
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   aplicarModeloTreino,
+  criarEventoAcademia,
+  inscreverNoEvento,
   obterConfigAcademia,
+  obterEventosAcademia,
   obterCrmAcademia,
   obterFrequenciaAcademia,
   obterModelosAviso,
@@ -35,10 +41,11 @@ import {
   salvarRegraCrm,
   salvarTurma,
   sincronizarCrmAcademia,
+  validarCredencialEvento,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "frequencia" | "avisos" | "crm" | "dayuse" | "config";
+type SubAba = "alunos" | "mensalidade" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -75,6 +82,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["avisos", "Avisos de vencimento"],
             ["crm", "CRM"],
             ["dayuse", "Day-use"],
+            ["eventos", "Eventos"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
@@ -93,6 +101,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "frequencia" && <Frequencia partnerId={partnerId} />}
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
+        {sub === "eventos" && <Eventos partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
     </TestSurfaceGate>
@@ -252,6 +261,207 @@ function DayUse({ partnerId }: { partnerId: string }) {
 }
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function Eventos({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterEventosAcademia);
+  const criar = useServerFn(criarEventoAcademia);
+  const inscrever = useServerFn(inscreverNoEvento);
+  const validar = useServerFn(validarCredencialEvento);
+  const [loading, setLoading] = useState(true);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [nome, setNome] = useState("");
+  const [dataEv, setDataEv] = useState("");
+  const [valorEv, setValorEv] = useState(0);
+  const [acesso, setAcesso] = useState("qrcode");
+  const [facePol, setFacePol] = useState("uma_leitura");
+  const [inscEvento, setInscEvento] = useState("");
+  const [inscNome, setInscNome] = useState("");
+  const [inscCpf, setInscCpf] = useState("");
+  const [credencial, setCredencial] = useState("");
+  const [veredito, setVeredito] = useState<{ decisao: string; motivo: string; nome: string | null } | null>(null);
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+  useEffect(carregar, [partnerId]);
+
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+
+  return (
+    <div className="space-y-3">
+      {dados.facesPendentes.length > 0 && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+          <p className="text-[11px] font-bold text-red-400">
+            {dados.facesPendentes.length} rosto(s) para apagar do leitor
+          </p>
+          <p className="mt-0.5 text-[11px] text-white/60">
+            O prazo venceu. Enquanto o agente da academia não existir, isso é
+            tarefa manual — apagar no próprio iDFace.
+          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {dados.facesPendentes.slice(0, 6).map((f) => (
+              <p key={f.inscricao_id} className="text-[11px] text-white/70">
+                <strong className="text-white">{f.nome}</strong> — {f.evento}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white">Novo evento</p>
+        <input
+          value={nome} onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome (ex.: Aulão de funcional)"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        />
+        <div className="flex gap-2">
+          <input
+            type="date" value={dataEv} onChange={(e) => setDataEv(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          />
+          <div className="min-w-0 flex-1"><CurrencyInputBRL value={valorEv} onChange={setValorEv} /></div>
+        </div>
+        <select
+          value={acesso} onChange={(e) => setAcesso(e.target.value)}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          {OPCOES_ACESSO_EVENTO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {acesso !== "qrcode" && (
+          <>
+            <select
+              value={facePol} onChange={(e) => setFacePol(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            >
+              {OPCOES_FACE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <p className="text-[11px] text-amber-400">
+              Rosto de quem não é aluno é dado sensível. O prazo de exclusão nasce
+              junto com o cadastro e a academia é responsável por cumpri-lo.
+            </p>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await criar({ data: { partnerId, nome, data: dataEv, valor: valorEv, acesso, facePolitica: facePol } });
+              setNome(""); setDataEv(""); setValorEv(0); carregar();
+              toast.success("Evento criado.");
+            } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+          }}
+          disabled={nome.trim().length < 3 || !dataEv}
+          className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+        >
+          Criar evento
+        </button>
+      </div>
+
+      {dados.eventos.length > 0 && (
+        <>
+          <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-[11px] font-bold text-white">Inscrever participante</p>
+            <select
+              value={inscEvento} onChange={(e) => setInscEvento(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            >
+              <option value="">Escolha o evento…</option>
+              {dados.eventos.filter((e) => e.ativo).map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome} — {new Date(`${e.data_evento}T12:00:00`).toLocaleDateString("pt-BR")}
+                </option>
+              ))}
+            </select>
+            <input
+              value={inscNome} onChange={(e) => setInscNome(e.target.value)}
+              placeholder="Nome do participante"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            <input
+              value={inscCpf} onChange={(e) => setInscCpf(e.target.value)}
+              placeholder="CPF (opcional)" inputMode="numeric"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                const ev = dados.eventos.find((e) => e.id === inscEvento);
+                try {
+                  const r = await inscrever({
+                    data: {
+                      partnerId, eventoId: inscEvento, nome: inscNome, cpf: inscCpf,
+                      valor: ev?.valor ?? 0, formaPagamento: (ev?.valor ?? 0) > 0 ? "dinheiro" : undefined,
+                    },
+                  });
+                  setInscNome(""); setInscCpf(""); carregar();
+                  toast.success(`Credencial: ${r.credencial.slice(0, 8)}…`);
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+              }}
+              disabled={!inscEvento || inscNome.trim().length < 3}
+              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            >
+              Inscrever
+            </button>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-[11px] font-bold text-white">Validar entrada</p>
+            <div className="flex gap-2">
+              <input
+                value={credencial} onChange={(e) => { setCredencial(e.target.value); setVeredito(null); }}
+                placeholder="Credencial do participante"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const r = await validar({ data: { partnerId, credencial } });
+                    setVeredito(r as never); carregar();
+                  } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+                }}
+                disabled={credencial.trim().length < 6}
+                className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+              >
+                Validar
+              </button>
+            </div>
+            {veredito && (
+              <div className={`rounded-xl border p-2.5 ${veredito.decisao === "liberado" ? "border-green-500/30 bg-green-500/10" : "border-red-500/30 bg-red-500/10"}`}>
+                <p className={`text-sm font-bold ${veredito.decisao === "liberado" ? "text-green-400" : "text-red-400"}`}>
+                  {MOTIVO_EVENTO[veredito.motivo] ?? veredito.motivo}
+                </p>
+                {veredito.nome && <p className="text-[11px] text-white/60">{veredito.nome}</p>}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {dados.eventos.map((e) => {
+              const insc = dados.inscricoes.filter((i) => i.evento_id === e.id);
+              const usados = insc.filter((i) => i.usado_em).length;
+              return (
+                <div key={e.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="font-semibold text-white">{e.nome}</p>
+                  <p className="text-[11px] text-white/50">
+                    {new Date(`${e.data_evento}T12:00:00`).toLocaleDateString("pt-BR")}
+                    {e.valor > 0 && ` · ${brl(Number(e.valor))}`}
+                    {" · "}{insc.length} inscrito(s), {usados} entrou(entraram)
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function Frequencia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterFrequenciaAcademia);
