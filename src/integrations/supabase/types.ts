@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_dayuse: {
+        Row: {
+          cpf_final: string | null
+          cpf_hash: string
+          created_at: string
+          forma_pagamento: string | null
+          id: string
+          liberado_por: string | null
+          nome: string
+          observacao: string | null
+          partner_id: string
+          taxa_percentual: number
+          taxa_valor: number
+          telefone: string | null
+          tipo: string
+          usado_em: string
+          valor: number
+          valor_liquido: number
+        }
+        Insert: {
+          cpf_final?: string | null
+          cpf_hash: string
+          created_at?: string
+          forma_pagamento?: string | null
+          id?: string
+          liberado_por?: string | null
+          nome: string
+          observacao?: string | null
+          partner_id: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          tipo?: string
+          usado_em: string
+          valor?: number
+          valor_liquido?: number
+        }
+        Update: {
+          cpf_final?: string | null
+          cpf_hash?: string
+          created_at?: string
+          forma_pagamento?: string | null
+          id?: string
+          liberado_por?: string | null
+          nome?: string
+          observacao?: string | null
+          partner_id?: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          tipo?: string
+          usado_em?: string
+          valor?: number
+          valor_liquido?: number
+        }
+        Relationships: []
+      }
       academia_avisos_modelos: {
         Row: {
           ativo: boolean
@@ -12923,6 +12980,36 @@ export type Database = {
     Functions: {
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
+        Returns: string
+      }
+      academia_cpf_hash: {
+        Args: { p_cpf: string; p_partner_id: string }
+        Returns: string
+      }
+      academia_dayuse_avaliar: {
+        Args: { p_cpf: string; p_partner_id: string }
+        Returns: {
+          decisao: string
+          motivo: string
+          ultimo_uso: string
+          usos: number
+        }[]
+      }
+      academia_dayuse_registrar: {
+        Args: {
+          p_cpf: string
+          p_forma_pagamento: string | null
+          p_liberado_por: string | null
+          p_nome: string
+          p_observacao: string | null
+          p_partner_id: string
+          p_taxa_percentual: number
+          p_taxa_valor: number
+          p_telefone: string | null
+          p_tipo: string
+          p_valor: number
+          p_valor_liquido: number
+        }
         Returns: string
       }
       academia_avisos_preparar: {

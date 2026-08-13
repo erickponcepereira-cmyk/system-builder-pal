@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
+  MOTIVO_DAYUSE,
   ROTULO_MARCO,
+  TIPOS_DAYUSE,
+  avaliarDayUse,
   cancelarMensalidadeAcademia,
   listarAlunosAcademia,
   obterConfigAcademia,
@@ -15,13 +18,14 @@ import {
   prepararAvisosAcademia,
   previewAvisosAcademia,
   previewTaxaAcademia,
+  registrarDayUse,
   registrarMensalidadeAcademia,
   salvarConfigAcademia,
   salvarModelosAviso,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "avisos" | "config";
+type SubAba = "alunos" | "mensalidade" | "avisos" | "dayuse" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -55,6 +59,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
             ["avisos", "Avisos de vencimento"],
+            ["dayuse", "Day-use"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
@@ -70,9 +75,162 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
         {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
+        {sub === "dayuse" && <DayUse partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
     </TestSurfaceGate>
+  );
+}
+
+function DayUse({ partnerId }: { partnerId: string }) {
+  const avaliar = useServerFn(avaliarDayUse);
+  const registrar = useServerFn(registrarDayUse);
+  const [cpf, setCpf] = useState("");
+  const [checando, setChecando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [veredito, setVeredito] = useState<{
+    decisao: string; motivo: string; usos: number; ultimo_uso: string | null;
+  } | null>(null);
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [tipo, setTipo] = useState<string>("day_use");
+  const [valor, setValor] = useState(0);
+  const [forma, setForma] = useState<FormaPagamento>("dinheiro");
+
+  const digitos = cpf.replace(/\D/g, "");
+
+  const checar = async () => {
+    setChecando(true);
+    setVeredito(null);
+    try {
+      const r = await avaliar({ data: { partnerId, cpf } });
+      setVeredito(r as never);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao consultar.");
+    } finally {
+      setChecando(false);
+    }
+  };
+
+  const gravar = async () => {
+    setSalvando(true);
+    try {
+      await registrar({
+        data: {
+          partnerId, cpf, nome, telefone: telefone || undefined, tipo,
+          valor, formaPagamento: valor > 0 ? forma : undefined,
+        },
+      });
+      toast.success("Entrada liberada e registrada.");
+      setCpf(""); setNome(""); setTelefone(""); setValor(0); setVeredito(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível registrar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const liberado = veredito?.decisao === "liberado";
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          Caminho separado da mensalidade. A regra de quantas vezes cada CPF pode
+          entrar é a que estiver em Configurações.
+        </p>
+        <p className="mt-1.5 text-[11px] text-white/60">
+          O CPF é guardado como código embaralhado, não como número — só os 3
+          últimos dígitos ficam visíveis para a recepção conferir com o documento.
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={cpf}
+          onChange={(e) => { setCpf(e.target.value); setVeredito(null); }}
+          placeholder="CPF de quem vai entrar"
+          inputMode="numeric"
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        />
+        <button
+          type="button"
+          onClick={() => void checar()}
+          disabled={checando || digitos.length !== 11}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+        >
+          {checando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Consultar
+        </button>
+      </div>
+
+      {veredito && (
+        <div className={`rounded-xl border p-3 ${liberado ? "border-green-500/30 bg-green-500/10" : "border-red-500/30 bg-red-500/10"}`}>
+          <p className={`text-sm font-bold ${liberado ? "text-green-400" : "text-red-400"}`}>
+            {MOTIVO_DAYUSE[veredito.motivo] ?? veredito.motivo}
+          </p>
+          {veredito.usos > 0 && (
+            <p className="mt-0.5 text-[11px] text-white/60">
+              {veredito.usos} uso(s) registrado(s)
+              {veredito.ultimo_uso && ` · último em ${new Date(`${veredito.ultimo_uso}T12:00:00`).toLocaleDateString("pt-BR")}`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {liberado && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome completo"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          />
+          <input
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            placeholder="Telefone (opcional)"
+            inputMode="tel"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          />
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+          >
+            {TIPOS_DAYUSE.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <CurrencyInputBRL value={valor} onChange={setValor} />
+            </div>
+            {valor > 0 && (
+              <select
+                value={forma}
+                onChange={(e) => setForma(e.target.value as FormaPagamento)}
+                className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 text-sm text-white"
+              >
+                {FORMAS_PAGAMENTO.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            )}
+          </div>
+          <p className="text-[11px] text-white/50">
+            Deixe o valor em zero para entrada gratuita.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => void gravar()}
+            disabled={salvando || nome.trim().length < 3}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />}
+            Liberar e registrar
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

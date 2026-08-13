@@ -455,6 +455,76 @@ export const salvarModelosAviso = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const TIPOS_DAYUSE = [
+  { value: "day_use", label: "Day-use" },
+  { value: "aula_experimental", label: "Aula experimental" },
+  { value: "cortesia", label: "Cortesia" },
+] as const;
+
+export const MOTIVO_DAYUSE: Record<string, string> = {
+  dayuse_permitido: "Pode entrar",
+  ja_usou: "Este CPF já usou o day-use nesta academia",
+  ja_usou_no_mes: "Este CPF já usou o day-use neste mês",
+  dayuse_desativado: "Esta academia não oferece day-use",
+  cpf_invalido: "CPF incompleto",
+};
+
+/** Consulta a regra da academia sem registrar nada. */
+export const avaliarDayUse = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; cpf: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_dayuse_avaliar", {
+      p_partner_id: data.partnerId,
+      p_cpf: data.cpf,
+    });
+    if (error) throw new Error(error.message);
+    const linha = ((r ?? []) as Array<{
+      decisao: string; motivo: string; usos: number; ultimo_uso: string | null;
+    }>)[0];
+    return linha ?? { decisao: "negado", motivo: "cpf_invalido", usos: 0, ultimo_uso: null };
+  });
+
+export const registrarDayUse = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; cpf: string; nome: string; telefone?: string;
+    tipo: string; valor: number; formaPagamento?: FormaPagamento; observacao?: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const nome = (data.nome || "").trim();
+    if (nome.length < 3) throw new Error("Informe o nome de quem vai entrar.");
+
+    const valor = Number(data.valor) || 0;
+    // Day-use pago usa exatamente a mesma conta de taxa da mensalidade, e
+    // sempre como venda externa: quem recebeu foi a recepção da academia.
+    const taxa = valor > 0 && data.formaPagamento
+      ? await calcularTaxa(admin, data.partnerId, "externa", data.formaPagamento, valor)
+      : { taxaPercentual: 0, taxaValor: 0, valorLiquido: valor, fonte: "dinheiro" as const };
+
+    // A regra é reavaliada dentro da função do banco: duas recepcionistas
+    // clicando ao mesmo tempo não passam as duas.
+    const { data: id, error } = await admin.rpc("academia_dayuse_registrar", {
+      p_partner_id: data.partnerId,
+      p_cpf: data.cpf,
+      p_nome: nome,
+      p_telefone: data.telefone ?? null,
+      p_tipo: data.tipo,
+      p_valor: valor,
+      p_forma_pagamento: valor > 0 ? (data.formaPagamento ?? null) : null,
+      p_taxa_percentual: taxa.taxaPercentual,
+      p_taxa_valor: taxa.taxaValor,
+      p_valor_liquido: taxa.valorLiquido,
+      p_liberado_por: profileId,
+      p_observacao: data.observacao ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, id: id as unknown as string, ...taxa };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)
