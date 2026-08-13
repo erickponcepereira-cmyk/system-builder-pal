@@ -520,7 +520,7 @@ export const registrarDayUse = createServerFn({ method: "POST" })
       p_valor_liquido: taxa.valorLiquido,
       p_liberado_por: profileId,
       p_observacao: data.observacao ?? null,
-    });
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true, id: id as unknown as string, ...taxa };
   });
@@ -650,7 +650,7 @@ export const aplicarModeloTreino = createServerFn({ method: "POST" })
       p_montado_por: profileId,
       p_nome: data.nome ?? "",
       p_dia: data.diaSemana ?? null,
-    });
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true, planoId: id as unknown as string };
   });
@@ -681,8 +681,8 @@ export const obterFrequenciaAcademia = createServerFn({ method: "POST" })
     const [{ data: linhas, error }, { data: turmas }, { data: cfg }] = await Promise.all([
       admin.rpc("academia_frequencia_relatorio", {
         p_partner_id: data.partnerId,
-        p_desde: data.desde ?? null,
-        p_turma_id: data.turmaId ?? null,
+        p_desde: data.desde ?? undefined,
+        p_turma_id: data.turmaId ?? undefined,
       }),
       admin.from("academia_turmas")
         .select("id, nome, modalidade, dia_semana, hora_inicio, hora_fim")
