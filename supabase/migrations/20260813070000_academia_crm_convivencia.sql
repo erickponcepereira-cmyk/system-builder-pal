@@ -9,6 +9,10 @@
 -- A partir dai o aluno e tratado no novo lugar e a automacao sai do caminho, em
 -- vez de empurrar o cartao de volta toda sincronizacao.
 
+-- O retorno ganhou a coluna 'assumidos'. Postgres nao deixa CREATE OR REPLACE
+-- mudar o tipo de retorno de uma funcao que ja existe, entao dropa antes.
+DROP FUNCTION IF EXISTS public.academia_crm_sincronizar(uuid);
+
 CREATE OR REPLACE FUNCTION public.academia_crm_sincronizar(p_partner_id uuid)
 RETURNS TABLE (gatilho text, criados integer, assumidos integer)
 LANGUAGE plpgsql
