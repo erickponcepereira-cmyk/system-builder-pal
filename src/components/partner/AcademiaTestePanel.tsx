@@ -10,6 +10,9 @@ import {
   buscarAlunosParaMensalidade,
   GATILHOS_CRM,
   MOTIVO_DAYUSE,
+  OPCOES_CONTA,
+  OPCOES_PERIODO,
+  OPCOES_VALIDACAO,
   ROTULO_MARCO,
   TIPOS_DAYUSE,
   avaliarDayUse,
@@ -18,6 +21,7 @@ import {
   aplicarModeloTreino,
   obterConfigAcademia,
   obterCrmAcademia,
+  obterFrequenciaAcademia,
   obterModelosAviso,
   obterTreinosAluno,
   prepararAvisosAcademia,
@@ -26,13 +30,15 @@ import {
   registrarDayUse,
   registrarMensalidadeAcademia,
   salvarConfigAcademia,
+  salvarConfigFrequencia,
   salvarModelosAviso,
   salvarRegraCrm,
+  salvarTurma,
   sincronizarCrmAcademia,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "avisos" | "crm" | "dayuse" | "config";
+type SubAba = "alunos" | "mensalidade" | "frequencia" | "avisos" | "crm" | "dayuse" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -65,6 +71,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           {([
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
+            ["frequencia", "Frequência"],
             ["avisos", "Avisos de vencimento"],
             ["crm", "CRM"],
             ["dayuse", "Day-use"],
@@ -83,6 +90,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
         {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
+        {sub === "frequencia" && <Frequencia partnerId={partnerId} />}
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
@@ -244,6 +252,177 @@ function DayUse({ partnerId }: { partnerId: string }) {
 }
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function Frequencia({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterFrequenciaAcademia);
+  const salvarCfg = useServerFn(salvarConfigFrequencia);
+  const criarTurma = useServerFn(salvarTurma);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [turmaId, setTurmaId] = useState("");
+  const [desde, setDesde] = useState("");
+  const [novaTurma, setNovaTurma] = useState("");
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId, desde: desde || null, turmaId: turmaId || null } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(carregar, [partnerId, desde, turmaId]);
+
+  const gravarCfg = async (patch: Partial<{ validacao: string; conta: string; periodo: string; meta: number | null }>) => {
+    if (!dados) return;
+    const c = dados.config;
+    setSalvando(true);
+    try {
+      await salvarCfg({
+        data: {
+          partnerId,
+          validacao: patch.validacao ?? c.validacao_frequencia,
+          conta: patch.conta ?? c.frequencia_conta,
+          periodo: patch.periodo ?? c.frequencia_periodo,
+          meta: patch.meta !== undefined ? patch.meta : c.frequencia_meta,
+        },
+      });
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  const c = dados.config;
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white">Como esta academia conta</p>
+
+        <select
+          value={c.validacao_frequencia}
+          onChange={(e) => void gravarCfg({ validacao: e.target.value })}
+          disabled={salvando}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          {OPCOES_VALIDACAO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
+        <select
+          value={c.frequencia_conta}
+          onChange={(e) => void gravarCfg({ conta: e.target.value })}
+          disabled={salvando}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          {OPCOES_CONTA.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
+        <select
+          value={c.frequencia_periodo}
+          onChange={(e) => void gravarCfg({ periodo: e.target.value })}
+          disabled={salvando}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          {OPCOES_PERIODO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
+        <input
+          type="number"
+          min={0}
+          value={c.frequencia_meta ?? ""}
+          onChange={(e) => void gravarCfg({ meta: e.target.value === "" ? null : Number(e.target.value) })}
+          placeholder="Meta de aulas para premiação (ex.: 100)"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        />
+        <p className="text-[11px] text-white/50">
+          Toda entrada é sempre registrada, inclusive a segunda do mesmo dia. A
+          configuração decide o que <strong className="text-white/70">conta</strong>, não o que é guardado.
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <select
+          value={turmaId}
+          onChange={(e) => setTurmaId(e.target.value)}
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          <option value="">Todas as turmas</option>
+          {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
+        <input
+          type="date"
+          value={desde}
+          onChange={(e) => setDesde(e.target.value)}
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={novaTurma}
+          onChange={(e) => setNovaTurma(e.target.value)}
+          placeholder="Nova turma (ex.: Bike Indoor 19h)"
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        />
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await criarTurma({ data: { partnerId, nome: novaTurma } });
+              setNovaTurma(""); carregar();
+            } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+          }}
+          disabled={novaTurma.trim().length < 2}
+          className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+        >
+          Criar
+        </button>
+      </div>
+
+      {dados.linhas.length === 0 ? (
+        <p className="py-8 text-center text-sm text-white/50">
+          Nenhuma frequência registrada ainda. Ela aparece quando a catraca ou o
+          QR começarem a registrar entrada.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {dados.linhas.map((l) => {
+            const contagem = c.frequencia_conta === "dia" ? l.dias : l.visitas;
+            const meta = c.frequencia_meta ?? 0;
+            const bateu = meta > 0 && contagem >= meta;
+            return (
+              <div key={l.student_id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">{l.nome}</p>
+                    <p className="text-[11px] text-white/50">
+                      {contagem} {c.frequencia_conta === "dia" ? "dia(s)" : "entrada(s)"}
+                      {l.minutos_medios > 0 && ` · ${l.minutos_medios} min em média`}
+                      {l.ultima && ` · última em ${new Date(l.ultima).toLocaleDateString("pt-BR")}`}
+                    </p>
+                    {l.repetiu_hoje && (
+                      <p className="text-[11px] text-amber-400">Entrou mais de uma vez hoje</p>
+                    )}
+                  </div>
+                  {meta > 0 && (
+                    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${bateu ? "bg-green-500/15 text-green-400" : "bg-white/10 text-white/60"}`}>
+                      {contagem}/{meta}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
   partnerId: string; studentId: string; nomeAluno: string; onClose: () => void;

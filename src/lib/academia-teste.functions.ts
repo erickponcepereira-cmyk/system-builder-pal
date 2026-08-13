@@ -655,6 +655,104 @@ export const aplicarModeloTreino = createServerFn({ method: "POST" })
     return { ok: true, planoId: id as unknown as string };
   });
 
+export const OPCOES_VALIDACAO = [
+  { value: "catraca", label: "Só catraca" },
+  { value: "qrcode", label: "Só QR code" },
+  { value: "ambos", label: "Catraca e QR code" },
+] as const;
+
+export const OPCOES_CONTA = [
+  { value: "dia", label: "Por dia — duas entradas no mesmo dia contam 1" },
+  { value: "entrada", label: "Por entrada — cada passagem conta 1" },
+] as const;
+
+export const OPCOES_PERIODO = [
+  { value: "vitalicio", label: "Vitalício — nunca zera" },
+  { value: "anual", label: "Zera todo ano" },
+  { value: "mensal", label: "Zera todo mês" },
+] as const;
+
+export const obterFrequenciaAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; desde?: string | null; turmaId?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: linhas, error }, { data: turmas }, { data: cfg }] = await Promise.all([
+      admin.rpc("academia_frequencia_relatorio", {
+        p_partner_id: data.partnerId,
+        p_desde: data.desde ?? null,
+        p_turma_id: data.turmaId ?? null,
+      }),
+      admin.from("academia_turmas")
+        .select("id, nome, modalidade, dia_semana, hora_inicio, hora_fim")
+        .eq("partner_id", data.partnerId).eq("ativo", true).order("nome"),
+      admin.from("partner_acesso_config")
+        .select("validacao_frequencia, frequencia_conta, frequencia_periodo, frequencia_meta")
+        .eq("partner_id", data.partnerId).maybeSingle(),
+    ]);
+    if (error) throw new Error(error.message);
+
+    return {
+      linhas: (linhas ?? []) as Array<{
+        student_id: string; nome: string; visitas: number; dias: number;
+        minutos_medios: number; ultima: string | null; repetiu_hoje: boolean;
+      }>,
+      turmas: (turmas ?? []) as Array<{ id: string; nome: string; modalidade: string | null }>,
+      config: (cfg as null | {
+        validacao_frequencia: string; frequencia_conta: string;
+        frequencia_periodo: string; frequencia_meta: number | null;
+      }) ?? {
+        validacao_frequencia: "catraca", frequencia_conta: "dia",
+        frequencia_periodo: "vitalicio", frequencia_meta: null,
+      },
+    };
+  });
+
+export const salvarConfigFrequencia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; validacao: string; conta: string; periodo: string; meta: number | null;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { error } = await admin.from("partner_acesso_config").upsert(
+      {
+        partner_id: data.partnerId,
+        validacao_frequencia: data.validacao,
+        frequencia_conta: data.conta,
+        frequencia_periodo: data.periodo,
+        frequencia_meta: data.meta,
+      },
+      { onConflict: "partner_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const salvarTurma = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; nome: string; modalidade?: string;
+    diaSemana?: number | null; horaInicio?: string | null; horaFim?: string | null;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const nome = (data.nome || "").trim();
+    if (nome.length < 2) throw new Error("Informe o nome da turma.");
+
+    const { error } = await admin.from("academia_turmas").insert({
+      partner_id: data.partnerId,
+      nome,
+      modalidade: data.modalidade?.trim() || null,
+      dia_semana: data.diaSemana ?? null,
+      hora_inicio: data.horaInicio || null,
+      hora_fim: data.horaFim || null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

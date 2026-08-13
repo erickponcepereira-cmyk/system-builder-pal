@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_turmas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_semana: number | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: string
+          modalidade: string | null
+          nome: string
+          partner_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana?: number | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          modalidade?: string | null
+          nome: string
+          partner_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana?: number | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          modalidade?: string | null
+          nome?: string
+          partner_id?: string
+        }
+        Relationships: []
+      }
+      academia_frequencias: {
+        Row: {
+          created_at: string
+          entrada_em: string
+          id: string
+          observacao: string | null
+          origem: string
+          partner_id: string
+          saida_em: string | null
+          student_id: string
+          turma_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entrada_em?: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          partner_id: string
+          saida_em?: string | null
+          student_id: string
+          turma_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entrada_em?: string
+          id?: string
+          observacao?: string | null
+          origem?: string
+          partner_id?: string
+          saida_em?: string | null
+          student_id?: string
+          turma_id?: string | null
+        }
+        Relationships: []
+      }
       academia_crm_regras: {
         Row: {
           ativo: boolean
@@ -6561,6 +6633,10 @@ export type Database = {
           avisos_automaticos: boolean
           created_at: string
           dias_carencia: number
+          frequencia_conta: string
+          frequencia_meta: number | null
+          frequencia_periodo: string
+          validacao_frequencia: string
           exige_senha_liberacao: boolean
           id: string
           modelo_catraca: string | null
@@ -6573,6 +6649,10 @@ export type Database = {
           avisos_automaticos?: boolean
           created_at?: string
           dias_carencia?: number
+          frequencia_conta?: string
+          frequencia_meta?: number | null
+          frequencia_periodo?: string
+          validacao_frequencia?: string
           exige_senha_liberacao?: boolean
           id?: string
           modelo_catraca?: string | null
@@ -6585,6 +6665,10 @@ export type Database = {
           avisos_automaticos?: boolean
           created_at?: string
           dias_carencia?: number
+          frequencia_conta?: string
+          frequencia_meta?: number | null
+          frequencia_periodo?: string
+          validacao_frequencia?: string
           exige_senha_liberacao?: boolean
           id?: string
           modelo_catraca?: string | null
@@ -13041,6 +13125,29 @@ export type Database = {
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
+      }
+      academia_frequencia_contador: {
+        Args: { p_partner_id: string; p_student_id: string }
+        Returns: {
+          conta: string
+          meta: number
+          no_periodo: number
+          periodo: string
+          total: number
+          ultima: string
+        }[]
+      }
+      academia_frequencia_relatorio: {
+        Args: { p_desde?: string | null; p_partner_id: string; p_turma_id?: string | null }
+        Returns: {
+          dias: number
+          minutos_medios: number
+          nome: string
+          repetiu_hoje: boolean
+          student_id: string
+          ultima: string
+          visitas: number
+        }[]
       }
       academia_treino_do_modelo: {
         Args: {
