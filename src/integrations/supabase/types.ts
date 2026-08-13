@@ -13176,8 +13176,17 @@ export type Database = {
       academia_crm_sincronizar: {
         Args: { p_partner_id: string }
         Returns: {
+          assumidos: number
           criados: number
           gatilho: string
+        }[]
+      }
+      academia_crm_em_varios_funis: {
+        Args: { p_partner_id: string }
+        Returns: {
+          funis: number
+          nome: string
+          quadros: string
         }[]
       }
       academia_cpf_hash: {

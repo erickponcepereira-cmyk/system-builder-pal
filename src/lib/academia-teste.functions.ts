@@ -551,15 +551,18 @@ export const obterCrmAcademia = createServerFn({ method: "POST" })
       ? await admin.from("crm_colunas").select("id, quadro_id, nome, posicao").in("quadro_id", ids).order("posicao")
       : { data: [] };
 
-    const { data: regras } = await admin
-      .from("academia_crm_regras")
-      .select("gatilho, quadro_id, coluna_id, ativo")
-      .eq("partner_id", data.partnerId);
+    const [{ data: regras }, { data: varios }] = await Promise.all([
+      admin.from("academia_crm_regras")
+        .select("gatilho, quadro_id, coluna_id, ativo").eq("partner_id", data.partnerId),
+      admin.rpc("academia_crm_em_varios_funis", { p_partner_id: data.partnerId }),
+    ]);
 
     return {
       quadros: (quadros ?? []) as Array<{ id: string; nome: string }>,
       colunas: (colunas ?? []) as Array<{ id: string; quadro_id: string; nome: string }>,
       regras: (regras ?? []) as Array<{ gatilho: string; quadro_id: string; coluna_id: string; ativo: boolean }>,
+      // Não é erro: a academia decide. Só precisa enxergar.
+      emVariosFunis: (varios ?? []) as Array<{ nome: string; funis: number; quadros: string }>,
     };
   });
 
@@ -601,8 +604,13 @@ export const sincronizarCrmAcademia = createServerFn({ method: "POST" })
       p_partner_id: data.partnerId,
     });
     if (error) throw new Error(error.message);
-    const linhas = (r ?? []) as Array<{ gatilho: string; criados: number }>;
-    return { criados: linhas.reduce((s, l) => s + Number(l.criados || 0), 0), porGatilho: linhas };
+    const linhas = (r ?? []) as Array<{ gatilho: string; criados: number; assumidos: number }>;
+    return {
+      criados: linhas.reduce((s, l) => s + Number(l.criados || 0), 0),
+      // Ficaram de fora porque a equipe moveu o cartão: já estão sendo tratados.
+      assumidos: linhas.reduce((s, l) => s + Number(l.assumidos || 0), 0),
+      porGatilho: linhas,
+    };
   });
 
 /** Treinos do aluno + modelos disponíveis + de quem é o aluno. */

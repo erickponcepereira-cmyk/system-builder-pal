@@ -570,6 +570,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
   const [quadros, setQuadros] = useState<Array<{ id: string; nome: string }>>([]);
   const [colunas, setColunas] = useState<Array<{ id: string; quadro_id: string; nome: string }>>([]);
   const [regras, setRegras] = useState<Record<string, { quadroId: string; colunaId: string; ativo: boolean }>>({});
+  const [emVarios, setEmVarios] = useState<Array<{ nome: string; funis: number; quadros: string }>>([]);
 
   const carregar = () => {
     setLoading(true);
@@ -577,6 +578,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
       .then((r) => {
         setQuadros(r.quadros);
         setColunas(r.colunas);
+        setEmVarios(r.emVariosFunis);
         const mapa: Record<string, { quadroId: string; colunaId: string; ativo: boolean }> = {};
         for (const g of r.regras) mapa[g.gatilho] = { quadroId: g.quadro_id, colunaId: g.coluna_id, ativo: g.ativo };
         setRegras(mapa);
@@ -608,7 +610,13 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
     setSincronizando(true);
     try {
       const r = await sincronizar({ data: { partnerId } });
-      toast.success(r.criados > 0 ? `${r.criados} cartão(ões) criado(s).` : "Nenhum cartão novo — já estava tudo em dia.");
+      const base = r.criados > 0 ? `${r.criados} cartão(ões) criado(s).` : "Nenhum cartão novo.";
+      toast.success(
+        r.assumidos > 0
+          ? `${base} ${r.assumidos} fora da automação — a equipe já assumiu.`
+          : base,
+      );
+      carregar();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível sincronizar.");
     } finally {
@@ -627,10 +635,31 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
         </p>
         <p className="mt-1.5 text-[11px] text-white/60">
           A automação <strong className="text-white/80">só cria cartão novo</strong>.
-          Ela nunca move nem apaga cartão existente — depois de criado, quem manda
-          é quem está tratando o aluno.
+          Se alguém mover o cartão, aquele aluno sai da automação e passa a ser
+          tratado onde a equipe colocou.
         </p>
       </div>
+
+      {emVarios.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+          <p className="text-[11px] font-semibold text-amber-300">
+            {emVarios.length} pessoa(s) em mais de um funil ao mesmo tempo
+          </p>
+          <p className="mt-0.5 text-[11px] text-white/50">
+            Não é erro — só avisando. A automação não mexe nesses cartões.
+          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {emVarios.slice(0, 8).map((p) => (
+              <p key={p.nome} className="text-[11px] text-white/70">
+                <strong className="text-white">{p.nome}</strong> — {p.quadros}
+              </p>
+            ))}
+            {emVarios.length > 8 && (
+              <p className="text-[11px] text-white/40">e mais {emVarios.length - 8}…</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {quadros.length === 0 ? (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
