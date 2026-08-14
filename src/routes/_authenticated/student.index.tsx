@@ -240,7 +240,8 @@ function StudentHome() {
       )}
 
 
-      {/* Indique e ganhe */}
+      {/* Indique e ganhe — escondido para coach ativo (já tem no painel de coach) */}
+      {!isActiveCoach && (
       <button
         type="button"
         onClick={() => setShowReferral(true)}
