@@ -93,6 +93,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["produtos", "Produtos que liberam"],
             ["dayuse", "Day-use"],
             ["eventos", "Eventos"],
+            ["agente", "Agente da catraca"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
@@ -113,6 +114,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
         {sub === "produtos" && <ProdutosMensalidade partnerId={partnerId} />}
         {sub === "eventos" && <Eventos partnerId={partnerId} />}
+        {sub === "agente" && <AgenteAcademia partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
     </TestSurfaceGate>
