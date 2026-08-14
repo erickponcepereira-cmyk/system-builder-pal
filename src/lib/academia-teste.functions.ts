@@ -984,6 +984,91 @@ export const reprocessarMensalidadesPendentes = createServerFn({ method: "POST" 
     return { geradas: Number(n ?? 0) };
   });
 
+export const obterAgenteAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: agentes }, { data: negados }, { data: entradas }, { data: credenciais }] =
+      await Promise.all([
+        admin.from("academia_agentes")
+          .select("id, nome, codigo_pareamento, codigo_expira_em, pareado_em, ultimo_contato_em, ultima_sync_em, versao, ativo")
+          .eq("partner_id", data.partnerId).order("created_at", { ascending: false }),
+        admin.from("academia_acessos_negados")
+          .select("id, referencia, motivo, origem, tentado_em")
+          .eq("partner_id", data.partnerId).order("tentado_em", { ascending: false }).limit(20),
+        admin.from("academia_frequencias")
+          .select("id, student_id, origem, entrada_em")
+          .eq("partner_id", data.partnerId).order("entrada_em", { ascending: false }).limit(20),
+        admin.from("academia_credenciais")
+          .select("id, student_id, tipo, referencia, ativo")
+          .eq("partner_id", data.partnerId).eq("ativo", true),
+      ]);
+
+    // Nomes só para a tela da academia. O agente nunca recebe isto.
+    const ids = Array.from(new Set([
+      ...((entradas ?? []) as Array<{ student_id: string }>).map((e) => e.student_id),
+      ...((credenciais ?? []) as Array<{ student_id: string | null }>).map((c) => c.student_id).filter(Boolean) as string[],
+    ]));
+    const nomes = new Map<string, string>();
+    if (ids.length) {
+      const { data: studs } = await admin.from("students").select("id, profile_id").in("id", ids);
+      const profIds = ((studs ?? []) as Array<{ profile_id: string }>).map((s) => s.profile_id);
+      const { data: profs } = await admin.from("profiles").select("id, name").in("id", profIds);
+      const mapProf = new Map(((profs ?? []) as Array<{ id: string; name: string | null }>).map((p) => [p.id, p.name ?? "Sem nome"]));
+      for (const s of (studs ?? []) as Array<{ id: string; profile_id: string }>) {
+        nomes.set(s.id, mapProf.get(s.profile_id) ?? "Sem nome");
+      }
+    }
+
+    return {
+      agentes: (agentes ?? []) as Array<{
+        id: string; nome: string; codigo_pareamento: string | null; codigo_expira_em: string | null;
+        pareado_em: string | null; ultimo_contato_em: string | null; ultima_sync_em: string | null;
+        versao: string | null; ativo: boolean;
+      }>,
+      negados: (negados ?? []) as Array<{
+        id: string; referencia: string | null; motivo: string; origem: string; tentado_em: string;
+      }>,
+      entradas: ((entradas ?? []) as Array<{ id: string; student_id: string; origem: string; entrada_em: string }>)
+        .map((e) => ({ ...e, nome: nomes.get(e.student_id) ?? "Sem nome" })),
+      credenciais: ((credenciais ?? []) as Array<{ id: string; student_id: string | null; tipo: string; referencia: string }>)
+        .map((c) => ({ ...c, nome: c.student_id ? (nomes.get(c.student_id) ?? "Sem nome") : "Sem vínculo" })),
+    };
+  });
+
+export const gerarCodigoAgente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; nome?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_agente_gerar_codigo", {
+      p_partner_id: data.partnerId,
+      p_nome: data.nome ?? "",
+    });
+    if (error) throw new Error(error.message);
+    const linha = ((r ?? []) as Array<{ agente_id: string; codigo: string; expira_em: string }>)[0];
+    if (!linha) throw new Error("Não foi possível gerar o código.");
+    return linha;
+  });
+
+export const vincularCredencial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; studentId: string; tipo: string; referencia: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const ref = (data.referencia || "").trim();
+    if (!ref) throw new Error("Informe o identificador do equipamento.");
+
+    const { error } = await admin.from("academia_credenciais").upsert(
+      { partner_id: data.partnerId, student_id: data.studentId, tipo: data.tipo, referencia: ref, ativo: true },
+      { onConflict: "partner_id,tipo,referencia" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

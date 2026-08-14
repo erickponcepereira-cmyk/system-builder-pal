@@ -208,6 +208,111 @@ export type Database = {
           },
         ]
       }
+      academia_agentes: {
+        Row: {
+          ativo: boolean
+          codigo_expira_em: string | null
+          codigo_pareamento: string | null
+          created_at: string
+          id: string
+          nome: string
+          pareado_em: string | null
+          partner_id: string
+          segredo_hash: string | null
+          ultima_sync_em: string | null
+          ultimo_contato_em: string | null
+          versao: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          codigo_expira_em?: string | null
+          codigo_pareamento?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          pareado_em?: string | null
+          partner_id: string
+          segredo_hash?: string | null
+          ultima_sync_em?: string | null
+          ultimo_contato_em?: string | null
+          versao?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          codigo_expira_em?: string | null
+          codigo_pareamento?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          pareado_em?: string | null
+          partner_id?: string
+          segredo_hash?: string | null
+          ultima_sync_em?: string | null
+          ultimo_contato_em?: string | null
+          versao?: string | null
+        }
+        Relationships: []
+      }
+      academia_credenciais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          partner_id: string
+          referencia: string
+          student_id: string | null
+          tipo: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          partner_id: string
+          referencia: string
+          student_id?: string | null
+          tipo?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          partner_id?: string
+          referencia?: string
+          student_id?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
+      academia_acessos_negados: {
+        Row: {
+          id: string
+          motivo: string
+          origem: string
+          partner_id: string
+          referencia: string | null
+          student_id: string | null
+          tentado_em: string
+        }
+        Insert: {
+          id?: string
+          motivo: string
+          origem?: string
+          partner_id: string
+          referencia?: string | null
+          student_id?: string | null
+          tentado_em?: string
+        }
+        Update: {
+          id?: string
+          motivo?: string
+          origem?: string
+          partner_id?: string
+          referencia?: string | null
+          student_id?: string | null
+          tentado_em?: string
+        }
+        Relationships: []
+      }
       academia_produtos_mensalidade: {
         Row: {
           ativo: boolean
@@ -13487,6 +13592,33 @@ export type Database = {
           criados: number
           gatilho: string
         }[]
+      }
+      academia_agente_gerar_codigo: {
+        Args: { p_nome: string; p_partner_id: string }
+        Returns: {
+          agente_id: string
+          codigo: string
+          expira_em: string
+        }[]
+      }
+      academia_agente_parear: {
+        Args: { p_codigo: string; p_versao: string }
+        Returns: {
+          agente_id: string
+          partner_id: string
+          segredo: string
+        }[]
+      }
+      academia_agente_retrato: {
+        Args: { p_agente_id: string; p_segredo: string }
+        Returns: {
+          ate: string
+          ref: string
+        }[]
+      }
+      academia_agente_enviar: {
+        Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
+        Returns: number
       }
       academia_mensalidades_pendentes_reprocessar: {
         Args: { p_partner_id: string }

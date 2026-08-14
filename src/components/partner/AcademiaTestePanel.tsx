@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
@@ -25,7 +25,9 @@ import {
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
+  gerarCodigoAgente,
   inscreverNoEvento,
+  obterAgenteAcademia,
   obterConfigAcademia,
   obterEventosAcademia,
   obterCrmAcademia,
@@ -47,10 +49,11 @@ import {
   salvarTurma,
   sincronizarCrmAcademia,
   validarCredencialEvento,
+  vincularCredencial,
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "config";
+type SubAba = "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "agente" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -774,6 +777,197 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function AgenteAcademia({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterAgenteAcademia);
+  const gerar = useServerFn(gerarCodigoAgente);
+  const vincular = useServerFn(vincularCredencial);
+  const buscarAlunos = useServerFn(buscarAlunosParaMensalidade);
+  const [loading, setLoading] = useState(true);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [novoCodigo, setNovoCodigo] = useState<{ codigo: string; expira_em: string } | null>(null);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<Array<{ studentId: string; nome: string }>>([]);
+  const [alvo, setAlvo] = useState<{ studentId: string; nome: string } | null>(null);
+  const [ref, setRef] = useState("");
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+  useEffect(carregar, [partnerId]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setAchados([]); return; }
+    const t = setTimeout(() => {
+      buscarAlunos({ data: { partnerId, termo } })
+        .then((r) => setAchados(r.alunos)).catch(() => setAchados([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [termo, partnerId]);
+
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+
+  const pareados = dados.agentes.filter((a) => a.pareado_em);
+  const pendentes = dados.agentes.filter((a) => !a.pareado_em && a.codigo_pareamento);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          O programa roda no PC da academia porque a porta da catraca é local.
+          Ele baixa quem pode entrar e sobe as entradas.
+        </p>
+        <p className="mt-1.5 text-[11px] text-white/60">
+          Ele recebe <strong className="text-white/80">só identificador e data</strong> — sem nome,
+          sem CPF, sem contrato, sem valor. Toda a regra fica aqui.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const r = await gerar({ data: { partnerId } });
+            setNovoCodigo({ codigo: r.codigo, expira_em: r.expira_em });
+            carregar();
+          } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+        }}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+      >
+        <Plug className="h-4 w-4" />
+        Gerar código de instalação
+      </button>
+
+      {novoCodigo && (
+        <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-center">
+          <p className="text-[11px] text-white/60">Digite este código no programa recém-instalado</p>
+          <p className="my-1 font-mono text-2xl font-bold tracking-[0.2em] text-green-400">{novoCodigo.codigo}</p>
+          <p className="text-[11px] text-white/50">
+            Uso único, vale até {new Date(novoCodigo.expira_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+      )}
+
+      {pendentes.length > 0 && (
+        <p className="text-[11px] text-amber-400">
+          {pendentes.length} código(s) aguardando instalação.
+        </p>
+      )}
+
+      {pareados.map((a) => {
+        const min = a.ultimo_contato_em
+          ? Math.round((Date.now() - Date.parse(a.ultimo_contato_em)) / 60000) : null;
+        const online = min !== null && min < 10;
+        return (
+          <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-white">{a.nome}</p>
+                <p className="text-[11px] text-white/50">
+                  {a.versao && `versão ${a.versao} · `}
+                  {a.ultima_sync_em
+                    ? `última sincronização ${new Date(a.ultima_sync_em).toLocaleString("pt-BR")}`
+                    : "nunca sincronizou"}
+                </p>
+              </div>
+              <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${online ? "bg-green-500/15 text-green-400" : "bg-white/10 text-white/60"}`}>
+                {min === null ? "sem contato" : online ? "online" : `há ${min} min`}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white">Vincular pessoa ao equipamento</p>
+        {alvo ? (
+          <>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+              <span className="truncate text-sm text-white">{alvo.nome}</span>
+              <button type="button" onClick={() => setAlvo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
+            </div>
+            <input
+              value={ref} onChange={(e) => setRef(e.target.value)}
+              placeholder="Identificador da pessoa no leitor"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await vincular({ data: { partnerId, studentId: alvo.studentId, tipo: "facial", referencia: ref } });
+                  setAlvo(null); setRef(""); setTermo(""); carregar();
+                  toast.success("Vinculado.");
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+              }}
+              disabled={!ref.trim()}
+              className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+            >
+              Vincular
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              value={termo} onChange={(e) => setTermo(e.target.value)}
+              placeholder="Buscar aluno pelo nome"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            {achados.map((a) => (
+              <button
+                key={a.studentId} type="button" onClick={() => setAlvo(a)}
+                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+              >
+                {a.nome}
+              </button>
+            ))}
+          </>
+        )}
+        <p className="text-[11px] text-white/50">
+          {dados.credenciais.length} pessoa(s) vinculada(s).
+        </p>
+      </div>
+
+      {dados.negados.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[11px] font-bold text-white">Tentaram e não entraram</p>
+          <div className="mt-1.5 space-y-1">
+            {dados.negados.map((n) => (
+              <div key={n.id} className="flex items-center justify-between gap-2">
+                <span className="truncate text-[11px] text-white/70">
+                  {n.referencia ?? "sem identificação"} — {ESTADOS[n.motivo]?.label ?? n.motivo}
+                </span>
+                <span className="shrink-0 text-[10px] text-white/40">
+                  {new Date(n.tentado_em).toLocaleString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dados.entradas.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[11px] font-bold text-white">Últimas entradas</p>
+          <div className="mt-1.5 space-y-1">
+            {dados.entradas.map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-2">
+                <span className="truncate text-[11px] text-white/70">{e.nome}</span>
+                <span className="shrink-0 text-[10px] text-white/40">
+                  {e.origem} · {new Date(e.entrada_em).toLocaleString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
