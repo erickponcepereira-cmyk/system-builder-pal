@@ -15132,6 +15132,14 @@ export type Database = {
       }
       test_mode_cutoff: { Args: never; Returns: string }
       touch_my_activity: { Args: never; Returns: undefined }
+      transfer_evaluation_client_link: {
+        Args: {
+          _client_id: string
+          _delete_duplicates?: boolean
+          _student_id: string
+        }
+        Returns: Json
+      }
       transfer_inactive_coach_network: {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
         Returns: Json
