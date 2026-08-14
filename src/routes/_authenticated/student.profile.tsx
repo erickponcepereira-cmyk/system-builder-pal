@@ -426,6 +426,8 @@ function ProfilePage() {
             </>
           )}
         </button>
+        )}
+
 
 
         <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
