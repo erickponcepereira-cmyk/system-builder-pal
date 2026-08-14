@@ -113,6 +113,14 @@ function ProfilePage() {
         setProfile({ name: pd.name, email: pd.email, photo_url: pd.photo_url || "", blood_type: pd.blood_type || "" });
       }
       if (!profileData?.id) return;
+      // Coach ativo não vê indicação/Fitcoin aqui — esses recursos ficam no painel de coach.
+      const { data: coachRow } = await supabase
+        .from("coaches")
+        .select("id, onboarding_stage")
+        .eq("profile_id", profileData.id)
+        .maybeSingle();
+      const activeCoach = (coachRow as { onboarding_stage?: string } | null)?.onboarding_stage === "released";
+      setIsActiveCoach(activeCoach);
       const { data: student } = await supabase.from("students").select("id,referral_link,referral_code,is_influencer").eq("profile_id", profileData.id).maybeSingle();
       if (!student?.id) return;
       setStudentId(student.id);
