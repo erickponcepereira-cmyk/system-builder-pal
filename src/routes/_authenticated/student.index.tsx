@@ -256,6 +256,8 @@ function StudentHome() {
         </div>
         <ChevronRight className="h-5 w-5 text-foreground/40" />
       </button>
+      )}
+
 
       {/* Meu Treino */}
       <Link to="/student/workout" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 transition-transform hover:scale-[1.01]">
