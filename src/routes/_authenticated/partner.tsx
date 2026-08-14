@@ -351,7 +351,7 @@ function PartnerPanel() {
         </div>
         <div className="flex items-center gap-2">
           <RoleSwitcher current="partner" />
-          <button onClick={signOut} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-white/60 hover:text-white touch-manipulation"><LogOut className="h-5 w-5" /></button>
+          <button onClick={signOut} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-current opacity-70 hover:opacity-100 touch-manipulation"><LogOut className="h-5 w-5" /></button>
         </div>
       </header>
 
