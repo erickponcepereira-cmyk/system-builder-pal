@@ -170,7 +170,7 @@ function ProfilePage() {
         setTokenHistory(hist);
       } catch (e) { console.warn("token history fetch failed", e); }
       try {
-        const mapped = await fetchReferralCommissions();
+        const mapped = activeCoach ? [] : await fetchReferralCommissions();
         setReferralCommissions(mapped);
         if (await getClientCutoffIso()) {
           const fitcoinPostCutoff = mapped.reduce((sum, row) => sum + Number(row.amount || 0), 0);
