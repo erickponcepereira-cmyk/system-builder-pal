@@ -28,6 +28,7 @@ import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutri
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
 import { StuckPaymentsAlert } from "@/components/admin/StuckPaymentsAlert";
+import { PayablesPanel } from "@/components/admin/PayablesPanel";
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
@@ -54,7 +55,7 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
+  type Tab = "dashboard" | "payables" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
@@ -71,6 +72,7 @@ function AdminPayments() {
       <div className="mb-4 flex gap-1 rounded-xl bg-card p-1 overflow-x-auto">
         {[
           { k: "dashboard", l: "Dashboard" },
+          { k: "payables", l: "Contas a Pagar" },
           { k: "seller", l: "Coach / Parceiro / Profissional" },
           { k: "student_referrer", l: "Aluno Indicador" },
           { k: "nutritionist", l: "Nutricionistas" },
@@ -93,6 +95,7 @@ function AdminPayments() {
       </div>
 
       {activeTab === "dashboard" && <DashboardPanel onPickGroup={(g) => setActiveTab(g)} />}
+      {activeTab === "payables" && <PayablesPanel />}
       {activeTab === "seller" && (
         <GroupPanel key={`seller-${sellerRole}`} group="seller" sellerRole={sellerRole} onChangeSellerRole={setSellerRole} />
       )}
