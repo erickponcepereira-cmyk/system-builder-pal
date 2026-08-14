@@ -320,9 +320,11 @@ function CoachDashboard() {
 
       {/* Mobile header */}
       <div
-        className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-foreground/5 px-4 py-2 backdrop-blur-xl lg:hidden"
+        className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b px-4 py-2 backdrop-blur-xl lg:hidden"
         style={{
-          backgroundColor: "rgba(10,10,10,0.94)",
+          backgroundColor: "color-mix(in srgb, var(--sidebar) 94%, transparent)",
+          color: "var(--sidebar-foreground)",
+          borderBottomColor: "var(--sidebar-border)",
           paddingTop: "max(2rem, env(safe-area-inset-top))",
           paddingLeft: "max(1rem, env(safe-area-inset-left))",
           paddingRight: "max(1rem, env(safe-area-inset-right))",
@@ -330,7 +332,7 @@ function CoachDashboard() {
       >
         <div className="flex min-w-0 items-center gap-2">
 <Logo className="h-9 w-auto shrink-0 object-contain" />
-          <span className="truncate font-bold text-foreground">FitMind Club</span>
+          <span className="truncate font-bold text-current">{brandTheme.name}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <RoleSwitcher current="coach" />
@@ -338,7 +340,7 @@ function CoachDashboard() {
             type="button"
             aria-label={sidebarOpen ? "Fechar menu" : "Abrir menu"}
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-foreground/10 text-foreground active:bg-foreground/20"
+            className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-current/10 text-current active:bg-current/20"
           >
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
