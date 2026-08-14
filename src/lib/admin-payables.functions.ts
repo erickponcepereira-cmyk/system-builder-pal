@@ -80,6 +80,7 @@ export interface PayablesReport {
 }
 
 async function nameIndex(profileIds: string[]) {
+  const supabaseAdmin = await getAdmin();
   const map = new Map<string, { name: string; email: string | null }>();
   const unique = Array.from(new Set(profileIds.filter(Boolean)));
   for (let i = 0; i < unique.length; i += 300) {
@@ -95,6 +96,7 @@ async function nameIndex(profileIds: string[]) {
 }
 
 async function loadLastAudit(): Promise<WalletAuditRun | null> {
+  const supabaseAdmin = await getAdmin();
   const { data: run } = await supabaseAdmin
     .from("wallet_audit_runs" as never)
     .select("id,run_at,wallets_checked,diffs_count,total_delta" as never)
@@ -136,7 +138,9 @@ async function loadLastAudit(): Promise<WalletAuditRun | null> {
 export const getPayablesReport = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<PayablesReport> => {
-    await assertAdmin(context.userId);
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Acesso negado");
+    const supabaseAdmin = await getAdmin();
 
     const people: PayablePersonRow[] = [];
 
@@ -314,7 +318,9 @@ export const getPayablesReport = createServerFn({ method: "POST" })
 export const runWalletAudit = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<WalletAuditRun | null> => {
-    await assertAdmin(context.userId);
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Acesso negado");
+    const supabaseAdmin = await getAdmin();
     const { error } = await supabaseAdmin.rpc("admin_wallet_audit_run" as never, {
       _admin_user_id: context.userId,
     } as never);
@@ -326,7 +332,9 @@ export const runWalletAudit = createServerFn({ method: "POST" })
 export const listWalletAuditRuns = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Acesso negado");
+    const supabaseAdmin = await getAdmin();
     const { data } = await supabaseAdmin
       .from("wallet_audit_runs" as never)
       .select("id,run_at,wallets_checked,diffs_count,total_delta" as never)
