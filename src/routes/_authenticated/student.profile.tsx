@@ -73,6 +73,7 @@ function ProfilePage() {
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
   const [referralCode, setReferralCode] = useState("ALUNO2026");
   const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [isActiveCoach, setIsActiveCoach] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("50");
   const [pixKey, setPixKey] = useState("");
@@ -113,6 +114,14 @@ function ProfilePage() {
         setProfile({ name: pd.name, email: pd.email, photo_url: pd.photo_url || "", blood_type: pd.blood_type || "" });
       }
       if (!profileData?.id) return;
+      // Coach ativo não vê indicação/Fitcoin aqui — esses recursos ficam no painel de coach.
+      const { data: coachRow } = await supabase
+        .from("coaches")
+        .select("id, onboarding_stage")
+        .eq("profile_id", profileData.id)
+        .maybeSingle();
+      const activeCoach = (coachRow as { onboarding_stage?: string } | null)?.onboarding_stage === "released";
+      setIsActiveCoach(activeCoach);
       const { data: student } = await supabase.from("students").select("id,referral_link,referral_code,is_influencer").eq("profile_id", profileData.id).maybeSingle();
       if (!student?.id) return;
       setStudentId(student.id);
@@ -161,7 +170,7 @@ function ProfilePage() {
         setTokenHistory(hist);
       } catch (e) { console.warn("token history fetch failed", e); }
       try {
-        const mapped = await fetchReferralCommissions();
+        const mapped = activeCoach ? [] : await fetchReferralCommissions();
         setReferralCommissions(mapped);
         if (await getClientCutoffIso()) {
           const fitcoinPostCutoff = mapped.reduce((sum, row) => sum + Number(row.amount || 0), 0);
@@ -343,7 +352,8 @@ function ProfilePage() {
         </div>
       )}
 
-      {/* Fitcoin (cashback de indicações) */}
+      {/* Fitcoin (cashback de indicações) — oculto para coach ativo */}
+      {!isActiveCoach && (
       <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
         <div className="flex items-center gap-2">
           <img src={fitcoinAsset.url} alt="Fitcoin" className="h-6 w-6 object-contain" />
@@ -367,9 +377,11 @@ function ProfilePage() {
           Indique e ganhe
         </button>
       </div>
+      )}
 
 
       <div className="grid gap-3 sm:grid-cols-2">
+        {!isActiveCoach && (
         <button
           type="button"
           onClick={() => setShowReferralsModal(true)}
@@ -414,6 +426,8 @@ function ProfilePage() {
             </>
           )}
         </button>
+        )}
+
 
 
         <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
@@ -501,11 +515,13 @@ function ProfilePage() {
 
       <p className="text-center text-[10px] text-foreground/20 mt-2">FitMind Club v1.0.0</p>
 
-      <StudentReferralModal
-        open={referralModalOpen}
-        onClose={() => setReferralModalOpen(false)}
-        referralCode={referralCode}
-      />
+      {!isActiveCoach && (
+        <StudentReferralModal
+          open={referralModalOpen}
+          onClose={() => setReferralModalOpen(false)}
+          referralCode={referralCode}
+        />
+      )}
 
       {withdrawOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe">
@@ -600,7 +616,7 @@ function ProfilePage() {
         </div>
       )}
 
-      {showReferralsModal && (
+      {showReferralsModal && !isActiveCoach && (
         <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe" onClick={() => setShowReferralsModal(false)}>
           <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">

@@ -847,48 +847,19 @@ export function EvaluateTab() {
     const isTransfer = existingClientIds.length > 0;
     try {
       const targetCoachId = (client as any).coachId || coachInfo.id;
-      // Captura estado anterior para auditoria
-      const { data: before } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("student_id" as never)
-        .eq("id" as never, client.id as never)
-        .maybeSingle();
-      const previousStudentId = (before as any)?.student_id ?? null;
 
-      // Se transferência: mover avaliações de TODOS os cadastros antigos → novo
-      if (isTransfer && existingClientIds.length > 0) {
-        const { error: mvErr } = await supabase
-          .from("coach_body_assessments" as never)
-          .update({ client_id: client.id, student_id: student.id } as never)
-          .in("client_id" as never, existingClientIds as never);
-        if (mvErr) throw mvErr;
-        // Apaga ou desvincula todos os cadastros antigos.
-        if (transferMergeAndDelete) {
-          const { error: delErr } = await supabase
-            .from("coach_evaluation_clients" as never)
-            .delete()
-            .in("id" as never, existingClientIds as never);
-          if (delErr) throw delErr;
-        } else {
-          const { error: unErr } = await supabase
-            .from("coach_evaluation_clients" as never)
-            .update({ student_id: null } as never)
-            .in("id" as never, existingClientIds as never);
-          if (unErr) throw unErr;
-        }
-      }
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc(
+        "transfer_evaluation_client_link" as never,
+        {
+          _client_id: client.id,
+          _student_id: student.id,
+          _delete_duplicates: transferMergeAndDelete,
+        } as never,
+      );
+      if (rpcErr) throw rpcErr;
+      const result = (rpcRes as any) || {};
+      const previousStudentId = result.previous_student_id ?? null;
 
-      // Vincula o cliente ao aluno
-      const { error: upErr } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .update({ student_id: student.id } as never)
-        .eq("id" as never, client.id as never);
-      if (upErr) throw upErr;
-      const { error: aErr } = await supabase
-        .from("coach_body_assessments" as never)
-        .update({ student_id: student.id } as never)
-        .eq("client_id" as never, client.id as never);
-      if (aErr) throw aErr;
 
       // Registra auditoria
       const { data: sess } = await supabase.auth.getUser();
