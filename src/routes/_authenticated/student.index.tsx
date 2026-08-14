@@ -47,6 +47,7 @@ function StudentHome() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [referralCode, setReferralCode] = useState<string>("");
   const [showReferral, setShowReferral] = useState(false);
+  const [isActiveCoach, setIsActiveCoach] = useState(false);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -76,10 +77,11 @@ function StudentHome() {
 
       // Check if user is also coach/professional/partner (blocked from challenge)
       const [{ data: coachRow }, { data: partnerRows }] = await Promise.all([
-        supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("coaches").select("id, onboarding_stage").eq("profile_id", profile.id).maybeSingle(),
         supabase.from("partners").select("id").eq("profile_id", profile.id).limit(1),
       ]);
       if (coachRow || (partnerRows?.length ?? 0) > 0) setChallengeBlocked(true);
+      if ((coachRow as { onboarding_stage?: string } | null)?.onboarding_stage === "released") setIsActiveCoach(true);
 
       const { data: student } = await supabase
         .from("students")
@@ -238,7 +240,8 @@ function StudentHome() {
       )}
 
 
-      {/* Indique e ganhe */}
+      {/* Indique e ganhe — escondido para coach ativo (já tem no painel de coach) */}
+      {!isActiveCoach && (
       <button
         type="button"
         onClick={() => setShowReferral(true)}
@@ -253,6 +256,8 @@ function StudentHome() {
         </div>
         <ChevronRight className="h-5 w-5 text-foreground/40" />
       </button>
+      )}
+
 
       {/* Meu Treino */}
       <Link to="/student/workout" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 transition-transform hover:scale-[1.01]">
@@ -384,11 +389,13 @@ function StudentHome() {
 
       <InstallAppButton />
 
-      <StudentReferralModal
-        open={showReferral}
-        onClose={() => setShowReferral(false)}
-        referralCode={referralCode || "ALUNO"}
-      />
+      {!isActiveCoach && (
+        <StudentReferralModal
+          open={showReferral}
+          onClose={() => setShowReferral(false)}
+          referralCode={referralCode || "ALUNO"}
+        />
+      )}
     </div>
   );
 }
