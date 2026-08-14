@@ -377,9 +377,11 @@ function ProfilePage() {
           Indique e ganhe
         </button>
       </div>
+      )}
 
 
       <div className="grid gap-3 sm:grid-cols-2">
+        {!isActiveCoach && (
         <button
           type="button"
           onClick={() => setShowReferralsModal(true)}
