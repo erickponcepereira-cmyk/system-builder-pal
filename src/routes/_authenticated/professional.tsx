@@ -12,6 +12,7 @@ import { StorePage } from "@/components/student/StorePage";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useBranding } from "@/components/theme-provider";
 import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
@@ -104,6 +105,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
 
 function ProfessionalPanel() {
   const navigate = useNavigate();
+  const { theme: brandTheme } = useBranding();
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<ProInfo | null>(null);
   const [tab, setTab] = useState<string>("students");
