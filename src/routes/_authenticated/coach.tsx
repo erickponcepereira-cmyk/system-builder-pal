@@ -12,6 +12,7 @@ import { PatentBadge } from "@/components/coach/PatentBadge";
 import { CoachReports } from "@/components/coach/CoachReports";
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useBranding } from "@/components/theme-provider";
 import { OverviewTab } from "@/components/coach/tabs/OverviewTab";
 import { NetworkTab } from "@/components/coach/tabs/NetworkTab";
 import { CoachProfileTab } from "@/components/coach/tabs/CoachProfileTab";
