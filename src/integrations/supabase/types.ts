@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      academia_acessos_negados: {
+        Row: {
+          id: string
+          motivo: string
+          origem: string
+          partner_id: string
+          referencia: string | null
+          student_id: string | null
+          tentado_em: string
+        }
+        Insert: {
+          id?: string
+          motivo: string
+          origem?: string
+          partner_id: string
+          referencia?: string | null
+          student_id?: string | null
+          tentado_em?: string
+        }
+        Update: {
+          id?: string
+          motivo?: string
+          origem?: string
+          partner_id?: string
+          referencia?: string | null
+          student_id?: string | null
+          tentado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_acessos_negados_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_acessos_negados_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_agentes: {
+        Row: {
+          ativo: boolean
+          codigo_expira_em: string | null
+          codigo_pareamento: string | null
+          created_at: string
+          id: string
+          nome: string
+          pareado_em: string | null
+          partner_id: string
+          segredo_hash: string | null
+          ultima_sync_em: string | null
+          ultimo_contato_em: string | null
+          versao: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          codigo_expira_em?: string | null
+          codigo_pareamento?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          pareado_em?: string | null
+          partner_id: string
+          segredo_hash?: string | null
+          ultima_sync_em?: string | null
+          ultimo_contato_em?: string | null
+          versao?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          codigo_expira_em?: string | null
+          codigo_pareamento?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          pareado_em?: string | null
+          partner_id?: string
+          segredo_hash?: string | null
+          ultima_sync_em?: string | null
+          ultimo_contato_em?: string | null
+          versao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_agentes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academia_avisos: {
         Row: {
           disparo_id: string | null
@@ -100,6 +198,51 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_credenciais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          partner_id: string
+          referencia: string
+          student_id: string | null
+          tipo: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          partner_id: string
+          referencia: string
+          student_id?: string | null
+          tipo?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          partner_id?: string
+          referencia?: string
+          student_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_credenciais_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_credenciais_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -12787,6 +12930,88 @@ export type Database = {
           },
         ]
       }
+      wallet_audit_diffs: {
+        Row: {
+          after_value: number
+          before_value: number
+          created_at: string
+          delta: number
+          field: string
+          id: string
+          person_name: string | null
+          profile_id: string | null
+          run_id: string
+          wallet_kind: string
+        }
+        Insert: {
+          after_value?: number
+          before_value?: number
+          created_at?: string
+          delta?: number
+          field: string
+          id?: string
+          person_name?: string | null
+          profile_id?: string | null
+          run_id: string
+          wallet_kind: string
+        }
+        Update: {
+          after_value?: number
+          before_value?: number
+          created_at?: string
+          delta?: number
+          field?: string
+          id?: string
+          person_name?: string | null
+          profile_id?: string | null
+          run_id?: string
+          wallet_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_audit_diffs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_audit_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_audit_runs: {
+        Row: {
+          diffs_count: number
+          id: string
+          run_at: string
+          total_delta: number
+          triggered_by: string | null
+          wallets_checked: number
+        }
+        Insert: {
+          diffs_count?: number
+          id?: string
+          run_at?: string
+          total_delta?: number
+          triggered_by?: string | null
+          wallets_checked?: number
+        }
+        Update: {
+          diffs_count?: number
+          id?: string
+          run_at?: string
+          total_delta?: number
+          triggered_by?: string | null
+          wallets_checked?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_audit_runs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallets: {
         Row: {
           available_balance: number | null
@@ -13619,6 +13844,33 @@ export type Database = {
       }
     }
     Functions: {
+      academia_agente_enviar: {
+        Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
+        Returns: number
+      }
+      academia_agente_gerar_codigo: {
+        Args: { p_nome: string; p_partner_id: string }
+        Returns: {
+          agente_id: string
+          codigo: string
+          expira_em: string
+        }[]
+      }
+      academia_agente_parear: {
+        Args: { p_codigo: string; p_versao: string }
+        Returns: {
+          agente_id: string
+          partner_id: string
+          segredo: string
+        }[]
+      }
+      academia_agente_retrato: {
+        Args: { p_agente_id: string; p_segredo: string }
+        Returns: {
+          ate: string
+          ref: string
+        }[]
+      }
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
@@ -13888,6 +14140,10 @@ export type Database = {
       admin_skip_invoice: {
         Args: { _invoice_id: string; _reason?: string }
         Returns: undefined
+      }
+      admin_wallet_audit_run: {
+        Args: { _admin_user_id?: string }
+        Returns: string
       }
       apply_annual_activation_for_store_order: {
         Args: { _order_id: string }
