@@ -332,9 +332,11 @@ function PartnerPanel() {
   const conteudo = (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header
-        className="border-b border-white/5 px-4 py-3 flex items-center justify-between"
+        className="border-b px-4 py-3 flex items-center justify-between"
         style={{
-          backgroundColor: "#111",
+          backgroundColor: "var(--sidebar)",
+          color: "var(--sidebar-foreground)",
+          borderBottomColor: "var(--sidebar-border)",
           paddingTop: "max(0.75rem, env(safe-area-inset-top))",
           paddingLeft: "max(1rem, env(safe-area-inset-left))",
           paddingRight: "max(1rem, env(safe-area-inset-right))",
@@ -343,13 +345,13 @@ function PartnerPanel() {
         <div className="flex items-center gap-2">
           <Logo className="h-8 w-8" />
           <div>
-            <p className="text-sm font-bold text-white">{partner.fantasy_name}</p>
-            <p className="text-[10px] text-white/40">Status: <span className={partner.status === "approved" ? "text-green-400" : "text-yellow-400"}>{partner.status}</span></p>
+            <p className="text-sm font-bold text-current">{partner.fantasy_name}</p>
+            <p className="text-[10px] text-current opacity-60">Status: <span className={partner.status === "approved" ? "text-green-500" : "text-yellow-500"}>{partner.status}</span></p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <RoleSwitcher current="partner" />
-          <button onClick={signOut} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-white/60 hover:text-white touch-manipulation"><LogOut className="h-5 w-5" /></button>
+          <button onClick={signOut} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-current opacity-70 hover:opacity-100 touch-manipulation"><LogOut className="h-5 w-5" /></button>
         </div>
       </header>
 

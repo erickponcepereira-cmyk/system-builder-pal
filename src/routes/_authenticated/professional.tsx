@@ -12,6 +12,7 @@ import { StorePage } from "@/components/student/StorePage";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useBranding } from "@/components/theme-provider";
 import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
@@ -104,6 +105,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
 
 function ProfessionalPanel() {
   const navigate = useNavigate();
+  const { theme: brandTheme } = useBranding();
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<ProInfo | null>(null);
   const [tab, setTab] = useState<string>("students");
@@ -217,9 +219,11 @@ function ProfessionalPanel() {
     <SubscriptionGuard walletSource="professional">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header
-        className="border-b border-white/5"
+        className="border-b"
         style={{
-          backgroundColor: "#0F0F0F",
+          backgroundColor: "var(--sidebar)",
+          color: "var(--sidebar-foreground)",
+          borderBottomColor: "var(--sidebar-border)",
           paddingTop: "max(0.75rem, env(safe-area-inset-top))",
           paddingLeft: "env(safe-area-inset-left)",
           paddingRight: "env(safe-area-inset-right)",
@@ -229,13 +233,13 @@ function ProfessionalPanel() {
           <Link to="/" className="flex items-center gap-2">
             <Logo className="h-8 w-8 object-contain" />
             <div>
-              <span className="text-sm font-bold text-white">FitMind Club</span>
+              <span className="text-sm font-bold text-current">{brandTheme.name}</span>
               <p className="text-[10px] text-primary uppercase tracking-wider">Profissional · {info.specialty?.label || "—"}</p>
             </div>
           </Link>
           <div className="flex items-center gap-3">
             <RoleSwitcher current="professional" />
-            <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-white/50 hover:bg-white/5 touch-manipulation">
+            <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg border text-current opacity-70 hover:opacity-100 touch-manipulation" style={{ borderColor: "var(--sidebar-border)" }}>
               <LogOut className="h-4 w-4" />
             </button>
           </div>
