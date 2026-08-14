@@ -352,7 +352,8 @@ function ProfilePage() {
         </div>
       )}
 
-      {/* Fitcoin (cashback de indicações) */}
+      {/* Fitcoin (cashback de indicações) — oculto para coach ativo */}
+      {!isActiveCoach && (
       <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--card)" }}>
         <div className="flex items-center gap-2">
           <img src={fitcoinAsset.url} alt="Fitcoin" className="h-6 w-6 object-contain" />
