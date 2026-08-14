@@ -1053,6 +1053,43 @@ export const gerarCodigoAgente = createServerFn({ method: "POST" })
     return linha;
   });
 
+/** Credenciais lidas do leitor que ainda não têm aluno, com sugestões por nome. */
+export const obterCredenciaisSemVinculo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: pendentes } = await admin
+      .from("academia_credenciais")
+      .select("id, referencia, nome_no_equipamento, importado_em")
+      .eq("partner_id", data.partnerId)
+      .is("student_id", null)
+      .eq("ativo", true)
+      .order("nome_no_equipamento");
+
+    const lista = (pendentes ?? []) as Array<{
+      id: string; referencia: string; nome_no_equipamento: string | null; importado_em: string | null;
+    }>;
+
+    // Sugestão por semelhança de nome. Não vincula nada: só ordena candidatos,
+    // porque vínculo errado manda a pessoa errada para dentro da academia.
+    const comSugestoes = await Promise.all(
+      lista.slice(0, 60).map(async (c) => {
+        const { data: s } = await admin.rpc("academia_credencial_sugestoes", {
+          p_partner_id: data.partnerId,
+          p_credencial_id: c.id,
+        });
+        return {
+          ...c,
+          sugestoes: (s ?? []) as Array<{ student_id: string; nome: string; email: string; semelhanca: number }>,
+        };
+      }),
+    );
+
+    return { pendentes: comSugestoes, total: lista.length };
+  });
+
 export const vincularCredencial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string; studentId: string; tipo: string; referencia: string }) => d)
@@ -1061,10 +1098,40 @@ export const vincularCredencial = createServerFn({ method: "POST" })
     const ref = (data.referencia || "").trim();
     if (!ref) throw new Error("Informe o identificador do equipamento.");
 
+    // Um mesmo aluno não pode ficar com duas credenciais do mesmo tipo nesta
+    // academia: duas faces para a mesma pessoa viram frequência duplicada.
+    const { data: jaTem } = await admin
+      .from("academia_credenciais")
+      .select("referencia")
+      .eq("partner_id", data.partnerId)
+      .eq("tipo", data.tipo)
+      .eq("student_id", data.studentId)
+      .neq("referencia", ref)
+      .maybeSingle();
+    if (jaTem) {
+      throw new Error(
+        `Este aluno já está vinculado ao identificador ${(jaTem as { referencia: string }).referencia}. Desvincule antes de ligar outro.`,
+      );
+    }
+
     const { error } = await admin.from("academia_credenciais").upsert(
       { partner_id: data.partnerId, student_id: data.studentId, tipo: data.tipo, referencia: ref, ativo: true },
       { onConflict: "partner_id,tipo,referencia" },
     );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const desvincularCredencial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; credencialId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    // Solta o vínculo, não apaga a credencial: o rosto continua no leitor.
+    const { error } = await admin.from("academia_credenciais")
+      .update({ student_id: null })
+      .eq("id", data.credencialId)
+      .eq("partner_id", data.partnerId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

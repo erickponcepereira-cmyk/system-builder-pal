@@ -29,6 +29,7 @@ import {
   inscreverNoEvento,
   obterAgenteAcademia,
   obterConfigAcademia,
+  obterCredenciaisSemVinculo,
   obterEventosAcademia,
   obterCrmAcademia,
   obterFrequenciaAcademia,
@@ -781,6 +782,133 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
   );
 }
 
+/**
+ * Quem já tem rosto no leitor mas ainda não está ligado a um aluno.
+ * Mesmo padrão do vínculo em avaliar aluno: sugere por semelhança de nome,
+ * mas quem decide é a pessoa — vínculo errado libera a pessoa errada.
+ */
+function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; aoVincular: () => void }) {
+  const obter = useServerFn(obterCredenciaisSemVinculo);
+  const vincular = useServerFn(vincularCredencial);
+  const buscar = useServerFn(buscarAlunosParaMensalidade);
+  const [loading, setLoading] = useState(true);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<Array<{ studentId: string; nome: string }>>([]);
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+  useEffect(carregar, [partnerId]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setAchados([]); return; }
+    const t = setTimeout(() => {
+      buscar({ data: { partnerId, termo } }).then((r) => setAchados(r.alunos)).catch(() => setAchados([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [termo, partnerId]);
+
+  const ligar = async (credencial: { referencia: string }, studentId: string) => {
+    try {
+      await vincular({ data: { partnerId, studentId, tipo: "facial", referencia: credencial.referencia } });
+      toast.success("Vinculado.");
+      setAberto(null); setTermo(""); carregar(); aoVincular();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível vincular.");
+    }
+  };
+
+  if (loading) return <Loader2 className="mx-auto my-5 h-5 w-5 animate-spin text-primary" />;
+  if (!dados || dados.total === 0) return null;
+
+  return (
+    <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+      <p className="text-[11px] font-bold text-amber-300">
+        {dados.total} pessoa(s) no leitor sem aluno vinculado
+      </p>
+      <p className="text-[11px] text-white/60">
+        O rosto já está no equipamento. Ligue cada uma ao aluno da plataforma —
+        <strong className="text-white/80"> ninguém precisa recadastrar</strong>. Sem vínculo, a pessoa não entra.
+      </p>
+
+      {dados.pendentes.map((c) => (
+        <div key={c.id} className="rounded-lg border border-white/10 bg-white/5 p-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">
+                {c.nome_no_equipamento || "Sem nome no leitor"}
+              </p>
+              <p className="font-mono text-[11px] text-white/50">id {c.referencia}</p>
+            </div>
+            {aberto !== c.id && (
+              <button
+                type="button"
+                onClick={() => { setAberto(c.id); setTermo(c.nome_no_equipamento || ""); }}
+                className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold text-primary hover:bg-white/10"
+              >
+                Vincular
+              </button>
+            )}
+          </div>
+
+          {aberto === c.id && (
+            <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2">
+              {c.sugestoes.length > 0 && (
+                <>
+                  <p className="text-[10px] uppercase tracking-wider text-white/40">Parecidos</p>
+                  {c.sugestoes.map((s) => (
+                    <button
+                      key={s.student_id}
+                      type="button"
+                      onClick={() => void ligar(c, s.student_id)}
+                      className="flex w-full items-center justify-between gap-2 rounded bg-white/5 px-2 py-1.5 text-left hover:bg-white/10"
+                    >
+                      <span className="min-w-0 truncate text-sm text-white">{s.nome}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-white/40">
+                        {Math.round(s.semelhanca * 100)}%
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              <input
+                value={termo}
+                onChange={(e) => setTermo(e.target.value)}
+                placeholder="Buscar outro aluno pelo nome"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder:text-white/40"
+              />
+              {achados.map((a) => (
+                <button
+                  key={a.studentId}
+                  type="button"
+                  onClick={() => void ligar(c, a.studentId)}
+                  className="w-full truncate rounded bg-white/5 px-2 py-1.5 text-left text-sm text-white hover:bg-white/10"
+                >
+                  {a.nome}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => { setAberto(null); setTermo(""); }}
+                className="w-full rounded px-2 py-1 text-[11px] text-white/50 hover:bg-white/10"
+              >
+                Voltar
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AgenteAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterAgenteAcademia);
   const gerar = useServerFn(gerarCodigoAgente);
@@ -884,6 +1012,8 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
           </div>
         );
       })}
+
+      <CredenciaisSemVinculo partnerId={partnerId} aoVincular={carregar} />
 
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
         <p className="text-[11px] font-bold text-white">Vincular pessoa ao equipamento</p>
