@@ -515,11 +515,13 @@ function ProfilePage() {
 
       <p className="text-center text-[10px] text-foreground/20 mt-2">FitMind Club v1.0.0</p>
 
-      <StudentReferralModal
-        open={referralModalOpen}
-        onClose={() => setReferralModalOpen(false)}
-        referralCode={referralCode}
-      />
+      {!isActiveCoach && (
+        <StudentReferralModal
+          open={referralModalOpen}
+          onClose={() => setReferralModalOpen(false)}
+          referralCode={referralCode}
+        />
+      )}
 
       {withdrawOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe">
