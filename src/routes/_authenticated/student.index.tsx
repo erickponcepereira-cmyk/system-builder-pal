@@ -77,10 +77,11 @@ function StudentHome() {
 
       // Check if user is also coach/professional/partner (blocked from challenge)
       const [{ data: coachRow }, { data: partnerRows }] = await Promise.all([
-        supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("coaches").select("id, onboarding_stage").eq("profile_id", profile.id).maybeSingle(),
         supabase.from("partners").select("id").eq("profile_id", profile.id).limit(1),
       ]);
       if (coachRow || (partnerRows?.length ?? 0) > 0) setChallengeBlocked(true);
+      if ((coachRow as { onboarding_stage?: string } | null)?.onboarding_stage === "released") setIsActiveCoach(true);
 
       const { data: student } = await supabase
         .from("students")
