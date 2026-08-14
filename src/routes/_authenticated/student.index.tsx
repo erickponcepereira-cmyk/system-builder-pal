@@ -47,6 +47,7 @@ function StudentHome() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [referralCode, setReferralCode] = useState<string>("");
   const [showReferral, setShowReferral] = useState(false);
+  const [isActiveCoach, setIsActiveCoach] = useState(false);
 
   const greeting = (() => {
     const h = new Date().getHours();
