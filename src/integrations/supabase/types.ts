@@ -208,150 +208,6 @@ export type Database = {
           },
         ]
       }
-      academia_produtos_mensalidade: {
-        Row: {
-          ativo: boolean
-          dias_validade: number
-          id: string
-          partner_id: string
-          plano: string
-          politica_renovacao: string
-          product_id: string
-          updated_at: string
-        }
-        Insert: {
-          ativo?: boolean
-          dias_validade?: number
-          id?: string
-          partner_id: string
-          plano?: string
-          politica_renovacao?: string
-          product_id: string
-          updated_at?: string
-        }
-        Update: {
-          ativo?: boolean
-          dias_validade?: number
-          id?: string
-          partner_id?: string
-          plano?: string
-          politica_renovacao?: string
-          product_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      academia_eventos: {
-        Row: {
-          aberto_a_nao_alunos: boolean
-          acesso: string
-          ativo: boolean
-          created_at: string
-          data_evento: string
-          descricao: string | null
-          face_politica: string
-          hora_inicio: string | null
-          id: string
-          nome: string
-          partner_id: string
-          valor: number
-        }
-        Insert: {
-          aberto_a_nao_alunos?: boolean
-          acesso?: string
-          ativo?: boolean
-          created_at?: string
-          data_evento: string
-          descricao?: string | null
-          face_politica?: string
-          hora_inicio?: string | null
-          id?: string
-          nome: string
-          partner_id: string
-          valor?: number
-        }
-        Update: {
-          aberto_a_nao_alunos?: boolean
-          acesso?: string
-          ativo?: boolean
-          created_at?: string
-          data_evento?: string
-          descricao?: string | null
-          face_politica?: string
-          hora_inicio?: string | null
-          id?: string
-          nome?: string
-          partner_id?: string
-          valor?: number
-        }
-        Relationships: []
-      }
-      academia_evento_inscricoes: {
-        Row: {
-          cpf_final: string | null
-          cpf_hash: string | null
-          created_at: string
-          credencial: string
-          evento_id: string
-          face_enviada_em: string | null
-          face_removida_em: string | null
-          face_remover_ate: string | null
-          forma_pagamento: string | null
-          id: string
-          nome: string
-          partner_id: string
-          student_id: string | null
-          taxa_percentual: number
-          taxa_valor: number
-          telefone: string | null
-          usado_em: string | null
-          valor: number
-          valor_liquido: number
-        }
-        Insert: {
-          cpf_final?: string | null
-          cpf_hash?: string | null
-          created_at?: string
-          credencial?: string
-          evento_id: string
-          face_enviada_em?: string | null
-          face_removida_em?: string | null
-          face_remover_ate?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          nome: string
-          partner_id: string
-          student_id?: string | null
-          taxa_percentual?: number
-          taxa_valor?: number
-          telefone?: string | null
-          usado_em?: string | null
-          valor?: number
-          valor_liquido?: number
-        }
-        Update: {
-          cpf_final?: string | null
-          cpf_hash?: string | null
-          created_at?: string
-          credencial?: string
-          evento_id?: string
-          face_enviada_em?: string | null
-          face_removida_em?: string | null
-          face_remover_ate?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          nome?: string
-          partner_id?: string
-          student_id?: string | null
-          taxa_percentual?: number
-          taxa_valor?: number
-          telefone?: string | null
-          usado_em?: string | null
-          valor?: number
-          valor_liquido?: number
-        }
-        Relationships: []
-      }
       academia_dayuse: {
         Row: {
           cpf_final: string | null
@@ -417,6 +273,147 @@ export type Database = {
           },
           {
             foreignKeyName: "academia_dayuse_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_evento_inscricoes: {
+        Row: {
+          cpf_final: string | null
+          cpf_hash: string | null
+          created_at: string
+          credencial: string
+          evento_id: string
+          face_enviada_em: string | null
+          face_remover_ate: string | null
+          face_removida_em: string | null
+          forma_pagamento: string | null
+          id: string
+          nome: string
+          partner_id: string
+          student_id: string | null
+          taxa_percentual: number
+          taxa_valor: number
+          telefone: string | null
+          usado_em: string | null
+          valor: number
+          valor_liquido: number
+        }
+        Insert: {
+          cpf_final?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          credencial?: string
+          evento_id: string
+          face_enviada_em?: string | null
+          face_remover_ate?: string | null
+          face_removida_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          student_id?: string | null
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          usado_em?: string | null
+          valor?: number
+          valor_liquido?: number
+        }
+        Update: {
+          cpf_final?: string | null
+          cpf_hash?: string | null
+          created_at?: string
+          credencial?: string
+          evento_id?: string
+          face_enviada_em?: string | null
+          face_remover_ate?: string | null
+          face_removida_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          student_id?: string | null
+          taxa_percentual?: number
+          taxa_valor?: number
+          telefone?: string | null
+          usado_em?: string | null
+          valor?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_evento_inscricoes_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "academia_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_evento_inscricoes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_evento_inscricoes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_eventos: {
+        Row: {
+          aberto_a_nao_alunos: boolean
+          acesso: string
+          ativo: boolean
+          created_at: string
+          data_evento: string
+          descricao: string | null
+          face_politica: string
+          hora_inicio: string | null
+          id: string
+          nome: string
+          partner_id: string
+          valor: number
+        }
+        Insert: {
+          aberto_a_nao_alunos?: boolean
+          acesso?: string
+          ativo?: boolean
+          created_at?: string
+          data_evento: string
+          descricao?: string | null
+          face_politica?: string
+          hora_inicio?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          valor?: number
+        }
+        Update: {
+          aberto_a_nao_alunos?: boolean
+          acesso?: string
+          ativo?: boolean
+          created_at?: string
+          data_evento?: string
+          descricao?: string | null
+          face_politica?: string
+          hora_inicio?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_eventos_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
@@ -499,6 +496,7 @@ export type Database = {
           student_id: string
           taxa_percentual: number
           taxa_valor: number
+          transaction_id: string | null
           updated_at: string
           valido_ate: string
           valor: number
@@ -520,6 +518,7 @@ export type Database = {
           student_id: string
           taxa_percentual?: number
           taxa_valor?: number
+          transaction_id?: string | null
           updated_at?: string
           valido_ate: string
           valor?: number
@@ -541,6 +540,7 @@ export type Database = {
           student_id?: string
           taxa_percentual?: number
           taxa_valor?: number
+          transaction_id?: string | null
           updated_at?: string
           valido_ate?: string
           valor?: number
@@ -573,6 +573,68 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_mensalidades_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_produtos_mensalidade: {
+        Row: {
+          ativo: boolean
+          dias_validade: number
+          id: string
+          partner_id: string
+          plano: string
+          politica_renovacao: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          dias_validade?: number
+          id?: string
+          partner_id: string
+          plano?: string
+          politica_renovacao?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          dias_validade?: number
+          id?: string
+          partner_id?: string
+          plano?: string
+          politica_renovacao?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_produtos_mensalidade_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_mensalidade_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_mensalidade_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -13480,18 +13542,6 @@ export type Database = {
         Args: { p_cpf: string; p_partner_id: string }
         Returns: string
       }
-      academia_crm_sincronizar: {
-        Args: { p_partner_id: string }
-        Returns: {
-          assumidos: number
-          criados: number
-          gatilho: string
-        }[]
-      }
-      academia_mensalidades_pendentes_reprocessar: {
-        Args: { p_partner_id: string }
-        Returns: number
-      }
       academia_crm_em_varios_funis: {
         Args: { p_partner_id: string }
         Returns: {
@@ -13500,23 +13550,12 @@ export type Database = {
           quadros: string
         }[]
       }
-      academia_evento_validar: {
-        Args: { p_credencial: string; p_partner_id: string }
-        Returns: {
-          decisao: string
-          evento: string
-          motivo: string
-          nome: string
-        }[]
-      }
-      academia_faces_a_remover: {
+      academia_crm_sincronizar: {
         Args: { p_partner_id: string }
         Returns: {
-          evento: string
-          inscricao_id: string
-          nome: string
-          politica: string
-          vencido_desde: string
+          assumidos: number
+          criados: number
+          gatilho: string
         }[]
       }
       academia_dayuse_avaliar: {
@@ -13545,6 +13584,25 @@ export type Database = {
         }
         Returns: string
       }
+      academia_evento_validar: {
+        Args: { p_credencial: string; p_partner_id: string }
+        Returns: {
+          decisao: string
+          evento: string
+          motivo: string
+          nome: string
+        }[]
+      }
+      academia_faces_a_remover: {
+        Args: { p_partner_id: string }
+        Returns: {
+          evento: string
+          inscricao_id: string
+          nome: string
+          politica: string
+          vencido_desde: string
+        }[]
+      }
       academia_frequencia_contador: {
         Args: { p_partner_id: string; p_student_id: string }
         Returns: {
@@ -13567,6 +13625,18 @@ export type Database = {
           ultima: string
           visitas: number
         }[]
+      }
+      academia_mensalidade_gerar: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
+      academia_mensalidades_pendentes_reprocessar: {
+        Args: { p_partner_id: string }
+        Returns: number
+      }
+      academia_pagamento_confirmado: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
       }
       academia_pode_ver: { Args: { p_partner_id: string }; Returns: boolean }
       academia_treino_do_modelo: {
