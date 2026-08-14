@@ -119,6 +119,7 @@ function useCoachContext() {
 function CoachDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme: brandTheme } = useBranding();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
       const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
