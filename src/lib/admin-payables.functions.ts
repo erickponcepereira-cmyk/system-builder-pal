@@ -1,20 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const n = (v: unknown) => Number(v || 0);
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
-async function assertAdmin(userId: string) {
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data || data.role !== "admin") throw new Error("Acesso negado");
+async function getAdmin() {
+  const mod = await import("@/integrations/supabase/client.server");
+  return mod.supabaseAdmin;
 }
+
 
 export type PayableWalletKind = "coach" | "partner" | "professional" | "student";
 
