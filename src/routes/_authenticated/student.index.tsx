@@ -389,11 +389,13 @@ function StudentHome() {
 
       <InstallAppButton />
 
-      <StudentReferralModal
-        open={showReferral}
-        onClose={() => setShowReferral(false)}
-        referralCode={referralCode || "ALUNO"}
-      />
+      {!isActiveCoach && (
+        <StudentReferralModal
+          open={showReferral}
+          onClose={() => setShowReferral(false)}
+          referralCode={referralCode || "ALUNO"}
+        />
+      )}
     </div>
   );
 }
