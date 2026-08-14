@@ -616,7 +616,7 @@ function ProfilePage() {
         </div>
       )}
 
-      {showReferralsModal && (
+      {showReferralsModal && !isActiveCoach && (
         <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-4 backdrop-blur-sm modal-safe" onClick={() => setShowReferralsModal(false)}>
           <div className="w-full max-w-[430px] rounded-3xl border border-foreground/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
