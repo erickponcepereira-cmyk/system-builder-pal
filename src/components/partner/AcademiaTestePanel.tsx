@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
+import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
@@ -798,6 +799,7 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
   const [achados, setAchados] = useState<Array<{ studentId: string; nome: string }>>([]);
   const [alvo, setAlvo] = useState<{ studentId: string; nome: string } | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
+  const [capturando, setCapturando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [fila, setFila] = useState<Array<{
     id: string; nome: string; referencia: string; status: string; erro: string | null;
@@ -860,22 +862,38 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
             <button type="button" onClick={() => { setAlvo(null); setFoto(null); }} className="shrink-0 text-white/50 hover:text-white">✕</button>
           </div>
 
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-4 text-sm text-white/70 hover:bg-white/10">
-            <Camera className="h-4 w-4" />
-            {foto ? "Trocar a foto" : "Tirar ou escolher a foto"}
-            <input
-              type="file" accept="image/jpeg,image/png" capture="user" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) void pegarArquivo(f); }}
-            />
-          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCapturando(true)}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-bold text-white hover:bg-white/15"
+            >
+              <Camera className="h-4 w-4" />
+              {foto ? "Tirar outra" : "Tirar foto agora"}
+            </button>
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm text-white/70 hover:bg-white/10">
+              Escolher arquivo
+              <input
+                type="file" accept="image/jpeg,image/png" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void pegarArquivo(f); }}
+              />
+            </label>
+          </div>
 
           {foto && (
             <img src={foto} alt="" className="mx-auto max-h-40 rounded-lg border border-white/10" />
           )}
 
+          {capturando && (
+            <CapturaRosto
+              onPronta={(b64) => { setFoto(b64); setCapturando(false); }}
+              onCancelar={() => setCapturando(false)}
+            />
+          )}
+
           <p className="text-[11px] text-white/50">
-            Rosto de frente, bem iluminado, sem boné nem óculos escuros — o leitor
-            recusa foto ruim e você só descobre na sincronização.
+            "Tirar foto agora" confere nitidez, luz e enquadramento antes de
+            aceitar — evita descobrir que a foto era ruim só na sincronização.
           </p>
 
           <button
@@ -1156,52 +1174,14 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
       <CredenciaisSemVinculo partnerId={partnerId} aoVincular={carregar} />
 
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Vincular pessoa ao equipamento</p>
-        {alvo ? (
-          <>
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
-              <span className="truncate text-sm text-white">{alvo.nome}</span>
-              <button type="button" onClick={() => setAlvo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
-            </div>
-            <input
-              value={ref} onChange={(e) => setRef(e.target.value)}
-              placeholder="Identificador da pessoa no leitor"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await vincular({ data: { partnerId, studentId: alvo.studentId, tipo: "facial", referencia: ref } });
-                  setAlvo(null); setRef(""); setTermo(""); carregar();
-                  toast.success("Vinculado.");
-                } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
-              }}
-              disabled={!ref.trim()}
-              className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
-            >
-              Vincular
-            </button>
-          </>
-        ) : (
-          <>
-            <input
-              value={termo} onChange={(e) => setTermo(e.target.value)}
-              placeholder="Buscar aluno pelo nome"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
-            />
-            {achados.map((a) => (
-              <button
-                key={a.studentId} type="button" onClick={() => setAlvo(a)}
-                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
-              >
-                {a.nome}
-              </button>
-            ))}
-          </>
-        )}
+        <p className="text-[11px] font-bold text-white">Pessoas vinculadas</p>
+        <p className="text-[11px] text-white/60">
+          {dados.credenciais.length} pessoa(s) ligada(s) ao leitor.
+        </p>
         <p className="text-[11px] text-white/50">
-          {dados.credenciais.length} pessoa(s) vinculada(s).
+          Para ligar mais alguém, use <strong className="text-white/70">Cadastrar rosto pela foto</strong> acima,
+          ou a lista de quem veio do leitor. O identificador dentro do
+          equipamento é escolhido pelo sistema — ninguém precisa digitar número.
         </p>
       </div>
 
