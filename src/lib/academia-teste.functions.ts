@@ -194,6 +194,17 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Busca de aluno para vincular, ISOLADA POR ACADEMIA.
+ *
+ * Por nome, só encontra quem já tem relação com esta unidade. Para trazer
+ * alguém de fora, exige CPF ou e-mail completo — que só quem está na frente do
+ * balcão consegue informar.
+ *
+ * A versão anterior varria todos os alunos da plataforma: num SaaS isso mostra
+ * gente de outras academias e de outros coaches para quem não tem nada a ver
+ * com eles.
+ */
 export const buscarAlunosParaMensalidade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string; termo: string }) => d)
@@ -202,20 +213,16 @@ export const buscarAlunosParaMensalidade = createServerFn({ method: "POST" })
     const termo = (data.termo || "").trim();
     if (termo.length < 3) return { alunos: [] as Array<{ studentId: string; nome: string }> };
 
-    const { data: profs } = await admin
-      .from("profiles")
-      .select("id, name")
-      .ilike("name", `%${termo}%`)
-      .limit(20);
-    const ids = ((profs ?? []) as Array<{ id: string }>).map((p) => p.id);
-    if (ids.length === 0) return { alunos: [] };
+    const { data: linhas, error } = await admin.rpc("academia_buscar_aluno", {
+      p_partner_id: data.partnerId,
+      p_termo: termo,
+    });
+    if (error) throw new Error(error.message);
 
-    const { data: studs } = await admin.from("students").select("id, profile_id").in("profile_id", ids);
-    const mapProf = new Map(((profs ?? []) as Array<{ id: string; name: string | null }>).map((p) => [p.id, p.name ?? "Sem nome"]));
     return {
-      alunos: ((studs ?? []) as Array<{ id: string; profile_id: string }>).map((s) => ({
-        studentId: s.id,
-        nome: mapProf.get(s.profile_id) ?? "Sem nome",
+      alunos: ((linhas ?? []) as Array<{ student_id: string; nome: string }>).map((l) => ({
+        studentId: l.student_id,
+        nome: l.nome,
       })),
     };
   });
@@ -1082,7 +1089,7 @@ export const obterCredenciaisSemVinculo = createServerFn({ method: "POST" })
         });
         return {
           ...c,
-          sugestoes: (s ?? []) as Array<{ student_id: string; nome: string; email: string; semelhanca: number }>,
+          sugestoes: (s ?? []) as Array<{ student_id: string; nome: string; semelhanca: number }>,
         };
       }),
     );

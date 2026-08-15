@@ -13771,7 +13771,15 @@ export type Database = {
       }
       academia_credencial_sugestoes: {
         Args: { p_credencial_id: string; p_partner_id: string }
-        Returns: { email: string; nome: string; semelhanca: number; student_id: string }[]
+        Returns: { nome: string; semelhanca: number; student_id: string }[]
+      }
+      academia_buscar_aluno: {
+        Args: { p_partner_id: string; p_termo: string }
+        Returns: { ja_e_da_casa: boolean; nome: string; student_id: string }[]
+      }
+      academia_alunos_da_unidade: {
+        Args: { p_partner_id: string }
+        Returns: { student_id: string }[]
       }
       academia_agente_gerar_codigo: {
         Args: { p_nome: string; p_partner_id: string }
