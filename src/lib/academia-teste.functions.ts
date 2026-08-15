@@ -1129,6 +1129,53 @@ export const vincularCredencial = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Enfileira uma foto para o agente gravar no leitor.
+ *
+ * É o que evita ir até a academia para cada aluno novo. A foto fica na fila só
+ * até o agente confirmar que gravou — nesse momento ela é apagada, porque o
+ * lugar da biometria é o equipamento, não este banco.
+ */
+export const enviarFoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; studentId: string; nome: string; fotoBase64: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const b64 = String(data.fotoBase64 || "").replace(/^data:[^;]+;base64,/, "");
+    if (b64.length < 1000) throw new Error("Foto ausente ou pequena demais.");
+    // ~1,4 MB de JPEG. Acima disso o leitor costuma recusar mesmo.
+    if (b64.length > 2_000_000) throw new Error("Foto muito grande. Use uma imagem menor.");
+
+    const { data: r, error } = await admin.rpc("academia_face_enfileirar", {
+      p_partner_id: data.partnerId,
+      p_student_id: data.studentId,
+      p_nome: (data.nome || "").trim().slice(0, 60),
+      p_foto_base64: b64,
+    });
+    if (error) throw new Error(error.message);
+    const linha = ((r ?? []) as Array<{ envio_id: string; referencia: string }>)[0];
+    return { ok: true, referencia: linha?.referencia ?? null };
+  });
+
+/** Fotos na fila, para a recepção acompanhar. */
+export const obterFilaDeFotos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: fila } = await admin
+      .from("academia_faces_envio")
+      .select("id, nome, referencia, status, erro, criado_em, enviado_em")
+      .eq("partner_id", data.partnerId)
+      .order("criado_em", { ascending: false })
+      .limit(20);
+    return { fila: (fila ?? []) as Array<{
+      id: string; nome: string; referencia: string; status: string;
+      erro: string | null; criado_em: string; enviado_em: string | null;
+    }> };
+  });
+
 export const desvincularCredencial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string; credencialId: string }) => d)

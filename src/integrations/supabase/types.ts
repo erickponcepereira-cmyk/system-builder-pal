@@ -202,6 +202,48 @@ export type Database = {
           },
         ]
       }
+      academia_faces_envio: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          enviado_em: string | null
+          erro: string | null
+          foto_base64: string | null
+          id: string
+          nome: string
+          partner_id: string
+          referencia: string
+          status: string
+          student_id: string | null
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          foto_base64?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          referencia: string
+          status?: string
+          student_id?: string | null
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          foto_base64?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          referencia?: string
+          status?: string
+          student_id?: string | null
+        }
+        Relationships: []
+      }
       academia_credenciais: {
         Row: {
           importado_em: string | null
@@ -13772,6 +13814,18 @@ export type Database = {
       academia_credencial_sugestoes: {
         Args: { p_credencial_id: string; p_partner_id: string }
         Returns: { nome: string; semelhanca: number; student_id: string }[]
+      }
+      academia_face_enfileirar: {
+        Args: { p_foto_base64: string; p_nome: string; p_partner_id: string; p_student_id: string }
+        Returns: { envio_id: string; referencia: string }[]
+      }
+      academia_agente_faces_a_enviar: {
+        Args: { p_agente_id: string; p_segredo: string }
+        Returns: { envio_id: string; foto_base64: string; nome: string; referencia: string }[]
+      }
+      academia_agente_face_enviada_confirmar: {
+        Args: { p_agente_id: string; p_envio_id: string; p_erro: string | null; p_ok: boolean; p_segredo: string }
+        Returns: boolean
       }
       academia_buscar_aluno: {
         Args: { p_partner_id: string; p_termo: string }

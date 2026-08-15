@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera } from "lucide-react";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
@@ -25,6 +25,7 @@ import {
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
+  enviarFoto,
   gerarCodigoAgente,
   inscreverNoEvento,
   obterAgenteAcademia,
@@ -32,6 +33,7 @@ import {
   obterCredenciaisSemVinculo,
   obterEventosAcademia,
   obterCrmAcademia,
+  obterFilaDeFotos,
   obterFrequenciaAcademia,
   obterModelosAviso,
   obterProdutosMensalidade,
@@ -785,6 +787,140 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
 }
 
 /**
+ * Cadastro de rosto sem estar na academia: escolhe o aluno, tira ou envia a
+ * foto, e o agente grava no leitor na próxima sincronização.
+ */
+function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
+  const buscar = useServerFn(buscarAlunosParaMensalidade);
+  const enviar = useServerFn(enviarFoto);
+  const obterFila = useServerFn(obterFilaDeFotos);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<Array<{ studentId: string; nome: string }>>([]);
+  const [alvo, setAlvo] = useState<{ studentId: string; nome: string } | null>(null);
+  const [foto, setFoto] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [fila, setFila] = useState<Array<{
+    id: string; nome: string; referencia: string; status: string; erro: string | null;
+  }>>([]);
+
+  const carregarFila = () => {
+    obterFila({ data: { partnerId } })
+      .then((r) => setFila(r.fila as never))
+      .catch(() => setFila([]));
+  };
+  useEffect(carregarFila, [partnerId]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setAchados([]); return; }
+    const t = setTimeout(() => {
+      buscar({ data: { partnerId, termo } }).then((r) => setAchados(r.alunos)).catch(() => setAchados([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [termo, partnerId]);
+
+  const pegarArquivo = async (f: File) => {
+    if (f.size > 4 * 1024 * 1024) { toast.error("Foto muito grande. Use uma menor que 4 MB."); return; }
+    const b64 = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(new Error("Não consegui ler o arquivo"));
+      r.readAsDataURL(f);
+    });
+    setFoto(b64);
+  };
+
+  const mandar = async () => {
+    if (!alvo || !foto) return;
+    setEnviando(true);
+    try {
+      const r = await enviar({ data: { partnerId, studentId: alvo.studentId, nome: alvo.nome, fotoBase64: foto } });
+      toast.success(`Foto na fila. Vai virar o id ${r.referencia} no leitor.`);
+      setAlvo(null); setFoto(null); setTermo("");
+      carregarFila();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar.");
+    } finally { setEnviando(false); }
+  };
+
+  const pendentes = fila.filter((f) => f.status === "pendente").length;
+  const comErro = fila.filter((f) => f.status === "erro");
+
+  return (
+    <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+      <p className="text-[11px] font-bold text-white">Cadastrar rosto pela foto</p>
+      <p className="text-[11px] text-white/60">
+        Escolha o aluno e envie a foto. O agente grava no leitor na próxima
+        sincronização — <strong className="text-white/80">sem precisar estar na academia</strong>.
+      </p>
+
+      {alvo ? (
+        <>
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+            <span className="truncate text-sm text-white">{alvo.nome}</span>
+            <button type="button" onClick={() => { setAlvo(null); setFoto(null); }} className="shrink-0 text-white/50 hover:text-white">✕</button>
+          </div>
+
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-4 text-sm text-white/70 hover:bg-white/10">
+            <Camera className="h-4 w-4" />
+            {foto ? "Trocar a foto" : "Tirar ou escolher a foto"}
+            <input
+              type="file" accept="image/jpeg,image/png" capture="user" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void pegarArquivo(f); }}
+            />
+          </label>
+
+          {foto && (
+            <img src={foto} alt="" className="mx-auto max-h-40 rounded-lg border border-white/10" />
+          )}
+
+          <p className="text-[11px] text-white/50">
+            Rosto de frente, bem iluminado, sem boné nem óculos escuros — o leitor
+            recusa foto ruim e você só descobre na sincronização.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => void mandar()}
+            disabled={enviando || !foto}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            Enviar para o leitor
+          </button>
+        </>
+      ) : (
+        <>
+          <input
+            value={termo} onChange={(e) => setTermo(e.target.value)}
+            placeholder="Buscar aluno pelo nome, CPF ou e-mail"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          />
+          {achados.map((a) => (
+            <button
+              key={a.studentId} type="button" onClick={() => setAlvo(a)}
+              className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+            >
+              {a.nome}
+            </button>
+          ))}
+        </>
+      )}
+
+      {pendentes > 0 && (
+        <p className="text-[11px] text-amber-400">
+          {pendentes} foto(s) esperando a próxima sincronização do agente.
+        </p>
+      )}
+      {comErro.map((f) => (
+        <p key={f.id} className="text-[11px] text-red-400">
+          {f.nome}: {f.erro}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Quem já tem rosto no leitor mas ainda não está ligado a um aluno.
  * Mesmo padrão do vínculo em avaliar aluno: sugere por semelhança de nome,
  * mas quem decide é a pessoa — vínculo errado libera a pessoa errada.
@@ -1014,6 +1150,8 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
           </div>
         );
       })}
+
+      <CadastrarRostoPelaFoto partnerId={partnerId} />
 
       <CredenciaisSemVinculo partnerId={partnerId} aoVincular={carregar} />
 
