@@ -18,10 +18,12 @@ export type AssessmentPhotoKey = (typeof ASSESSMENT_PHOTO_KEYS)[number];
 export type AssessmentPhotos = Partial<Record<AssessmentPhotoKey, string | undefined>>;
 
 const BUCKET = "evolution-photos";
-const MAX_SIDE = 1280;
-const QUALITY = 0.82;
+const MAX_SIDE = 1080;
+const QUALITY = 0.75;
 /** Limite de segurança para o campo `photos` (texto) antes de salvar. */
 export const MAX_PHOTOS_JSON_BYTES = 200 * 1024;
+
+export type PhotoProgress = "compressing" | "uploading";
 
 const signedCache = new Map<string, { url: string; exp: number }>();
 
@@ -29,21 +31,18 @@ export function isInlinePhoto(value?: string | null): boolean {
   return !!value && (value.startsWith("data:") || value.startsWith("blob:") || value.startsWith("http"));
 }
 
-/** Reduz a imagem para no máximo 1280px no maior lado e comprime em JPEG. */
-export async function downscaleImage(file: File | Blob): Promise<Blob> {
-  const bitmap = await loadBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
+function targetSize(w: number, h: number) {
+  const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+  return { w: Math.max(1, Math.round(w * scale)), h: Math.max(1, Math.round(h * scale)) };
+}
+
+async function encode(source: CanvasImageSource, w: number, h: number): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Não foi possível processar a imagem neste navegador.");
-  ctx.drawImage(bitmap as CanvasImageSource, 0, 0, w, h);
-  if ("close" in bitmap && typeof (bitmap as ImageBitmap).close === "function") {
-    (bitmap as ImageBitmap).close();
-  }
+  ctx.drawImage(source, 0, 0, w, h);
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/jpeg", QUALITY),
   );
@@ -51,14 +50,43 @@ export async function downscaleImage(file: File | Blob): Promise<Blob> {
   return blob;
 }
 
-async function loadBitmap(file: File | Blob): Promise<ImageBitmap | HTMLImageElement> {
+/**
+ * Reduz a imagem para no máximo 1080px no maior lado e comprime em JPEG.
+ * Usa o redimensionamento nativo do decodificador (createImageBitmap com
+ * resizeWidth/resizeHeight) para não carregar fotos de 50MP inteiras na memória
+ * de celulares mais fracos.
+ */
+export async function downscaleImage(file: File | Blob): Promise<Blob> {
   if (typeof createImageBitmap === "function") {
     try {
-      return await createImageBitmap(file);
+      const probe = await createImageBitmap(file);
+      const { w, h } = targetSize(probe.width, probe.height);
+      probe.close?.();
+      let bitmap: ImageBitmap;
+      try {
+        bitmap = await createImageBitmap(file, {
+          resizeWidth: w,
+          resizeHeight: h,
+          resizeQuality: "medium",
+        });
+      } catch {
+        bitmap = await createImageBitmap(file);
+      }
+      try {
+        return await encode(bitmap, w, h);
+      } finally {
+        bitmap.close?.();
+      }
     } catch {
       /* fallback abaixo */
     }
   }
+  const img = await loadImageElement(file);
+  const { w, h } = targetSize(img.naturalWidth || img.width, img.naturalHeight || img.height);
+  return encode(img, w, h);
+}
+
+async function loadImageElement(file: File | Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);
   try {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -73,18 +101,29 @@ async function loadBitmap(file: File | Blob): Promise<ImageBitmap | HTMLImageEle
 }
 
 /** Envia a foto para o storage e devolve o caminho gravável no banco. */
-export async function uploadAssessmentPhoto(file: File | Blob): Promise<string> {
+export async function uploadAssessmentPhoto(
+  file: File | Blob,
+  onProgress?: (stage: PhotoProgress) => void,
+): Promise<string> {
+  onProgress?.("compressing");
   const blob = await downscaleImage(file);
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData.user?.id;
   if (!uid) throw new Error("Sessão expirada. Entre novamente para anexar fotos.");
-  const path = `${uid}/assessments/${crypto.randomUUID()}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-  if (error) throw new Error(error.message);
-  return path;
+  onProgress?.("uploading");
+  let lastError: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const path = `${uid}/assessments/${crypto.randomUUID()}.jpg`;
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (!error) return path;
+    lastError = error.message;
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+  }
+  throw new Error(lastError || "Não foi possível enviar a foto. Verifique sua conexão.");
 }
+
 
 /** Gera URL exibível: base64/HTTP passam direto, caminhos viram URL assinada. */
 export async function resolveAssessmentPhotoUrl(value?: string | null): Promise<string | null> {
