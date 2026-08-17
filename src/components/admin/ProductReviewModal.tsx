@@ -87,6 +87,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       setAllowedCoachIds(p?.allowed_coach_ids || []);
       setCardDays(p?.perk_card_days_override != null ? String(p.perk_card_days_override) : "");
       setTickets(p?.perk_challenge_tickets_override != null ? String(p.perk_challenge_tickets_override) : "");
+      setSysFeeInput(p?.system_fee_pct_override != null ? String(p.system_fee_pct_override) : "");
       if (p?.section_id) {
         const { data: s } = await supabase
           .from("store_sections" as never)
