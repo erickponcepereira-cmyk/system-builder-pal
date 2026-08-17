@@ -503,7 +503,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                   { key: "rightSide", label: "Lat. direita" },
                   { key: "leftSide", label: "Lat. esquerda" },
                 ] as const).map((v) => {
-                  const photo = (editForm.photos as any)?.[v.key] as string | undefined;
+                  const photo = (editPhotoUrls as any)?.[v.key] as string | undefined;
                   const inputId = `edit-photo-${v.key}`;
                   return (
                     <div key={v.key}>
