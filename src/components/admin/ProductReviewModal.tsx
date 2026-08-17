@@ -67,6 +67,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const [allowedCoachIds, setAllowedCoachIds] = useState<string[]>([]);
   const [cardDays, setCardDays] = useState<string>("");
   const [tickets, setTickets] = useState<string>("");
+  const [sysFeeInput, setSysFeeInput] = useState<string>("");
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [coachSearch, setCoachSearch] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
