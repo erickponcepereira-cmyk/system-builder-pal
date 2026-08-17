@@ -83,6 +83,8 @@ const fmtNum = (v?: number, unit = "") => {
 const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit, challengeCandidates = [] }) => {
   const [editing, setEditing] = useState<FitMindAssessment | null>(null);
   const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
+  const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+
   const editPhotoUrls = useAssessmentPhotoUrls(editForm.photos as any);
   const [savingEdit, setSavingEdit] = useState(false);
   const openEdit = (a: FitMindAssessment) => {
