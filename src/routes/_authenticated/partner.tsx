@@ -745,9 +745,13 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     if (editing.kind === "paid") {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
-      const split = editing.system_fee_pct_override != null
-        ? { systemFeePctOverride: Number(editing.system_fee_pct_override) }
+      const split = (editing.system_fee_pct_override != null || editing.system_fee_amount_override != null)
+        ? {
+            systemFeePctOverride: editing.system_fee_pct_override != null ? Number(editing.system_fee_pct_override) : null,
+            systemFeeAmountOverride: editing.system_fee_amount_override != null ? Number(editing.system_fee_amount_override) : null,
+          }
         : null;
+
       const b = mode === "receive"
         ? computeFromReceive(editing.partner_net_amount || 0, pct, "card", DEFAULT_PARTNER_FEES, split)
         : computeFromCharge(editing.price || 0, pct, "card", DEFAULT_PARTNER_FEES, split);
