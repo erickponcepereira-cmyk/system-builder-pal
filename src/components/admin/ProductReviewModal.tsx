@@ -357,8 +357,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
             </div>
 
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-white/40">
-            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+
               <p className="text-[10px] uppercase tracking-wider text-white/40">
                 Taxa do sistema deste produto
               </p>
