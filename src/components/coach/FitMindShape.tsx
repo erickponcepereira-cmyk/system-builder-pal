@@ -2655,18 +2655,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         { key: "rightSide" as const, label: "3. Lateral Direita", guide: poseLateralDir },
         { key: "leftSide" as const, label: "4. Lateral Esquerda", guide: poseLateralEsq },
       ];
-      const photosObj = (assessment.photos || {}) as Record<string, string | undefined>;
-      const handlePhotoFile = (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
+      const photosObj = assessmentPhotoUrls as Record<string, string | undefined>;
+      const handlePhotoFile = async (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = String(reader.result || "");
+        const { toast } = await import("sonner");
+        setUploadingPhoto(key);
+        try {
+          const path = await uploadAssessmentPhoto(file);
           upd("photos" as keyof FitMindAssessment, {
             ...(assessment.photos || {}),
-            [key]: dataUrl,
+            [key]: path,
           } as any);
-        };
-        reader.readAsDataURL(file);
+        } catch (e: any) {
+          toast.error(e?.message || "Não foi possível anexar a foto.");
+        } finally {
+          setUploadingPhoto(null);
+        }
       };
       return (
         <div>
