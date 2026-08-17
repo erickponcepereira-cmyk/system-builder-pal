@@ -1394,20 +1394,23 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.partner_net_amount) || 0;
+  const split = product.system_fee_pct_override != null
+    ? { systemFeePctOverride: Number(product.system_fee_pct_override) }
+    : null;
 
   const breakdown = mode === "receive"
-    ? computeFromReceive(receive, pct, method)
-    : computeFromCharge(charge, pct, method);
+    ? computeFromReceive(receive, pct, method, DEFAULT_PARTNER_FEES, split)
+    : computeFromCharge(charge, pct, method, DEFAULT_PARTNER_FEES, split);
 
   const updateCharge = (n: number) => onChange({ price: n });
   const updateReceive = (n: number) => {
-    const inv = computeFromReceive(n, pct, method);
+    const inv = computeFromReceive(n, pct, method, DEFAULT_PARTNER_FEES, split);
     onChange({ partner_net_amount: n, price: inv.gross });
   };
 
   const switchMode = (next: PartnerPriceMode) => {
     if (next === "receive") {
-      const b = computeFromCharge(charge, pct, method);
+      const b = computeFromCharge(charge, pct, method, DEFAULT_PARTNER_FEES, split);
       onChange({ price_input_mode: next, partner_net_amount: Math.max(0, b.partnerNet) });
     } else {
       onChange({ price_input_mode: next, price: breakdown.gross });
@@ -1416,7 +1419,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const changePct = (next: CoachCommissionPct) => {
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, next, method);
+      const inv = computeFromReceive(receive, next, method, DEFAULT_PARTNER_FEES, split);
       onChange({ coach_commission_percentage: next, price: inv.gross });
     } else {
       onChange({ coach_commission_percentage: next });
@@ -1426,7 +1429,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
   const changeMethod = (m: "pix" | "card") => {
     setMethod(m);
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, pct, m);
+      const inv = computeFromReceive(receive, pct, m, DEFAULT_PARTNER_FEES, split);
       onChange({ price: inv.gross });
     }
   };
