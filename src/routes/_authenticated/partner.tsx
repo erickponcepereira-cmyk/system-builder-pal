@@ -1508,7 +1508,14 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
         <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
         <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
-        <BreakdownLine label={`− Taxa do sistema (${breakdown.systemFeePct}%)`} value={-breakdown.systemFee} muted />
+        <BreakdownLine
+          label={product.system_fee_amount_override != null
+            ? "− Taxa do sistema (valor fixo)"
+            : `− Taxa do sistema (${breakdown.systemFeePct}%)`}
+          value={-breakdown.systemFee}
+          muted
+        />
+
         <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
         <div className="my-1 border-t border-white/10" />
         <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />
