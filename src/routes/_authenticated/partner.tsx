@@ -110,6 +110,7 @@ interface Product {
   delivery_days?: number | null;
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
+  system_fee_pct_override?: number | null;
 }
 
 
