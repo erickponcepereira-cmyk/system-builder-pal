@@ -111,6 +111,8 @@ interface Product {
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
   system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
+
 }
 
 
@@ -743,9 +745,13 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     if (editing.kind === "paid") {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
-      const split = editing.system_fee_pct_override != null
-        ? { systemFeePctOverride: Number(editing.system_fee_pct_override) }
+      const split = (editing.system_fee_pct_override != null || editing.system_fee_amount_override != null)
+        ? {
+            systemFeePctOverride: editing.system_fee_pct_override != null ? Number(editing.system_fee_pct_override) : null,
+            systemFeeAmountOverride: editing.system_fee_amount_override != null ? Number(editing.system_fee_amount_override) : null,
+          }
         : null;
+
       const b = mode === "receive"
         ? computeFromReceive(editing.partner_net_amount || 0, pct, "card", DEFAULT_PARTNER_FEES, split)
         : computeFromCharge(editing.price || 0, pct, "card", DEFAULT_PARTNER_FEES, split);
@@ -1394,9 +1400,13 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.partner_net_amount) || 0;
-  const split = product.system_fee_pct_override != null
-    ? { systemFeePctOverride: Number(product.system_fee_pct_override) }
+  const split = (product.system_fee_pct_override != null || product.system_fee_amount_override != null)
+    ? {
+        systemFeePctOverride: product.system_fee_pct_override != null ? Number(product.system_fee_pct_override) : null,
+        systemFeeAmountOverride: product.system_fee_amount_override != null ? Number(product.system_fee_amount_override) : null,
+      }
     : null;
+
 
   const breakdown = mode === "receive"
     ? computeFromReceive(receive, pct, method, DEFAULT_PARTNER_FEES, split)
@@ -1498,7 +1508,14 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
         <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
         <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
-        <BreakdownLine label={`− Taxa do sistema (${breakdown.systemFeePct}%)`} value={-breakdown.systemFee} muted />
+        <BreakdownLine
+          label={product.system_fee_amount_override != null
+            ? "− Taxa do sistema (valor fixo)"
+            : `− Taxa do sistema (${breakdown.systemFeePct}%)`}
+          value={-breakdown.systemFee}
+          muted
+        />
+
         <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
         <div className="my-1 border-t border-white/10" />
         <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />

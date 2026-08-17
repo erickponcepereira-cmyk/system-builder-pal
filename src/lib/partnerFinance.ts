@@ -54,6 +54,8 @@ export interface PartnerBreakdown {
 export interface PartnerSplitOverride {
   skipTax?: boolean;
   systemFeePctOverride?: number | null;
+  /** Taxa do sistema em R$ (tem prioridade sobre o percentual). */
+  systemFeeAmountOverride?: number | null;
   creatorPctOverride?: number | null; // % do criador; cadeia = 100 - creator
   networkL1PctOverride?: number | null;
   networkL2PctOverride?: number | null;
@@ -69,6 +71,8 @@ function resolveCfg(
   const taxPct = active && split?.skipTax ? 0 : fees.taxPct;
   const systemFeePct = active && split?.systemFeePctOverride != null
     ? Number(split.systemFeePctOverride) : fees.systemFeePct;
+  const systemFeeAmount = active && split?.systemFeeAmountOverride != null
+    ? Math.max(0, Number(split.systemFeeAmountOverride)) : null;
   const l1Pct = active && split?.networkL1PctOverride != null
     ? Number(split.networkL1PctOverride) : NETWORK_SPLIT.l1;
   const l2Pct = active && split?.networkL2PctOverride != null
@@ -78,8 +82,9 @@ function resolveCfg(
   const coachPctEffective = active && split?.creatorPctOverride != null
     ? Math.max(0, 100 - Number(split.creatorPctOverride))
     : coachPct;
-  return { taxPct, systemFeePct, l1Pct, l2Pct, l3Pct, coachPctEffective };
+  return { taxPct, systemFeePct, systemFeeAmount, l1Pct, l2Pct, l3Pct, coachPctEffective };
 }
+
 
 export function computeFromCharge(
   gross: number,
@@ -98,8 +103,15 @@ export function computeFromCharge(
   const tax = round2(remaining * (cfg.taxPct / 100));
   remaining = round2(remaining - tax);
 
-  const systemFee = round2(remaining * (cfg.systemFeePct / 100));
+  const baseForSystem = remaining;
+  const systemFee = cfg.systemFeeAmount != null
+    ? round2(Math.min(cfg.systemFeeAmount, Math.max(0, baseForSystem)))
+    : round2(remaining * (cfg.systemFeePct / 100));
+  const systemFeePctEffective = baseForSystem > 0
+    ? Math.round((systemFee / baseForSystem) * 10000) / 100
+    : cfg.systemFeePct;
   remaining = round2(remaining - systemFee);
+
 
   const coachCommission = round2(remaining * (cfg.coachPctEffective / 100));
 
@@ -122,7 +134,7 @@ export function computeFromCharge(
     coachNet,
     partnerNet,
     taxPct: cfg.taxPct,
-    systemFeePct: cfg.systemFeePct,
+    systemFeePct: systemFeePctEffective,
     coachCommissionPct: cfg.coachPctEffective,
     networkL1Pct: cfg.l1Pct,
     networkL2Pct: cfg.l2Pct,
@@ -154,9 +166,12 @@ export function computeFromReceive(
   }
 
   const afterSystem = net / commFactor;
-  const afterTax = afterSystem / systemFactor;
+  const afterTax = cfg.systemFeeAmount != null
+    ? afterSystem + cfg.systemFeeAmount
+    : afterSystem / systemFactor;
   const afterFee = afterTax / taxFactor;
   const gross = round2(afterFee / feeFactor);
+
 
   return computeFromCharge(gross, coachCommissionPct, method, fees, split);
 }
