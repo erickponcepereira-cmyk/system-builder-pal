@@ -43,6 +43,8 @@ interface ProductFull {
   allowed_coach_ids?: string[] | null;
   perk_card_days_override?: number | null;
   perk_challenge_tickets_override?: number | null;
+  system_fee_pct_override?: number | null;
+  custom_split?: boolean | null;
 }
 
 type CoachOption = { id: string; name: string; email: string | null; number: number | null };
