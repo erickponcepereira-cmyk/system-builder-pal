@@ -1,39 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, RefreshCw, X } from "lucide-react";
 
 /**
- * Captura de rosto com conferência de qualidade, no próprio navegador.
+ * Captura de rosto no navegador, com dicas de qualidade.
  *
- * O leitor facial recusa foto ruim, mas só na hora de gravar — e aí o erro
- * aparece minutos depois, longe de quem tirou a foto. Conferir aqui evita a
- * viagem de volta.
+ * IMPORTANTE: as medidas aqui são DICA, não veredito. A escala de nitidez varia
+ * demais entre câmeras — o mesmo rosto dá números diferentes no iPhone e num
+ * notebook. Quem recusa foto ruim de verdade é o leitor facial, e o erro dele
+ * volta para a tela. Barrar por heurística mal calibrada só impediria a pessoa
+ * de mandar uma foto que funcionaria.
  *
- * Sem biblioteca externa e sem custo: usa a câmera pelo navegador, mede nitidez
- * e iluminação no canvas, e usa o detector de rosto nativo quando existe.
+ * Sem biblioteca externa: câmera do navegador e medida no canvas.
  */
 
 type Estado = "iniciando" | "pronto" | "erro" | "revisando";
 
 type Medida = {
-  nitidez: number;      // variância de Laplaciano; baixo = tremido
-  luz: number;          // brilho médio 0–255
-  rosto: boolean | null; // null = navegador não sabe detectar
-  ok: boolean;
-  aviso: string | null;
+  nitidez: number;
+  luz: number;
+  rosto: boolean | null;
+  avisos: string[];
 };
 
-// Limiares calibrados para foto de documento: abaixo disso o leitor costuma
-// recusar ou reconhecer mal depois.
-const NITIDEZ_MIN = 55;
-const LUZ_MIN = 55;
-const LUZ_MAX = 215;
+// Faixas frouxas, só para pegar o obviamente ruim. Ajustadas depois de medir
+// num iPhone: foto boa deu nitidez ~10, então o limiar antigo de 55 reprovava
+// tudo.
+const NITIDEZ_BAIXA = 3;
+const LUZ_MIN = 45;
+const LUZ_MAX = 225;
 
 function medir(canvas: HTMLCanvasElement, temRosto: boolean | null): Medida {
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return { nitidez: 0, luz: 0, rosto: temRosto, ok: false, aviso: "Não consegui ler a imagem." };
+  if (!ctx) return { nitidez: 0, luz: 0, rosto: temRosto, avisos: [] };
 
   const { width: w, height: h } = canvas;
-  // Mede só o miolo, onde o rosto deve estar: fundo não interessa.
   const mx = Math.floor(w * 0.25), my = Math.floor(h * 0.2);
   const mw = Math.floor(w * 0.5), mh = Math.floor(h * 0.6);
   const d = ctx.getImageData(mx, my, mw, mh).data;
@@ -47,7 +47,6 @@ function medir(canvas: HTMLCanvasElement, temRosto: boolean | null): Medida {
   }
   const luz = soma / (mw * mh);
 
-  // Laplaciano: quanto mais borda, mais nítida. Foto tremida tem pouca borda.
   let sq = 0, sm = 0, n = 0;
   for (let y = 1; y < mh - 1; y++) {
     for (let x = 1; x < mw - 1; x++) {
@@ -58,13 +57,13 @@ function medir(canvas: HTMLCanvasElement, temRosto: boolean | null): Medida {
   }
   const nitidez = n ? Math.sqrt(sq / n - (sm / n) ** 2) : 0;
 
-  let aviso: string | null = null;
-  if (temRosto === false) aviso = "Não encontrei um rosto. Centralize no oval.";
-  else if (luz < LUZ_MIN) aviso = "Muito escuro. Procure mais luz, de frente.";
-  else if (luz > LUZ_MAX) aviso = "Muito claro. Evite luz forte atrás de você.";
-  else if (nitidez < NITIDEZ_MIN) aviso = "Foto tremida. Segure firme e tente de novo.";
+  const avisos: string[] = [];
+  if (temRosto === false) avisos.push("Não encontrei um rosto no oval");
+  if (luz < LUZ_MIN) avisos.push("Parece escuro");
+  if (luz > LUZ_MAX) avisos.push("Parece claro demais");
+  if (nitidez < NITIDEZ_BAIXA) avisos.push("Pode estar tremida");
 
-  return { nitidez, luz, rosto: temRosto, ok: aviso === null, aviso };
+  return { nitidez, luz, rosto: temRosto, avisos };
 }
 
 export function CapturaRosto({ onPronta, onCancelar }: {
@@ -79,41 +78,42 @@ export function CapturaRosto({ onPronta, onCancelar }: {
   const [medida, setMedida] = useState<Medida | null>(null);
   const [previa, setPrevia] = useState<string | null>(null);
 
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({
+  const ligarCamera = useCallback(async () => {
+    try {
+      if (!stream.current) {
+        stream.current = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 960 }, height: { ideal: 960 } },
           audio: false,
         });
-        if (!vivo) { s.getTracks().forEach((t) => t.stop()); return; }
-        stream.current = s;
-        if (video.current) { video.current.srcObject = s; await video.current.play(); }
-        setEstado("pronto");
-      } catch {
-        setErro("Não consegui abrir a câmera. Verifique a permissão do navegador.");
-        setEstado("erro");
       }
-    })();
-    return () => {
-      vivo = false;
-      stream.current?.getTracks().forEach((t) => t.stop());
-    };
+      if (video.current) {
+        video.current.srcObject = stream.current;
+        // O Safari do iPhone pausa o vídeo depois de desenhar no canvas. Sem
+        // este play() de novo, "Repetir" deixava a tela preta.
+        await video.current.play();
+      }
+      setEstado("pronto");
+    } catch {
+      setErro("Não consegui abrir a câmera. Verifique a permissão do navegador.");
+      setEstado("erro");
+    }
   }, []);
+
+  useEffect(() => {
+    void ligarCamera();
+    return () => { stream.current?.getTracks().forEach((t) => t.stop()); stream.current = null; };
+  }, [ligarCamera]);
 
   const capturar = async () => {
     const v = video.current, c = canvas.current;
-    if (!v || !c) return;
+    if (!v || !c || !v.videoWidth) return;
 
-    // Quadrado central: é o enquadramento que o leitor espera.
     const lado = Math.min(v.videoWidth, v.videoHeight);
     c.width = lado; c.height = lado;
     const ctx = c.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(v, (v.videoWidth - lado) / 2, (v.videoHeight - lado) / 2, lado, lado, 0, 0, lado, lado);
 
-    // Detector nativo quando o navegador tem. Sem ele, seguimos pelas medidas.
     let temRosto: boolean | null = null;
     const Det = (window as unknown as { FaceDetector?: new (o?: unknown) => { detect: (s: unknown) => Promise<unknown[]> } }).FaceDetector;
     if (Det) {
@@ -124,26 +124,38 @@ export function CapturaRosto({ onPronta, onCancelar }: {
     }
 
     setMedida(medir(c, temRosto));
-    setPrevia(c.toDataURL("image/jpeg", 0.9));
+    setPrevia(c.toDataURL("image/jpeg", 0.92));
     setEstado("revisando");
   };
 
   const confirmar = () => {
-    if (previa) onPronta(previa);
+    if (!previa) return;
     stream.current?.getTracks().forEach((t) => t.stop());
+    stream.current = null;
+    onPronta(previa);
   };
 
-  const refazer = () => { setPrevia(null); setMedida(null); setEstado("pronto"); };
+  const refazer = () => {
+    setPrevia(null); setMedida(null);
+    setEstado("iniciando");
+    void ligarCamera();
+  };
+
+  const fechar = () => {
+    stream.current?.getTracks().forEach((t) => t.stop());
+    stream.current = null;
+    onCancelar();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3" onClick={onCancelar}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3" onClick={fechar}>
       <div
         className="w-full max-w-sm space-y-3 rounded-2xl border border-white/10 bg-[#12171C] p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-white">Foto para o leitor facial</p>
-          <button type="button" onClick={onCancelar} className="rounded p-1 text-white/60 hover:bg-white/10">
+          <button type="button" onClick={fechar} className="rounded p-1 text-white/60 hover:bg-white/10">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -155,19 +167,18 @@ export function CapturaRosto({ onPronta, onCancelar }: {
             {previa ? (
               <img src={previa} alt="" className="h-full w-full object-cover" />
             ) : (
-              <video ref={video} playsInline muted className="h-full w-full scale-x-[-1] object-cover" />
+              <video ref={video} playsInline muted autoPlay className="h-full w-full scale-x-[-1] object-cover" />
             )}
 
-            {/* Guia oval: mostra onde o rosto precisa ficar */}
             {!previa && (
               <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 h-full w-full">
                 <defs>
-                  <mask id="m">
+                  <mask id="mascara-rosto">
                     <rect width="100" height="100" fill="white" />
                     <ellipse cx="50" cy="46" rx="27" ry="35" fill="black" />
                   </mask>
                 </defs>
-                <rect width="100" height="100" fill="rgba(0,0,0,.45)" mask="url(#m)" />
+                <rect width="100" height="100" fill="rgba(0,0,0,.45)" mask="url(#mascara-rosto)" />
                 <ellipse cx="50" cy="46" rx="27" ry="35" fill="none" stroke="#56B9D8" strokeWidth="0.7" strokeDasharray="3 2" />
               </svg>
             )}
@@ -177,20 +188,22 @@ export function CapturaRosto({ onPronta, onCancelar }: {
         <canvas ref={canvas} className="hidden" />
 
         {estado === "revisando" && medida && (
-          <div className={`rounded-xl border p-2.5 ${medida.ok ? "border-green-500/30 bg-green-500/10" : "border-amber-500/30 bg-amber-500/10"}`}>
-            <p className={`text-sm font-bold ${medida.ok ? "text-green-400" : "text-amber-400"}`}>
-              {medida.ok ? "Foto boa" : medida.aviso}
-            </p>
-            <p className="mt-0.5 font-mono text-[11px] text-white/50">
-              nitidez {Math.round(medida.nitidez)} · luz {Math.round(medida.luz)}
+          <div className={`rounded-xl border p-2.5 ${medida.avisos.length ? "border-amber-500/30 bg-amber-500/10" : "border-green-500/30 bg-green-500/10"}`}>
+            {medida.avisos.length ? (
+              <>
+                <p className="text-sm font-bold text-amber-400">{medida.avisos.join(" · ")}</p>
+                <p className="mt-0.5 text-[11px] text-white/60">
+                  É só uma dica. Se a foto parecer boa para você, pode usar — quem
+                  decide de verdade é o leitor.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm font-bold text-green-400">Parece boa</p>
+            )}
+            <p className="mt-1 font-mono text-[11px] text-white/40">
+              nitidez {medida.nitidez.toFixed(1)} · luz {Math.round(medida.luz)}
               {medida.rosto === null ? " · rosto não verificado" : medida.rosto ? " · 1 rosto" : " · rosto não encontrado"}
             </p>
-            {medida.rosto === null && (
-              <p className="mt-1 text-[11px] text-white/50">
-                Este navegador não detecta rosto sozinho. Confira você mesmo que
-                está de frente e centralizado.
-              </p>
-            )}
           </div>
         )}
 
@@ -210,8 +223,8 @@ export function CapturaRosto({ onPronta, onCancelar }: {
                 <RefreshCw className="h-4 w-4" /> Repetir
               </button>
               <button
-                type="button" onClick={confirmar} disabled={!medida?.ok}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-40"
+                type="button" onClick={confirmar}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground"
               >
                 <Check className="h-4 w-4" /> Usar esta
               </button>
