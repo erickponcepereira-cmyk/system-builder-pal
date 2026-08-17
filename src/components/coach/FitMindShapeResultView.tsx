@@ -9,6 +9,7 @@
  * FitMindShape, para que possa ser montado a partir de dados públicos.
  */
 import React, { useState, useMemo } from "react";
+import { useAssessmentPhotoUrls } from "@/lib/assessment-photos";
 import {
   LineChart, Line, PieChart, Pie, Cell, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -147,6 +148,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [showProNotes, setShowProNotes] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
+  const resolvedPhotos = useAssessmentPhotoUrls(a.photos as any);
 
   const computedBMI = useMemo(() => {
     if (!a.weight || !a.height) return 0;
@@ -541,7 +543,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
             </span>
           </div>
           {(() => {
-            const photos = a.photos || {};
+            const photos = resolvedPhotos || {};
             const items = [
               { key: "front", label: "Frente", src: photos.front },
               { key: "back", label: "Costas", src: photos.back },
