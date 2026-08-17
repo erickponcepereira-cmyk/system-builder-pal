@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2, Pencil, X } from "lucide-react";
 import type { FitMindAssessment, FitMindClient, FitMindChallengeCandidate } from "./FitMindShape";
+import { uploadAssessmentPhoto, useAssessmentPhotoUrls } from "@/lib/assessment-photos";
 
 interface Props {
   client: FitMindClient;
@@ -82,6 +83,7 @@ const fmtNum = (v?: number, unit = "") => {
 const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit, challengeCandidates = [] }) => {
   const [editing, setEditing] = useState<FitMindAssessment | null>(null);
   const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
+  const editPhotoUrls = useAssessmentPhotoUrls(editForm.photos as any);
   const [savingEdit, setSavingEdit] = useState(false);
   const openEdit = (a: FitMindAssessment) => {
     setEditing(a);
