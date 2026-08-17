@@ -44,7 +44,9 @@ interface ProductFull {
   perk_card_days_override?: number | null;
   perk_challenge_tickets_override?: number | null;
   system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
   custom_split?: boolean | null;
+
 }
 
 type CoachOption = { id: string; name: string; email: string | null; number: number | null };
@@ -68,6 +70,8 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const [cardDays, setCardDays] = useState<string>("");
   const [tickets, setTickets] = useState<string>("");
   const [sysFeeInput, setSysFeeInput] = useState<string>("");
+  const [sysFeeMode, setSysFeeMode] = useState<"pct" | "amount">("pct");
+
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [coachSearch, setCoachSearch] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
@@ -87,7 +91,14 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       setAllowedCoachIds(p?.allowed_coach_ids || []);
       setCardDays(p?.perk_card_days_override != null ? String(p.perk_card_days_override) : "");
       setTickets(p?.perk_challenge_tickets_override != null ? String(p.perk_challenge_tickets_override) : "");
-      setSysFeeInput(p?.system_fee_pct_override != null ? String(p.system_fee_pct_override) : "");
+      if (p?.system_fee_amount_override != null) {
+        setSysFeeMode("amount");
+        setSysFeeInput(String(p.system_fee_amount_override));
+      } else {
+        setSysFeeMode("pct");
+        setSysFeeInput(p?.system_fee_pct_override != null ? String(p.system_fee_pct_override) : "");
+      }
+
       if (p?.section_id) {
         const { data: s } = await supabase
           .from("store_sections" as never)
@@ -131,10 +142,16 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const salvarConfig = async () => {
     const rawFee = sysFeeInput.trim().replace(",", ".");
     const feeValue = rawFee === "" ? null : Number(rawFee);
-    if (feeValue != null && (!Number.isFinite(feeValue) || feeValue < 0 || feeValue > 100)) {
-      toast.error("Taxa do sistema inválida (0 a 100).");
+    if (feeValue != null && (!Number.isFinite(feeValue) || feeValue < 0)) {
+      toast.error("Taxa do sistema inválida.");
       return;
     }
+    if (sysFeeMode === "pct" && feeValue != null && feeValue > 100) {
+      toast.error("Taxa do sistema em % deve ficar entre 0 e 100.");
+      return;
+    }
+    const feePctValue = sysFeeMode === "pct" ? feeValue : null;
+    const feeAmountValue = sysFeeMode === "amount" ? feeValue : null;
     setSavingConfig(true);
     try {
       const patch: Record<string, unknown> = {
@@ -142,7 +159,8 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
         allowed_coach_ids: restrict ? allowedCoachIds : [],
         perk_card_days_override: cardDays.trim() === "" ? null : Number(cardDays),
         perk_challenge_tickets_override: tickets.trim() === "" ? null : Number(tickets),
-        system_fee_pct_override: feeValue,
+        system_fee_pct_override: feePctValue,
+        system_fee_amount_override: feeAmountValue,
       };
       if (table === "professional_products") {
         // No produto profissional o override só vale com o split customizado ligado.
@@ -158,11 +176,12 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
           coachPctNow,
           "card",
           {
-            systemFeePct: feeValue ?? DEFAULT_PARTNER_FEES.systemFeePct,
+            systemFeePct: feePctValue ?? DEFAULT_PARTNER_FEES.systemFeePct,
             taxPct: product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct,
             cardFeePct: product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct,
             pixFeePct: product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct,
           },
+          feeAmountValue != null ? { systemFeeAmountOverride: feeAmountValue } : null,
         );
         if (priceNow > 0) {
           patch.coach_commission_amount = b.coachCommission;
@@ -173,6 +192,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
           else patch.professional_net_amount = b.partnerNet;
         }
       }
+
 
       const { error } = await supabase
         .from(table as never)
@@ -235,12 +255,16 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const pixFeePct = product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct;
   const taxPct = product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct;
   const parsedSysFee = Number(sysFeeInput.trim().replace(",", "."));
-  const sysFeePct = sysFeeInput.trim() !== "" && Number.isFinite(parsedSysFee)
+  const hasSysFeeInput = sysFeeInput.trim() !== "" && Number.isFinite(parsedSysFee);
+  const sysFeePct = hasSysFeeInput && sysFeeMode === "pct"
     ? parsedSysFee
     : DEFAULT_PARTNER_FEES.systemFeePct;
+  const sysFeeAmount = hasSysFeeInput && sysFeeMode === "amount" ? parsedSysFee : null;
+  const sysSplit = sysFeeAmount != null ? { systemFeeAmountOverride: sysFeeAmount } : null;
   const coachPct = Number(product.coach_commission_percentage || 0) as 10 | 20 | 30 | 40 | 50;
-  const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
-  const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
+  const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct }, sysSplit);
+  const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct }, sysSplit);
+
   const coachAmt = cardBreakdown.coachCommission;
   const l1 = cardBreakdown.networkL1;
   const l2 = cardBreakdown.networkL2;
@@ -304,7 +328,11 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
               <Row label="Taxa cartão" value={`${cardFeePct}%`} />
               <Row label="Taxa PIX" value={`${pixFeePct}%`} />
               <Row label="Imposto" value={`${taxPct}%`} />
-              <Row label="Taxa sistema" value={`${sysFeePct}%`} />
+              <Row
+                label="Taxa sistema"
+                value={sysFeeAmount != null ? money(cardBreakdown.systemFee) : `${sysFeePct}%`}
+              />
+
               <Row label="Líquido (Cartão)" value={money(cardBreakdown.partnerNet)} />
               <Row label="Líquido (PIX)" value={money(pixBreakdown.partnerNet)} />
             </div>
@@ -330,20 +358,43 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
 
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <p className="text-[10px] uppercase tracking-wider text-white/40">
-                Taxa do sistema deste produto (%)
+            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">
+                Taxa do sistema deste produto
               </p>
+              <div className="mt-2 flex gap-2">
+                {([
+                  { key: "pct" as const, label: "Percentual (%)" },
+                  { key: "amount" as const, label: "Valor fixo (R$)" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSysFeeMode(opt.key)}
+                    className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-bold ${
+                      sysFeeMode === opt.key
+                        ? "bg-primary/25 text-primary"
+                        : "bg-white/5 text-white/60"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               <input
                 value={sysFeeInput}
                 onChange={(e) => setSysFeeInput(e.target.value.replace(/[^0-9.,]/g, ""))}
                 inputMode="decimal"
-                placeholder="padrão 5"
-                className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+                placeholder={sysFeeMode === "pct" ? "padrão 5" : "ex.: 12,50"}
+                className="mt-2 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
               />
               <p className="mt-1 text-[10px] text-white/40">
-                Deixe em branco para usar os 5% padrão. Ao salvar, o resumo do dono do produto é
-                atualizado automaticamente e a venda passa a usar esta taxa.
+                Deixe em branco para usar os 5% padrão. No modo valor fixo, o sistema retém esse
+                valor em reais por venda (limitado ao que sobra após taxa de pagamento e imposto).
+                Ao salvar, o resumo do dono do produto é atualizado e a venda passa a usar esta taxa.
               </p>
             </div>
+
 
             <p className="mt-2 text-[10px] text-white/40">
               % comissão coach: {Number(product.coach_commission_percentage || 0)}%. Master coach
