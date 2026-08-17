@@ -129,6 +129,12 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   }, []);
 
   const salvarConfig = async () => {
+    const rawFee = sysFeeInput.trim().replace(",", ".");
+    const feeValue = rawFee === "" ? null : Number(rawFee);
+    if (feeValue != null && (!Number.isFinite(feeValue) || feeValue < 0 || feeValue > 100)) {
+      toast.error("Taxa do sistema inválida (0 a 100).");
+      return;
+    }
     setSavingConfig(true);
     try {
       const patch: Record<string, unknown> = {
@@ -136,12 +142,44 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
         allowed_coach_ids: restrict ? allowedCoachIds : [],
         perk_card_days_override: cardDays.trim() === "" ? null : Number(cardDays),
         perk_challenge_tickets_override: tickets.trim() === "" ? null : Number(tickets),
+        system_fee_pct_override: feeValue,
       };
+      if (table === "professional_products") {
+        // No produto profissional o override só vale com o split customizado ligado.
+        patch.custom_split = feeValue != null ? true : !!product?.custom_split;
+      }
+
+      // Recalcula o resumo mostrado ao dono do produto com a nova taxa.
+      if (product) {
+        const priceNow = Number(product.price || 0);
+        const coachPctNow = Number(product.coach_commission_percentage || 0);
+        const b = computeFromCharge(
+          priceNow,
+          coachPctNow,
+          "card",
+          {
+            systemFeePct: feeValue ?? DEFAULT_PARTNER_FEES.systemFeePct,
+            taxPct: product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct,
+            cardFeePct: product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct,
+            pixFeePct: product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct,
+          },
+        );
+        if (priceNow > 0) {
+          patch.coach_commission_amount = b.coachCommission;
+          patch.network_l1_amount = b.networkL1;
+          patch.network_l2_amount = b.networkL2;
+          patch.network_l3_amount = b.networkL3;
+          if (table === "partner_products") patch.partner_net_amount = b.partnerNet;
+          else patch.professional_net_amount = b.partnerNet;
+        }
+      }
+
       const { error } = await supabase
         .from(table as never)
         .update(patch as never)
         .eq("id" as never, productId);
       if (error) throw new Error(error.message);
+      setProduct((prev) => (prev ? { ...prev, ...(patch as Partial<ProductFull>) } : prev));
       toast.success("Configuração salva");
       onChanged?.();
     } catch (e) {
