@@ -327,11 +327,30 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
               </span>
               <span className="font-bold text-primary">{money(ownerNet)}</span>
             </div>
+
+            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">
+                Taxa do sistema deste produto (%)
+              </p>
+              <input
+                value={sysFeeInput}
+                onChange={(e) => setSysFeeInput(e.target.value.replace(/[^0-9.,]/g, ""))}
+                inputMode="decimal"
+                placeholder="padrão 5"
+                className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+              />
+              <p className="mt-1 text-[10px] text-white/40">
+                Deixe em branco para usar os 5% padrão. Ao salvar, o resumo do dono do produto é
+                atualizado automaticamente e a venda passa a usar esta taxa.
+              </p>
+            </div>
+
             <p className="mt-2 text-[10px] text-white/40">
               % comissão coach: {Number(product.coach_commission_percentage || 0)}%. Master coach
               recebe bônus adicional sobre essa comissão quando vende.
             </p>
           </div>
+
 
           <div className="rounded-xl border border-white/10 bg-black/30 p-4">
             <p className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">
