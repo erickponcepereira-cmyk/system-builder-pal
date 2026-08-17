@@ -111,6 +111,8 @@ interface Product {
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
   system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
+
 }
 
 
