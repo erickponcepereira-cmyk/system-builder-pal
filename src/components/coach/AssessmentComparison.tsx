@@ -508,37 +508,75 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                   { key: "leftSide", label: "Lat. esquerda" },
                 ] as const).map((v) => {
                   const photo = (editPhotoUrls as any)?.[v.key] as string | undefined;
-                  const inputId = `edit-photo-${v.key}`;
+                  const camId = `edit-photo-cam-${v.key}`;
+                  const galId = `edit-photo-gal-${v.key}`;
+                  const busy = photoBusy?.startsWith(`${v.key}:`) ?? false;
+                  const busyLabel = photoBusy?.endsWith(":uploading") ? "Enviando..." : "Comprimindo...";
+                  const pick = async (file: File | null) => {
+                    if (!file) return;
+                    const { toast } = await import("sonner");
+                    setPhotoBusy(`${v.key}:compressing`);
+                    try {
+                      const path = await uploadAssessmentPhoto(file, (stage) => setPhotoBusy(`${v.key}:${stage}`));
+                      setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: path } as any }));
+                    } catch (err: any) {
+                      toast.error(err?.message || "Não foi possível anexar a foto.");
+                    } finally {
+                      setPhotoBusy(null);
+                    }
+                  };
+                  const btnStyle: React.CSSProperties = {
+                    flex: 1,
+                    textAlign: "center",
+                    cursor: busy ? "default" : "pointer",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#fff",
+                    background: "rgba(0,0,0,0.6)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: 6,
+                    padding: "5px 4px",
+                  };
                   return (
                     <div key={v.key}>
-                      <label htmlFor={inputId} style={{ display: "block", cursor: "pointer", aspectRatio: "3 / 4", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.2)", background: "#0A0A0A", overflow: "hidden", position: "relative" }}>
+                      <div style={{ display: "block", aspectRatio: "3 / 4", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.2)", background: "#0A0A0A", overflow: "hidden", position: "relative" }}>
                         {photo ? (
                           <img src={photo} alt={v.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#64748b", fontSize: 11, textAlign: "center", padding: 6 }}>
-                            {v.label}<br />Toque para anexar
+                            {v.label}
                           </div>
                         )}
+                        <div style={{ position: "absolute", left: 4, right: 4, bottom: 4, display: "flex", gap: 4 }}>
+                          {busy ? (
+                            <div style={{ ...btnStyle, flex: 1 }}>{busyLabel}</div>
+                          ) : (
+                            <>
+                              <label htmlFor={camId} style={btnStyle}>Tirar foto</label>
+                              <label htmlFor={galId} style={btnStyle}>Galeria</label>
+                            </>
+                          )}
+                        </div>
                         <input
-                          id={inputId}
+                          id={camId}
                           type="file"
                           accept="image/*"
+                          capture="environment"
+                          disabled={busy}
                           style={{ display: "none" }}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            e.target.value = "";
-                            if (!file) return;
-                            const { toast } = await import("sonner");
-                            try {
-                              const path = await uploadAssessmentPhoto(file);
-                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: path } as any }));
-                            } catch (err: any) {
-                              toast.error(err?.message || "Não foi possível anexar a foto.");
-                            }
-                          }}
+                          onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ""; void pick(f); }}
                         />
-                      </label>
+                        <input
+                          id={galId}
+                          type="file"
+                          accept="image/*"
+                          disabled={busy}
+                          style={{ display: "none" }}
+                          onChange={(e) => { const f = e.target.files?.[0] || null; e.target.value = ""; void pick(f); }}
+                        />
+                      </div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#94a3b8" }}>
+
                         <span>{v.label}</span>
                         {photo && (
                           <button
