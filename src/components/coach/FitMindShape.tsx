@@ -20,6 +20,7 @@ import { calcAgeFromDateOnly } from "@/lib/date-only";
 
 import { getShareOrigin } from "@/lib/auth-redirects";
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { uploadAssessmentPhoto, useAssessmentPhotoUrls } from "@/lib/assessment-photos";
 import AssessmentComparison from "./AssessmentComparison";
 import FitMindShapeResultView from "./FitMindShapeResultView";
 import { useServerFn } from "@tanstack/react-start";
