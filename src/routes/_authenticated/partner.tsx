@@ -20,7 +20,7 @@ import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
 import { maskPhone } from "@/lib/masks";
-import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
+import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, DEFAULT_PARTNER_FEES, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
@@ -110,6 +110,9 @@ interface Product {
   delivery_days?: number | null;
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
+  system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
+
 }
 
 
@@ -742,9 +745,16 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     if (editing.kind === "paid") {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const split = (editing.system_fee_pct_override != null || editing.system_fee_amount_override != null)
+        ? {
+            systemFeePctOverride: editing.system_fee_pct_override != null ? Number(editing.system_fee_pct_override) : null,
+            systemFeeAmountOverride: editing.system_fee_amount_override != null ? Number(editing.system_fee_amount_override) : null,
+          }
+        : null;
+
       const b = mode === "receive"
-        ? computeFromReceive(editing.partner_net_amount || 0, pct)
-        : computeFromCharge(editing.price || 0, pct);
+        ? computeFromReceive(editing.partner_net_amount || 0, pct, "card", DEFAULT_PARTNER_FEES, split)
+        : computeFromCharge(editing.price || 0, pct, "card", DEFAULT_PARTNER_FEES, split);
       if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
       if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
       extra = {
@@ -1390,20 +1400,27 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.partner_net_amount) || 0;
+  const split = (product.system_fee_pct_override != null || product.system_fee_amount_override != null)
+    ? {
+        systemFeePctOverride: product.system_fee_pct_override != null ? Number(product.system_fee_pct_override) : null,
+        systemFeeAmountOverride: product.system_fee_amount_override != null ? Number(product.system_fee_amount_override) : null,
+      }
+    : null;
+
 
   const breakdown = mode === "receive"
-    ? computeFromReceive(receive, pct, method)
-    : computeFromCharge(charge, pct, method);
+    ? computeFromReceive(receive, pct, method, DEFAULT_PARTNER_FEES, split)
+    : computeFromCharge(charge, pct, method, DEFAULT_PARTNER_FEES, split);
 
   const updateCharge = (n: number) => onChange({ price: n });
   const updateReceive = (n: number) => {
-    const inv = computeFromReceive(n, pct, method);
+    const inv = computeFromReceive(n, pct, method, DEFAULT_PARTNER_FEES, split);
     onChange({ partner_net_amount: n, price: inv.gross });
   };
 
   const switchMode = (next: PartnerPriceMode) => {
     if (next === "receive") {
-      const b = computeFromCharge(charge, pct, method);
+      const b = computeFromCharge(charge, pct, method, DEFAULT_PARTNER_FEES, split);
       onChange({ price_input_mode: next, partner_net_amount: Math.max(0, b.partnerNet) });
     } else {
       onChange({ price_input_mode: next, price: breakdown.gross });
@@ -1412,7 +1429,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const changePct = (next: CoachCommissionPct) => {
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, next, method);
+      const inv = computeFromReceive(receive, next, method, DEFAULT_PARTNER_FEES, split);
       onChange({ coach_commission_percentage: next, price: inv.gross });
     } else {
       onChange({ coach_commission_percentage: next });
@@ -1422,7 +1439,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
   const changeMethod = (m: "pix" | "card") => {
     setMethod(m);
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, pct, m);
+      const inv = computeFromReceive(receive, pct, m, DEFAULT_PARTNER_FEES, split);
       onChange({ price: inv.gross });
     }
   };
@@ -1491,7 +1508,14 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
         <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
         <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
-        <BreakdownLine label="− Taxa do sistema (5%)" value={-breakdown.systemFee} muted />
+        <BreakdownLine
+          label={product.system_fee_amount_override != null
+            ? "− Taxa do sistema (valor fixo)"
+            : `− Taxa do sistema (${breakdown.systemFeePct}%)`}
+          value={-breakdown.systemFee}
+          muted
+        />
+
         <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
         <div className="my-1 border-t border-white/10" />
         <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />

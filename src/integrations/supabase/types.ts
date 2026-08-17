@@ -202,77 +202,35 @@ export type Database = {
           },
         ]
       }
-      academia_faces_envio: {
-        Row: {
-          criado_em: string
-          criado_por: string | null
-          enviado_em: string | null
-          erro: string | null
-          foto_base64: string | null
-          id: string
-          nome: string
-          partner_id: string
-          referencia: string
-          status: string
-          student_id: string | null
-        }
-        Insert: {
-          criado_em?: string
-          criado_por?: string | null
-          enviado_em?: string | null
-          erro?: string | null
-          foto_base64?: string | null
-          id?: string
-          nome: string
-          partner_id: string
-          referencia: string
-          status?: string
-          student_id?: string | null
-        }
-        Update: {
-          criado_em?: string
-          criado_por?: string | null
-          enviado_em?: string | null
-          erro?: string | null
-          foto_base64?: string | null
-          id?: string
-          nome?: string
-          partner_id?: string
-          referencia?: string
-          status?: string
-          student_id?: string | null
-        }
-        Relationships: []
-      }
       academia_credenciais: {
         Row: {
-          importado_em: string | null
-          nome_no_equipamento: string | null
           ativo: boolean
           created_at: string
           id: string
+          importado_em: string | null
+          nome_no_equipamento: string | null
           partner_id: string
           referencia: string
           student_id: string | null
           tipo: string
         }
         Insert: {
-          importado_em?: string | null
-          nome_no_equipamento?: string | null
           ativo?: boolean
           created_at?: string
           id?: string
+          importado_em?: string | null
+          nome_no_equipamento?: string | null
           partner_id: string
           referencia: string
           student_id?: string | null
           tipo?: string
         }
         Update: {
-          importado_em?: string | null
-          nome_no_equipamento?: string | null
           ativo?: boolean
           created_at?: string
           id?: string
+          importado_em?: string | null
+          nome_no_equipamento?: string | null
           partner_id?: string
           referencia?: string
           student_id?: string | null
@@ -608,6 +566,70 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_faces_envio: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          enviado_em: string | null
+          erro: string | null
+          foto_base64: string | null
+          id: string
+          nome: string
+          partner_id: string
+          referencia: string
+          status: string
+          student_id: string | null
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          foto_base64?: string | null
+          id?: string
+          nome: string
+          partner_id: string
+          referencia: string
+          status?: string
+          student_id?: string | null
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          enviado_em?: string | null
+          erro?: string | null
+          foto_base64?: string | null
+          id?: string
+          nome?: string
+          partner_id?: string
+          referencia?: string
+          status?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_faces_envio_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_faces_envio_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_faces_envio_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -7880,7 +7902,9 @@ export type Database = {
           status: string
           stock: number | null
           subcategory_id: string | null
+          system_fee_amount_override: number | null
           system_fee_fixed: number
+          system_fee_pct_override: number | null
           tax_percentage: number
           updated_at: string
           uses_scheduling: boolean
@@ -7946,7 +7970,9 @@ export type Database = {
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_amount_override?: number | null
           system_fee_fixed?: number
+          system_fee_pct_override?: number | null
           tax_percentage?: number
           updated_at?: string
           uses_scheduling?: boolean
@@ -8012,7 +8038,9 @@ export type Database = {
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_amount_override?: number | null
           system_fee_fixed?: number
+          system_fee_pct_override?: number | null
           tax_percentage?: number
           updated_at?: string
           uses_scheduling?: boolean
@@ -9751,6 +9779,7 @@ export type Database = {
           status: string
           stock: number | null
           subcategory_id: string | null
+          system_fee_amount_override: number | null
           system_fee_pct_override: number | null
           updated_at: string
           uses_scheduling: boolean
@@ -9826,6 +9855,7 @@ export type Database = {
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_amount_override?: number | null
           system_fee_pct_override?: number | null
           updated_at?: string
           uses_scheduling?: boolean
@@ -9901,6 +9931,7 @@ export type Database = {
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_amount_override?: number | null
           system_fee_pct_override?: number | null
           updated_at?: string
           uses_scheduling?: boolean
@@ -13787,6 +13818,14 @@ export type Database = {
       }
     }
     Functions: {
+      academia_agente_credenciais_importar: {
+        Args: { p_agente_id: string; p_segredo: string; p_usuarios: Json }
+        Returns: {
+          atualizadas: number
+          novas: number
+          total: number
+        }[]
+      }
       academia_agente_enviar: {
         Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
         Returns: number
@@ -13795,9 +13834,28 @@ export type Database = {
         Args: { p_agente_id: string; p_inscricao_id: string; p_segredo: string }
         Returns: boolean
       }
+      academia_agente_face_enviada_confirmar: {
+        Args: {
+          p_agente_id: string
+          p_envio_id: string
+          p_erro: string
+          p_ok: boolean
+          p_segredo: string
+        }
+        Returns: boolean
+      }
       academia_agente_face_removida: {
         Args: { p_agente_id: string; p_inscricao_id: string; p_segredo: string }
         Returns: boolean
+      }
+      academia_agente_faces_a_enviar: {
+        Args: { p_agente_id: string; p_segredo: string }
+        Returns: {
+          envio_id: string
+          foto_base64: string
+          nome: string
+          referencia: string
+        }[]
       }
       academia_agente_faces_pendentes: {
         Args: { p_agente_id: string; p_segredo: string }
@@ -13806,34 +13864,6 @@ export type Database = {
           politica: string
           referencia: string
         }[]
-      }
-      academia_agente_credenciais_importar: {
-        Args: { p_agente_id: string; p_segredo: string; p_usuarios: Json }
-        Returns: { atualizadas: number; novas: number; total: number }[]
-      }
-      academia_credencial_sugestoes: {
-        Args: { p_credencial_id: string; p_partner_id: string }
-        Returns: { nome: string; semelhanca: number; student_id: string }[]
-      }
-      academia_face_enfileirar: {
-        Args: { p_foto_base64: string; p_nome: string; p_partner_id: string; p_student_id: string }
-        Returns: { envio_id: string; referencia: string }[]
-      }
-      academia_agente_faces_a_enviar: {
-        Args: { p_agente_id: string; p_segredo: string }
-        Returns: { envio_id: string; foto_base64: string; nome: string; referencia: string }[]
-      }
-      academia_agente_face_enviada_confirmar: {
-        Args: { p_agente_id: string; p_envio_id: string; p_erro: string | null; p_ok: boolean; p_segredo: string }
-        Returns: boolean
-      }
-      academia_buscar_aluno: {
-        Args: { p_partner_id: string; p_termo: string }
-        Returns: { ja_e_da_casa: boolean; nome: string; student_id: string }[]
-      }
-      academia_alunos_da_unidade: {
-        Args: { p_partner_id: string }
-        Returns: { student_id: string }[]
       }
       academia_agente_gerar_codigo: {
         Args: { p_nome: string; p_partner_id: string }
@@ -13856,6 +13886,12 @@ export type Database = {
         Returns: {
           ate: string
           ref: string
+        }[]
+      }
+      academia_alunos_da_unidade: {
+        Args: { p_partner_id: string }
+        Returns: {
+          student_id: string
         }[]
       }
       academia_aviso_texto_padrao: {
@@ -13882,9 +13918,25 @@ export type Database = {
         }[]
       }
       academia_avisos_preparar_automaticos: { Args: never; Returns: number }
+      academia_buscar_aluno: {
+        Args: { p_partner_id: string; p_termo: string }
+        Returns: {
+          ja_e_da_casa: boolean
+          nome: string
+          student_id: string
+        }[]
+      }
       academia_cpf_hash: {
         Args: { p_cpf: string; p_partner_id: string }
         Returns: string
+      }
+      academia_credencial_sugestoes: {
+        Args: { p_credencial_id: string; p_partner_id: string }
+        Returns: {
+          nome: string
+          semelhanca: number
+          student_id: string
+        }[]
       }
       academia_crm_em_varios_funis: {
         Args: { p_partner_id: string }
@@ -13935,6 +13987,18 @@ export type Database = {
           evento: string
           motivo: string
           nome: string
+        }[]
+      }
+      academia_face_enfileirar: {
+        Args: {
+          p_foto_base64: string
+          p_nome: string
+          p_partner_id: string
+          p_student_id: string
+        }
+        Returns: {
+          envio_id: string
+          referencia: string
         }[]
       }
       academia_faces_a_remover: {
@@ -15140,6 +15204,8 @@ export type Database = {
         Args: { _product_id: string; _schedules: Json }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       slot_target_profile_id: {
         Args: {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]

@@ -313,7 +313,20 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
 
 
     const photosRaw = (a.photos as Record<string, string | undefined> | null) ?? null;
-    const photos = photosRaw && Object.keys(photosRaw).length > 0 ? photosRaw : null;
+    // Fotos novas ficam no bucket privado evolution-photos (apenas o caminho é salvo).
+    // A página pública não tem sessão, então assinamos as URLs aqui no servidor.
+    let photos = photosRaw && Object.keys(photosRaw).length > 0 ? { ...photosRaw } : null;
+    if (photos) {
+      for (const key of Object.keys(photos)) {
+        const value = photos[key];
+        if (!value || value.startsWith("data:") || value.startsWith("http")) continue;
+        const { data: signed } = await supabaseAdmin.storage
+          .from("evolution-photos")
+          .createSignedUrl(value, 60 * 60 * 24);
+        photos[key] = signed?.signedUrl ?? undefined;
+      }
+      if (!Object.values(photos).some(Boolean)) photos = null;
+    }
     // circumferences live inside segment_analysis or separate? Check schema — it's not a column; coaches store via assessment payload. Fallback: read from segment_analysis.circumferences if present.
     const segAny = (a.segment_analysis as Record<string, any> | null) ?? null;
     const circumferences =

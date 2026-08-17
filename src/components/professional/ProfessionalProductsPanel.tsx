@@ -81,6 +81,7 @@ interface ProProduct {
   custom_split?: boolean;
   skip_tax?: boolean;
   system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
   creator_pct_override?: number | null;
   network_l1_pct_override?: number | null;
   network_l2_pct_override?: number | null;
@@ -92,6 +93,8 @@ function productSplitOverride(p: Partial<ProProduct> | null | undefined): Partne
   return {
     skipTax: !!p.skip_tax,
     systemFeePctOverride: p.system_fee_pct_override ?? null,
+    systemFeeAmountOverride: p.system_fee_amount_override ?? null,
+
     creatorPctOverride: p.creator_pct_override ?? null,
     networkL1PctOverride: p.network_l1_pct_override ?? null,
     networkL2PctOverride: p.network_l2_pct_override ?? null,

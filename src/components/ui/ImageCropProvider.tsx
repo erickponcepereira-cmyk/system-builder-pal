@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { Loader2, X, Check, ZoomIn, ZoomOut } from "lucide-react";
+import { toast } from "sonner";
 
 type CropOptions = {
   /** Máximo em pixels do lado do quadrado exportado. Default: 1024. */
@@ -62,15 +63,18 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
   }, [pending]);
 
   const confirm = useCallback(async () => {
-    if (!pending || !areaRef.current) return;
+    if (!pending || busy) return;
     setBusy(true);
     try {
-      const blob = await renderCrop(pending.src, areaRef.current, pending.file, pending.opts.maxSize);
+      // Se o onCropComplete ainda não disparou, usa a imagem inteira.
+      const area = areaRef.current ?? (await fullArea(pending.src));
+      const blob = await renderCrop(pending.src, area, pending.file, pending.opts.maxSize);
       close(blob);
-    } catch {
-      close(null);
+    } catch (e: any) {
+      setBusy(false);
+      toast.error(e?.message || "Não foi possível processar a imagem. Tente uma foto menor.");
     }
-  }, [pending, close]);
+  }, [pending, close, busy]);
 
   const value = useMemo<Ctx>(() => ({ cropToBlob }), [cropToBlob]);
 
@@ -153,23 +157,81 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Limite seguro de lado para canvas/decode em Android (Chrome trava acima disso). */
+const MAX_SOURCE_SIDE = 4096;
+
 async function renderCrop(src: string, area: Area, source: File | Blob, maxSize: number): Promise<Blob> {
-  const img = await loadImage(src);
-  const size = Math.min(maxSize, Math.round(area.width));
+  // Fonte pode ser uma foto de 50–108MP (Galaxy S21 Ultra). Redimensionamos antes
+  // de recortar, senão o Chrome Android devolve canvas em branco ou toBlob null.
+  const { source: drawable, scale } = await loadDrawable(src, source);
+
+  const sx = area.x * scale;
+  const sy = area.y * scale;
+  const sw = Math.max(1, area.width * scale);
+  const sh = Math.max(1, area.height * scale);
+  const size = Math.max(1, Math.min(maxSize, Math.round(sw)));
+
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas 2d indisponível");
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, size, size);
+  ctx.drawImage(drawable as CanvasImageSource, sx, sy, sw, sh, 0, 0, size, size);
+  if (typeof (drawable as ImageBitmap).close === "function") (drawable as ImageBitmap).close();
 
   const isPng = (source as File).type === "image/png";
   const mime = isPng ? "image/png" : "image/jpeg";
   const quality = isPng ? undefined : 0.9;
-  return await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob falhou"))), mime, quality);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((b) => resolve(b), mime, quality);
   });
+  if (blob) return blob;
+
+  // Fallback: alguns aparelhos falham no toBlob mas conseguem o dataURL.
+  const dataUrl = canvas.toDataURL(mime, quality ?? 0.9);
+  const res = await fetch(dataUrl);
+  const fallback = await res.blob();
+  if (!fallback || fallback.size === 0) throw new Error("Não foi possível gerar a imagem recortada");
+  return fallback;
+}
+
+/** Devolve algo desenhável já reduzido, e a escala aplicada sobre o tamanho natural. */
+async function loadDrawable(
+  src: string,
+  file: File | Blob,
+): Promise<{ source: CanvasImageSource; scale: number }> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const probe = await createImageBitmap(file);
+      const side = Math.max(probe.width, probe.height);
+      if (side <= MAX_SOURCE_SIDE) return { source: probe, scale: 1 };
+      const scale = MAX_SOURCE_SIDE / side;
+      probe.close?.();
+      const resized = await createImageBitmap(file, {
+        resizeWidth: Math.round(probe.width * scale),
+        resizeHeight: Math.round(probe.height * scale),
+        resizeQuality: "high",
+      });
+      return { source: resized, scale };
+    } catch {
+      // cai para <img>
+    }
+  }
+  const img = await loadImage(src);
+  return { source: img, scale: 1 };
+}
+
+async function fullArea(src: string): Promise<Area> {
+  const img = await loadImage(src);
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  return {
+    x: (img.naturalWidth - side) / 2,
+    y: (img.naturalHeight - side) / 2,
+    width: side,
+    height: side,
+  };
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -177,7 +239,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => reject(new Error("Falha ao carregar a imagem"));
     img.src = src;
   });
 }

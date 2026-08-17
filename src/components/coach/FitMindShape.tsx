@@ -20,6 +20,7 @@ import { calcAgeFromDateOnly } from "@/lib/date-only";
 
 import { getShareOrigin } from "@/lib/auth-redirects";
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { uploadAssessmentPhoto, useAssessmentPhotoUrls } from "@/lib/assessment-photos";
 import AssessmentComparison from "./AssessmentComparison";
 import FitMindShapeResultView from "./FitMindShapeResultView";
 import { useServerFn } from "@tanstack/react-start";
@@ -467,6 +468,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
   const [showProNotes, setShowProNotes] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
+  const assessmentPhotoUrls = useAssessmentPhotoUrls(assessment.photos as any);
 
   const availableGroups = useMemo(() => {
     const byId = new Map<string, { id: string; name: string; color?: string }>();
@@ -2655,19 +2658,26 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         { key: "rightSide" as const, label: "3. Lateral Direita", guide: poseLateralDir },
         { key: "leftSide" as const, label: "4. Lateral Esquerda", guide: poseLateralEsq },
       ];
-      const photosObj = (assessment.photos || {}) as Record<string, string | undefined>;
-      const handlePhotoFile = (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
+      const photosObj = assessmentPhotoUrls as Record<string, string | undefined>;
+      const handlePhotoFile = async (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = String(reader.result || "");
+        const { toast } = await import("sonner");
+        setUploadingPhoto(`${key}:compressing`);
+        try {
+          const path = await uploadAssessmentPhoto(file, (stage) =>
+            setUploadingPhoto(`${key}:${stage}`),
+          );
           upd("photos" as keyof FitMindAssessment, {
             ...(assessment.photos || {}),
-            [key]: dataUrl,
+            [key]: path,
           } as any);
-        };
-        reader.readAsDataURL(file);
+        } catch (e: any) {
+          toast.error(e?.message || "Não foi possível anexar a foto.");
+        } finally {
+          setUploadingPhoto(null);
+        }
       };
+
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
@@ -2691,21 +2701,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           >
             {VIEWS.map((v) => {
               const photo = photosObj[v.key];
-              const inputId = `fm-photo-${v.key}`;
+              const camId = `fm-photo-cam-${v.key}`;
+              const galId = `fm-photo-gal-${v.key}`;
+              const busy = uploadingPhoto?.startsWith(`${v.key}:`) ?? false;
+              const busyLabel = uploadingPhoto?.endsWith(":uploading")
+                ? "Enviando foto..."
+                : "Comprimindo foto...";
               return (
                 <div key={v.key}>
                   <label className="fm-label" style={{ marginBottom: 6 }}>
                     {v.label}
                   </label>
-                  <label
-                    htmlFor={inputId}
+                  <div
                     className="fm-photo-box"
                     style={{
                       position: "relative",
                       overflow: "hidden",
                       padding: 0,
                       display: "block",
-                      cursor: "pointer",
                     }}
                   >
                     <img
@@ -2726,36 +2739,91 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "flex-end",
-                        padding: 10,
+                        padding: 8,
+                        gap: 6,
                         background:
                           "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          color: "var(--card)",
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Camera size={14} />{" "}
-                        {photo ? "Trocar foto" : "Toque para adicionar"}
-                        {!photo && <span style={{ opacity: 0.6, marginLeft: 4 }}>· 1080×1440px</span>}
-                      </div>
+                      {busy ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            color: "var(--card)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Camera size={14} /> {busyLabel}
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6, width: "100%" }}>
+                          <label
+                            htmlFor={camId}
+                            style={{
+                              flex: 1,
+                              textAlign: "center",
+                              cursor: "pointer",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#fff",
+                              background: "rgba(0,0,0,0.55)",
+                              border: "1px solid rgba(255,255,255,0.35)",
+                              borderRadius: 6,
+                              padding: "6px 4px",
+                            }}
+                          >
+                            Tirar foto
+                          </label>
+                          <label
+                            htmlFor={galId}
+                            style={{
+                              flex: 1,
+                              textAlign: "center",
+                              cursor: "pointer",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#fff",
+                              background: "rgba(0,0,0,0.55)",
+                              border: "1px solid rgba(255,255,255,0.35)",
+                              borderRadius: 6,
+                              padding: "6px 4px",
+                            }}
+                          >
+                            Galeria
+                          </label>
+                        </div>
+                      )}
                     </div>
                     <input
-                      id={inputId}
+                      id={camId}
                       type="file"
                       accept="image/*"
+                      capture="environment"
+                      disabled={busy}
                       style={{ display: "none" }}
-                      onChange={(e) =>
-                        handlePhotoFile(v.key, e.target.files?.[0] || null)
-                      }
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        e.target.value = "";
+                        handlePhotoFile(v.key, f);
+                      }}
                     />
-                  </label>
+                    <input
+                      id={galId}
+                      type="file"
+                      accept="image/*"
+                      disabled={busy}
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        e.target.value = "";
+                        handlePhotoFile(v.key, f);
+                      }}
+                    />
+                  </div>
+
                   {photo && (
                     <button
                       type="button"

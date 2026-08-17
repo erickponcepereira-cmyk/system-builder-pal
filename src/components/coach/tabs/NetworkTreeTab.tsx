@@ -113,7 +113,7 @@ function TreeNode({ node, expanded, toggle, onOpen, clickable }: { node: CoachTr
       </div>
       {isOpen && hasChildren && (
         <div className="ml-6 space-y-1 border-l border-white/10 pl-3">
-          {node.children.map((child) => <TreeNode key={child.coachId} node={child} expanded={expanded} toggle={toggle} onOpen={onOpen} clickable={false} />)}
+          {node.children.map((child) => <TreeNode key={child.coachId} node={child} expanded={expanded} toggle={toggle} onOpen={onOpen} clickable />)}
         </div>
       )}
     </div>

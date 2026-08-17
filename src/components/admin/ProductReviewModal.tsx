@@ -43,6 +43,10 @@ interface ProductFull {
   allowed_coach_ids?: string[] | null;
   perk_card_days_override?: number | null;
   perk_challenge_tickets_override?: number | null;
+  system_fee_pct_override?: number | null;
+  system_fee_amount_override?: number | null;
+  custom_split?: boolean | null;
+
 }
 
 type CoachOption = { id: string; name: string; email: string | null; number: number | null };
@@ -65,6 +69,9 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const [allowedCoachIds, setAllowedCoachIds] = useState<string[]>([]);
   const [cardDays, setCardDays] = useState<string>("");
   const [tickets, setTickets] = useState<string>("");
+  const [sysFeeInput, setSysFeeInput] = useState<string>("");
+  const [sysFeeMode, setSysFeeMode] = useState<"pct" | "amount">("pct");
+
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [coachSearch, setCoachSearch] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
@@ -84,6 +91,14 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       setAllowedCoachIds(p?.allowed_coach_ids || []);
       setCardDays(p?.perk_card_days_override != null ? String(p.perk_card_days_override) : "");
       setTickets(p?.perk_challenge_tickets_override != null ? String(p.perk_challenge_tickets_override) : "");
+      if (p?.system_fee_amount_override != null) {
+        setSysFeeMode("amount");
+        setSysFeeInput(String(p.system_fee_amount_override));
+      } else {
+        setSysFeeMode("pct");
+        setSysFeeInput(p?.system_fee_pct_override != null ? String(p.system_fee_pct_override) : "");
+      }
+
       if (p?.section_id) {
         const { data: s } = await supabase
           .from("store_sections" as never)
@@ -125,6 +140,18 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   }, []);
 
   const salvarConfig = async () => {
+    const rawFee = sysFeeInput.trim().replace(",", ".");
+    const feeValue = rawFee === "" ? null : Number(rawFee);
+    if (feeValue != null && (!Number.isFinite(feeValue) || feeValue < 0)) {
+      toast.error("Taxa do sistema inválida.");
+      return;
+    }
+    if (sysFeeMode === "pct" && feeValue != null && feeValue > 100) {
+      toast.error("Taxa do sistema em % deve ficar entre 0 e 100.");
+      return;
+    }
+    const feePctValue = sysFeeMode === "pct" ? feeValue : null;
+    const feeAmountValue = sysFeeMode === "amount" ? feeValue : null;
     setSavingConfig(true);
     try {
       const patch: Record<string, unknown> = {
@@ -132,12 +159,47 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
         allowed_coach_ids: restrict ? allowedCoachIds : [],
         perk_card_days_override: cardDays.trim() === "" ? null : Number(cardDays),
         perk_challenge_tickets_override: tickets.trim() === "" ? null : Number(tickets),
+        system_fee_pct_override: feePctValue,
+        system_fee_amount_override: feeAmountValue,
       };
+      if (table === "professional_products") {
+        // No produto profissional o override só vale com o split customizado ligado.
+        patch.custom_split = feeValue != null ? true : !!product?.custom_split;
+      }
+
+      // Recalcula o resumo mostrado ao dono do produto com a nova taxa.
+      if (product) {
+        const priceNow = Number(product.price || 0);
+        const coachPctNow = Number(product.coach_commission_percentage || 0);
+        const b = computeFromCharge(
+          priceNow,
+          coachPctNow,
+          "card",
+          {
+            systemFeePct: feePctValue ?? DEFAULT_PARTNER_FEES.systemFeePct,
+            taxPct: product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct,
+            cardFeePct: product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct,
+            pixFeePct: product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct,
+          },
+          feeAmountValue != null ? { systemFeeAmountOverride: feeAmountValue } : null,
+        );
+        if (priceNow > 0) {
+          patch.coach_commission_amount = b.coachCommission;
+          patch.network_l1_amount = b.networkL1;
+          patch.network_l2_amount = b.networkL2;
+          patch.network_l3_amount = b.networkL3;
+          if (table === "partner_products") patch.partner_net_amount = b.partnerNet;
+          else patch.professional_net_amount = b.partnerNet;
+        }
+      }
+
+
       const { error } = await supabase
         .from(table as never)
         .update(patch as never)
         .eq("id" as never, productId);
       if (error) throw new Error(error.message);
+      setProduct((prev) => (prev ? { ...prev, ...(patch as Partial<ProductFull>) } : prev));
       toast.success("Configuração salva");
       onChanged?.();
     } catch (e) {
@@ -192,15 +254,22 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const cardFeePct = product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct;
   const pixFeePct = product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct;
   const taxPct = product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct;
-  const sysFeePct = DEFAULT_PARTNER_FEES.systemFeePct;
+  const parsedSysFee = Number(sysFeeInput.trim().replace(",", "."));
+  const hasSysFeeInput = sysFeeInput.trim() !== "" && Number.isFinite(parsedSysFee);
+  const sysFeePct = hasSysFeeInput && sysFeeMode === "pct"
+    ? parsedSysFee
+    : DEFAULT_PARTNER_FEES.systemFeePct;
+  const sysFeeAmount = hasSysFeeInput && sysFeeMode === "amount" ? parsedSysFee : null;
+  const sysSplit = sysFeeAmount != null ? { systemFeeAmountOverride: sysFeeAmount } : null;
   const coachPct = Number(product.coach_commission_percentage || 0) as 10 | 20 | 30 | 40 | 50;
-  const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
-  const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
-  const coachAmt = Number(product.coach_commission_amount || 0);
-  const l1 = Number(product.network_l1_amount || 0);
-  const l2 = Number(product.network_l2_amount || 0);
-  const l3 = Number(product.network_l3_amount || 0);
-  const ownerNet = Number(product.partner_net_amount ?? product.professional_net_amount ?? 0);
+  const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct }, sysSplit);
+  const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct }, sysSplit);
+
+  const coachAmt = cardBreakdown.coachCommission;
+  const l1 = cardBreakdown.networkL1;
+  const l2 = cardBreakdown.networkL2;
+  const l3 = cardBreakdown.networkL3;
+  const ownerNet = cardBreakdown.partnerNet;
 
   return (
     <div
@@ -259,7 +328,11 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
               <Row label="Taxa cartão" value={`${cardFeePct}%`} />
               <Row label="Taxa PIX" value={`${pixFeePct}%`} />
               <Row label="Imposto" value={`${taxPct}%`} />
-              <Row label="Taxa sistema" value={`${sysFeePct}%`} />
+              <Row
+                label="Taxa sistema"
+                value={sysFeeAmount != null ? money(cardBreakdown.systemFee) : `${sysFeePct}%`}
+              />
+
               <Row label="Líquido (Cartão)" value={money(cardBreakdown.partnerNet)} />
               <Row label="Líquido (PIX)" value={money(pixBreakdown.partnerNet)} />
             </div>
@@ -282,11 +355,52 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
               </span>
               <span className="font-bold text-primary">{money(ownerNet)}</span>
             </div>
+
+            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+
+              <p className="text-[10px] uppercase tracking-wider text-white/40">
+                Taxa do sistema deste produto
+              </p>
+              <div className="mt-2 flex gap-2">
+                {([
+                  { key: "pct" as const, label: "Percentual (%)" },
+                  { key: "amount" as const, label: "Valor fixo (R$)" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSysFeeMode(opt.key)}
+                    className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-bold ${
+                      sysFeeMode === opt.key
+                        ? "bg-primary/25 text-primary"
+                        : "bg-white/5 text-white/60"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={sysFeeInput}
+                onChange={(e) => setSysFeeInput(e.target.value.replace(/[^0-9.,]/g, ""))}
+                inputMode="decimal"
+                placeholder={sysFeeMode === "pct" ? "padrão 5" : "ex.: 12,50"}
+                className="mt-2 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+              />
+              <p className="mt-1 text-[10px] text-white/40">
+                Deixe em branco para usar os 5% padrão. No modo valor fixo, o sistema retém esse
+                valor em reais por venda (limitado ao que sobra após taxa de pagamento e imposto).
+                Ao salvar, o resumo do dono do produto é atualizado e a venda passa a usar esta taxa.
+              </p>
+            </div>
+
+
             <p className="mt-2 text-[10px] text-white/40">
               % comissão coach: {Number(product.coach_commission_percentage || 0)}%. Master coach
               recebe bônus adicional sobre essa comissão quando vende.
             </p>
           </div>
+
 
           <div className="rounded-xl border border-white/10 bg-black/30 p-4">
             <p className="mb-3 text-xs font-bold uppercase tracking-wider text-primary">
