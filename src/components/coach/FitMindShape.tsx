@@ -2662,9 +2662,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       const handlePhotoFile = async (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
         if (!file) return;
         const { toast } = await import("sonner");
-        setUploadingPhoto(key);
+        setUploadingPhoto(`${key}:compressing`);
         try {
-          const path = await uploadAssessmentPhoto(file);
+          const path = await uploadAssessmentPhoto(file, (stage) =>
+            setUploadingPhoto(`${key}:${stage}`),
+          );
           upd("photos" as keyof FitMindAssessment, {
             ...(assessment.photos || {}),
             [key]: path,
@@ -2675,6 +2677,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           setUploadingPhoto(null);
         }
       };
+
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
