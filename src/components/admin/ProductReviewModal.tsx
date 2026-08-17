@@ -234,15 +234,18 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
   const cardFeePct = product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct;
   const pixFeePct = product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct;
   const taxPct = product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct;
-  const sysFeePct = DEFAULT_PARTNER_FEES.systemFeePct;
+  const parsedSysFee = Number(sysFeeInput.trim().replace(",", "."));
+  const sysFeePct = sysFeeInput.trim() !== "" && Number.isFinite(parsedSysFee)
+    ? parsedSysFee
+    : DEFAULT_PARTNER_FEES.systemFeePct;
   const coachPct = Number(product.coach_commission_percentage || 0) as 10 | 20 | 30 | 40 | 50;
   const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
   const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
-  const coachAmt = Number(product.coach_commission_amount || 0);
-  const l1 = Number(product.network_l1_amount || 0);
-  const l2 = Number(product.network_l2_amount || 0);
-  const l3 = Number(product.network_l3_amount || 0);
-  const ownerNet = Number(product.partner_net_amount ?? product.professional_net_amount ?? 0);
+  const coachAmt = cardBreakdown.coachCommission;
+  const l1 = cardBreakdown.networkL1;
+  const l2 = cardBreakdown.networkL2;
+  const l3 = cardBreakdown.networkL3;
+  const ownerNet = cardBreakdown.partnerNet;
 
   return (
     <div
