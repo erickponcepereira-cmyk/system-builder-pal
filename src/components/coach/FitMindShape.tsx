@@ -2701,21 +2701,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           >
             {VIEWS.map((v) => {
               const photo = photosObj[v.key];
-              const inputId = `fm-photo-${v.key}`;
+              const camId = `fm-photo-cam-${v.key}`;
+              const galId = `fm-photo-gal-${v.key}`;
+              const busy = uploadingPhoto?.startsWith(`${v.key}:`) ?? false;
+              const busyLabel = uploadingPhoto?.endsWith(":uploading")
+                ? "Enviando foto..."
+                : "Comprimindo foto...";
               return (
                 <div key={v.key}>
                   <label className="fm-label" style={{ marginBottom: 6 }}>
                     {v.label}
                   </label>
-                  <label
-                    htmlFor={inputId}
+                  <div
                     className="fm-photo-box"
                     style={{
                       position: "relative",
                       overflow: "hidden",
                       padding: 0,
                       display: "block",
-                      cursor: "pointer",
                     }}
                   >
                     <img
@@ -2736,40 +2739,91 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "flex-end",
-                        padding: 10,
+                        padding: 8,
+                        gap: 6,
                         background:
                           "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          color: "var(--card)",
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Camera size={14} />{" "}
-                        {uploadingPhoto === v.key
-                          ? "Enviando foto..."
-                          : photo
-                            ? "Trocar foto"
-                            : "Toque para adicionar"}
-                        {!photo && <span style={{ opacity: 0.6, marginLeft: 4 }}>· 1080×1440px</span>}
-                      </div>
+                      {busy ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            color: "var(--card)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Camera size={14} /> {busyLabel}
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6, width: "100%" }}>
+                          <label
+                            htmlFor={camId}
+                            style={{
+                              flex: 1,
+                              textAlign: "center",
+                              cursor: "pointer",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#fff",
+                              background: "rgba(0,0,0,0.55)",
+                              border: "1px solid rgba(255,255,255,0.35)",
+                              borderRadius: 6,
+                              padding: "6px 4px",
+                            }}
+                          >
+                            Tirar foto
+                          </label>
+                          <label
+                            htmlFor={galId}
+                            style={{
+                              flex: 1,
+                              textAlign: "center",
+                              cursor: "pointer",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#fff",
+                              background: "rgba(0,0,0,0.55)",
+                              border: "1px solid rgba(255,255,255,0.35)",
+                              borderRadius: 6,
+                              padding: "6px 4px",
+                            }}
+                          >
+                            Galeria
+                          </label>
+                        </div>
+                      )}
                     </div>
                     <input
-                      id={inputId}
+                      id={camId}
                       type="file"
                       accept="image/*"
+                      capture="environment"
+                      disabled={busy}
                       style={{ display: "none" }}
-                      onChange={(e) =>
-                        handlePhotoFile(v.key, e.target.files?.[0] || null)
-                      }
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        e.target.value = "";
+                        handlePhotoFile(v.key, f);
+                      }}
                     />
-                  </label>
+                    <input
+                      id={galId}
+                      type="file"
+                      accept="image/*"
+                      disabled={busy}
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        e.target.value = "";
+                        handlePhotoFile(v.key, f);
+                      }}
+                    />
+                  </div>
+
                   {photo && (
                     <button
                       type="button"
