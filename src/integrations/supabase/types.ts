@@ -7903,6 +7903,7 @@ export type Database = {
           stock: number | null
           subcategory_id: string | null
           system_fee_fixed: number
+          system_fee_pct_override: number | null
           tax_percentage: number
           updated_at: string
           uses_scheduling: boolean
@@ -7969,6 +7970,7 @@ export type Database = {
           stock?: number | null
           subcategory_id?: string | null
           system_fee_fixed?: number
+          system_fee_pct_override?: number | null
           tax_percentage?: number
           updated_at?: string
           uses_scheduling?: boolean
@@ -8035,6 +8037,7 @@ export type Database = {
           stock?: number | null
           subcategory_id?: string | null
           system_fee_fixed?: number
+          system_fee_pct_override?: number | null
           tax_percentage?: number
           updated_at?: string
           uses_scheduling?: boolean
