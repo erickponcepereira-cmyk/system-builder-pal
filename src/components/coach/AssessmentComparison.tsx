@@ -520,15 +520,17 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                           type="file"
                           accept="image/*"
                           style={{ display: "none" }}
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
+                            e.target.value = "";
                             if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              const dataUrl = String(reader.result || "");
-                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: dataUrl } as any }));
-                            };
-                            reader.readAsDataURL(file);
+                            const { toast } = await import("sonner");
+                            try {
+                              const path = await uploadAssessmentPhoto(file);
+                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: path } as any }));
+                            } catch (err: any) {
+                              toast.error(err?.message || "Não foi possível anexar a foto.");
+                            }
                           }}
                         />
                       </label>
