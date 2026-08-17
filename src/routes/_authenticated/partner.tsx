@@ -743,9 +743,12 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     if (editing.kind === "paid") {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const split = editing.system_fee_pct_override != null
+        ? { systemFeePctOverride: Number(editing.system_fee_pct_override) }
+        : null;
       const b = mode === "receive"
-        ? computeFromReceive(editing.partner_net_amount || 0, pct)
-        : computeFromCharge(editing.price || 0, pct);
+        ? computeFromReceive(editing.partner_net_amount || 0, pct, "card", DEFAULT_PARTNER_FEES, split)
+        : computeFromCharge(editing.price || 0, pct, "card", DEFAULT_PARTNER_FEES, split);
       if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
       if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
       extra = {
