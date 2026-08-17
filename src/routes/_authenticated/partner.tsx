@@ -1400,9 +1400,13 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.partner_net_amount) || 0;
-  const split = product.system_fee_pct_override != null
-    ? { systemFeePctOverride: Number(product.system_fee_pct_override) }
+  const split = (product.system_fee_pct_override != null || product.system_fee_amount_override != null)
+    ? {
+        systemFeePctOverride: product.system_fee_pct_override != null ? Number(product.system_fee_pct_override) : null,
+        systemFeeAmountOverride: product.system_fee_amount_override != null ? Number(product.system_fee_amount_override) : null,
+      }
     : null;
+
 
   const breakdown = mode === "receive"
     ? computeFromReceive(receive, pct, method, DEFAULT_PARTNER_FEES, split)
