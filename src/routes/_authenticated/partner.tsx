@@ -20,7 +20,7 @@ import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
 import { maskPhone } from "@/lib/masks";
-import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
+import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, DEFAULT_PARTNER_FEES, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
