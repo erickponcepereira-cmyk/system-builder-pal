@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2, Pencil, X } from "lucide-react";
 import type { FitMindAssessment, FitMindClient, FitMindChallengeCandidate } from "./FitMindShape";
+import { uploadAssessmentPhoto, useAssessmentPhotoUrls } from "@/lib/assessment-photos";
 
 interface Props {
   client: FitMindClient;
@@ -82,6 +83,7 @@ const fmtNum = (v?: number, unit = "") => {
 const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit, challengeCandidates = [] }) => {
   const [editing, setEditing] = useState<FitMindAssessment | null>(null);
   const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
+  const editPhotoUrls = useAssessmentPhotoUrls(editForm.photos as any);
   const [savingEdit, setSavingEdit] = useState(false);
   const openEdit = (a: FitMindAssessment) => {
     setEditing(a);
@@ -503,7 +505,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                   { key: "rightSide", label: "Lat. direita" },
                   { key: "leftSide", label: "Lat. esquerda" },
                 ] as const).map((v) => {
-                  const photo = (editForm.photos as any)?.[v.key] as string | undefined;
+                  const photo = (editPhotoUrls as any)?.[v.key] as string | undefined;
                   const inputId = `edit-photo-${v.key}`;
                   return (
                     <div key={v.key}>
@@ -520,15 +522,17 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                           type="file"
                           accept="image/*"
                           style={{ display: "none" }}
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
+                            e.target.value = "";
                             if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              const dataUrl = String(reader.result || "");
-                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: dataUrl } as any }));
-                            };
-                            reader.readAsDataURL(file);
+                            const { toast } = await import("sonner");
+                            try {
+                              const path = await uploadAssessmentPhoto(file);
+                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: path } as any }));
+                            } catch (err: any) {
+                              toast.error(err?.message || "Não foi possível anexar a foto.");
+                            }
                           }}
                         />
                       </label>
