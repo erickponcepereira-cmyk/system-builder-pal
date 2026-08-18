@@ -1067,6 +1067,44 @@ export type Database = {
           },
         ]
       }
+      agente_versoes: {
+        Row: {
+          arquivos: Json
+          ativa: boolean
+          notas: string | null
+          obrigatoria: boolean
+          publicada_em: string
+          publicada_por: string | null
+          versao: string
+        }
+        Insert: {
+          arquivos: Json
+          ativa?: boolean
+          notas?: string | null
+          obrigatoria?: boolean
+          publicada_em?: string
+          publicada_por?: string | null
+          versao: string
+        }
+        Update: {
+          arquivos?: Json
+          ativa?: boolean
+          notas?: string | null
+          obrigatoria?: boolean
+          publicada_em?: string
+          publicada_por?: string | null
+          versao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agente_versoes_publicada_por_fkey"
+            columns: ["publicada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnesis_forms: {
         Row: {
           additional_observations: string | null
@@ -13818,6 +13856,14 @@ export type Database = {
       }
     }
     Functions: {
+      academia_agente_atualizacao: {
+        Args: { p_agente_id: string; p_segredo: string; p_versao_atual: string }
+        Returns: {
+          arquivos: Json
+          notas: string
+          versao: string
+        }[]
+      }
       academia_agente_credenciais_importar: {
         Args: { p_agente_id: string; p_segredo: string; p_usuarios: Json }
         Returns: {
