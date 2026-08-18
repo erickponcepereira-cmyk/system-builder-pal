@@ -1102,7 +1102,13 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
         {breakdown.taxPct > 0 && (
           <BreakdownLine label={`− Reserva fiscal (${fmtPct(breakdown.taxPct)})`} value={-breakdown.tax} muted />
         )}
-        <BreakdownLine label={`− Taxa do sistema (${fmtPct(breakdown.systemFeePct)})`} value={-breakdown.systemFee} muted />
+        <BreakdownLine
+          label={split?.systemFeeAmountOverride != null
+            ? "− Taxa do sistema (valor fixo)"
+            : `− Taxa do sistema (${fmtPct(breakdown.systemFeePct)})`}
+          value={-breakdown.systemFee}
+          muted
+        />
         <BreakdownLine
           label={`− Cadeia comercial (${fmtPct(breakdown.coachCommissionPct)})`}
           value={-breakdown.coachCommission}
