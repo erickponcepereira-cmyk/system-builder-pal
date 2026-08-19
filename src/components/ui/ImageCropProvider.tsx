@@ -50,7 +50,17 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       areaRef.current = null;
-      setPending({ src, file, opts: { ...DEFAULTS, ...opts }, resolve });
+      setPending((anterior) => {
+        // Se ja havia um recorte em andamento, ele TEM que ser resolvido. Antes
+        // o pedido novo sobrescrevia o antigo, e quem estava no await do
+        // anterior ficava pendurado para sempre — spinner girando, nada salvo
+        // e erro nenhum na tela.
+        if (anterior) {
+          URL.revokeObjectURL(anterior.src);
+          anterior.resolve(null);
+        }
+        return { src, file, opts: { ...DEFAULTS, ...opts }, resolve };
+      });
     });
   }, []);
 
@@ -66,9 +76,11 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
     if (!pending || busy) return;
     setBusy(true);
     try {
-      // Se o onCropComplete ainda não disparou, usa a imagem inteira.
-      const area = areaRef.current ?? (await fullArea(pending.src));
-      const blob = await renderCrop(pending.src, area, pending.file, pending.opts.maxSize);
+      // Se o onCropComplete ainda nao disparou, o recorte vira a imagem
+      // inteira — calculada dentro do renderCrop, a partir da mesma imagem ja
+      // decodificada. Antes disso a imagem era carregada uma SEGUNDA vez so
+      // para medir, o que dobrava o custo e criava mais um ponto de falha.
+      const blob = await renderCrop(pending.src, areaRef.current, pending.file, pending.opts.maxSize);
       close(blob);
     } catch (e: any) {
       setBusy(false);
@@ -160,10 +172,25 @@ export function ImageCropProvider({ children }: { children: React.ReactNode }) {
 /** Limite seguro de lado para canvas/decode em Android (Chrome trava acima disso). */
 const MAX_SOURCE_SIDE = 4096;
 
-async function renderCrop(src: string, area: Area, source: File | Blob, maxSize: number): Promise<Blob> {
+async function renderCrop(src: string, area: Area | null, source: File | Blob, maxSize: number): Promise<Blob> {
   // Fonte pode ser uma foto de 50–108MP (Galaxy S21 Ultra). Redimensionamos antes
   // de recortar, senão o Chrome Android devolve canvas em branco ou toBlob null.
   const { source: drawable, scale } = await loadDrawable(src, source);
+
+  // Sem area escolhida: quadrado central da propria imagem. As medidas saem do
+  // drawable, que ja esta na escala reduzida — por isso a area nasce dividida
+  // por scale, para as contas abaixo continuarem valendo.
+  if (!area) {
+    const lg = (drawable as ImageBitmap).width ?? (drawable as HTMLImageElement).naturalWidth;
+    const al = (drawable as ImageBitmap).height ?? (drawable as HTMLImageElement).naturalHeight;
+    const lado = Math.min(lg, al);
+    area = {
+      x: ((lg - lado) / 2) / scale,
+      y: ((al - lado) / 2) / scale,
+      width: lado / scale,
+      height: lado / scale,
+    };
+  }
 
   const sx = area.x * scale;
   const sy = area.y * scale;
@@ -204,12 +231,17 @@ async function loadDrawable(
 ): Promise<{ source: CanvasImageSource; scale: number }> {
   if (typeof createImageBitmap === "function") {
     try {
-      const probe = await createImageBitmap(file);
+      // imageOrientation "from-image" para o canvas enxergar a foto do MESMO
+      // jeito que a prévia. Sem isto, foto de celular com EXIF de rotação sai
+      // recortada na região errada — e só em alguns aparelhos, que é o pior
+      // tipo de defeito.
+      const probe = await createImageBitmap(file, { imageOrientation: "from-image" });
       const side = Math.max(probe.width, probe.height);
       if (side <= MAX_SOURCE_SIDE) return { source: probe, scale: 1 };
       const scale = MAX_SOURCE_SIDE / side;
       probe.close?.();
       const resized = await createImageBitmap(file, {
+        imageOrientation: "from-image",
         resizeWidth: Math.round(probe.width * scale),
         resizeHeight: Math.round(probe.height * scale),
         resizeQuality: "high",
@@ -223,21 +255,16 @@ async function loadDrawable(
   return { source: img, scale: 1 };
 }
 
-async function fullArea(src: string): Promise<Area> {
-  const img = await loadImage(src);
-  const side = Math.min(img.naturalWidth, img.naturalHeight);
-  return {
-    x: (img.naturalWidth - side) / 2,
-    y: (img.naturalHeight - side) / 2,
-    width: side,
-    height: side,
-  };
-}
-
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    // crossOrigin SO para URL remota. Em blob: e data: o Chrome do Android
+    // trata como requisicao CORS, e a resposta de um object URL nao tem
+    // cabecalho nenhum — a imagem simplesmente nao carrega. Era isto que
+    // produzia "Falha ao carregar a imagem" num aparelho onde a previa do
+    // recorte mostrava a foto normalmente: o <img> do react-easy-crop nao
+    // poe crossOrigin, o nosso punha.
+    if (!/^(blob:|data:)/i.test(src)) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("Falha ao carregar a imagem"));
     img.src = src;

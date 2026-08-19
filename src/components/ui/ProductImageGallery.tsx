@@ -3,6 +3,7 @@ import { Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
+import { comLimiteDeTempo, conferirImagem } from "@/lib/envio-com-limite";
 
 interface Props {
   images: string[];
@@ -30,12 +31,20 @@ export function ProductImageGallery({ images, onChange, folder, bucket = "store-
     try {
       const uploaded: string[] = [];
       for (const file of list) {
+        // Recusa cedo o que nao vai dar certo, em vez de deixar a pessoa
+        // esperar recorte e envio para so entao falhar.
+        const problema = conferirImagem(file);
+        if (problema) { toast.error(problema); continue; }
         const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
         if (!cropped) continue;
         setUploading(true);
         const ext = cropped.type === "image/png" ? "png" : "jpg";
         const path = `${folder.replace(/\/$/, "")}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from(bucket).upload(path, cropped, { upsert: false, contentType: cropped.type });
+        // Sem limite de tempo, conexao ruim de celular deixava o botao girando
+        // para sempre, sem salvar e sem erro nenhum.
+        const { error } = await comLimiteDeTempo(
+          supabase.storage.from(bucket).upload(path, cropped, { upsert: false, contentType: cropped.type }),
+        );
         if (error) throw error;
         const { data } = supabase.storage.from(bucket).getPublicUrl(path);
         uploaded.push(data.publicUrl);

@@ -28,6 +28,7 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
+import { comLimiteDeTempo, conferirImagem } from "@/lib/envio-com-limite";
 
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsappGroupSettings } from "@/components/shared/WhatsappGroupSettings";
@@ -716,12 +717,16 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
 
   const upload = async (file: File) => {
+    const problema = conferirImagem(file);
+    if (problema) { toast.error(problema); return; }
     const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
     if (!cropped) return;
     setUploading(true);
     const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `partners/${partner.id}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: true, contentType: cropped.type });
+    const { error } = await comLimiteDeTempo(
+      supabase.storage.from("store-images").upload(path, cropped, { upsert: true, contentType: cropped.type }),
+    );
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setEditing(e => e ? { ...e, image_url: data.publicUrl } : e);
@@ -1562,7 +1567,9 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
     setUploading(true);
     const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `partners/${partner.id}/posts/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { contentType: cropped.type });
+    const { error } = await comLimiteDeTempo(
+      supabase.storage.from("store-images").upload(path, cropped, { contentType: cropped.type }),
+    );
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setPending(data.publicUrl);
@@ -1874,7 +1881,9 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
   const upload = async (blob: Blob, field: "photo_url" | "cover_url") => {
     setUploading(true);
     const path = `partners/${partner.id}/${field}-${Date.now()}.jpg`;
-    const { error } = await supabase.storage.from("store-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    const { error } = await comLimiteDeTempo(
+      supabase.storage.from("store-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" }),
+    );
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setForm((f) => ({ ...f, [field]: data.publicUrl }));
