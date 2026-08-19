@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  alvosDoFunil, alvosColados, resumoDisparo, dispararCampanha, cancelarCampanha,
+  alvosDoFunil, alvosColados, alvosDaAcademia, resumoDisparo, dispararCampanha, cancelarCampanha,
 } from "@/lib/bot-disparos.functions";
 import { toast } from "sonner";
 import {
@@ -907,6 +907,12 @@ function DetalheDisparo({
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [confirmar, setConfirmar] = useState(false);
 
+  const [publico, setPublico] = useState<"ativos" | "inativos" | "todos">("inativos");
+  const [diasMin, setDiasMin] = useState(15);
+  const [diasMax, setDiasMax] = useState(365);
+  // Teto baixo de proposito: e mais facil subir depois do que desfazer envio.
+  const [limite, setLimite] = useState(50);
+  const puxarAcademia = useServerFn(alvosDaAcademia);
   const puxarFunil = useServerFn(alvosDoFunil);
   const puxarColados = useServerFn(alvosColados);
   const verResumo = useServerFn(resumoDisparo);
@@ -1000,6 +1006,49 @@ function DetalheDisparo({
               </button>
             </div>
           )}
+
+          {/*
+            Aluno de academia não é cartão de funil nem usuário da plataforma: o
+            telefone dele mora na credencial do leitor. Sem esta fonte, avisar os
+            alunos exigiria exportar e colar lista na mão toda vez.
+          */}
+          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-white/10 p-3">
+            <div className="min-w-[180px] flex-1">
+              <label className="mb-1 block text-xs text-white/50">Puxar alunos da academia</label>
+              <select value={publico} onChange={(e) => setPublico(e.target.value as typeof publico)} className={campo}>
+                <option value="ativos">Quem está em dia — para avisar de benefício, evento, novidade</option>
+                <option value="inativos">Quem parou de pagar — para chamar de volta</option>
+                <option value="todos">Todo mundo cadastrado no leitor</option>
+              </select>
+            </div>
+            {publico === "inativos" && (
+              <div className="w-[150px]">
+                <label className="mb-1 block text-xs text-white/50">Parou há (dias)</label>
+                <div className="flex items-center gap-1">
+                  <input type="number" min={0} max={3650} value={diasMin}
+                    onChange={(e) => setDiasMin(Number(e.target.value))} className={campo} />
+                  <span className="text-xs text-white/40">a</span>
+                  <input type="number" min={1} max={3650} value={diasMax}
+                    onChange={(e) => setDiasMax(Number(e.target.value))} className={campo} />
+                </div>
+              </div>
+            )}
+            <div className="w-[110px]">
+              {/* Teto por leva: mandar para centenas de uma vez queima o chip. */}
+              <label className="mb-1 block text-xs text-white/50">No máximo</label>
+              <input type="number" min={1} max={500} value={limite}
+                onChange={(e) => setLimite(Number(e.target.value))} className={campo} />
+            </div>
+            <button
+              onClick={() => void acao("academia",
+                () => puxarAcademia({ data: { disparoId: d.id, publico, diasMin, diasMax, limite } }),
+                (r) => `${r.adicionados} adicionados · ${r.repetidos} já estavam na lista`)}
+              disabled={ocupado === "academia"}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-white hover:bg-white/5 disabled:opacity-50">
+              {ocupado === "academia" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Puxar da academia
+            </button>
+          </div>
 
           <div>
             <label className="mb-1 block text-xs text-white/50">Ou cole uma lista (um por linha)</label>

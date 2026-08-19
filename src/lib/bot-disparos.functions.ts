@@ -87,6 +87,74 @@ export const alvosDoFunil = createServerFn({ method: "POST" })
     return { adicionados, repetidos: linhas.length - adicionados };
   });
 
+/**
+ * Puxa gente da academia: quem está em dia, quem parou, ou todo mundo.
+ *
+ * É a terceira fonte de alvos, ao lado do funil do CRM e da lista colada. Ela
+ * existe porque aluno de academia não é usuário da plataforma nem cartão de
+ * funil — o telefone dele mora na credencial do leitor. Quem decide quem entra
+ * é `academia_publico`, no banco, para não haver duas versões dessa regra.
+ */
+export const alvosDaAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      disparoId: z.string().uuid(),
+      publico: z.enum(["ativos", "inativos", "todos"]),
+      // só para "inativos": faixa de quantos dias sem acesso
+      diasMin: z.number().int().min(0).max(3650).default(0),
+      diasMax: z.number().int().min(1).max(3650).default(365),
+      // teto por leva: mandar para 400 pessoas de uma vez queima o chip
+      limite: z.number().int().min(1).max(500).default(100),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { db, disparo } = await contexto(context.userId, data.disparoId);
+    if (disparo.status !== "rascunho") throw new Error("A campanha já foi disparada");
+    if (disparo.escopo !== "parceiro" || !disparo.owner_id) {
+      throw new Error("Só campanha de parceiro puxa gente da academia");
+    }
+
+    const { data: pessoas, error } = await db.rpc("academia_publico", {
+      p_partner_id: disparo.owner_id,
+      p_publico: data.publico,
+      p_dias_min: data.diasMin,
+      p_dias_max: data.diasMax,
+      p_limite: data.limite,
+    });
+    if (error) throw new Error(error.message);
+
+    const linhas = ((pessoas ?? []) as Array<{ nome: string | null; telefone: string | null }>)
+      .map((p) => ({
+        disparo_id: data.disparoId,
+        telefone: soDigitos(p.telefone ?? ""),
+        nome: p.nome,
+      }))
+      .filter((l) => l.telefone.length >= 10);
+
+    if (!linhas.length) return { adicionados: 0, repetidos: 0 };
+
+    const { data: inseridos } = await db
+      .from("bot_disparo_alvos").upsert(linhas, { onConflict: "disparo_id,telefone", ignoreDuplicates: true })
+      .select("id");
+    const adicionados = (inseridos ?? []).length;
+    return { adicionados, repetidos: linhas.length - adicionados };
+  });
+
+/** Quantas pessoas cada público alcançaria, para olhar antes de montar. */
+export const previaDaAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ partnerId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as unknown as Db;
+    const { data: faixas, error } = await db.rpc("academia_reativacao_previa", {
+      p_partner_id: data.partnerId,
+    });
+    if (error) throw new Error(error.message);
+    return { faixas: (faixas ?? []) as Array<{ faixa: string; pessoas: number; com_telefone: number }> };
+  });
+
 /** Adiciona telefones colados na mão. */
 export const alvosColados = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
