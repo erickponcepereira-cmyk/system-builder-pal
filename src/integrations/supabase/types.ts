@@ -1067,6 +1067,44 @@ export type Database = {
           },
         ]
       }
+      agente_versoes: {
+        Row: {
+          arquivos: Json
+          ativa: boolean
+          notas: string | null
+          obrigatoria: boolean
+          publicada_em: string
+          publicada_por: string | null
+          versao: string
+        }
+        Insert: {
+          arquivos: Json
+          ativa?: boolean
+          notas?: string | null
+          obrigatoria?: boolean
+          publicada_em?: string
+          publicada_por?: string | null
+          versao: string
+        }
+        Update: {
+          arquivos?: Json
+          ativa?: boolean
+          notas?: string | null
+          obrigatoria?: boolean
+          publicada_em?: string
+          publicada_por?: string | null
+          versao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agente_versoes_publicada_por_fkey"
+            columns: ["publicada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnesis_forms: {
         Row: {
           additional_observations: string | null
@@ -13818,6 +13856,14 @@ export type Database = {
       }
     }
     Functions: {
+      academia_agente_atualizacao: {
+        Args: { p_agente_id: string; p_segredo: string; p_versao_atual: string }
+        Returns: {
+          arquivos: Json
+          notas: string
+          versao: string
+        }[]
+      }
       academia_agente_credenciais_importar: {
         Args: { p_agente_id: string; p_segredo: string; p_usuarios: Json }
         Returns: {
@@ -15027,6 +15073,37 @@ export type Database = {
           _student_id: string
         }
         Returns: string
+      }
+      request_seller_withdrawal_atomic: {
+        Args: {
+          _amount: number
+          _entity_id: string
+          _notes?: string
+          _pix_key: string
+          _pix_key_type?: string
+          _source: string
+        }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          partner_id: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          professional_coach_id: string | null
+          profile_id: string
+          requested_at: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "withdrawal_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       reserve_partner_freebie: {
         Args: { _product_id: string; _slot_start: string }
