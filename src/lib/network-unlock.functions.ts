@@ -67,25 +67,30 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     // Single source of truth: `wallets.available_balance` (kept in sync by the
     // `recalc_wallet_for_profile` trigger and the admin payout flow). This is
     // the same value the admin panel reads, so both views agree.
-    const [{ data: walletRow }, { data: partnerRows }, { data: coachRows }] = await Promise.all([
+    const [{ data: walletRow }, { data: partnerRows }, { data: coachRows }, { data: studentRows }] = await Promise.all([
       supabaseAdmin.from("wallets").select("available_balance,pending_balance").eq("profile_id", profile.id).maybeSingle(),
       supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id as never),
       supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id),
+      supabaseAdmin.from("students").select("id").eq("profile_id", profile.id),
     ]);
     const partnerIds = ((partnerRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
     const coachIds = ((coachRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
-    const [{ data: pwRows }, { data: profwRows }] = await Promise.all([
+    const studentIds = ((studentRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
+    const [{ data: pwRows }, { data: profwRows }, { data: swRows }] = await Promise.all([
       partnerIds.length
         ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,pending_balance" as never).in("partner_id" as never, partnerIds as never)
         : Promise.resolve({ data: [] as unknown }),
       coachIds.length
         ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,pending_balance" as never).in("professional_coach_id" as never, coachIds as never)
         : Promise.resolve({ data: [] as unknown }),
+      studentIds.length
+        ? supabaseAdmin.from("student_wallets").select("available_balance,pending_balance").in("student_id", studentIds)
+        : Promise.resolve({ data: [] as unknown }),
     ]);
     const sumField = (rows: unknown, field: "available_balance" | "pending_balance"): number =>
       ((rows as Array<Record<string, number>> | null) || []).reduce((acc, r) => acc + Number(r[field] || 0), 0);
-    const creatorAvailable = sumField(pwRows, "available_balance") + sumField(profwRows, "available_balance");
-    const creatorPending = sumField(pwRows, "pending_balance") + sumField(profwRows, "pending_balance");
+    const creatorAvailable = sumField(pwRows, "available_balance") + sumField(profwRows, "available_balance") + sumField(swRows, "available_balance");
+    const creatorPending = sumField(pwRows, "pending_balance") + sumField(profwRows, "pending_balance") + sumField(swRows, "pending_balance");
     const walletAvailable = Number((walletRow as { available_balance?: number } | null)?.available_balance || 0);
     const walletPending = Number((walletRow as { pending_balance?: number } | null)?.pending_balance || 0);
 
@@ -173,8 +178,8 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       directAvailable = walletAvailable - networkAvailable;
     }
 
-    // Sum creator earnings (partner_wallets + professional_wallets) into the
-    // direct bucket so the coach sees the full amount they can withdraw.
+    // Sum all auxiliary wallets (partner, professional and student referral)
+    // into the direct bucket so display, request and admin payout agree.
     const direct = {
       available: directAvailable + creatorAvailable,
       pending: directPending + creatorPending,
