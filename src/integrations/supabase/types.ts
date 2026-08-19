@@ -15074,6 +15074,37 @@ export type Database = {
         }
         Returns: string
       }
+      request_seller_withdrawal_atomic: {
+        Args: {
+          _amount: number
+          _entity_id: string
+          _notes?: string
+          _pix_key: string
+          _pix_key_type?: string
+          _source: string
+        }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          partner_id: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          professional_coach_id: string | null
+          profile_id: string
+          requested_at: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "withdrawal_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reserve_partner_freebie: {
         Args: { _product_id: string; _slot_start: string }
         Returns: {
