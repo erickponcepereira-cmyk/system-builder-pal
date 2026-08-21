@@ -231,7 +231,8 @@ function RootComponent() {
       window.removeEventListener("vite:preloadError", onPreloadError);
       window.removeEventListener("error", onChunkError);
     };
-  }, []);
+  }, [maintenance]);
+  if (maintenance) return <MaintenanceScreen />;
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
