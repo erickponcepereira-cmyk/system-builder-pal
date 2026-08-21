@@ -108,6 +108,8 @@ function RootComponent() {
     fallbackQueryClient;
   const maintenance = MAINTENANCE_MODE;
   useEffect(() => {
+    // Modo manutenção: não dispara nenhuma chamada ao backend.
+    if (maintenance) return;
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
     // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
