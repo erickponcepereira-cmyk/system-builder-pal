@@ -114,36 +114,46 @@ export type Database = {
       }
       academia_avisos: {
         Row: {
+          credencial_id: string | null
           disparo_id: string | null
           gerado_em: string
           id: string
           marco: string
           partner_id: string
-          student_id: string
+          student_id: string | null
           telefone: string | null
           valido_ate: string
         }
         Insert: {
+          credencial_id?: string | null
           disparo_id?: string | null
           gerado_em?: string
           id?: string
           marco: string
           partner_id: string
-          student_id: string
+          student_id?: string | null
           telefone?: string | null
           valido_ate: string
         }
         Update: {
+          credencial_id?: string | null
           disparo_id?: string | null
           gerado_em?: string
           id?: string
           marco?: string
           partner_id?: string
-          student_id?: string
+          student_id?: string | null
           telefone?: string | null
           valido_ate?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "academia_avisos_credencial_id_fkey"
+            columns: ["credencial_id"]
+            isOneToOne: false
+            referencedRelation: "academia_credenciais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "academia_avisos_disparo_id_fkey"
             columns: ["disparo_id"]
@@ -212,6 +222,7 @@ export type Database = {
           partner_id: string
           referencia: string
           student_id: string | null
+          telefone: string | null
           tipo: string
         }
         Insert: {
@@ -223,6 +234,7 @@ export type Database = {
           partner_id: string
           referencia: string
           student_id?: string | null
+          telefone?: string | null
           tipo?: string
         }
         Update: {
@@ -234,6 +246,7 @@ export type Database = {
           partner_id?: string
           referencia?: string
           student_id?: string | null
+          telefone?: string | null
           tipo?: string
         }
         Relationships: [
@@ -637,38 +650,48 @@ export type Database = {
       academia_frequencias: {
         Row: {
           created_at: string
+          credencial_id: string | null
           entrada_em: string
           id: string
           observacao: string | null
           origem: string
           partner_id: string
           saida_em: string | null
-          student_id: string
+          student_id: string | null
           turma_id: string | null
         }
         Insert: {
           created_at?: string
+          credencial_id?: string | null
           entrada_em?: string
           id?: string
           observacao?: string | null
           origem?: string
           partner_id: string
           saida_em?: string | null
-          student_id: string
+          student_id?: string | null
           turma_id?: string | null
         }
         Update: {
           created_at?: string
+          credencial_id?: string | null
           entrada_em?: string
           id?: string
           observacao?: string | null
           origem?: string
           partner_id?: string
           saida_em?: string | null
-          student_id?: string
+          student_id?: string | null
           turma_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "academia_frequencias_credencial_id_fkey"
+            columns: ["credencial_id"]
+            isOneToOne: false
+            referencedRelation: "academia_credenciais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "academia_frequencias_partner_id_fkey"
             columns: ["partner_id"]
@@ -692,13 +715,50 @@ export type Database = {
           },
         ]
       }
+      academia_import_tokens: {
+        Row: {
+          criado_em: string
+          expira_em: string
+          id: string
+          partner_id: string
+          token_hash: string
+          usos: number
+        }
+        Insert: {
+          criado_em?: string
+          expira_em: string
+          id?: string
+          partner_id: string
+          token_hash: string
+          usos?: number
+        }
+        Update: {
+          criado_em?: string
+          expira_em?: string
+          id?: string
+          partner_id?: string
+          token_hash?: string
+          usos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_import_tokens_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academia_mensalidades: {
         Row: {
           cancelado_em: string | null
           cancelado_por: string | null
           created_at: string
+          credencial_id: string | null
           forma_pagamento: string
           id: string
+          importado_de: string | null
           motivo_cancelamento: string | null
           observacao: string | null
           origem: string
@@ -706,7 +766,7 @@ export type Database = {
           plano: string
           registrado_por: string | null
           status: string
-          student_id: string
+          student_id: string | null
           taxa_percentual: number
           taxa_valor: number
           transaction_id: string | null
@@ -719,8 +779,10 @@ export type Database = {
           cancelado_em?: string | null
           cancelado_por?: string | null
           created_at?: string
+          credencial_id?: string | null
           forma_pagamento: string
           id?: string
+          importado_de?: string | null
           motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
@@ -728,7 +790,7 @@ export type Database = {
           plano: string
           registrado_por?: string | null
           status?: string
-          student_id: string
+          student_id?: string | null
           taxa_percentual?: number
           taxa_valor?: number
           transaction_id?: string | null
@@ -741,8 +803,10 @@ export type Database = {
           cancelado_em?: string | null
           cancelado_por?: string | null
           created_at?: string
+          credencial_id?: string | null
           forma_pagamento?: string
           id?: string
+          importado_de?: string | null
           motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
@@ -750,7 +814,7 @@ export type Database = {
           plano?: string
           registrado_por?: string | null
           status?: string
-          student_id?: string
+          student_id?: string | null
           taxa_percentual?: number
           taxa_valor?: number
           transaction_id?: string | null
@@ -765,6 +829,13 @@ export type Database = {
             columns: ["cancelado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_mensalidades_credencial_id_fkey"
+            columns: ["credencial_id"]
+            isOneToOne: false
+            referencedRelation: "academia_credenciais"
             referencedColumns: ["id"]
           },
           {
@@ -848,6 +919,69 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_sombra: {
+        Row: {
+          agente_id: string | null
+          confianca: number | null
+          criado_em: string
+          deles: string
+          divergiu: boolean
+          em: string
+          id: string
+          motivo: string | null
+          nome: string | null
+          nosso: string
+          partner_id: string
+          referencia: string
+          resposta: string | null
+        }
+        Insert: {
+          agente_id?: string | null
+          confianca?: number | null
+          criado_em?: string
+          deles: string
+          divergiu: boolean
+          em: string
+          id?: string
+          motivo?: string | null
+          nome?: string | null
+          nosso: string
+          partner_id: string
+          referencia: string
+          resposta?: string | null
+        }
+        Update: {
+          agente_id?: string | null
+          confianca?: number | null
+          criado_em?: string
+          deles?: string
+          divergiu?: boolean
+          em?: string
+          id?: string
+          motivo?: string | null
+          nome?: string | null
+          nosso?: string
+          partner_id?: string
+          referencia?: string
+          resposta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_sombra_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "academia_agentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_sombra_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -13934,6 +14068,10 @@ export type Database = {
           ref: string
         }[]
       }
+      academia_agente_sombra_registrar: {
+        Args: { p_agente_id: string; p_registros: Json; p_segredo: string }
+        Returns: number
+      }
       academia_alunos_da_unidade: {
         Args: { p_partner_id: string }
         Returns: {
@@ -13947,6 +14085,7 @@ export type Database = {
       academia_avisos_pendentes: {
         Args: { p_partner_id: string }
         Returns: {
+          credencial_id: string
           dias_restantes: number
           marco: string
           nome: string
@@ -14080,6 +14219,15 @@ export type Database = {
           visitas: number
         }[]
       }
+      academia_importar_contratos: {
+        Args: { p_linhas: Json; p_partner_id: string; p_token: string }
+        Returns: {
+          casados: number
+          mensalidades: number
+          sem_credencial: number
+          telefones: number
+        }[]
+      }
       academia_mensalidade_gerar: {
         Args: { p_transaction_id: string }
         Returns: boolean
@@ -14093,6 +14241,52 @@ export type Database = {
         Returns: boolean
       }
       academia_pode_ver: { Args: { p_partner_id: string }; Returns: boolean }
+      academia_publico: {
+        Args: {
+          p_dias_max?: number
+          p_dias_min?: number
+          p_limite?: number
+          p_partner_id: string
+          p_publico: string
+        }
+        Returns: {
+          credencial_id: string
+          dias_restantes: number
+          nome: string
+          student_id: string
+          telefone: string
+          valido_ate: string
+        }[]
+      }
+      academia_reativacao_preparar: {
+        Args: {
+          p_dias_max?: number
+          p_dias_min?: number
+          p_limite?: number
+          p_partner_id: string
+        }
+        Returns: {
+          contatos: number
+          disparo_id: string
+        }[]
+      }
+      academia_reativacao_previa: {
+        Args: { p_partner_id: string }
+        Returns: {
+          com_telefone: number
+          faixa: string
+          pessoas: number
+        }[]
+      }
+      academia_sombra_placar: {
+        Args: { p_partner_id: string }
+        Returns: {
+          comparadas: number
+          divergencias: number
+          primeira: string
+          ultima: string
+        }[]
+      }
       academia_treino_do_modelo: {
         Args: {
           p_dia: number
@@ -14128,6 +14322,7 @@ export type Database = {
       acesso_avaliar_academia: {
         Args: { p_partner_id: string }
         Returns: {
+          credencial_id: string
           decisao: string
           dias_restantes: number
           motivo: string
@@ -14819,6 +15014,36 @@ export type Database = {
         Returns: undefined
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_freebie_do_dia: {
+        Args: { p_dia?: string; p_partner_id: string }
+        Returns: {
+          aluno_foto: string
+          aluno_nome: string
+          aluno_telefone: string
+          coach_nome: string
+          coach_telefone: string
+          produto: string
+          reservation_id: string
+          slot_end: string
+          slot_start: string
+          status: string
+          visitas_aqui: number
+          visitas_no_mes: number
+        }[]
+      }
+      partner_freebie_resumo_mensal: {
+        Args: { p_mes?: string; p_partner_id: string }
+        Returns: {
+          faltas: number
+          limite_mensal: number
+          produto: string
+          produto_id: string
+          reservas: number
+          restantes: number
+          usados: number
+          visitantes: number
+        }[]
+      }
       partner_pode: {
         Args: { _partner_id: string; _permissao: string }
         Returns: boolean
