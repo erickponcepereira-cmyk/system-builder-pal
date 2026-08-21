@@ -106,6 +106,7 @@ function RootComponent() {
   const queryClient =
     ((router.options.context as { queryClient?: QueryClient } | undefined)?.queryClient) ??
     fallbackQueryClient;
+  const maintenance = MAINTENANCE_MODE;
   useEffect(() => {
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
