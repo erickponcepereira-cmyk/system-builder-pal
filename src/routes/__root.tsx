@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
+import { MAINTENANCE_MODE } from "@/lib/maintenance";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 
 
 function NotFoundComponent() {
@@ -104,7 +106,10 @@ function RootComponent() {
   const queryClient =
     ((router.options.context as { queryClient?: QueryClient } | undefined)?.queryClient) ??
     fallbackQueryClient;
+  const maintenance = MAINTENANCE_MODE;
   useEffect(() => {
+    // Modo manutenção: não dispara nenhuma chamada ao backend.
+    if (maintenance) return;
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
     // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
@@ -226,7 +231,8 @@ function RootComponent() {
       window.removeEventListener("vite:preloadError", onPreloadError);
       window.removeEventListener("error", onChunkError);
     };
-  }, []);
+  }, [maintenance]);
+  if (maintenance) return <MaintenanceScreen />;
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
