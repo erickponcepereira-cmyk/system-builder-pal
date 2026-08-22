@@ -898,36 +898,52 @@ function NutritionistPanel() {
 function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChanged: () => void }) {
   const fetchBlocked = useServerFn(listBlockedCommissions);
   const advance = useServerFn(advanceCommissionRelease);
+  const fetchOrders = useServerFn(listBlockedCreatorOrders);
+  const advanceOrders = useServerFn(advanceCreatorRelease);
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<BlockedCommissionRow[] | null>(null);
+  const [orders, setOrders] = useState<BlockedCreatorOrderRow[] | null>(null);
   const [sel, setSel] = useState<Record<string, boolean>>({});
+  const [selOrders, setSelOrders] = useState<Record<string, boolean>>({});
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setRows(null);
+    setOrders(null);
     try { setRows(await fetchBlocked({ data: { profileId } })); }
     catch (e: any) { toast.error(e?.message || "Erro ao carregar comissões bloqueadas"); setRows([]); }
+    try { setOrders(await fetchOrders({ data: { profileId } })); }
+    catch (e: any) { toast.error(e?.message || "Erro ao carregar vendas em carência"); setOrders([]); }
   };
 
   useEffect(() => { if (open) load(); /* eslint-disable-next-line */ }, [open, profileId]);
 
   const selectedIds = Object.keys(sel).filter((k) => sel[k]);
-  const total = (rows || []).filter((r) => sel[r.id]).reduce((s, r) => s + r.amount, 0);
+  const selectedOrderIds = Object.keys(selOrders).filter((k) => selOrders[k]);
+  const total =
+    (rows || []).filter((r) => sel[r.id]).reduce((s, r) => s + r.amount, 0) +
+    (orders || []).filter((o) => selOrders[o.id]).reduce((s, o) => s + o.amount, 0);
 
   const submit = async () => {
-    if (!selectedIds.length) return toast.error("Selecione ao menos uma comissão");
+    if (!selectedIds.length && !selectedOrderIds.length) return toast.error("Selecione ao menos um item");
     if (!window.confirm(`Antecipar a liberação de ${fmt(total)}? O valor passa a contar como disponível na carteira.`)) return;
     setBusy(true);
     try {
-      await advance({ data: { profileId, commissionIds: selectedIds, reason: reason || undefined } });
+      if (selectedIds.length) {
+        await advance({ data: { profileId, commissionIds: selectedIds, reason: reason || undefined } });
+      }
+      if (selectedOrderIds.length) {
+        await advanceOrders({ data: { profileId, orderIds: selectedOrderIds, reason: reason || undefined } });
+      }
       toast.success("Liberação antecipada registrada");
-      setSel({}); setReason("");
+      setSel({}); setSelOrders({}); setReason("");
       await load();
       onChanged();
     } catch (e: any) { toast.error(e?.message || "Erro ao antecipar"); }
     finally { setBusy(false); }
   };
+
 
   return (
     <div className="rounded-xl p-4 border border-amber-500/30" style={{ backgroundColor: "rgba(245,158,11,0.05)" }}>
