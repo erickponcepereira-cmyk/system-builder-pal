@@ -5262,6 +5262,160 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_lesson_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          last_position_seconds: number
+          lesson_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          last_position_seconds?: number
+          lesson_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          last_position_seconds?: number
+          lesson_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "digital_product_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_lesson_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_product_lessons: {
+        Row: {
+          allow_download: boolean
+          counts_for_certificate: boolean
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          file_path: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          module_id: string
+          sort_order: number
+          title: string
+          unlock_at: string | null
+          unlock_days: number | null
+          unlock_rule: string
+          updated_at: string
+          video_key: string | null
+          video_url: string | null
+        }
+        Insert: {
+          allow_download?: boolean
+          counts_for_certificate?: boolean
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_path?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          module_id: string
+          sort_order?: number
+          title: string
+          unlock_at?: string | null
+          unlock_days?: number | null
+          unlock_rule?: string
+          updated_at?: string
+          video_key?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          allow_download?: boolean
+          counts_for_certificate?: boolean
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_path?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          module_id?: string
+          sort_order?: number
+          title?: string
+          unlock_at?: string | null
+          unlock_days?: number | null
+          unlock_rule?: string
+          updated_at?: string
+          video_key?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_product_lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "digital_product_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_product_modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          digital_product_id: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          digital_product_id: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          digital_product_id?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_product_modules_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_products: {
         Row: {
           access_days: number | null
@@ -8928,6 +9082,7 @@ export type Database = {
       product_downloads: {
         Row: {
           created_at: string
+          digital_product_id: string | null
           file_path: string
           id: string
           mime_type: string | null
@@ -8941,6 +9096,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          digital_product_id?: string | null
           file_path: string
           id?: string
           mime_type?: string | null
@@ -8954,6 +9110,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          digital_product_id?: string | null
           file_path?: string
           id?: string
           mime_type?: string | null
@@ -8966,6 +9123,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_downloads_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_downloads_partner_product_id_fkey"
             columns: ["partner_product_id"]
@@ -14617,6 +14781,10 @@ export type Database = {
         Args: { _coach_id: string }
         Returns: boolean
       }
+      coach_owns_digital_product: {
+        Args: { _digital_product_id: string }
+        Returns: boolean
+      }
       coach_store_list_my_hidden: {
         Args: never
         Returns: {
@@ -15585,6 +15753,10 @@ export type Database = {
       }
       student_has_partner_benefits: {
         Args: { _student_id: string }
+        Returns: boolean
+      }
+      student_owns_digital_product: {
+        Args: { _digital_product_id: string }
         Returns: boolean
       }
       submit_coach_application:
