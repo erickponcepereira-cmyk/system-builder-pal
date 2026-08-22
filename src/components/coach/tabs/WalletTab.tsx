@@ -282,6 +282,12 @@ export function WalletTab() {
         </div>
       </div>
 
+      <div className="mt-3">
+        <WalletStatementCard statement={statement} mask={mask} />
+      </div>
+
+
+
       {topMonthlyMedal && (
         <button
           type="button"
