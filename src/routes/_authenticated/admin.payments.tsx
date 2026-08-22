@@ -423,6 +423,8 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
   const register = useServerFn(registerManualPayout);
   const update = useServerFn(updateWithdrawalStatus);
 
+  const fetchStatement = useServerFn(getWalletStatementFor);
+  const [statement, setStatement] = useState<WalletStatement | null>(null);
   const [details, setDetails] = useState<PayoutDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"sales" | "commissions" | "withdrawals">("withdrawals");
