@@ -40,6 +40,8 @@ const withdrawalLabel = (status?: string | null) => {
 
 export function WalletTab() {
   const fetchSplit = useServerFn(getWalletSplit);
+  const fetchStatement = useServerFn(getMyWalletStatement);
+  const [statement, setStatement] = useState<WalletStatement | null>(null);
   const fetchCareer = useServerFn(getCareerProgress);
   const fetchMedals = useServerFn(getIndividualCareer);
   const fetchHistory = useServerFn(getMyWalletHistory);
