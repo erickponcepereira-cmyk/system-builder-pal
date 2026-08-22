@@ -6,6 +6,8 @@ import { Building2, Loader2, Eye, Package } from "lucide-react";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
 import { mirrorHerbalifeCatalog, unmirrorHerbalifeCatalog } from "@/lib/mirror-herbalife.functions";
+import { listPartnersForApproval, listPartnerProductsForApproval } from "@/lib/partner-approvals.functions";
+
 
 
 export const Route = createFileRoute("/_authenticated/admin/partners")({
