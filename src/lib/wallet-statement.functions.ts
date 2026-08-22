@@ -8,8 +8,12 @@ export type WalletStatement = {
   available: number;
   /** Disponível antes de descontar o adiantamento em aberto. */
   availableBeforeAdvance: number;
-  /** Adiantamento em aberto (recebeu acima do liberado) — desconta do disponível. */
+  /** Adiantamento em aberto (recebeu acima do liberado) — ainda não quitado. */
   advanceOpen: number;
+  /** Parte do adiantamento já quitada automaticamente/manualmente. */
+  advanceSettled: number;
+  /** Adiantamento total concedido (aberto + quitado) — sempre descontado do disponível. */
+  advanceTotal: number;
   /** Em carência (a liberar): coach + parceiro + profissional. NÃO inclui rede bloqueada. */
   hold: number;
   /** Rede liberada por prazo, porém bloqueada até bater a missão do mês. */
@@ -49,6 +53,8 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     available: n(raw?.available),
     availableBeforeAdvance: n(raw?.available_before_advance),
     advanceOpen: n(raw?.advance_open),
+    advanceSettled: n(raw?.advance_settled),
+    advanceTotal: n(raw?.advance_total ?? raw?.advance_open),
     hold: n(raw?.hold),
     networkBlocked: n(raw?.network_blocked),
     pendingTotal: n(raw?.pending_total),

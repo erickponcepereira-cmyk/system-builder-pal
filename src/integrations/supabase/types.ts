@@ -13297,6 +13297,51 @@ export type Database = {
           },
         ]
       }
+      wallet_advance_settlements: {
+        Row: {
+          advance_id: string
+          amount: number
+          created_at: string
+          id: string
+          origin: string
+          profile_id: string
+          reference_id: string | null
+        }
+        Insert: {
+          advance_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          origin?: string
+          profile_id: string
+          reference_id?: string | null
+        }
+        Update: {
+          advance_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          origin?: string
+          profile_id?: string
+          reference_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_advance_settlements_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_advance_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_advances: {
         Row: {
           amount: number
@@ -15855,6 +15900,15 @@ export type Database = {
         Args: { _product_id: string; _schedules: Json }
         Returns: undefined
       }
+      settle_advances_for_profile: {
+        Args: {
+          _amount: number
+          _origin?: string
+          _profile_id: string
+          _reference_id?: string
+        }
+        Returns: number
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       slot_target_profile_id: {
@@ -15998,6 +16052,7 @@ export type Database = {
           valid: boolean
         }[]
       }
+      wallet_base_available: { Args: { _profile_id: string }; Returns: number }
       wallet_statement: {
         Args: { _profile_id: string; _recalc?: boolean }
         Returns: Json

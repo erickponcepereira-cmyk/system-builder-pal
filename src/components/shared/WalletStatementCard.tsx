@@ -30,12 +30,16 @@ export function WalletStatementCard({
         { label: "Profissional", value: s.professional.available },
       ],
     },
-    ...(statement.advanceOpen > 0
+    ...(statement.advanceTotal > 0
       ? [{
-          label: "Adiantamento a compensar",
-          value: statement.advanceOpen,
+          label: "Adiantamento",
+          value: statement.advanceTotal,
           tone: "text-red-400",
-          hint: "Valor já pago acima do liberado — desconta do disponível",
+          hint: `Valor já pago acima do liberado — desconta do disponível. Quitado ${statement.advanceSettled.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} de ${statement.advanceTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`,
+          subs: [
+            { label: "Em aberto", value: statement.advanceOpen },
+            { label: "Já quitado", value: statement.advanceSettled },
+          ],
         }]
       : []),
     {
