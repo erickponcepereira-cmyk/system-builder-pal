@@ -13076,6 +13076,47 @@ export type Database = {
           },
         ]
       }
+      wallet_advances: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          profile_id: string
+          reason: string | null
+          settled_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          profile_id: string
+          reason?: string | null
+          settled_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          profile_id?: string
+          reason?: string | null
+          settled_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_advances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_audit_diffs: {
         Row: {
           after_value: number
