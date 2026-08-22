@@ -33,10 +33,6 @@ export function ModalShell({ header, footer, children, className, zIndex = 50 }:
           "flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-card shadow-xl",
           className,
         )}
-        style={{
-          maxHeight:
-            "calc(var(--vvh, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
-        }}
       >
         {header ? <div className="shrink-0 border-b border-white/10 p-4">{header}</div> : null}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">{children}</div>

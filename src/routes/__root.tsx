@@ -84,7 +84,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{function s(){var h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;if(h)document.documentElement.style.setProperty('--vvh',h+'px');}s();window.addEventListener('resize',s);window.addEventListener('orientationchange',s);if(window.visualViewport){window.visualViewport.addEventListener('resize',s);window.visualViewport.addEventListener('scroll',s);}}catch(e){}})();`,
+            __html: `(function(){try{function s(){var v=window.visualViewport;var h=(v&&v.height)||window.innerHeight;var o=(v&&v.offsetTop)||0;var d=document.documentElement;if(h)d.style.setProperty('--vvh',h+'px');d.style.setProperty('--vvo',o+'px');}s();window.addEventListener('resize',s);window.addEventListener('orientationchange',s);if(window.visualViewport){window.visualViewport.addEventListener('resize',s);window.visualViewport.addEventListener('scroll',s);}}catch(e){}})();`,
           }}
         />
 

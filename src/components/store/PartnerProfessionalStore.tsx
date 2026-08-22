@@ -683,6 +683,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div
           className="fixed inset-x-0 top-0 z-[60] flex items-start justify-center overflow-hidden bg-background/80 px-3 backdrop-blur-sm sm:items-center sm:px-4"
           style={{
+            // top precisa acompanhar o deslocamento do viewport visual: com as
+            // barras do Safari abertas, top:0 nao e o topo do que se enxerga.
+            top: "var(--vvo, 0px)",
             height: "var(--vvh, 100dvh)",
             paddingTop: "max(0.5rem, env(safe-area-inset-top))",
             paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
@@ -692,7 +695,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             onClick={(e) => e.stopPropagation()}
             className="flex min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
             style={{
-              maxHeight: "calc(var(--vvh, 100dvh) - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)))",
+              maxHeight: "100%",
             }}
           >
             <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-card px-4 py-3">

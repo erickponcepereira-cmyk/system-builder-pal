@@ -523,15 +523,27 @@ select option {
 .modal-safe {
   overflow: hidden !important;
   align-items: center !important;
+
+  /* O overlay e `fixed inset-0`, ou seja, do tamanho do viewport de LAYOUT.
+     No iPhone, com as barras do Safari visiveis, o layout e mais alto que a
+     area realmente visivel. Centralizar dentro dele empurra o topo do cartao
+     (onde fica o X) para fora da tela - foi exatamente o bug relatado.
+
+     --vvh e --vvo vem do visualViewport (script no __root) e descrevem a
+     area visivel de verdade: a altura dela e onde ela comeca. */
+  top: var(--vvo, 0px) !important;
+  bottom: auto !important;
+  height: var(--vvh, 100dvh) !important;
 }
 
 /* Teto de altura real da janela visível (--vvh é atualizado pelo script do
    root a partir do visualViewport; 100dvh é o fallback). Sobrescreve
    propositalmente max-h-[90vh] & cia., que no Android estouram a tela. */
 .modal-safe > *:not(script):not(style) {
-  max-height: calc(
-    var(--vvh, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
-  );
+  /* 100% da caixa de conteudo do overlay, que ja desconta o padding de
+     safe-area acima. A versao anterior subtraia a safe-area de novo aqui,
+     contando duas vezes e encolhendo o cartao sem motivo. */
+  max-height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
