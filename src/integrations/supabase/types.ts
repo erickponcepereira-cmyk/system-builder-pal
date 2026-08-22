@@ -5318,6 +5318,7 @@ export type Database = {
           module_id: string
           require_watermark: boolean
           sort_order: number
+          thumbnail_key: string | null
           title: string
           unlock_at: string | null
           unlock_days: number | null
@@ -5339,6 +5340,7 @@ export type Database = {
           module_id: string
           require_watermark?: boolean
           sort_order?: number
+          thumbnail_key?: string | null
           title: string
           unlock_at?: string | null
           unlock_days?: number | null
@@ -5360,6 +5362,7 @@ export type Database = {
           module_id?: string
           require_watermark?: boolean
           sort_order?: number
+          thumbnail_key?: string | null
           title?: string
           unlock_at?: string | null
           unlock_days?: number | null
