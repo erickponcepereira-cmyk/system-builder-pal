@@ -23,7 +23,7 @@ export function normalizeRecurrence(value: RecurrenceValue, price?: number | nul
   if (!value?.is_recurring) {
     return {
       is_recurring: false,
-      recurrence_interval: null,
+      recurrence_interval: "monthly",
       recurrence_amount: null,
       recurrence_trial_days: 0,
       recurrence_allow_one_time: true,
