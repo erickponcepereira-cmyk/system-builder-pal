@@ -15618,16 +15618,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      produtos_por_local: {
-        Args: never
-        Returns: {
-          cidade_chave: string
-          cidade_exibicao: string
-          origem: string
-          produto_id: string
-          uf: string
-        }[]
-      }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
         Returns: boolean
@@ -16086,6 +16076,16 @@ export type Database = {
           referred_by_student_id: string
           sponsor_name: string
           valid: boolean
+        }[]
+      }
+      vendedores_por_local: {
+        Args: never
+        Returns: {
+          cidade_chave: string
+          cidade_exibicao: string
+          tipo: string
+          uf: string
+          vendedor_id: string
         }[]
       }
       wallet_base_available: { Args: { _profile_id: string }; Returns: number }
