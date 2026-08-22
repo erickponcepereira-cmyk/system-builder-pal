@@ -15249,6 +15249,27 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      parceiro_publico: {
+        Args: { p_partner_id: string }
+        Returns: {
+          address: string
+          business_area: string
+          city: string
+          cover_url: string
+          description: string
+          facebook: string
+          fantasy_name: string
+          id: string
+          instagram: string
+          photo_url: string
+          public_whatsapp: string
+          specialty: string
+          state: string
+          status: string
+          website: string
+          whatsapp: string
+        }[]
+      }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
       partner_freebie_do_dia: {
         Args: { p_dia?: string; p_partner_id: string }
