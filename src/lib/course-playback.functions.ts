@@ -27,6 +27,7 @@ export type LessonPlayback = {
   duracaoSegundos: number | null;
   marcaDagua: string | null;
   permiteBaixar: boolean;
+  capaUrl: string | null;
 };
 
 export const getLessonPlayback = createServerFn({ method: "POST" })
@@ -43,7 +44,7 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
     const { data: lesson } = await admin
       .from("digital_product_lessons")
       .select(
-        "id, module_id, title, video_key, duration_seconds, allow_download, require_watermark, digital_product_modules!inner(digital_product_id)",
+        "id, module_id, title, kind, video_key, thumbnail_key, duration_seconds, allow_download, require_watermark, digital_product_modules!inner(digital_product_id)",
       )
       .eq("id", data.lessonId)
       .maybeSingle();
@@ -101,12 +102,24 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
       marca = [profile.name, mascara].filter(Boolean).join(" · ");
     }
 
+    // Capa da aula: mesmo bucket privado, mesmo tratamento.
+    let capaUrl: string | null = null;
+    if (lesson.thumbnail_key) {
+      const { data: capa } = await admin.storage
+        .from("course-videos")
+        .createSignedUrl(lesson.thumbnail_key, LINK_SEGUNDOS);
+      capaUrl = capa?.signedUrl ?? null;
+    }
+
     return {
       url: signed.signedUrl,
       titulo: String(lesson.title || ""),
       posicaoSegundos: posicao,
       duracaoSegundos: lesson.duration_seconds ?? null,
       marcaDagua: marca,
-      permiteBaixar: lesson.allow_download !== false,
+      // Video nunca libera download, mesmo que a coluna diga o contrario.
+      // A coluna serve para material de apoio, onde baixar e o objetivo.
+      permiteBaixar: lesson.kind !== "video" && lesson.allow_download === true,
+      capaUrl,
     };
   });

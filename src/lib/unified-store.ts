@@ -44,6 +44,8 @@ export type UnifiedProduct = {
   /** Id do vendedor: partner_id para parceiro, coach_id para profissional.
    *  E a chave que descobre a cidade sem consultar produto a produto. */
   sellerId: string | null;
+  /** Marcado como destaque no admin. Alimenta o banner da loja. */
+  isFeatured: boolean;
   sectionId: string | null;
   categoryId: string | null;
   cardDays: number;
@@ -153,7 +155,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .order("sort_order" as never),
     supabase
       .from("digital_products")
-      .select("id,title,description,price,original_price,cover_url")
+      .select("id,title,description,price,original_price,cover_url,is_featured")
       .eq("status", "active")
       .order("sort_order"),
     supabase
@@ -222,6 +224,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: null,
       sellerCity: null,
       sellerId: null,
+      isFeatured: false,
       sectionId: null,
       categoryId: null,
       cardDays: num(r.card_access_days),
@@ -247,6 +250,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: null,
       sellerCity: null,
       sellerId: null,
+      isFeatured: false,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: num(r.card_access_days),
@@ -272,6 +276,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: null,
       sellerCity: null,
       sellerId: null,
+      isFeatured: r.is_featured === true,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -297,6 +302,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: null,
       sellerCity: null,
       sellerId: null,
+      isFeatured: false,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -324,6 +330,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerName: partner?.fantasy_name || "Parceiro",
       sellerCoachId: partner?.upline_coach_id ?? null,
       sellerId: (r.partner_id as string) || null,
+      isFeatured: false,
       sellerCity: partner?.city ?? null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
@@ -352,6 +359,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerName: coach?.profile?.name || "Profissional",
       sellerCoachId: (r.coach_id as string) || null,
       sellerId: (r.coach_id as string) || null,
+      isFeatured: false,
       sellerCity: null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,

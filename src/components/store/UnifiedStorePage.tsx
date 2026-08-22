@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { StoreBanner } from "@/components/store/StoreBanner";
 import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
@@ -60,6 +62,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const [local, setLocal] = useState<StoreLocation>(EMPTY_LOCATION);
   const [ondeEstou, setOndeEstou] = useState<LocalSelecionado>({ modo: "todas" });
   const [seletorAberto, setSeletorAberto] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -211,6 +214,16 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             {" "}{fmt(ctx.freebiesValue)} em gratuitos disponíveis para resgate.
           </p>
         </section>
+      )}
+
+      {/* Banner: quem abre a loja sem intencao definida nao clica em
+          categoria. Precisa de algo na frente. */}
+      {browsing && (
+        <StoreBanner
+          produtos={products}
+          onAbrir={setDetail}
+          onVerCursos={() => navigate({ to: "/student/library" })}
+        />
       )}
 
       {/* 2. Busca */}

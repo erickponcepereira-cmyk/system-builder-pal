@@ -324,6 +324,9 @@ function PlayerSheet({
                 ref={videoRef}
                 src={pb.url}
                 controls
+                poster={pb.capaUrl ?? undefined}
+                // Aula de video nunca oferece download. permiteBaixar so vale
+                // para material de apoio, onde baixar e o objetivo.
                 controlsList={pb.permiteBaixar ? undefined : "nodownload"}
                 onContextMenu={(e) => { if (!pb.permiteBaixar) e.preventDefault(); }}
                 onLoadedMetadata={(e) => {
