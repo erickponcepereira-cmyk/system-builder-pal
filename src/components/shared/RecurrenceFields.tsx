@@ -59,13 +59,15 @@ export function RecurrenceFields({ value, price, onChange }: Props) {
           type="checkbox"
           checked={on}
           onChange={(e) =>
-            onChange({
-              is_recurring: e.target.checked,
-              recurrence_interval: value.recurrence_interval || "monthly",
-              recurrence_amount: value.recurrence_amount ?? (price ? Number(price) : null),
-              recurrence_trial_days: value.recurrence_trial_days ?? 0,
-              recurrence_allow_one_time: value.recurrence_allow_one_time ?? true,
-            })
+            e.target.checked
+              ? onChange({
+                  is_recurring: true,
+                  recurrence_interval: value.recurrence_interval || "monthly",
+                  recurrence_amount: value.recurrence_amount ?? (price ? Number(price) : null),
+                  recurrence_trial_days: value.recurrence_trial_days ?? 0,
+                  recurrence_allow_one_time: value.recurrence_allow_one_time ?? true,
+                })
+              : onChange(normalizeRecurrence({ is_recurring: false }))
           }
         />
         <RefreshCw className="h-3.5 w-3.5 text-primary" />
