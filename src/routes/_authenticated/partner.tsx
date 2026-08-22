@@ -798,6 +798,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
       redemption_location_name: editing.kind === "free" ? (emptyToNull(editing.redemption_location_name) as string | null) : null,
       redemption_location_url: editing.kind === "free" ? (emptyToNull(editing.redemption_location_url) as string | null) : null,
+      ...normalizeRecurrence(editing.kind === "paid" ? (editing as never) : {}, Number((extra.price ?? editing.price) || 0)),
     };
 
     // Aviso ao reduzir as vagas abaixo do que já foi vendido/reservado.
