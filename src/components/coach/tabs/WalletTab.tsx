@@ -262,14 +262,15 @@ export function WalletTab() {
     <>
       <div className="rounded-2xl p-6 mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.6))" }}>
         <div className="flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">Vendas Diretas — disponível</p>
+          <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">Disponível para saque</p>
           <Unlock className="h-4 w-4 text-primary-foreground/80" />
         </div>
-        <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(directAvail)}</p>
+        <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(withdrawableMax)}</p>
         <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
-          + {mask(split?.direct.pending ?? 0)} pendente
+          + {mask(statement ? statement.hold + statement.networkBlocked : (split?.direct.pending ?? 0))} a liberar
           <PendingInfo days={COMMISSION_HOLD_DAYS} />
         </p>
+
       </div>
       <div className="grid gap-3 grid-cols-2">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
