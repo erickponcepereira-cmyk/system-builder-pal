@@ -1,3 +1,4 @@
+import { WalletsOverviewPanel } from "@/components/admin/WalletsOverviewPanel";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -57,7 +58,7 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "payables" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
+  type Tab = "dashboard" | "payables" | "wallets" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
@@ -75,6 +76,7 @@ function AdminPayments() {
         {[
           { k: "dashboard", l: "Dashboard" },
           { k: "payables", l: "Contas a Pagar" },
+          { k: "wallets", l: "Carteiras" },
           { k: "seller", l: "Coach / Parceiro / Profissional" },
           { k: "student_referrer", l: "Aluno Indicador" },
           { k: "nutritionist", l: "Nutricionistas" },
@@ -98,6 +100,7 @@ function AdminPayments() {
 
       {activeTab === "dashboard" && <DashboardPanel onPickGroup={(g) => setActiveTab(g)} />}
       {activeTab === "payables" && <PayablesPanel />}
+      {activeTab === "wallets" && <WalletsOverviewPanel />}
       {activeTab === "seller" && (
         <GroupPanel key={`seller-${sellerRole}`} group="seller" sellerRole={sellerRole} onChangeSellerRole={setSellerRole} />
       )}
