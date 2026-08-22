@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
+import { RecurrenceFields, normalizeRecurrence, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown, Eye, Users } from "lucide-react";
