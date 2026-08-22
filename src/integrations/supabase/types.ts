@@ -14250,6 +14250,17 @@ export type Database = {
         }
         Relationships: []
       }
+      vendedor_local: {
+        Row: {
+          cidade_chave: string | null
+          cidade_exibicao: string | null
+          nome: string | null
+          tipo: string | null
+          uf: string | null
+          vendedor_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       academia_agente_atualizacao: {
@@ -14805,6 +14816,15 @@ export type Database = {
           tipo: string
         }[]
       }
+      cidades_com_loja: {
+        Args: never
+        Returns: {
+          cidade_chave: string
+          cidade_exibicao: string
+          uf: string
+          vendedores: number
+        }[]
+      }
       coach_assessment_counts: {
         Args: { _coach_id: string; _master?: boolean }
         Returns: {
@@ -15279,6 +15299,7 @@ export type Database = {
           used_week: number
         }[]
       }
+      normaliza_cidade: { Args: { _texto: string }; Returns: string }
       notify_admin_pending_specialty: {
         Args: { _coach_id: string }
         Returns: undefined
@@ -15515,6 +15536,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      produtos_por_local: {
+        Args: never
+        Returns: {
+          cidade_chave: string
+          cidade_exibicao: string
+          origem: string
+          produto_id: string
+          uf: string
+        }[]
       }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
