@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
+import { RecurrenceFields, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
