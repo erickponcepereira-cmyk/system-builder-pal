@@ -56,6 +56,23 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     withdrawnPaid: n(raw?.withdrawn_paid),
     spentWallet: n(raw?.spent_wallet),
     totalEarned: n(raw?.total_earned),
+    sources: {
+      coach: {
+        available: n(raw?.sources?.coach?.available),
+        hold: n(raw?.sources?.coach?.hold),
+        earned: n(raw?.sources?.coach?.earned),
+      },
+      partner: {
+        available: n(raw?.sources?.partner?.available),
+        hold: n(raw?.sources?.partner?.hold),
+        earned: n(raw?.sources?.partner?.earned),
+      },
+      professional: {
+        available: n(raw?.sources?.professional?.available),
+        hold: n(raw?.sources?.professional?.hold),
+        earned: n(raw?.sources?.professional?.earned),
+      },
+    },
     fitcoin: {
       available: n(raw?.fitcoin?.available),
       pending: n(raw?.fitcoin?.pending),
