@@ -53,6 +53,8 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     available: n(raw?.available),
     availableBeforeAdvance: n(raw?.available_before_advance),
     advanceOpen: n(raw?.advance_open),
+    advanceSettled: n(raw?.advance_settled),
+    advanceTotal: n(raw?.advance_total ?? raw?.advance_open),
     hold: n(raw?.hold),
     networkBlocked: n(raw?.network_blocked),
     pendingTotal: n(raw?.pending_total),
