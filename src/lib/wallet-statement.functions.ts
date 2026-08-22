@@ -110,3 +110,151 @@ export const getWalletStatementFor = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Acesso restrito ao administrador");
     return loadWalletStatement(data.profileId);
   });
+
+export type WalletKind = "commission" | "partner" | "professional" | "fitcoin" | "nutritionist" | "professor";
+
+export type WalletKindTotals = {
+  kind: WalletKind;
+  people: number;
+  available: number;
+  pending: number;
+  blocked: number;
+  earned: number;
+  withdrawn: number;
+};
+
+export type WalletPersonRow = {
+  profileId: string;
+  name: string;
+  email: string | null;
+  available: number;
+  pending: number;
+  blocked: number;
+  earned: number;
+  withdrawn: number;
+  advanceOpen: number;
+  kinds: Partial<Record<WalletKind, { available: number; pending: number; blocked: number; earned: number; withdrawn: number }>>;
+};
+
+export type WalletsOverview = {
+  generatedAt: string;
+  advancesOpen: number;
+  adminWallet: { available: number; earned: number; withdrawn: number };
+  totals: WalletKindTotals[];
+  people: WalletPersonRow[];
+};
+
+async function assertAdmin(supabase: any, userId: string) {
+  const { data: isAdmin } = await supabase.rpc("is_admin" as never, { _user_id: userId } as never);
+  if (!isAdmin) throw new Error("Acesso restrito ao administrador");
+}
+
+/** Totais por tipo de carteira + detalhamento por pessoa (admin). */
+export const getWalletsOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<WalletsOverview> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("wallets_overview" as never, {} as never);
+    if (error) throw new Error(error.message);
+    const raw = (data as Record<string, any>) || {};
+    return {
+      generatedAt: String(raw.generated_at || new Date().toISOString()),
+      advancesOpen: n(raw.advances_open),
+      adminWallet: {
+        available: n(raw?.admin_wallet?.available),
+        earned: n(raw?.admin_wallet?.earned),
+        withdrawn: n(raw?.admin_wallet?.withdrawn),
+      },
+      totals: ((raw.totals as any[]) || []).map((t) => ({
+        kind: t.kind as WalletKind,
+        people: n(t.people),
+        available: n(t.available),
+        pending: n(t.pending),
+        blocked: n(t.blocked),
+        earned: n(t.earned),
+        withdrawn: n(t.withdrawn),
+      })),
+      people: ((raw.people as any[]) || []).map((p) => ({
+        profileId: String(p.profile_id),
+        name: String(p.name || "Sem nome"),
+        email: p.email ?? null,
+        available: n(p.available),
+        pending: n(p.pending),
+        blocked: n(p.blocked),
+        earned: n(p.earned),
+        withdrawn: n(p.withdrawn),
+        advanceOpen: n(p.advance_open),
+        kinds: (p.kinds || {}) as WalletPersonRow["kinds"],
+      })),
+    };
+  });
+
+export type WalletAdvanceRow = {
+  id: string;
+  amount: number;
+  settledAmount: number;
+  reason: string | null;
+  createdAt: string;
+};
+
+/** Adiantamentos de uma pessoa (admin). */
+export const listWalletAdvances = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { profileId: string }) => input)
+  .handler(async ({ data, context }): Promise<WalletAdvanceRow[]> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("wallet_advances")
+      .select("id, amount, settled_amount, reason, created_at")
+      .eq("profile_id", data.profileId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows || []).map((r: any) => ({
+      id: r.id,
+      amount: n(r.amount),
+      settledAmount: n(r.settled_amount),
+      reason: r.reason,
+      createdAt: r.created_at,
+    }));
+  });
+
+/** Lança um adiantamento (valor recebido acima do liberado) — desconta do disponível. */
+export const createWalletAdvance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { profileId: string; amount: number; reason?: string }) => input)
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    await assertAdmin(context.supabase, context.userId);
+    if (!(data.amount > 0)) throw new Error("Informe um valor maior que zero");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("wallet_advances").insert({
+      profile_id: data.profileId,
+      amount: data.amount,
+      reason: data.reason || null,
+      created_by: context.userId,
+    } as never);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Marca um adiantamento como compensado (total ou parcial). */
+export const settleWalletAdvance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { advanceId: string; settledAmount?: number }) => input)
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error: readErr } = await supabaseAdmin
+      .from("wallet_advances").select("amount").eq("id", data.advanceId).maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!row) throw new Error("Adiantamento não encontrado");
+    const settled = data.settledAmount ?? n((row as any).amount);
+    const { error } = await supabaseAdmin
+      .from("wallet_advances")
+      .update({ settled_amount: settled } as never)
+      .eq("id", data.advanceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
