@@ -998,6 +998,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </p>
               ) : null}
               <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                {recurrenceLabel(p as never) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-semibold">{recurrenceLabel(p as never)}</span>
+                )}
                 {p.is_mirrored && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Herbalife (espelho)</span>
                 )}
