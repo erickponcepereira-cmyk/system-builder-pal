@@ -5316,6 +5316,7 @@ export type Database = {
           is_active: boolean
           kind: string
           module_id: string
+          require_watermark: boolean
           sort_order: number
           title: string
           unlock_at: string | null
@@ -5336,6 +5337,7 @@ export type Database = {
           is_active?: boolean
           kind?: string
           module_id: string
+          require_watermark?: boolean
           sort_order?: number
           title: string
           unlock_at?: string | null
@@ -5356,6 +5358,7 @@ export type Database = {
           is_active?: boolean
           kind?: string
           module_id?: string
+          require_watermark?: boolean
           sort_order?: number
           title?: string
           unlock_at?: string | null
@@ -7670,6 +7673,60 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_created_courses: {
+        Row: {
+          approved_at: string | null
+          approved_by_admin: boolean | null
+          created_at: string
+          creator_commission_percentage: number
+          digital_product_id: string
+          id: string
+          partner_id: string
+          platform_percentage: number | null
+          status: string | null
+          upline_commission_percentage: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_admin?: boolean | null
+          created_at?: string
+          creator_commission_percentage?: number
+          digital_product_id: string
+          id?: string
+          partner_id: string
+          platform_percentage?: number | null
+          status?: string | null
+          upline_commission_percentage?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_admin?: boolean | null
+          created_at?: string
+          creator_commission_percentage?: number
+          digital_product_id?: string
+          id?: string
+          partner_id?: string
+          platform_percentage?: number | null
+          status?: string | null
+          upline_commission_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_created_courses_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_created_courses_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -14682,6 +14739,10 @@ export type Database = {
       }
       can_create_fitmind_events: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      can_manage_digital_product: {
+        Args: { _digital_product_id: string }
         Returns: boolean
       }
       can_manage_event: {
