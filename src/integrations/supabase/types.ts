@@ -15645,6 +15645,10 @@ export type Database = {
           valid: boolean
         }[]
       }
+      wallet_statement: {
+        Args: { _profile_id: string; _recalc?: boolean }
+        Returns: Json
+      }
     }
     Enums: {
       chat_permission:
