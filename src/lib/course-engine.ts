@@ -266,3 +266,90 @@ export async function salvarProgresso(
     .upsert(payload as never, { onConflict: "student_id,lesson_id" } as never);
   if (error) throw new Error(error.message);
 }
+
+export type CourseSummary = {
+  productId: string;
+  title: string;
+  coverUrl: string | null;
+  totalAulas: number;
+  feitas: number;
+  percentual: number;
+};
+
+/**
+ * Cursos a que a pessoa tem acesso.
+ *
+ * O filtro é a própria RLS: `digital_product_modules` só devolve linha de curso
+ * que `can_view_digital_product` libera — comprado, incluso na mensalidade de
+ * coach adimplente, ou administrado por quem chama. Então listar os módulos
+ * visíveis já é listar os cursos acessíveis, sem repetir a regra aqui.
+ */
+export async function listMyCourses(studentId: string | null): Promise<CourseSummary[]> {
+  const { data: mods, error } = await supabase
+    .from("digital_product_modules" as never)
+    .select("id,digital_product_id" as never)
+    .eq("is_active" as never, true as never);
+
+  if (error) {
+    console.error("[course-engine] meus cursos", error);
+    return [];
+  }
+
+  const modRows = (mods as unknown as Array<Record<string, unknown>>) || [];
+  if (!modRows.length) return [];
+
+  const produtoIds = Array.from(new Set(modRows.map((m) => String(m.digital_product_id))));
+  const moduleIds = modRows.map((m) => String(m.id));
+
+  const [prodRes, lessonRes] = await Promise.all([
+    supabase
+      .from("digital_products")
+      .select("id,title,cover_url")
+      .in("id", produtoIds),
+    supabase
+      .from("digital_product_lessons" as never)
+      .select("id,module_id" as never)
+      .in("module_id" as never, moduleIds as never)
+      .eq("is_active" as never, true as never),
+  ]);
+
+  const moduloDoProduto = new Map<string, string>();
+  for (const m of modRows) moduloDoProduto.set(String(m.id), String(m.digital_product_id));
+
+  const aulasPorProduto = new Map<string, string[]>();
+  for (const l of (lessonRes.data as unknown as Array<Record<string, unknown>>) || []) {
+    const prod = moduloDoProduto.get(String(l.module_id));
+    if (!prod) continue;
+    const arr = aulasPorProduto.get(prod) || [];
+    arr.push(String(l.id));
+    aulasPorProduto.set(prod, arr);
+  }
+
+  const concluidas = new Set<string>();
+  if (studentId) {
+    const todasAulas = Array.from(aulasPorProduto.values()).flat();
+    if (todasAulas.length) {
+      const { data } = await supabase
+        .from("digital_lesson_progress" as never)
+        .select("lesson_id,completed_at" as never)
+        .eq("student_id" as never, studentId as never)
+        .in("lesson_id" as never, todasAulas as never);
+      for (const r of (data as unknown as Array<Record<string, unknown>>) || []) {
+        if (r.completed_at) concluidas.add(String(r.lesson_id));
+      }
+    }
+  }
+
+  return ((prodRes.data as Array<Record<string, unknown>>) || []).map((p) => {
+    const aulas = aulasPorProduto.get(String(p.id)) || [];
+    const feitas = aulas.filter((id) => concluidas.has(id)).length;
+    return {
+      productId: String(p.id),
+      title: String(p.title || ""),
+      coverUrl: (p.cover_url as string) || null,
+      totalAulas: aulas.length,
+      feitas,
+      percentual: aulas.length ? Math.round((feitas / aulas.length) * 100) : 0,
+    };
+  });
+}

@@ -71,7 +71,6 @@ import { Route as AuthenticatedStudentGroupRouteImport } from './routes/_authent
 import { Route as AuthenticatedStudentFreebiesRouteImport } from './routes/_authenticated/student.freebies'
 import { Route as AuthenticatedStudentEvolutionRouteImport } from './routes/_authenticated/student.evolution'
 import { Route as AuthenticatedStudentDownloadsRouteImport } from './routes/_authenticated/student.downloads'
-import { Route as AuthenticatedStudentCursoTesteRouteImport } from './routes/_authenticated/student.curso-teste'
 import { Route as AuthenticatedStudentComprasRouteImport } from './routes/_authenticated/student.compras'
 import { Route as AuthenticatedStudentCoachCourseRouteImport } from './routes/_authenticated/student.coach-course'
 import { Route as AuthenticatedStudentChallengeRouteImport } from './routes/_authenticated/student.challenge'
@@ -159,6 +158,7 @@ import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.goog
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 import { Route as AuthenticatedStudentProfileEditRouteImport } from './routes/_authenticated/student.profile.edit'
 import { Route as AuthenticatedStudentPartnersPartnerIdRouteImport } from './routes/_authenticated/student.partners.$partnerId'
+import { Route as AuthenticatedStudentCursoIdRouteImport } from './routes/_authenticated/student.curso.$id'
 import { Route as AuthenticatedAdminCoachesInactivityRouteImport } from './routes/_authenticated/admin.coaches.inactivity'
 
 const TermosProfissionalRoute = TermosProfissionalRouteImport.update({
@@ -492,12 +492,6 @@ const AuthenticatedStudentDownloadsRoute =
   AuthenticatedStudentDownloadsRouteImport.update({
     id: '/downloads',
     path: '/downloads',
-    getParentRoute: () => AuthenticatedStudentRoute,
-  } as any)
-const AuthenticatedStudentCursoTesteRoute =
-  AuthenticatedStudentCursoTesteRouteImport.update({
-    id: '/curso-teste',
-    path: '/curso-teste',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
 const AuthenticatedStudentComprasRoute =
@@ -1009,6 +1003,12 @@ const AuthenticatedStudentPartnersPartnerIdRoute =
     path: '/$partnerId',
     getParentRoute: () => AuthenticatedStudentPartnersRoute,
   } as any)
+const AuthenticatedStudentCursoIdRoute =
+  AuthenticatedStudentCursoIdRouteImport.update({
+    id: '/curso/$id',
+    path: '/curso/$id',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedAdminCoachesInactivityRoute =
   AuthenticatedAdminCoachesInactivityRouteImport.update({
     id: '/inactivity',
@@ -1126,7 +1126,6 @@ export interface FileRoutesByFullPath {
   '/student/challenge': typeof AuthenticatedStudentChallengeRoute
   '/student/coach-course': typeof AuthenticatedStudentCoachCourseRoute
   '/student/compras': typeof AuthenticatedStudentComprasRoute
-  '/student/curso-teste': typeof AuthenticatedStudentCursoTesteRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
@@ -1152,6 +1151,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/student/': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
+  '/student/curso/$id': typeof AuthenticatedStudentCursoIdRoute
   '/student/partners/$partnerId': typeof AuthenticatedStudentPartnersPartnerIdRoute
   '/student/profile/edit': typeof AuthenticatedStudentProfileEditRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
@@ -1276,7 +1276,6 @@ export interface FileRoutesByTo {
   '/student/challenge': typeof AuthenticatedStudentChallengeRoute
   '/student/coach-course': typeof AuthenticatedStudentCoachCourseRoute
   '/student/compras': typeof AuthenticatedStudentComprasRoute
-  '/student/curso-teste': typeof AuthenticatedStudentCursoTesteRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
@@ -1302,6 +1301,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/student': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
+  '/student/curso/$id': typeof AuthenticatedStudentCursoIdRoute
   '/student/partners/$partnerId': typeof AuthenticatedStudentPartnersPartnerIdRoute
   '/student/profile/edit': typeof AuthenticatedStudentProfileEditRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
@@ -1430,7 +1430,6 @@ export interface FileRoutesById {
   '/_authenticated/student/challenge': typeof AuthenticatedStudentChallengeRoute
   '/_authenticated/student/coach-course': typeof AuthenticatedStudentCoachCourseRoute
   '/_authenticated/student/compras': typeof AuthenticatedStudentComprasRoute
-  '/_authenticated/student/curso-teste': typeof AuthenticatedStudentCursoTesteRoute
   '/_authenticated/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/_authenticated/student/evolution': typeof AuthenticatedStudentEvolutionRoute
   '/_authenticated/student/freebies': typeof AuthenticatedStudentFreebiesRoute
@@ -1456,6 +1455,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/student/': typeof AuthenticatedStudentIndexRoute
   '/_authenticated/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
+  '/_authenticated/student/curso/$id': typeof AuthenticatedStudentCursoIdRoute
   '/_authenticated/student/partners/$partnerId': typeof AuthenticatedStudentPartnersPartnerIdRoute
   '/_authenticated/student/profile/edit': typeof AuthenticatedStudentProfileEditRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
@@ -1584,7 +1584,6 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/compras'
-    | '/student/curso-teste'
     | '/student/downloads'
     | '/student/evolution'
     | '/student/freebies'
@@ -1610,6 +1609,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/student/curso/$id'
     | '/student/partners/$partnerId'
     | '/student/profile/edit'
     | '/api/oauth/google/callback'
@@ -1734,7 +1734,6 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/compras'
-    | '/student/curso-teste'
     | '/student/downloads'
     | '/student/evolution'
     | '/student/freebies'
@@ -1760,6 +1759,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
+    | '/student/curso/$id'
     | '/student/partners/$partnerId'
     | '/student/profile/edit'
     | '/api/oauth/google/callback'
@@ -1887,7 +1887,6 @@ export interface FileRouteTypes {
     | '/_authenticated/student/challenge'
     | '/_authenticated/student/coach-course'
     | '/_authenticated/student/compras'
-    | '/_authenticated/student/curso-teste'
     | '/_authenticated/student/downloads'
     | '/_authenticated/student/evolution'
     | '/_authenticated/student/freebies'
@@ -1913,6 +1912,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/student/'
     | '/_authenticated/admin/coaches/inactivity'
+    | '/_authenticated/student/curso/$id'
     | '/_authenticated/student/partners/$partnerId'
     | '/_authenticated/student/profile/edit'
     | '/api/oauth/google/callback'
@@ -2416,13 +2416,6 @@ declare module '@tanstack/react-router' {
       path: '/downloads'
       fullPath: '/student/downloads'
       preLoaderRoute: typeof AuthenticatedStudentDownloadsRouteImport
-      parentRoute: typeof AuthenticatedStudentRoute
-    }
-    '/_authenticated/student/curso-teste': {
-      id: '/_authenticated/student/curso-teste'
-      path: '/curso-teste'
-      fullPath: '/student/curso-teste'
-      preLoaderRoute: typeof AuthenticatedStudentCursoTesteRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
     '/_authenticated/student/compras': {
@@ -3034,6 +3027,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentPartnersPartnerIdRouteImport
       parentRoute: typeof AuthenticatedStudentPartnersRoute
     }
+    '/_authenticated/student/curso/$id': {
+      id: '/_authenticated/student/curso/$id'
+      path: '/curso/$id'
+      fullPath: '/student/curso/$id'
+      preLoaderRoute: typeof AuthenticatedStudentCursoIdRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/admin/coaches/inactivity': {
       id: '/_authenticated/admin/coaches/inactivity'
       path: '/inactivity'
@@ -3284,7 +3284,6 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentChallengeRoute: typeof AuthenticatedStudentChallengeRoute
   AuthenticatedStudentCoachCourseRoute: typeof AuthenticatedStudentCoachCourseRoute
   AuthenticatedStudentComprasRoute: typeof AuthenticatedStudentComprasRoute
-  AuthenticatedStudentCursoTesteRoute: typeof AuthenticatedStudentCursoTesteRoute
   AuthenticatedStudentDownloadsRoute: typeof AuthenticatedStudentDownloadsRoute
   AuthenticatedStudentEvolutionRoute: typeof AuthenticatedStudentEvolutionRoute
   AuthenticatedStudentFreebiesRoute: typeof AuthenticatedStudentFreebiesRoute
@@ -3304,6 +3303,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentSupportRoute: typeof AuthenticatedStudentSupportRoute
   AuthenticatedStudentWorkoutRoute: typeof AuthenticatedStudentWorkoutRoute
   AuthenticatedStudentIndexRoute: typeof AuthenticatedStudentIndexRoute
+  AuthenticatedStudentCursoIdRoute: typeof AuthenticatedStudentCursoIdRoute
 }
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
@@ -3314,7 +3314,6 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentChallengeRoute: AuthenticatedStudentChallengeRoute,
   AuthenticatedStudentCoachCourseRoute: AuthenticatedStudentCoachCourseRoute,
   AuthenticatedStudentComprasRoute: AuthenticatedStudentComprasRoute,
-  AuthenticatedStudentCursoTesteRoute: AuthenticatedStudentCursoTesteRoute,
   AuthenticatedStudentDownloadsRoute: AuthenticatedStudentDownloadsRoute,
   AuthenticatedStudentEvolutionRoute: AuthenticatedStudentEvolutionRoute,
   AuthenticatedStudentFreebiesRoute: AuthenticatedStudentFreebiesRoute,
@@ -3340,6 +3339,7 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentSupportRoute: AuthenticatedStudentSupportRoute,
   AuthenticatedStudentWorkoutRoute: AuthenticatedStudentWorkoutRoute,
   AuthenticatedStudentIndexRoute: AuthenticatedStudentIndexRoute,
+  AuthenticatedStudentCursoIdRoute: AuthenticatedStudentCursoIdRoute,
 }
 
 const AuthenticatedStudentRouteWithChildren =
