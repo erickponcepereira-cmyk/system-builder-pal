@@ -19,12 +19,20 @@ export function WalletStatementCard({
   const fmt = mask ?? brl;
   const rows: Array<{ label: string; value: number; hint?: string; tone?: string }> = [
     { label: "Disponível para saque agora", value: statement.available, tone: "text-success" },
+    ...(statement.advanceOpen > 0
+      ? [{
+          label: "Adiantamento a compensar",
+          value: statement.advanceOpen,
+          tone: "text-red-400",
+          hint: "Valor já pago acima do liberado — desconta do disponível",
+        }]
+      : []),
     { label: "Em carência (a liberar)", value: statement.hold, tone: "text-amber-400", hint: "Aguardando o prazo de liberação" },
     { label: "Rede bloqueada", value: statement.networkBlocked, tone: "text-amber-400", hint: "Libera ao bater a missão do mês" },
     { label: "Saque solicitado (aguardando pagamento)", value: statement.withdrawOpen, tone: "text-blue-400" },
     { label: "Já pago em saques", value: statement.withdrawnPaid, tone: "text-white/70" },
     { label: "Usado na própria carteira", value: statement.spentWallet, tone: "text-white/70", hint: "Mensalidade e pedidos pagos com saldo" },
-    { label: "Total ganho", value: statement.totalEarned, tone: "text-white" },
+    { label: "Total ganho (sem Fitcoin)", value: statement.totalEarned, tone: "text-white" },
   ];
 
   return (
@@ -41,20 +49,28 @@ export function WalletStatementCard({
           </div>
         ))}
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-white/40">
+
+      <div className="mt-3 rounded-xl bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white/70">Carteira de indicação (Fitcoin) — separada</p>
+        <p className="text-[10px] text-white/35 mb-1.5">Não entra no saldo de comissões nem no limite de saque.</p>
+        <div className="grid grid-cols-3 gap-2 text-[10px] text-white/40">
+          <div>Disponível<p className="font-mono text-white/70">{fmt(statement.fitcoin.available)}</p></div>
+          <div>Pendente<p className="font-mono text-white/70">{fmt(statement.fitcoin.pending)}</p></div>
+          <div>Total ganho<p className="font-mono text-white/70">{fmt(statement.fitcoin.earned)}</p></div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-white/40">
         <div>
-          Comissões
+          Comissões (rede/vendas)
           <p className="text-white/70 font-mono">{fmt(statement.breakdown.commissions.earned)}</p>
         </div>
         <div>
           Produtos criados
           <p className="text-white/70 font-mono">{fmt(statement.breakdown.creator.earned)}</p>
         </div>
-        <div>
-          Indicação
-          <p className="text-white/70 font-mono">{fmt(statement.breakdown.referral.earned)}</p>
-        </div>
       </div>
     </div>
   );
 }
+
