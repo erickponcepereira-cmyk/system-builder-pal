@@ -267,8 +267,16 @@ export function WalletTab() {
         </div>
         <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(withdrawableMax)}</p>
         <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
-          + {mask(statement ? statement.hold + statement.networkBlocked : (split?.direct.pending ?? 0))} a liberar
+          + {mask(statement ? statement.hold : (split?.direct.pending ?? 0))} a liberar
           <PendingInfo days={COMMISSION_HOLD_DAYS} />
+        </p>
+        {statement && statement.networkBlocked > 0 && (
+          <p className="text-[11px] text-primary-foreground/60 mt-0.5">
+            🔒 {mask(statement.networkBlocked)} de rede bloqueada (libera ao bater a missão do mês)
+          </p>
+        )}
+        <p className="text-[10px] text-primary-foreground/60 mt-1">
+          Saque feito por aqui — reúne coach, parceiro e profissional.
         </p>
 
       </div>
@@ -278,8 +286,8 @@ export function WalletTab() {
           <p className="text-xl font-bold text-white mt-1 font-mono">{mask(split?.direct.total ?? 0)}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-xs text-white/50">Pendente</p>
-          <p className="text-xl font-bold text-white mt-1 font-mono">{mask(split?.direct.pending ?? 0)}</p>
+          <p className="text-xs text-white/50">Pendente (carência + rede)</p>
+          <p className="text-xl font-bold text-white mt-1 font-mono">{mask(statement ? statement.pendingTotal : (split?.direct.pending ?? 0))}</p>
         </div>
       </div>
 
