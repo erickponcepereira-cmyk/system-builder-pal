@@ -442,6 +442,9 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
       const fromIso = from ? new Date(from).toISOString() : undefined;
       const toIso = to ? new Date(to + "T23:59:59").toISOString() : undefined;
       setDetails(await fetchDetails({ data: { profileId: person.profileId, group, fromDate: fromIso, toDate: toIso } }));
+      fetchStatement({ data: { profileId: person.profileId } })
+        .then(setStatement)
+        .catch((e) => console.error("wallet statement failed", e));
     } catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setLoading(false); }
   };
