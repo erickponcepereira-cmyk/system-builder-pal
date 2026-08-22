@@ -251,6 +251,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       redemption_location_url: emptyToNull(editing.redemption_location_url) as string | null,
       uses_scheduling: !!editing.uses_scheduling,
       weekly_limit_per_student: Math.max(1, Number(editing.weekly_limit_per_student || 1)),
+      ...normalizeRecurrence(isFree ? {} : (editing as never), Number(editing.price || 0)),
     };
 
     if (editing.is_schedulable) {
