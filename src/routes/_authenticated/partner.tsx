@@ -194,12 +194,13 @@ function PartnerPanel() {
     setUnidadeAtiva(ativa);
     lembrarUnidadeAtiva(ativa.partnerId);
 
-    const { data: p } = await supabase
-      .from("partners" as never)
-      .select("id, profile_id, fantasy_name, description, photo_url, cover_url, whatsapp, public_whatsapp, instagram, facebook, website, address, city, state, status, document, document_type, business_area, specialty, referral_code, referral_link, free_redeem_policy" as never)
-      .eq("id" as never, ativa.partnerId as never)
-      .maybeSingle();
+    // A tabela `partners` tem permissão por coluna (auditoria de segurança):
+    // ler campos internos direto pelo navegador derruba a consulta inteira.
+    // A RPC devolve a ficha completa só para dono/admin/membro autorizado.
+    const { data: fichas } = await supabase.rpc("parceiro_do_dono" as never, { p_partner_id: ativa.partnerId } as never);
+    const p = Array.isArray(fichas) ? (fichas[0] ?? null) : (fichas ?? null);
     if (!p) { setLoading(false); return; }
+
     const pt = p as unknown as Partner;
     setPartner(pt);
     const [pr, ps, v, coach, student] = await Promise.all([
