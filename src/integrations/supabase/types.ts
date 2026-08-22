@@ -7982,6 +7982,10 @@ export type Database = {
           release_base_event: string | null
           release_days: number
           release_status: Database["public"]["Enums"]["release_status_type"]
+          released_early: boolean
+          released_early_at: string | null
+          released_early_by: string | null
+          released_early_reason: string | null
           sale_channel: string
           selling_coach_id: string | null
           shipping_address: string | null
@@ -8034,6 +8038,10 @@ export type Database = {
           release_base_event?: string | null
           release_days?: number
           release_status?: Database["public"]["Enums"]["release_status_type"]
+          released_early?: boolean
+          released_early_at?: string | null
+          released_early_by?: string | null
+          released_early_reason?: string | null
           sale_channel?: string
           selling_coach_id?: string | null
           shipping_address?: string | null
@@ -8086,6 +8094,10 @@ export type Database = {
           release_base_event?: string | null
           release_days?: number
           release_status?: Database["public"]["Enums"]["release_status_type"]
+          released_early?: boolean
+          released_early_at?: string | null
+          released_early_by?: string | null
+          released_early_reason?: string | null
           sale_channel?: string
           selling_coach_id?: string | null
           shipping_address?: string | null
@@ -14667,6 +14679,15 @@ export type Database = {
         }
         Returns: number
       }
+      admin_advance_creator_release: {
+        Args: {
+          _admin_user_id: string
+          _order_ids: string[]
+          _profile_id: string
+          _reason?: string
+        }
+        Returns: number
+      }
       admin_block_and_transfer_to_upline: {
         Args: {
           _coach_id: string
@@ -15541,6 +15562,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      ppo_is_released: {
+        Args: { _created_at: string; _early: boolean; _paid_at: string }
+        Returns: boolean
+      }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -15592,16 +15617,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      produtos_por_local: {
-        Args: never
-        Returns: {
-          cidade_chave: string
-          cidade_exibicao: string
-          origem: string
-          produto_id: string
-          uf: string
-        }[]
       }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
@@ -16061,6 +16076,16 @@ export type Database = {
           referred_by_student_id: string
           sponsor_name: string
           valid: boolean
+        }[]
+      }
+      vendedores_por_local: {
+        Args: never
+        Returns: {
+          cidade_chave: string
+          cidade_exibicao: string
+          tipo: string
+          uf: string
+          vendedor_id: string
         }[]
       }
       wallet_base_available: { Args: { _profile_id: string }; Returns: number }
