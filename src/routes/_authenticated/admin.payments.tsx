@@ -25,6 +25,8 @@ import {
 } from "@/lib/admin-payouts.functions";
 
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
+import { getWalletStatementFor, type WalletStatement } from "@/lib/wallet-statement.functions";
+import { WalletStatementCard } from "@/components/shared/WalletStatementCard";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
 import { StuckPaymentsAlert } from "@/components/admin/StuckPaymentsAlert";
@@ -423,6 +425,8 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
   const register = useServerFn(registerManualPayout);
   const update = useServerFn(updateWithdrawalStatus);
 
+  const fetchStatement = useServerFn(getWalletStatementFor);
+  const [statement, setStatement] = useState<WalletStatement | null>(null);
   const [details, setDetails] = useState<PayoutDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"sales" | "commissions" | "withdrawals">("withdrawals");
@@ -438,6 +442,9 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
       const fromIso = from ? new Date(from).toISOString() : undefined;
       const toIso = to ? new Date(to + "T23:59:59").toISOString() : undefined;
       setDetails(await fetchDetails({ data: { profileId: person.profileId, group, fromDate: fromIso, toDate: toIso } }));
+      fetchStatement({ data: { profileId: person.profileId } })
+        .then(setStatement)
+        .catch((e) => console.error("wallet statement failed", e));
     } catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setLoading(false); }
   };
@@ -489,11 +496,14 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
         ) : (
           <div className="p-5 space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Mini label="Disponível" value={fmt(details.wallet.available)} accent />
-              <Mini label="Bloqueado" value={fmt(details.wallet.blocked)} />
-              <Mini label="Total ganho" value={fmt(details.wallet.totalEarned)} />
-              <Mini label="Total sacado" value={fmt(details.wallet.totalWithdrawn)} />
+              <Mini label="Disponível" value={fmt(statement ? statement.available : details.wallet.available)} accent />
+              <Mini label="Bloqueado" value={fmt(statement ? statement.hold + statement.networkBlocked : details.wallet.blocked)} />
+              <Mini label="Total ganho" value={fmt(statement ? statement.totalEarned : details.wallet.totalEarned)} />
+              <Mini label="Total sacado" value={fmt(statement ? statement.withdrawnPaid : details.wallet.totalWithdrawn)} />
             </div>
+
+            <WalletStatementCard statement={statement} />
+
 
             <div className="rounded-xl p-4 border border-primary/30" style={{ backgroundColor: "rgba(255,107,0,0.05)" }}>
               <p className="text-xs uppercase tracking-wider text-primary font-bold mb-2">Dar baixa em saque</p>
