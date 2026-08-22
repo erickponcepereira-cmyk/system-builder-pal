@@ -15,6 +15,36 @@ interface Props {
 }
 
 /**
+ * Normaliza os campos de recorrência antes de salvar.
+ * Se o produto NÃO é assinatura, todos os campos ficam limpos — nada de
+ * resíduo capaz de transformar uma venda avulsa em cobrança recorrente.
+ */
+export function normalizeRecurrence(value: RecurrenceValue, price?: number | null): Required<RecurrenceValue> {
+  if (!value?.is_recurring) {
+    return {
+      is_recurring: false,
+      recurrence_interval: null,
+      recurrence_amount: null,
+      recurrence_trial_days: 0,
+      recurrence_allow_one_time: true,
+    };
+  }
+  return {
+    is_recurring: true,
+    recurrence_interval: value.recurrence_interval === "yearly" ? "yearly" : "monthly",
+    recurrence_amount: Number(value.recurrence_amount ?? price ?? 0) || 0,
+    recurrence_trial_days: Math.max(0, Number(value.recurrence_trial_days || 0)),
+    recurrence_allow_one_time: value.recurrence_allow_one_time !== false,
+  };
+}
+
+/** Etiqueta curta para as listas de produtos. */
+export function recurrenceLabel(value: RecurrenceValue): string | null {
+  if (!value?.is_recurring) return null;
+  return value.recurrence_interval === "yearly" ? "Assinatura anual" : "Assinatura mensal";
+}
+
+/**
  * Bloco reutilizável de configuração de cobrança recorrente (assinatura).
  * Usado no cadastro de produtos do admin, do parceiro e do profissional.
  */
