@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
+import { RecurrenceFields, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
@@ -354,6 +354,9 @@ export function StoreItemsManager() {
                     <span className="text-xs text-white/40 line-through">R$ {Number(it.original_price).toFixed(2)}</span>
                   )}
                 </div>
+                {recurrenceLabel(it as never) && (
+                  <span className="inline-block rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">{recurrenceLabel(it as never)}</span>
+                )}
                 {it.kind === "physical" && (
                   <div className="text-xs text-white/50">Estoque: {it.stock ?? "—"}</div>
                 )}

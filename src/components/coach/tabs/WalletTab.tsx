@@ -14,6 +14,8 @@ import { PendingInfo } from "@/components/PendingInfo";
 import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal, type WithdrawalRequestKind } from "@/lib/withdrawals.functions";
 import { getMyCoachPayoutInfo } from "@/lib/sensitive-fields.functions";
+import { getMyWalletStatement, type WalletStatement } from "@/lib/wallet-statement.functions";
+import { WalletStatementCard } from "@/components/shared/WalletStatementCard";
 
 const MIN_WITHDRAWAL = 50;
 
@@ -38,6 +40,8 @@ const withdrawalLabel = (status?: string | null) => {
 
 export function WalletTab() {
   const fetchSplit = useServerFn(getWalletSplit);
+  const fetchStatement = useServerFn(getMyWalletStatement);
+  const [statement, setStatement] = useState<WalletStatement | null>(null);
   const fetchCareer = useServerFn(getCareerProgress);
   const fetchMedals = useServerFn(getIndividualCareer);
   const fetchHistory = useServerFn(getMyWalletHistory);
@@ -151,6 +155,7 @@ export function WalletTab() {
     })();
     
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
+    fetchStatement().then((r) => setStatement(r)).catch((e) => console.error("getMyWalletStatement failed:", e));
     fetchCareer().then(setCareer).catch(() => {});
     fetchMedals().then(setMedals).catch(() => {});
 
@@ -161,7 +166,8 @@ export function WalletTab() {
   const directAvail = split?.direct.available ?? 0;
   const networkAvail = split?.network.available ?? 0;
   const networkLocked = split?.network.locked ?? true;
-  const withdrawableMax = directAvail + networkAvail;
+  // Fonte única de verdade: o extrato consolidado do banco (mesma base do admin).
+  const withdrawableMax = statement ? statement.available : directAvail + networkAvail;
 
   const requestWithdraw = async () => {
     if (!bank.coachId) return;
@@ -210,6 +216,7 @@ export function WalletTab() {
         withdrawalStatus: wr.status,
       }, ...current].slice(0, 20));
       fetchSplit().then((r) => setSplit(r)).catch(() => {});
+      fetchStatement().then((r) => setStatement(r)).catch(() => {});
 
       toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação do admin.`);
       setOpen(false);
@@ -255,14 +262,15 @@ export function WalletTab() {
     <>
       <div className="rounded-2xl p-6 mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.6))" }}>
         <div className="flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">Vendas Diretas — disponível</p>
+          <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">Disponível para saque</p>
           <Unlock className="h-4 w-4 text-primary-foreground/80" />
         </div>
-        <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(directAvail)}</p>
+        <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(withdrawableMax)}</p>
         <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
-          + {mask(split?.direct.pending ?? 0)} pendente
+          + {mask(statement ? statement.hold + statement.networkBlocked : (split?.direct.pending ?? 0))} a liberar
           <PendingInfo days={COMMISSION_HOLD_DAYS} />
         </p>
+
       </div>
       <div className="grid gap-3 grid-cols-2">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
@@ -274,6 +282,12 @@ export function WalletTab() {
           <p className="text-xl font-bold text-white mt-1 font-mono">{mask(split?.direct.pending ?? 0)}</p>
         </div>
       </div>
+
+      <div className="mt-3">
+        <WalletStatementCard statement={statement} mask={mask} />
+      </div>
+
+
 
       {topMonthlyMedal && (
         <button

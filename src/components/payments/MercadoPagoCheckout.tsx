@@ -110,8 +110,14 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         const r: any = await recurrenceFn({ data: source });
         if (!alive || !r) return;
         setRecurrence(r);
-        setMode("subscribe");
-        setTab("card");
+        // Assinatura nunca é o padrão: só trava em "Assinar" quando o vendedor
+        // desmarcou explicitamente o pagamento avulso.
+        if (r.allowOneTime === false) {
+          setMode("subscribe");
+          setTab("card");
+        } else {
+          setMode("one_time");
+        }
       } catch { /* ignore */ }
     })();
     return () => { alive = false; };
