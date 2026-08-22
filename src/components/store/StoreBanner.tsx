@@ -1,60 +1,77 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, GraduationCap, Sparkles, Tag } from "lucide-react";
+import { ChevronRight, GraduationCap, Sparkles, Tag, X } from "lucide-react";
 
 import type { UnifiedProduct } from "@/lib/unified-store";
+import {
+  marcarPopupVisto,
+  popupPendente,
+  proximoGiro,
+  type StoreBanner as BannerRow,
+} from "@/lib/store-banners";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type Faixa = {
   id: string;
-  etiqueta: string;
+  etiqueta: string | null;
   titulo: string;
-  apoio: string;
-  produto: UnifiedProduct;
+  apoio: string | null;
+  imagem: string | null;
   icone: typeof Sparkles;
+  /** Cadastrado no admin abre link; derivado do catálogo abre o produto. */
+  destino: { tipo: "link"; url: string | null } | { tipo: "produto"; produto: UnifiedProduct };
 };
 
 /**
- * Banner rotativo do topo da loja.
+ * Faixa do topo da loja.
  *
- * Existe porque catálogo por categoria não converte sozinho: quem abre a loja
- * sem intenção definida não clica em "Suplementos", clica no que estiver na
- * frente. É o mesmo motivo de o iFood abrir com faixa promocional.
+ * Prioridade: banner cadastrado no admin. Só se não houver nenhum ativo a faixa
+ * é derivada do catálogo (destaque marcado, maior desconto, curso) — rede de
+ * segurança para o topo nunca ficar vazio.
  *
- * Sem tabela nova: as faixas saem do próprio catálogo, por regra determinística
- * e nesta ordem — destaque marcado no admin, maior desconto real, curso.
- * Se nada se qualificar, o banner não aparece. Faixa vazia é pior que faixa
- * nenhuma, porque ensina a ignorar aquele espaço.
+ * O giro começa num banner diferente a cada visita, para a pessoa conhecer
+ * todos com o tempo em vez de ver sempre o primeiro.
  */
 export function StoreBanner({
   produtos,
+  banners,
   onAbrir,
-  onVerCursos,
+  onNavegar,
 }: {
   produtos: UnifiedProduct[];
+  banners: BannerRow[];
   onAbrir: (p: UnifiedProduct) => void;
-  onVerCursos: () => void;
+  onNavegar: (url: string) => void;
 }) {
+  const cadastrados = useMemo(() => banners.filter((b) => b.kind === "banner"), [banners]);
+
   const faixas = useMemo<Faixa[]>(() => {
+    if (cadastrados.length) {
+      return cadastrados.map((b) => ({
+        id: b.id,
+        etiqueta: b.badge,
+        titulo: b.title,
+        apoio: b.subtitle,
+        imagem: b.imageUrl,
+        icone: Sparkles,
+        destino: { tipo: "link" as const, url: b.linkUrl },
+      }));
+    }
+
+    // Sem cadastro: deriva do catálogo, como antes.
     const out: Faixa[] = [];
     const usados = new Set<string>();
 
-    // 1. Destaque marcado no admin — é a curadoria humana e vem primeiro.
     for (const p of produtos) {
       if (out.length >= 4) break;
       if (!p.isFeatured || usados.has(p.id)) continue;
       usados.add(p.id);
       out.push({
-        id: p.id,
-        etiqueta: "Destaque",
-        titulo: p.title,
-        apoio: fmt(p.price),
-        produto: p,
-        icone: Sparkles,
+        id: p.id, etiqueta: "Destaque", titulo: p.title, apoio: fmt(p.price),
+        imagem: p.imageUrl, icone: Sparkles, destino: { tipo: "produto", produto: p },
       });
     }
 
-    // 2. Maior desconto real, do maior para o menor.
     const comDesconto = produtos
       .filter((p) => !usados.has(p.id) && p.originalPrice && p.originalPrice > p.price)
       .map((p) => ({ p, off: Math.round((1 - p.price / (p.originalPrice as number)) * 100) }))
@@ -65,38 +82,36 @@ export function StoreBanner({
       if (out.length >= 4) break;
       usados.add(p.id);
       out.push({
-        id: p.id,
-        etiqueta: off + "% OFF",
-        titulo: p.title,
+        id: p.id, etiqueta: off + "% OFF", titulo: p.title,
         apoio: fmt(p.price) + " · antes " + fmt(p.originalPrice as number),
-        produto: p,
-        icone: Tag,
+        imagem: p.imageUrl, icone: Tag, destino: { tipo: "produto", produto: p },
       });
     }
 
-    // 3. Curso, para a área de membros ter porta na loja.
     for (const p of produtos) {
       if (out.length >= 4) break;
       if (p.kind !== "digital" || usados.has(p.id)) continue;
       usados.add(p.id);
       out.push({
-        id: p.id,
-        etiqueta: "Curso",
-        titulo: p.title,
+        id: p.id, etiqueta: "Curso", titulo: p.title,
         apoio: p.price > 0 ? fmt(p.price) : "Incluído no seu plano",
-        produto: p,
-        icone: GraduationCap,
+        imagem: p.imageUrl, icone: GraduationCap,
+        destino: { tipo: "link", url: "/student/library" },
       });
     }
 
     return out;
-  }, [produtos]);
+  }, [cadastrados, produtos]);
 
   const [i, setI] = useState(0);
 
+  // Começa num banner diferente a cada visita.
+  useEffect(() => {
+    if (faixas.length) setI(proximoGiro(faixas.length));
+  }, [faixas.length]);
+
   useEffect(() => {
     if (faixas.length < 2) return;
-    // Respeita quem pediu menos movimento: sem rotação automática.
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const t = setInterval(() => setI((v) => (v + 1) % faixas.length), 6000);
     return () => clearInterval(t);
@@ -107,20 +122,20 @@ export function StoreBanner({
   const f = faixas[Math.min(i, faixas.length - 1)];
   const Icone = f.icone;
 
+  const abrir = () => {
+    if (f.destino.tipo === "produto") onAbrir(f.destino.produto);
+    else if (f.destino.url) onNavegar(f.destino.url);
+  };
+
   return (
     <section className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => (f.produto.kind === "digital" ? onVerCursos() : onAbrir(f.produto))}
+        onClick={abrir}
         className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent p-4 text-left"
       >
-        {f.produto.imageUrl ? (
-          <img
-            src={f.produto.imageUrl}
-            alt=""
-            className="h-14 w-14 shrink-0 rounded-xl object-cover"
-            loading="lazy"
-          />
+        {f.imagem ? (
+          <img src={f.imagem} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" loading="lazy" />
         ) : (
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/20">
             <Icone className="h-6 w-6 text-primary" />
@@ -128,11 +143,15 @@ export function StoreBanner({
         )}
 
         <span className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary-foreground">
-            {f.etiqueta}
-          </span>
+          {f.etiqueta && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary-foreground">
+              {f.etiqueta}
+            </span>
+          )}
           <span className="mt-1 block truncate text-sm font-bold text-foreground">{f.titulo}</span>
-          <span className="block truncate text-[11px] tabular-nums text-muted-foreground">{f.apoio}</span>
+          {f.apoio && (
+            <span className="block truncate text-[11px] tabular-nums text-muted-foreground">{f.apoio}</span>
+          )}
         </span>
 
         <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -148,14 +167,105 @@ export function StoreBanner({
               aria-selected={idx === i}
               aria-label={"Destaque " + (idx + 1)}
               onClick={() => setI(idx)}
-              className={`h-1.5 rounded-full transition-all ${
-                idx === i ? "w-5 bg-primary" : "w-1.5 bg-muted"
-              }`}
+              className={`h-1.5 rounded-full transition-all ${idx === i ? "w-5 bg-primary" : "w-1.5 bg-muted"}`}
             />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Popup de entrada.
+ *
+ * Aparece UMA vez por oferta e tem fechar visível desde o primeiro instante.
+ * Popup que volta toda sessão treina a pessoa a fechar antes de ler — e aí o
+ * canal morre para sempre.
+ */
+export function StorePopup({
+  banners,
+  onNavegar,
+}: {
+  banners: BannerRow[];
+  onNavegar: (url: string) => void;
+}) {
+  const [atual, setAtual] = useState<BannerRow | null>(null);
+
+  useEffect(() => {
+    const p = popupPendente(banners);
+    if (!p) return;
+    // Pequeno atraso: abrir junto com a tela atrapalha quem já sabe o que quer.
+    const t = setTimeout(() => setAtual(p), 900);
+    return () => clearTimeout(t);
+  }, [banners]);
+
+  if (!atual) return null;
+
+  const fechar = () => {
+    marcarPopupVisto(atual.id);
+    setAtual(null);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+      onClick={fechar}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={atual.title}
+      >
+        <div className="flex justify-end p-2">
+          <button
+            type="button"
+            onClick={fechar}
+            aria-label="Fechar"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"
+          >
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {atual.imageUrl && (
+          <img src={atual.imageUrl} alt="" className="max-h-56 w-full object-cover" />
+        )}
+
+        <div className="p-5 pt-3">
+          {atual.badge && (
+            <span className="inline-flex rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary-foreground">
+              {atual.badge}
+            </span>
+          )}
+          <h2 className="mt-2 text-base font-bold text-foreground">{atual.title}</h2>
+          {atual.subtitle && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{atual.subtitle}</p>
+          )}
+
+          {atual.linkUrl && (
+            <button
+              type="button"
+              onClick={() => { marcarPopupVisto(atual.id); setAtual(null); onNavegar(atual.linkUrl as string); }}
+              className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
+            >
+              {atual.linkLabel || "Ver agora"}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={fechar}
+            className="mt-2 w-full rounded-xl px-4 py-2 text-xs font-semibold text-muted-foreground"
+          >
+            Agora não
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

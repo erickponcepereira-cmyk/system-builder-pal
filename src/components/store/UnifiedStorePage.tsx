@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { StoreBanner } from "@/components/store/StoreBanner";
+import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
+import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
@@ -63,6 +64,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const [ondeEstou, setOndeEstou] = useState<LocalSelecionado>({ modo: "todas" });
   const [seletorAberto, setSeletorAberto] = useState(false);
   const navigate = useNavigate();
+  const [banners, setBanners] = useState<BannerRow[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -76,15 +78,17 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           .filter((p) => p.origin === "partner")
           .map((p) => p.sourceId);
 
-        const [context, stockMap, loc] = await Promise.all([
+        const [context, stockMap, loc, bs] = await Promise.all([
           loadStoreContext(data),
           loadStockStatus(partnerIds),
           loadStoreLocation(),
+          loadBanners(),
         ]);
         if (!active) return;
         setCtx(context);
         setStock(stockMap);
         setLocal(loc);
+        setBanners(bs);
 
         // "Minha localizacao" vem do cadastro, que o ComplianceGate ja exige.
         // So entra se a cidade do perfil tiver loja - senao abriria vazio.
@@ -221,8 +225,9 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
       {browsing && (
         <StoreBanner
           produtos={products}
+          banners={banners}
           onAbrir={setDetail}
-          onVerCursos={() => navigate({ to: "/student/library" })}
+          onNavegar={(url) => navigate({ to: url })}
         />
       )}
 
@@ -402,6 +407,8 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           onClose={() => setSeletorAberto(false)}
         />
       )}
+
+      <StorePopup banners={banners} onNavegar={(url) => navigate({ to: url })} />
 
       {detail && <DetailSheet product={detail} onClose={() => setDetail(null)} />}
     </div>
