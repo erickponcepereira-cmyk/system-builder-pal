@@ -166,7 +166,8 @@ export function WalletTab() {
   const directAvail = split?.direct.available ?? 0;
   const networkAvail = split?.network.available ?? 0;
   const networkLocked = split?.network.locked ?? true;
-  const withdrawableMax = directAvail + networkAvail;
+  // Fonte única de verdade: o extrato consolidado do banco (mesma base do admin).
+  const withdrawableMax = statement ? statement.available : directAvail + networkAvail;
 
   const requestWithdraw = async () => {
     if (!bank.coachId) return;
