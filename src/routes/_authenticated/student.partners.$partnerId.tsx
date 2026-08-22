@@ -57,11 +57,14 @@ function PartnerProfilePage() {
   useEffect(() => {
     (async () => {
       const [p, pr, ps] = await Promise.all([
-        supabase.from("partners" as never).select("*").eq("id" as never, partnerId).eq("status" as never, "approved" as never).maybeSingle(),
+        // `partners` tem permissão por coluna; a RPC devolve só os campos públicos.
+        supabase.rpc("parceiro_publico" as never, { p_partner_id: partnerId } as never),
         supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,name,description,image_url,image_urls,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).is("deleted_at" as never, null as never).order("kind" as never),
         supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, partnerId).order("created_at" as never, { ascending: false }).limit(30),
       ]);
-      setPartner((p.data as unknown as Partner) || null);
+      const fichas = p.data as unknown as Partner[] | null;
+      setPartner((Array.isArray(fichas) ? fichas[0] : fichas) || null);
+
       setProducts((pr.data as unknown as Product[]) || []);
       setPosts((ps.data as unknown as Post[]) || []);
       setLoading(false);
