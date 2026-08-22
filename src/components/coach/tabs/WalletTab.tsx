@@ -216,6 +216,7 @@ export function WalletTab() {
         withdrawalStatus: wr.status,
       }, ...current].slice(0, 20));
       fetchSplit().then((r) => setSplit(r)).catch(() => {});
+      fetchStatement().then((r) => setStatement(r)).catch(() => {});
 
       toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação do admin.`);
       setOpen(false);
