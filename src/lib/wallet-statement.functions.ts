@@ -10,11 +10,11 @@ export type WalletStatement = {
   availableBeforeAdvance: number;
   /** Adiantamento em aberto (recebeu acima do liberado) — desconta do disponível. */
   advanceOpen: number;
-  /** Em carência (ainda não passou o prazo de liberação). */
+  /** Em carência (a liberar): coach + parceiro + profissional. NÃO inclui rede bloqueada. */
   hold: number;
   /** Rede liberada por prazo, porém bloqueada até bater a missão do mês. */
   networkBlocked: number;
-  /** Total pendente registrado nas carteiras profissionais. */
+  /** Pendente total = carência (hold) + rede bloqueada. */
   pendingTotal: number;
   /** Saques solicitados/aprovados aguardando pagamento. */
   withdrawOpen: number;
@@ -24,6 +24,12 @@ export type WalletStatement = {
   spentWallet: number;
   /** Tudo que já entrou nas carteiras profissionais (sem Fitcoin). */
   totalEarned: number;
+  /** Disponível e carência por origem do dinheiro. */
+  sources: {
+    coach: { available: number; hold: number; earned: number };
+    partner: { available: number; hold: number; earned: number };
+    professional: { available: number; hold: number; earned: number };
+  };
   /** Carteira de indicação (Fitcoin do aluno) — separada, não entra no saldo profissional. */
   fitcoin: { available: number; pending: number; earned: number };
   breakdown: {
@@ -50,6 +56,23 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     withdrawnPaid: n(raw?.withdrawn_paid),
     spentWallet: n(raw?.spent_wallet),
     totalEarned: n(raw?.total_earned),
+    sources: {
+      coach: {
+        available: n(raw?.sources?.coach?.available),
+        hold: n(raw?.sources?.coach?.hold),
+        earned: n(raw?.sources?.coach?.earned),
+      },
+      partner: {
+        available: n(raw?.sources?.partner?.available),
+        hold: n(raw?.sources?.partner?.hold),
+        earned: n(raw?.sources?.partner?.earned),
+      },
+      professional: {
+        available: n(raw?.sources?.professional?.available),
+        hold: n(raw?.sources?.professional?.hold),
+        earned: n(raw?.sources?.professional?.earned),
+      },
+    },
     fitcoin: {
       available: n(raw?.fitcoin?.available),
       pending: n(raw?.fitcoin?.pending),

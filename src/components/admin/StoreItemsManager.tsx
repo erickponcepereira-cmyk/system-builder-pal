@@ -180,7 +180,7 @@ export function StoreItemsManager() {
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
         is_recurring: !!editing.is_recurring,
-        recurrence_interval: editing.is_recurring ? (editing.recurrence_interval || "monthly") : null,
+        recurrence_interval: editing.recurrence_interval === "yearly" && editing.is_recurring ? "yearly" : "monthly",
         recurrence_amount: editing.is_recurring ? Number(editing.recurrence_amount ?? editing.price ?? 0) : null,
         recurrence_trial_days: editing.is_recurring ? Math.max(0, Number(editing.recurrence_trial_days || 0)) : 0,
         recurrence_allow_one_time: editing.is_recurring ? editing.recurrence_allow_one_time !== false : true,

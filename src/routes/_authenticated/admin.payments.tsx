@@ -500,7 +500,7 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
           <div className="p-5 space-y-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Mini label="Disponível" value={fmt(statement ? statement.available : details.wallet.available)} accent />
-              <Mini label="Bloqueado" value={fmt(statement ? statement.hold + statement.networkBlocked : details.wallet.blocked)} />
+              <Mini label="Pendente (carência + rede)" value={fmt(statement ? statement.pendingTotal : details.wallet.blocked)} />
               <Mini label="Total ganho" value={fmt(statement ? statement.totalEarned : details.wallet.totalEarned)} />
               <Mini label="Total sacado" value={fmt(statement ? statement.withdrawnPaid : details.wallet.totalWithdrawn)} />
             </div>
