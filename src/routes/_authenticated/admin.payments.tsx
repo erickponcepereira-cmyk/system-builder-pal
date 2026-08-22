@@ -1027,11 +1027,12 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
               className="md:col-span-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
             />
             <button
-              disabled={busy || !selectedIds.length}
+              disabled={busy || (!selectedIds.length && !selectedOrderIds.length)}
               onClick={submit}
               className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Liberar {selectedIds.length ? fmt(total) : ""}
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Liberar {selectedIds.length + selectedOrderIds.length ? fmt(total) : ""}
+
             </button>
           </div>
         </div>
