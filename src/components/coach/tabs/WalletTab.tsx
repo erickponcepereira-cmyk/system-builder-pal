@@ -14,6 +14,8 @@ import { PendingInfo } from "@/components/PendingInfo";
 import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal, type WithdrawalRequestKind } from "@/lib/withdrawals.functions";
 import { getMyCoachPayoutInfo } from "@/lib/sensitive-fields.functions";
+import { getMyWalletStatement, type WalletStatement } from "@/lib/wallet-statement.functions";
+import { WalletStatementCard } from "@/components/shared/WalletStatementCard";
 
 const MIN_WITHDRAWAL = 50;
 
