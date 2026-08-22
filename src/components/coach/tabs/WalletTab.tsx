@@ -155,6 +155,7 @@ export function WalletTab() {
     })();
     
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
+    fetchStatement().then((r) => setStatement(r)).catch((e) => console.error("getMyWalletStatement failed:", e));
     fetchCareer().then(setCareer).catch(() => {});
     fetchMedals().then(setMedals).catch(() => {});
 
