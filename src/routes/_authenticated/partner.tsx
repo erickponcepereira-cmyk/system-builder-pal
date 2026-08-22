@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
+import { RecurrenceFields, normalizeRecurrence, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -798,6 +798,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
       redemption_location_name: editing.kind === "free" ? (emptyToNull(editing.redemption_location_name) as string | null) : null,
       redemption_location_url: editing.kind === "free" ? (emptyToNull(editing.redemption_location_url) as string | null) : null,
+      ...normalizeRecurrence(editing.kind === "paid" ? (editing as never) : {}, Number((extra.price ?? editing.price) || 0)),
     };
 
     // Aviso ao reduzir as vagas abaixo do que já foi vendido/reservado.
@@ -997,6 +998,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </p>
               ) : null}
               <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                {recurrenceLabel(p as never) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-semibold">{recurrenceLabel(p as never)}</span>
+                )}
                 {p.is_mirrored && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Herbalife (espelho)</span>
                 )}

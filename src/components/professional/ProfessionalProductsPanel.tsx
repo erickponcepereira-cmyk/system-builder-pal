@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { RecurrenceFields } from "@/components/shared/RecurrenceFields";
+import { RecurrenceFields, normalizeRecurrence, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown, Eye, Users } from "lucide-react";
@@ -251,6 +251,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       redemption_location_url: emptyToNull(editing.redemption_location_url) as string | null,
       uses_scheduling: !!editing.uses_scheduling,
       weekly_limit_per_student: Math.max(1, Number(editing.weekly_limit_per_student || 1)),
+      ...normalizeRecurrence(isFree ? {} : (editing as never), Number(editing.price || 0)),
     };
 
     if (editing.is_schedulable) {
@@ -467,6 +468,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>
               )}
               <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                {recurrenceLabel(p as never) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-semibold">{recurrenceLabel(p as never)}</span>
+                )}
                 {p.is_mirrored && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Herbalife (espelho)</span>
                 )}
