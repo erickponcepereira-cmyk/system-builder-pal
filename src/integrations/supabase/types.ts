@@ -15690,6 +15690,7 @@ export type Database = {
         Args: { _profile_id: string; _recalc?: boolean }
         Returns: Json
       }
+      wallets_overview: { Args: never; Returns: Json }
     }
     Enums: {
       chat_permission:
