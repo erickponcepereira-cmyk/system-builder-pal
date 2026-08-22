@@ -5428,6 +5428,7 @@ export type Database = {
           description: string | null
           duration_hours: number | null
           id: string
+          included_for_active_coaches: boolean
           instructor: string | null
           is_featured: boolean | null
           original_price: number | null
@@ -5445,6 +5446,7 @@ export type Database = {
           description?: string | null
           duration_hours?: number | null
           id?: string
+          included_for_active_coaches?: boolean
           instructor?: string | null
           is_featured?: boolean | null
           original_price?: number | null
@@ -5462,6 +5464,7 @@ export type Database = {
           description?: string | null
           duration_hours?: number | null
           id?: string
+          included_for_active_coaches?: boolean
           instructor?: string | null
           is_featured?: boolean | null
           original_price?: number | null
@@ -14803,6 +14806,14 @@ export type Database = {
       }
       can_manage_event: {
         Args: { _event_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_digital_product: {
+        Args: { _digital_product_id: string }
+        Returns: boolean
+      }
+      can_view_digital_product_for: {
+        Args: { _digital_product_id: string; _user_id: string }
         Returns: boolean
       }
       can_withdraw: {

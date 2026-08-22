@@ -30,14 +30,17 @@ immutable
 set search_path = public, pg_temp
 as $$
   select nullif(
-    regexp_replace(
-      lower(translate(coalesce(_texto,''),
-        'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
-        'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')),
-      '\s+', ' ', 'g'
+    trim(
+      regexp_replace(
+        lower(translate(coalesce(_texto,''),
+          'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+          'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')),
+        '\s+', ' ', 'g'
+      )
     ),
   '');
 $$;
+
 
 -- ---------------------------------------------------------------------------
 -- 2. Local canonico por vendedor
