@@ -987,6 +987,38 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
             </div>
           )}
 
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-bold mb-1">
+              Vendas de produto em carência (parceiro/profissional)
+            </p>
+            {orders === null ? (
+              <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-amber-400" /></div>
+            ) : orders.length === 0 ? (
+              <p className="text-xs text-white/50">Nenhuma venda em carência.</p>
+            ) : (
+              <div className="max-h-56 overflow-auto rounded-lg border border-white/5 divide-y divide-white/5">
+                {orders.map((o) => (
+                  <label key={o.id} className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
+                    <input
+                      type="checkbox"
+                      checked={!!selOrders[o.id]}
+                      onChange={(e) => setSelOrders((s) => ({ ...s, [o.id]: e.target.checked }))}
+                    />
+                    <span className="flex-1 text-white/80">
+                      {o.orderNumber || "Pedido"} · {o.origin === "partner" ? "parceiro" : "profissional"}
+                    </span>
+                    <span className="text-white/40">
+                      {o.releasesAt ? `libera ${new Date(o.releasesAt).toLocaleDateString("pt-BR")}` : "—"}
+                    </span>
+                    <span className="font-bold text-white">{fmt(o.amount)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <input
               value={reason}
