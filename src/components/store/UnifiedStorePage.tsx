@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
+import { StoreOrders } from "@/components/store/StoreOrders";
 import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
@@ -370,6 +371,10 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           <Block title="Vitrine" hint={`${showcase.length} itens`}>
             <Grid items={showcase} stock={stock} onOpen={setDetail} />
           </Block>
+
+          {/* Pedidos: a loja antiga mostrava "Meus pedidos" aqui, e depois de
+              comprar e na loja que a pessoa procura o pedido - nao no perfil. */}
+          {browsing && <StoreOrders studentId={ctx.studentId} />}
 
           {/* 8. A navegação de hoje, preservada para quem já sabe usar */}
           {browsing && usableSections.length > 0 && (
