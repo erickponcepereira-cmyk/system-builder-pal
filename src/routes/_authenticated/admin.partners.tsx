@@ -26,14 +26,21 @@ function AdminPartners() {
 
   const load = async () => {
     setLoading(true);
-    const [a, b] = await Promise.all([
-      supabase.from("partners" as never).select("*, profiles(name, email)").order("created_at" as never, { ascending: false }),
-      supabase.from("partner_products" as never).select("*, partners(fantasy_name)").order("created_at" as never, { ascending: false }),
-    ]);
-    setPartners((a.data as unknown as PartnerRow[]) || []);
-    setProducts((b.data as unknown as ProductRow[]) || []);
+    // A tabela `partners` tem restrição por coluna no cliente: a leitura
+    // administrativa acontece no servidor.
+    try {
+      const [a, b] = await Promise.all([
+        listPartnersForApproval(),
+        listPartnerProductsForApproval(),
+      ]);
+      setPartners((a as unknown as PartnerRow[]) || []);
+      setProducts((b as unknown as ProductRow[]) || []);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
     setLoading(false);
   };
+
   useEffect(() => { load(); }, []);
 
   const updatePartner = async (id: string, patch: Partial<PartnerRow>) => {
