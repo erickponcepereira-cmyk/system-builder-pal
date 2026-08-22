@@ -17,6 +17,10 @@ import type { UnifiedCatalog, UnifiedProduct } from "@/lib/unified-store";
 
 export type StoreContext = {
   studentId: string | null;
+  /** Cidade do perfil. E a base de "minha localizacao" na loja: o
+   *  ComplianceGate ja a exige, entao nao precisamos pedir GPS. */
+  currentCity: string | null;
+  currentState: string | null;
   cardValidUntil: string | null;
   cardActive: boolean;
   coachId: string | null;
@@ -35,6 +39,8 @@ export type StoreContext = {
 
 export const EMPTY_CONTEXT: StoreContext = {
   studentId: null,
+  currentCity: null,
+  currentState: null,
   cardValidUntil: null,
   cardActive: false,
   coachId: null,
@@ -71,7 +77,7 @@ export async function loadStoreContext(catalog: UnifiedCatalog): Promise<StoreCo
     if (!user) return ctx;
 
     const { data: profile } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+      .from("profiles").select("id, city, state").eq("user_id", user.id).maybeSingle();
     if (!profile?.id) return ctx;
 
     const { data: student } = await supabase
@@ -82,6 +88,8 @@ export async function loadStoreContext(catalog: UnifiedCatalog): Promise<StoreCo
 
     const stu = student as { id?: string; card_valid_until?: string | null; coach_id?: string | null } | null;
     ctx.studentId = stu?.id ?? null;
+    ctx.currentCity = (profile as { city?: string | null }).city ?? null;
+    ctx.currentState = (profile as { state?: string | null }).state ?? null;
     ctx.cardValidUntil = stu?.card_valid_until ?? null;
     ctx.cardActive = !!stu?.card_valid_until && new Date(stu.card_valid_until).getTime() > Date.now();
     ctx.coachId = stu?.coach_id ?? null;

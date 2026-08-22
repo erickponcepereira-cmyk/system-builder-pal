@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, IdCard, Loader2, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
+import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
   foldText,
@@ -10,6 +10,16 @@ import {
   type UnifiedOrigin,
   type UnifiedProduct,
 } from "@/lib/unified-store";
+import {
+  aplicarLocal,
+  type CidadeComLoja,
+  chaveCidade,
+  contarLocais,
+  EMPTY_LOCATION,
+  loadStoreLocation,
+  type LocalSelecionado,
+  type StoreLocation,
+} from "@/lib/store-location";
 import {
   buildNetwork,
   buildRecommendations,
@@ -47,6 +57,9 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const [query, setQuery] = useState("");
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<UnifiedProduct | null>(null);
+  const [local, setLocal] = useState<StoreLocation>(EMPTY_LOCATION);
+  const [ondeEstou, setOndeEstou] = useState<LocalSelecionado>({ modo: "todas" });
+  const [seletorAberto, setSeletorAberto] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -60,13 +73,21 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           .filter((p) => p.origin === "partner")
           .map((p) => p.sourceId);
 
-        const [context, stockMap] = await Promise.all([
+        const [context, stockMap, loc] = await Promise.all([
           loadStoreContext(data),
           loadStockStatus(partnerIds),
+          loadStoreLocation(),
         ]);
         if (!active) return;
         setCtx(context);
         setStock(stockMap);
+        setLocal(loc);
+
+        // "Minha localizacao" vem do cadastro, que o ComplianceGate ja exige.
+        // So entra se a cidade do perfil tiver loja - senao abriria vazio.
+        const minha = chaveCidade(context.currentCity);
+        const achou = minha ? loc.cidades.find((c) => c.chave === minha) : undefined;
+        if (achou) setOndeEstou({ modo: "cidade", chave: achou.chave, nome: achou.nome, uf: achou.uf });
       } catch (error) {
         console.error("[unified-store] carga", error);
       } finally {
@@ -83,10 +104,16 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     return (catalog?.sections ?? []).filter((s) => used.has(s.id));
   }, [catalog, products]);
 
+  const noLocal = useMemo(() => aplicarLocal(products, local, ondeEstou), [products, local, ondeEstou]);
+
   const filtered = useMemo(
-    () => products.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
-    [products, query, sectionId],
+    () => noLocal.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
+    [noLocal, query, sectionId],
   );
+
+  /** Acabaram os vendedores locais: sobrou so o catalogo nacional. */
+  const semLojaLocal =
+    ondeEstou.modo === "cidade" && contarLocais(products, local, ondeEstou.chave) === 0;
 
   const searching = foldText(query).length > 0;
   const browsing = !searching && !sectionId;
@@ -131,6 +158,27 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           {products.length} produtos de {groupBySeller(products).length} vendedores, numa vitrine só.
         </p>
       </header>
+
+      {/* Barra de local. Fica no topo como no iFood: o que muda o catalogo
+          inteiro precisa estar visivel antes do catalogo. */}
+      {local.cidades.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setSeletorAberto(true)}
+          className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-left"
+        >
+          <MapPin className="h-4 w-4 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Mostrando lojas de
+            </span>
+            <span className="block truncate text-sm font-semibold text-foreground">
+              {ondeEstou.modo === "cidade" ? `${ondeEstou.nome} · ${ondeEstou.uf}` : "Todas as cidades"}
+            </span>
+          </span>
+          <span className="shrink-0 text-[11px] font-bold text-primary">Trocar</span>
+        </button>
+      )}
 
       {catalog?.errors.length ? (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3">
@@ -270,6 +318,36 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             </Block>
           )}
 
+          {/* Acabaram os vendedores locais. O catalogo FitMind e nacional,
+              entao a loja nunca fica vazia — mas precisa dizer o que houve. */}
+          {semLojaLocal && (
+            <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <p className="text-sm font-bold text-amber-500">
+                Ainda não há lojas em {ondeEstou.modo === "cidade" ? ondeEstou.nome : "sua cidade"}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-500/80">
+                Você está vendo o catálogo FitMind, que vale para todo o Brasil. Quer olhar as
+                lojas de outra cidade?
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSeletorAberto(true)}
+                  className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+                >
+                  Explorar outras cidades
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOndeEstou({ modo: "todas" })}
+                  className="rounded-xl border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500"
+                >
+                  Ver tudo
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* 7. Vitrine ordenada por score, empate em ordem alfabética */}
           <Block title="Vitrine" hint={`${showcase.length} itens`}>
             <Grid items={showcase} stock={stock} onOpen={setDetail} />
@@ -300,6 +378,16 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             </Block>
           )}
         </>
+      )}
+
+      {seletorAberto && (
+        <CitySheet
+          cidades={local.cidades}
+          atual={ondeEstou}
+          minhaCidade={chaveCidade(ctx.currentCity)}
+          onPick={(sel) => { setOndeEstou(sel); setSeletorAberto(false); }}
+          onClose={() => setSeletorAberto(false)}
+        />
       )}
 
       {detail && <DetailSheet product={detail} onClose={() => setDetail(null)} />}
@@ -424,6 +512,112 @@ function Card({
         </p>
       )}
     </button>
+  );
+}
+
+/**
+ * Seletor de cidade.
+ *
+ * Ordena por numero de vendedores, nao alfabeticamente: a cidade com mais loja
+ * e a que mais gente procura. A cidade do perfil vem marcada, para a pessoa
+ * reconhecer a dela sem ler a lista toda.
+ */
+function CitySheet({
+  cidades,
+  atual,
+  minhaCidade,
+  onPick,
+  onClose,
+}: {
+  cidades: CidadeComLoja[];
+  atual: LocalSelecionado;
+  minhaCidade: string;
+  onPick: (sel: LocalSelecionado) => void;
+  onClose: () => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const termo = chaveCidade(busca);
+  const lista = termo ? cidades.filter((c) => c.chave.includes(termo)) : cidades;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Escolher cidade"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Onde você quer comprar</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Cursos e protocolos da FitMind aparecem em qualquer cidade.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {cidades.length > 6 && (
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar cidade…"
+            aria-label="Buscar cidade"
+            className="mb-3 w-full rounded-xl border border-border bg-muted px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPick({ modo: "todas" })}
+          className={`mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left ${
+            atual.modo === "todas" ? "border-primary bg-primary/10" : "border-border bg-muted"
+          }`}
+        >
+          <span className="text-sm font-semibold text-foreground">Todas as cidades</span>
+          <span className="text-[10px] text-muted-foreground">sem filtro</span>
+        </button>
+
+        <div className="flex flex-col gap-1.5">
+          {lista.map((c) => {
+            const ativa = atual.modo === "cidade" && atual.chave === c.chave;
+            return (
+              <button
+                key={c.chave + c.uf}
+                type="button"
+                onClick={() => onPick({ modo: "cidade", chave: c.chave, nome: c.nome, uf: c.uf })}
+                className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left ${
+                  ativa ? "border-primary bg-primary/10" : "border-border bg-muted"
+                }`}
+              >
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-foreground">
+                    {c.nome} · {c.uf}
+                  </span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    {c.vendedores} {c.vendedores === 1 ? "vendedor" : "vendedores"}
+                    {c.chave === minhaCidade ? " · sua cidade" : ""}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+          {lista.length === 0 && (
+            <p className="py-6 text-center text-xs text-muted-foreground">
+              Nenhuma cidade encontrada para “{busca}”.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
