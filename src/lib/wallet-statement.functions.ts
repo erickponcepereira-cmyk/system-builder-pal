@@ -4,13 +4,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export type WalletStatement = {
   profileId: string;
   generatedAt: string;
-  /** Pode sacar agora (comissões liberadas + produto criado liberado + indicação), já descontado saques pagos e gastos na carteira. */
+  /** Pode sacar agora (comissões liberadas + produto criado liberado), já descontado adiantamento. NÃO inclui Fitcoin. */
   available: number;
+  /** Disponível antes de descontar o adiantamento em aberto. */
+  availableBeforeAdvance: number;
+  /** Adiantamento em aberto (recebeu acima do liberado) — desconta do disponível. */
+  advanceOpen: number;
   /** Em carência (ainda não passou o prazo de liberação). */
   hold: number;
   /** Rede liberada por prazo, porém bloqueada até bater a missão do mês. */
   networkBlocked: number;
-  /** Total pendente registrado nas carteiras (carência + rede bloqueada + produto criado em carência). */
+  /** Total pendente registrado nas carteiras profissionais. */
   pendingTotal: number;
   /** Saques solicitados/aprovados aguardando pagamento. */
   withdrawOpen: number;
@@ -18,8 +22,10 @@ export type WalletStatement = {
   withdrawnPaid: number;
   /** Valor usado para pagar mensalidade/pedidos com a própria carteira. */
   spentWallet: number;
-  /** Tudo que já entrou (comissões + produto criado + indicação). */
+  /** Tudo que já entrou nas carteiras profissionais (sem Fitcoin). */
   totalEarned: number;
+  /** Carteira de indicação (Fitcoin do aluno) — separada, não entra no saldo profissional. */
+  fitcoin: { available: number; pending: number; earned: number };
   breakdown: {
     commissions: { available: number; pending: number; releasedTotal: number; earned: number; withdrawn: number };
     creator: { available: number; pending: number; earned: number; withdrawn: number };
@@ -35,6 +41,8 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     profileId: String(raw?.profile_id || ""),
     generatedAt: String(raw?.generated_at || new Date().toISOString()),
     available: n(raw?.available),
+    availableBeforeAdvance: n(raw?.available_before_advance),
+    advanceOpen: n(raw?.advance_open),
     hold: n(raw?.hold),
     networkBlocked: n(raw?.network_blocked),
     pendingTotal: n(raw?.pending_total),
@@ -42,6 +50,11 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     withdrawnPaid: n(raw?.withdrawn_paid),
     spentWallet: n(raw?.spent_wallet),
     totalEarned: n(raw?.total_earned),
+    fitcoin: {
+      available: n(raw?.fitcoin?.available),
+      pending: n(raw?.fitcoin?.pending),
+      earned: n(raw?.fitcoin?.earned),
+    },
     breakdown: {
       commissions: {
         available: n(b?.commissions?.available),
@@ -64,6 +77,7 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     },
   };
 }
+
 
 /** Extrato consolidado (fonte única de verdade) para um perfil. Recalcula antes de ler. */
 export async function loadWalletStatement(profileId: string): Promise<WalletStatement> {
