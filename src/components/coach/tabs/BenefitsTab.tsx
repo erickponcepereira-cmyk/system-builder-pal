@@ -13,6 +13,8 @@ import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { loadPartnersById } from "@/lib/partner-public";
+import { InactiveCardModal } from "@/components/student/InactiveCardModal";
+
 
 
 type PartnerFreeProduct = {
@@ -620,7 +622,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); refetchUsage(); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
         />
       )}
+
+      {showCardBlock && <InactiveCardModal onClose={() => setShowCardBlock(false)} validUntil={cardValidUntil} />}
     </>
+
   );
 }
 
