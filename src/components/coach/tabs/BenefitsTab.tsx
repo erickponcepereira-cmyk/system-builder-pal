@@ -111,17 +111,29 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         }
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address,whatsapp,public_whatsapp)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,partner_id" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
         .is("deleted_at" as never, null as never)
         .order("sort_order" as never, { ascending: true } as never)
         .order("created_at" as never, { ascending: false });
-      const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
+      if (error) {
+        console.error("[BenefitsTab] partner_products", error);
+        setLoadError(error.message || "Erro desconhecido ao carregar benefícios.");
+        setLoading(false);
+        return;
+      }
+      setLoadError(null);
+      const rawProducts = (data as unknown as PartnerFreeProduct[]) || [];
+      const partnerMap = await loadPartnersById(Array.from(new Set(rawProducts.map((p) => p.partner_id).filter(Boolean))));
+      const pf = rawProducts
+        .map((p) => ({ ...p, partners: partnerMap.get(p.partner_id) ?? null }))
+        .filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);
+
 
       // Fetch schedules for the products we display
       const ids = pf.map((p) => p.id);
