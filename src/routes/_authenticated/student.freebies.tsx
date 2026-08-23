@@ -203,7 +203,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id,partners(fantasy_name,photo_url,status,business_area,address,whatsapp,public_whatsapp)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -222,11 +222,19 @@ function StudentFreebies() {
       supabase.from("store_categories" as never).select("id,section_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
       supabase.from("store_subcategories" as never).select("id,category_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
     ]);
+    if (c.error) console.error("[student.freebies] partner_products", c.error);
+    if (d.error) console.error("[student.freebies] professional_products", d.error);
+    setLoadError(c.error?.message || d.error?.message || null);
     setItems((a.data as unknown as Freebie[]) || []);
     setMine((b.data as unknown as Redemption[]) || []);
-    const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
+    const rawProducts = (c.data as unknown as PartnerFreeProduct[]) || [];
+    const partnerMap = await loadPartnersById(Array.from(new Set(rawProducts.map((p) => p.partner_id).filter(Boolean))));
+    const pf = rawProducts
+      .map((p) => ({ ...p, partners: (partnerMap.get(p.partner_id) as PartnerFreeProduct["partners"]) ?? null }))
+      .filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
     setProfessionalFreebies((d.data as unknown as ProfessionalFreeProduct[]) || []);
+
     setSections((secRes.data as unknown as StoreSection[]) || []);
     setCategories((catRes.data as unknown as StoreCategory[]) || []);
     setSubcategories((subRes.data as unknown as StoreSubcategory[]) || []);
