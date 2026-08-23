@@ -576,7 +576,7 @@ function StudentFreebies() {
                                   {p.uses_scheduling && !isDiscount ? (
                                     <button
                                       type="button"
-                                      onClick={() => setBookingProduct(p)}
+                                      onClick={() => openBooking(p)}
                                       className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground"
                                     >
                                       <Clock className="h-3.5 w-3.5" /> Reservar horário
