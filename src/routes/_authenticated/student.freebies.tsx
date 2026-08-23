@@ -266,7 +266,9 @@ function StudentFreebies() {
   useEffect(() => { load(); }, []);
 
   const redeem = async (id: string) => {
+    if (!requireCard()) return;
     setRedeeming(id);
+
     const { error } = await supabase.rpc("redeem_freebie" as never, { _freebie_id: id } as never);
     setRedeeming(null);
     if (error) return toast.error(error.message);
@@ -332,21 +334,31 @@ function StudentFreebies() {
       </div>
 
       <div className="p-4">
+        {!loading && !cardActive && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+            <p className="text-[11px] text-yellow-100/80">
+              Sua carteirinha está inativa — você pode ver os benefícios, mas o resgate fica bloqueado.
+            </p>
+          </div>
+        )}
         {loading ? (
           <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-primary" />
-        ) : !cardActive ? (
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 text-center">
-            <ShieldAlert className="mx-auto h-8 w-8 text-yellow-400" />
-            <p className="mt-3 text-sm font-bold text-white">Sua carteirinha está inativa</p>
-            <p className="mt-1 text-xs text-white/60">
-              Para acessar o portal de gratuitos é necessário ter a carteirinha ativa. Compre um plano ou produto para ativar.
-            </p>
-            <Link to="/student/store" className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
-              Ver loja
-            </Link>
+        ) : loadError ? (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
+            <p className="text-sm font-bold text-red-300">Não foi possível carregar os benefícios</p>
+            <p className="mt-1 break-words text-xs text-red-200/70">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
+            >
+              Tentar de novo
+            </button>
           </div>
         ) : (
           <>
+
             {/* QR actions */}
             <div className="mb-5 grid grid-cols-2 gap-3">
               <button
