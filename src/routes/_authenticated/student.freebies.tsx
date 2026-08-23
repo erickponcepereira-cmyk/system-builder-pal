@@ -511,7 +511,7 @@ function StudentFreebies() {
                           return (
                             <div
                               key={p.id}
-                              className="text-left rounded-2xl overflow-hidden border border-white/5 block relative"
+                              className={`text-left rounded-2xl overflow-hidden border border-white/5 block relative ${cardActive ? "" : "opacity-80"}`}
                               style={{ backgroundColor: "#1A1A1A" }}
                             >
                               {isDiscount && p.discount_percent ? (
@@ -621,7 +621,7 @@ function StudentFreebies() {
                       const proName = p.coaches?.profiles?.name || "Profissional";
                       const proAvatar = p.coaches?.profiles?.avatar_url || null;
                       return (
-                        <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
+                        <div key={p.id} className={`text-left rounded-2xl overflow-hidden border border-white/5 block relative ${cardActive ? "" : "opacity-80"}`} style={{ backgroundColor: "#1A1A1A" }}>
                           {isDiscount && p.discount_percent ? (
                             <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-lg">
                               {p.discount_percent}% OFF
