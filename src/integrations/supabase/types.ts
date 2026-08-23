@@ -16079,6 +16079,7 @@ export type Database = {
         Returns: undefined
       }
       run_stats: { Args: { _profile_id: string }; Returns: Json }
+      saldo_disponivel: { Args: { _profile_id: string }; Returns: number }
       search_approved_coaches: {
         Args: { _limit?: number; _query?: string }
         Returns: {
