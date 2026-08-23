@@ -305,7 +305,19 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
 
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-            {(() => {
+            {loadError ? (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                <p className="text-sm font-bold text-red-300">Não foi possível carregar os benefícios</p>
+                <p className="mt-1 break-words text-xs text-red-200/70">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
+                >
+                  Tentar de novo
+                </button>
+              </div>
+            ) : (() => {
               const list = partnerFreebies.filter((p) =>
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
               );
@@ -323,9 +335,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     return (
                       <div
                         key={p.id}
-                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full"
+                        className={`text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full ${cardActive ? "" : "opacity-80"}`}
                         style={{ backgroundColor: "#0F0F0F" }}
                       >
+
                         {isDiscount && p.discount_percent ? (
                           <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-xs font-extrabold px-2.5 py-1 rounded-lg shadow-lg">
                             {p.discount_percent}% OFF
