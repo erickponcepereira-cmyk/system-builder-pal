@@ -12,6 +12,8 @@ import { StudentFreebieReservations } from "@/components/student/StudentFreebieR
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { loadPartnersById } from "@/lib/partner-public";
+
 
 type PartnerFreeProduct = {
   id: string;
@@ -69,6 +71,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [schedulesByProduct, setSchedulesByProduct] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showCardBlock, setShowCardBlock] = useState(false);
+
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [openBenefit, setOpenBenefit] = useState<PartnerFreeProduct | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
