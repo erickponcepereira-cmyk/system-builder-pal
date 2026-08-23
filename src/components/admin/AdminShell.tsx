@@ -20,6 +20,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle, perm: "inactivity" },
   { to: "/admin/students", label: "Alunos", icon: Users, perm: "students" },
   { to: "/admin/student-trace", label: "Rastrear aluno", icon: Search, perm: "students" },
+  { to: "/admin/carteirinha", label: "Carteirinha", icon: IdCard, perm: "students" },
   { to: "/admin/users", label: "Admins", icon: ShieldCheck, perm: "users" },
   
   { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart, perm: "orders" },
