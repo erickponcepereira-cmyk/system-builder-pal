@@ -864,6 +864,8 @@ function StudentFreebies() {
           </div>
         </div>
       )}
+
+      {showCardBlock && <InactiveCardModal onClose={() => setShowCardBlock(false)} validUntil={cardValidUntil} />}
     </div>
   );
 }
