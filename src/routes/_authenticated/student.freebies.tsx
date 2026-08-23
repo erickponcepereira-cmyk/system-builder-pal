@@ -13,6 +13,9 @@ import { StudentFreebieReservations } from "@/components/student/StudentFreebieR
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { loadPartnersById } from "@/lib/partner-public";
+import { InactiveCardModal } from "@/components/student/InactiveCardModal";
+
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
