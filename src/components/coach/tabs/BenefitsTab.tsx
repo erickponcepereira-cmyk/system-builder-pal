@@ -174,9 +174,22 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     })();
   }, []);
 
+  const requireCard = () => {
+    if (cardActive) return true;
+    setShowCardBlock(true);
+    return false;
+  };
+
+  const openBooking = (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
+    setBookingProduct(p);
+  };
+
   const generateCoupon = async (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+
     setGenerating(null);
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
