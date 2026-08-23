@@ -5,7 +5,7 @@ import {
   Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare, Bot,
 
   Blocks, MessageCircle,
-  Image,
+  Image, IdCard,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
