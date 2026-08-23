@@ -132,9 +132,23 @@ function StudentFreebies() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showCardBlock, setShowCardBlock] = useState(false);
   const { usage, refetchUsage } = useFreebieUsage();
 
+  const requireCard = () => {
+    if (cardActive) return true;
+    setShowCardBlock(true);
+    return false;
+  };
+
+  const openBooking = (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
+    setBookingProduct(p);
+  };
+
   const generateCoupon = async (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
     setGenerating(null);
@@ -146,6 +160,7 @@ function StudentFreebies() {
   };
 
   const generateProCoupon = async (p: ProfessionalFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_professional_coupon" as never, { p_professional_product_id: p.id } as never);
     setGenerating(null);
@@ -155,6 +170,7 @@ function StudentFreebies() {
     setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: null, locationUrl: null });
     refetchUsage();
   };
+
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
