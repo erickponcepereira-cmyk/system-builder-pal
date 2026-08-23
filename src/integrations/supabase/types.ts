@@ -1522,6 +1522,30 @@ export type Database = {
           },
         ]
       }
+      auditoria_fechamento_rede_202607: {
+        Row: {
+          congelado_em: string | null
+          disponivel_antes: number | null
+          name: string | null
+          pendente_antes: number | null
+          profile_id: string | null
+        }
+        Insert: {
+          congelado_em?: string | null
+          disponivel_antes?: number | null
+          name?: string | null
+          pendente_antes?: number | null
+          profile_id?: string | null
+        }
+        Update: {
+          congelado_em?: string | null
+          disponivel_antes?: number | null
+          name?: string | null
+          pendente_antes?: number | null
+          profile_id?: string | null
+        }
+        Relationships: []
+      }
       bioimpedance_evaluations: {
         Row: {
           bmi: number | null
