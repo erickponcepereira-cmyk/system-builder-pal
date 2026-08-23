@@ -431,7 +431,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             <button
                               type="button"
                               onClick={() => {
-                                if (isScheduled && !isDiscount) setBookingProduct(p);
+                                if (isScheduled && !isDiscount) openBooking(p);
                                 else generateCoupon(p);
                               }}
                               disabled={generating === p.id}
@@ -589,7 +589,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     const p = openBenefit;
                     const scheduled = (schedulesByProduct[p.id] || []).length > 0;
                     setOpenBenefit(null);
-                    if (scheduled && p.redemption_mode !== "discount") setBookingProduct(p);
+                    if (scheduled && p.redemption_mode !== "discount") openBooking(p);
                     else generateCoupon(p);
                   }}
                   disabled={generating === openBenefit.id}
