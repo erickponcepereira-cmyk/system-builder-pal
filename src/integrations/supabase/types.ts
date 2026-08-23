@@ -7081,6 +7081,70 @@ export type Database = {
           },
         ]
       }
+      membership_card_overrides: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          escopo: string
+          id: string
+          motivo: string | null
+          profile_id: string
+          revogado_em: string | null
+          revogado_por: string | null
+          valido_ate: string
+          valor_anterior: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          escopo: string
+          id?: string
+          motivo?: string | null
+          profile_id: string
+          revogado_em?: string | null
+          revogado_por?: string | null
+          valido_ate: string
+          valor_anterior?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          escopo?: string
+          id?: string
+          motivo?: string | null
+          profile_id?: string
+          revogado_em?: string | null
+          revogado_por?: string | null
+          valido_ate?: string
+          valor_anterior?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_card_overrides_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_card_overrides_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_card_overrides_revogado_por_fkey"
+            columns: ["revogado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercadopago_payments: {
         Row: {
           amount: number
@@ -15008,6 +15072,21 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      carteirinha_definir_excecao: {
+        Args: {
+          _admin_user_id: string
+          _escopo: string
+          _motivo: string
+          _profile_id: string
+          _valido_ate: string
+        }
+        Returns: Json
+      }
+      carteirinha_revogar_excecao: {
+        Args: { _admin_user_id: string; _override_id: string }
+        Returns: Json
+      }
+      carteirinha_situacao: { Args: { _profile_id: string }; Returns: Json }
       catalogo_publico: {
         Args: never
         Returns: {
