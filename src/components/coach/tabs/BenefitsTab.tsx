@@ -209,24 +209,23 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         <p className="text-sm text-white/50">Brindes e descontos de empresas parceiras aprovados pelo admin</p>
       </div>
 
+      {!loading && !cardActive && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+          <p className="text-[11px] text-yellow-100/80">
+            Sua carteirinha está inativa — você pode ver os benefícios, mas o resgate fica bloqueado.
+            {cardValidUntil ? ` Validade anterior: ${new Date(cardValidUntil).toLocaleDateString("pt-BR")}.` : ""}
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-sm text-white/50">Carregando...</p>
         </div>
-      ) : !cardActive ? (
-        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 text-center">
-          <ShieldAlert className="mx-auto h-8 w-8 text-yellow-400" />
-          <p className="mt-3 text-sm font-bold text-white">Sua carteirinha de coach está inativa</p>
-          <p className="mt-1 text-xs text-white/60">
-            Para acessar o portal de gratuitos é necessário ter a carteirinha ativa. Renove comprando o curso de coach ou solicite ativação ao admin.
-          </p>
-          {cardValidUntil && (
-            <p className="mt-2 text-[11px] text-white/40">Validade anterior: {new Date(cardValidUntil).toLocaleDateString("pt-BR")}</p>
-          )}
-        </div>
       ) : (
         <>
+
           {(() => {
             const filteredPartner = partnerFreebies.filter((p) =>
               pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
