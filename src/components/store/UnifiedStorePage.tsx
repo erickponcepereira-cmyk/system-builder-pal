@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { WalletPayButton } from "@/components/payments/WalletPayButton";
+import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
+import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
@@ -38,9 +43,19 @@ import {
 } from "@/lib/store-personalization";
 import {
   type CartItem,
+  exigeEntrega,
   type OrderStep,
   useCarrinho,
 } from "@/lib/store-cart";
+import {
+  criarProximoPedido,
+  faltaParaEntrega,
+  limparErroDeCheckout,
+  type PayOrder,
+  type PaymentMethod,
+  SHIPPING_VAZIO,
+  type ShippingForm,
+} from "@/lib/store-checkout";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -78,6 +93,15 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   // Mesmo carrinho da loja atual — mesma chave de storage, mesmo formato de
   // item. Quem montou o carrinho lá encontra ele aqui, e vice-versa.
   const carrinho = useCarrinho(audience);
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const [shipping, setShipping] = useState<ShippingForm>(SHIPPING_VAZIO);
+  const [aceitouPrazo, setAceitouPrazo] = useState(false);
+  const [aceitouEndereco, setAceitouEndereco] = useState(false);
+  const [criandoPedido, setCriandoPedido] = useState(false);
+  const [payOrder, setPayOrder] = useState<PayOrder | null>(null);
+  const [comprado, setComprado] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
+  const attachShipping = useServerFn(attachShippingToOrder);
 
   // As tres regras de visibilidade. Faltar qualquer uma e vazamento de
   // catalogo entre redes, nao falta de recurso.
@@ -175,6 +199,77 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     setCarrinhoAberto(true);
   };
 
+  const precisaEntrega = exigeEntrega(carrinho.cart);
+
+  /**
+   * Cria o próximo pedido do carrinho e abre o pagamento.
+   *
+   * Um pedido por vez, porque a cobrança é uma por pedido. O que sobrar no
+   * carrinho continua lá e a próxima rodada começa quando esta fechar.
+   */
+  const finalizar = async () => {
+    if (carrinho.cart.length === 0 || criandoPedido) return;
+    if (audience === "coach") {
+      toast.error("Venda como coach ainda não está ligada nesta vitrine. Use a loja atual.");
+      return;
+    }
+    if (precisaEntrega && carrinho.steps[0]?.key === "fitmind") {
+      const falta = faltaParaEntrega(shipping, aceitouPrazo, aceitouEndereco);
+      if (falta) { toast.error(falta); return; }
+    }
+
+    setCriandoPedido(true);
+    try {
+      const pedido = await criarProximoPedido({
+        cart: carrinho.cart,
+        paymentMethod,
+        shipping,
+        studentId: ctx.studentId,
+        attachShipping,
+      });
+      if (!pedido) return;
+      setCarrinhoAberto(false);
+      setPayOrder(pedido);
+    } catch (erro) {
+      toast.error(limparErroDeCheckout(erro));
+    } finally {
+      setCriandoPedido(false);
+    }
+  };
+
+  /** Itens pagos no formato do pop-up de compra aprovada. */
+  const itensComprados = (ids: string[]): PurchasedItem[] =>
+    carrinho.cart
+      .filter((item) => ids.includes(item.id))
+      .map((item) => ({
+        productId: item.kind === "partner" || item.kind === "partner_company" ? item.sourceId : null,
+        productName: item.title,
+        price: item.price * item.quantity,
+        kind: item.kind === "partner_company" ? "partner" : item.kind === "partner" ? "professional" : "fitmind",
+        slotLabel: item.scheduledSlot
+          ? new Date(item.scheduledSlot).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+          : null,
+      }));
+
+  /** Pagou: tira do carrinho o que este pedido cobria e mostra a aprovação. */
+  const aoPagar = () => {
+    const ids = payOrder?.paidItemIds || [];
+    setComprado({ items: itensComprados(ids), buyerName: payOrder?.name || null });
+    carrinho.limpar(ids);
+    if (payOrder?.sourceKind === "store_order") {
+      setShipping(SHIPPING_VAZIO);
+      setAceitouPrazo(false);
+      setAceitouEndereco(false);
+    }
+    setPayOrder(null);
+  };
+
+  /** Sobrou item: reabre o carrinho, que é onde o próximo pedido começa. */
+  const fecharAprovacao = () => {
+    setComprado(null);
+    if (carrinho.cart.length > 0) setCarrinhoAberto(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -189,9 +284,9 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-500">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            <b>Vitrine de teste.</b> Dados reais de produção. Nada aqui cria pedido nem cobra —
-            o carrinho é o mesmo da loja atual e o que você montar aqui aparece lá. Visível
-            apenas para master admin.
+            <b>Vitrine de teste, com compra de verdade.</b> Dados reais de produção: o pedido
+            é criado e o pagamento é cobrado como em qualquer outra tela. O carrinho é o mesmo
+            da loja atual. Visível apenas para master admin.
           </span>
         </p>
       </div>
@@ -487,6 +582,40 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           onQuantidade={carrinho.alterarQuantidade}
           onRemover={carrinho.remover}
           onClose={() => setCarrinhoAberto(false)}
+          checkout={{
+            paymentMethod,
+            onPaymentMethod: setPaymentMethod,
+            precisaEntrega,
+            shipping,
+            onShipping: (patch) => setShipping((atual) => ({ ...atual, ...patch })),
+            aceitouPrazo,
+            onAceitouPrazo: setAceitouPrazo,
+            aceitouEndereco,
+            onAceitouEndereco: setAceitouEndereco,
+            criando: criandoPedido,
+            onFinalizar: finalizar,
+            bloqueio: audience === "coach"
+              ? "Venda como coach ainda não está ligada aqui — falta o seletor de aluno. Use a loja atual."
+              : null,
+          }}
+        />
+      )}
+
+      {payOrder && (
+        <PaySheet
+          order={payOrder}
+          paymentMethod={paymentMethod}
+          restante={carrinho.steps.length - 1}
+          onPaid={aoPagar}
+          onClose={() => setPayOrder(null)}
+        />
+      )}
+
+      {comprado && (
+        <PurchaseSuccessModal
+          items={comprado.items}
+          buyerName={comprado.buyerName}
+          onClose={fecharAprovacao}
         />
       )}
     </div>
@@ -795,8 +924,8 @@ function DetailSheet({
         )}
 
         <p className="mt-3 rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
-          Vitrine de teste: o carrinho é o mesmo da loja atual, então o que você montar aqui
-          aparece lá. O pagamento ainda acontece na loja atual.
+          O carrinho é o mesmo da loja atual: o que você montar aqui aparece lá, e o contrário
+          também.
         </p>
       </div>
     </div>
@@ -810,6 +939,34 @@ function DetailSheet({
  * rodapé: é informação que muda a decisão de comprar, e no rodapé ela chega
  * depois de a pessoa já ter decidido.
  */
+type CheckoutProps = {
+  paymentMethod: PaymentMethod;
+  onPaymentMethod: (method: PaymentMethod) => void;
+  precisaEntrega: boolean;
+  shipping: ShippingForm;
+  onShipping: (patch: Partial<ShippingForm>) => void;
+  aceitouPrazo: boolean;
+  onAceitouPrazo: (valor: boolean) => void;
+  aceitouEndereco: boolean;
+  onAceitouEndereco: (valor: boolean) => void;
+  criando: boolean;
+  onFinalizar: () => void;
+  /** Por que não dá para comprar agora, ou `null`. */
+  bloqueio: string | null;
+};
+
+const CAMPOS_ENTREGA: Array<{ campo: keyof ShippingForm; label: string }> = [
+  { campo: "name", label: "Nome" },
+  { campo: "phone", label: "Telefone" },
+  { campo: "zip", label: "CEP" },
+  { campo: "address", label: "Logradouro" },
+  { campo: "number", label: "Número" },
+  { campo: "city", label: "Cidade" },
+  { campo: "state", label: "UF" },
+  { campo: "reference", label: "Referência (ex.: portão azul)" },
+  { campo: "location_url", label: "Link do mapa (opcional)" },
+];
+
 function CartSheet({
   cart,
   subtotal,
@@ -817,6 +974,7 @@ function CartSheet({
   onQuantidade,
   onRemover,
   onClose,
+  checkout,
 }: {
   cart: CartItem[];
   subtotal: number;
@@ -824,8 +982,11 @@ function CartSheet({
   onQuantidade: (id: string, delta: number) => void;
   onRemover: (id: string) => void;
   onClose: () => void;
+  checkout: CheckoutProps;
 }) {
   const multiplo = steps.length > 1;
+  /** O primeiro pedido é o da FitMind? É ele que leva o endereço. */
+  const entregaAgora = steps[0]?.key === "fitmind";
 
   return (
     <div
@@ -935,15 +1096,84 @@ function CartSheet({
         )}
 
         {cart.length > 0 && (
-          <div className="mt-3 rounded-xl bg-muted p-3">
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="text-muted-foreground">Total</span>
-              <b className="tabular-nums text-primary">{fmt(subtotal)}</b>
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {(["pix", "credit_card", "debit_card"] as PaymentMethod[]).map((metodo) => (
+                <button
+                  key={metodo}
+                  type="button"
+                  onClick={() => checkout.onPaymentMethod(metodo)}
+                  aria-pressed={checkout.paymentMethod === metodo}
+                  className={`rounded-xl px-2 py-2 text-xs font-bold transition ${
+                    checkout.paymentMethod === metodo
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {metodo === "pix" ? "PIX" : metodo === "credit_card" ? "Crédito" : "Débito"}
+                </button>
+              ))}
             </div>
-            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-              Taxas de cartão são aplicadas no checkout, não aqui.
-            </p>
-          </div>
+
+            {checkout.precisaEntrega && (
+              <div className="mt-3 grid gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-bold text-primary">Entrega (produto físico)</p>
+                {!entregaAgora && (
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    O endereço vale para o pedido da FitMind, que é o último da fila. Os pedidos
+                    de parceiro vêm antes e não têm entrega.
+                  </p>
+                )}
+                {CAMPOS_ENTREGA.map(({ campo, label }) => (
+                  <input
+                    key={campo}
+                    value={checkout.shipping[campo] || ""}
+                    onChange={(event) => checkout.onShipping({ [campo]: event.target.value })}
+                    placeholder={label}
+                    aria-label={label}
+                    className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                ))}
+                <label className="mt-1 flex items-start gap-2 text-[11px] text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={checkout.aceitouPrazo}
+                    onChange={(event) => checkout.onAceitouPrazo(event.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Aceito que o produto será entregue neste endereço, respeitando o prazo médio
+                    informado pelo vendedor.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-[11px] text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={checkout.aceitouEndereco}
+                    onChange={(event) => checkout.onAceitouEndereco(event.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>Declaro que preenchi corretamente os dados de localização.</span>
+                </label>
+              </div>
+            )}
+
+            <div className="mt-3 rounded-xl bg-muted p-3">
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-muted-foreground">Total</span>
+                <b className="tabular-nums text-primary">{fmt(subtotal)}</b>
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                Taxas de cartão são aplicadas no checkout, não aqui.
+              </p>
+            </div>
+          </>
+        )}
+
+        {checkout.bloqueio && cart.length > 0 && (
+          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
+            {checkout.bloqueio}
+          </p>
         )}
 
         <div className="modal-foot -mx-5 -mb-5 mt-3 flex gap-2 px-5 pb-5 pt-3">
@@ -956,18 +1186,90 @@ function CartSheet({
           </button>
           <button
             type="button"
-            disabled
-            title="O pagamento ainda acontece na loja atual"
-            className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            onClick={checkout.onFinalizar}
+            disabled={cart.length === 0 || checkout.criando || !!checkout.bloqueio}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
-            {multiplo ? `Pagar 1 de ${steps.length}` : "Finalizar"}
+            {checkout.criando
+              ? "Processando…"
+              : multiplo
+                ? `Pagar 1 de ${steps.length}`
+                : "Finalizar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Pagamento de um pedido.
+ *
+ * Diz quantos pedidos ainda faltam. Sem isso, quem paga o primeiro de três
+ * acha que terminou — e é exatamente aí que a compra é abandonada.
+ */
+function PaySheet({
+  order,
+  paymentMethod,
+  restante,
+  onPaid,
+  onClose,
+}: {
+  order: PayOrder;
+  paymentMethod: PaymentMethod;
+  restante: number;
+  onPaid: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="modal-safe fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-background/80 p-4 backdrop-blur-sm sm:items-center"
+      role="presentation"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pagamento"
+      >
+        <div className="modal-head -mx-5 -mt-5 mb-4 flex items-center justify-between px-5 pb-3 pt-5">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Pagamento</h2>
+            <p className="text-xs text-muted-foreground">Pedido {order.number || "—"}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground"
+          >
+            Fechar
           </button>
         </div>
 
-        <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground">
-          O botão de pagar ainda não está ligado nesta vitrine. Seu carrinho está salvo e abre
-          igual na loja atual, onde a compra se conclui.
-        </p>
+        {restante > 0 && (
+          <p className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
+            Este é o pedido de um vendedor. Ainda {restante === 1 ? "falta 1 pedido" : `faltam ${restante} pedidos`}{" "}
+            depois deste — o próximo abre assim que você concluir.
+          </p>
+        )}
+
+        <div className="mb-3">
+          <WalletPayButton
+            orderId={order.id}
+            amount={order.total}
+            kind={order.sourceKind === "store_order" ? "store" : "partner"}
+            onPaid={onPaid}
+          />
+        </div>
+
+        <MercadoPagoCheckout
+          source={{ kind: order.sourceKind, id: order.id }}
+          amount={order.total}
+          description={`Pedido ${order.number}`}
+          defaultPayer={{ email: order.email, name: order.name }}
+          initialMethod={paymentMethod === "pix" ? "pix" : "card"}
+          onApproved={() => { toast.success("Pagamento aprovado!"); onPaid(); }}
+        />
       </div>
     </div>
   );
