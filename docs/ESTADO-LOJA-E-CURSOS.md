@@ -1,7 +1,7 @@
 # Estado da loja nova e da área de membros
 
-Documento de continuidade. Escrito em 22/08/2026 para que nada do que foi
-descoberto ou construído se perca entre sessões.
+Documento de continuidade. Escrito em 22/08/2026 e atualizado em 23/08/2026,
+para que nada do que foi descoberto ou construído se perca entre sessões.
 
 Repositório de trabalho: `C:\dev\fitmind-bugs`, branch `main`.
 Existe outra cópia em `C:\dev\fitmind` (`feat/mobile-shell`) — **não é a usada**.
@@ -55,7 +55,7 @@ tabela inexistente devolve `404 PGRST205`, sem permissão devolve `401/42501`.
 
 ## 2. O que já está no ar
 
-### Loja nova (`UnifiedStorePage`, 713 linhas) — ainda atrás do gate de teste
+### Loja nova (`UnifiedStorePage`) — atrás do gate de teste, **e já vende**
 
 | Peça | Arquivo | Situação |
 |---|---|---|
@@ -67,6 +67,13 @@ tabela inexistente devolve `404 PGRST205`, sem permissão devolve `401/42501`.
 | Banner + popup do admin | `src/lib/store-banners.ts`, `StoreBanner.tsx` | pronto |
 | Histórico de pedidos | `StoreOrders.tsx` | pronto |
 | Admin de banners | `src/routes/_authenticated/admin.banners.tsx` | pronto |
+| **Carrinho** (estado, storage, quantidade) | `src/lib/store-cart.ts` | pronto |
+| **Checkout do aluno** | `src/lib/store-checkout.ts` | pronto |
+| Checkout do coach | — | **falta** (precisa do seletor de aluno) |
+
+**Desde 23/08 a loja nova cria pedido e cobra de verdade.** O aviso do topo
+diz isso. O gate continua sendo `is_master_admin`, então o alcance é Erick e
+Nathan — mas não é mais uma tela de leitura.
 
 ### Área de membros — **em produção, sem gate**
 
@@ -122,9 +129,19 @@ Cada uma custou investigação. Não redescubra.
 
 ### Loja
 
-- **A loja nova não vende.** `UnifiedStorePage` não tem carrinho nem checkout.
-  Grep confirmou zero ocorrências de `MercadoPagoCheckout`, `PurchaseSuccessModal`,
-  `localStorage` e de todas as RPCs de pedido.
+- **As duas lojas dividem o mesmo carrinho** — mesma chave de `localStorage` e
+  mesmo array. Isso é de propósito (carrinho montado antes do cadastro precisa
+  sobreviver ao login), mas cria uma armadilha: **o formato do item é um
+  contrato entre as duas telas.** `store-cart.ts` grava um superconjunto do que
+  `StorePage` lê, e o `id` segue a convenção da loja atual.
+- **A única divergência de nome entre as duas é `plan-` × `challenge-`.** O
+  mesmo produto legado é `plan-<id>` na loja atual e `challenge-<id>` no
+  catálogo unificado. `cartIdDoProduto` traduz para `plan-`; sem isso o mesmo
+  produto vira duas linhas ao trocar de tela. Os outros cinco prefixos batem.
+- **A loja pública usa outra chave** (`fitmind_public_cart`). Quem faz a ponte
+  é um efeito de importação em `StorePage.tsx:527-551`, que casa por id e
+  chama `clearPublicCart`. **A loja nova não importa o carrinho público** — não
+  perde nada (o público fica onde está), mas também não aproveita.
 - **`StorePage.tsx` tem ~1854 linhas** e ainda opera com as duas abas
   (`storeTab: "fitmind" | "market"`).
 - **Bug do carrinho multi-vendedor (produção):** `StorePage.tsx:678` pega
@@ -223,6 +240,11 @@ Para quem continuar não repetir e para o histórico ser honesto.
    cidade de todo profissional. Está revogada de `anon` e `authenticated`.
 5. **Recomendei um REVOKE que teria quebrado o painel do parceiro** (item da
    seção de segurança acima).
+6. **Quase deixei o aviso mentir.** O topo da loja nova dizia "somente leitura —
+   nada aqui compra nem altera pedido". Ao ligar o checkout, essa frase virou
+   mentira na cara de quem estava comprando. Foi trocada no mesmo commit. A
+   lição vale além deste caso: **aviso de ambiente é código**, e envelhece junto
+   com o que ele descreve.
 
 ---
 
@@ -233,24 +255,36 @@ Para quem continuar não repetir e para o histórico ser honesto.
 Ordem sugerida. **A decisão do dono foi copiar de `StorePage`, não extrair**, para
 não tocar no que está vendendo. Unificar depois, quando a nova provar-se.
 
-1. **Carrinho** — estado, persistência em `localStorage`, add/remove/quantidade.
-   **A chave não pode mudar:** `fitmind_cart_student` / `fitmind_cart_coach`. É
-   ela que faz o carrinho sobreviver ao cadastro, ligando a loja pública à logada.
-2. **Checkout** — copiar `checkoutAsStudent` (`StorePage.tsx:667-792`) e
-   `checkoutAsCoach` (a partir de ~`:795`). Inclui frete, `ensureOrderNumber`,
-   `payOrder`, `MercadoPagoCheckout`, `PurchaseSuccessModal` e limpeza por
-   `paidItemIds`. **Levar junto `planOrderSteps` e o aviso de N pedidos.**
-3. **Modo coach** — hoje `audience` só troca um rótulo. Falta seleção de aluno
-   (`ClientPickerModal`), `COLUNAS_FINANCEIRAS` e histórico de vendas.
-4. **Produto agendável** — `is_schedulable` é carregado e nunca usado. Falta
-   `AvailabilityPicker` e o preflight que cancela agendamento anterior.
+~~1. **Carrinho**~~ — **feito em 23/08** (`src/lib/store-cart.ts`, commit
+   `c6851209`). Chave e formato preservados; ver a seção de descobertas.
+
+~~2. **Checkout do aluno**~~ — **feito em 23/08** (`src/lib/store-checkout.ts`,
+   commit `5bb53b6a`). `criarProximoPedido` cria **um** pedido por chamada, o
+   primeiro passo de `planOrderSteps`, e a tela de pagamento diz quantos ainda
+   faltam. Frete, aceites, `ensureOrderNumber`, `WalletPayButton`,
+   `MercadoPagoCheckout` e `PurchaseSuccessModal` estão ligados.
+
+3. **Modo coach** — hoje `audience` só troca um rótulo e o botão de finalizar
+   fica desligado, com o motivo escrito na tela. Falta seleção de aluno
+   (`ClientPickerModal`), o checkout `create_coach_sale` (copiar
+   `checkoutAsCoach`, `StorePage.tsx:822-919`), `COLUNAS_FINANCEIRAS` e
+   histórico de vendas.
+4. **Produto agendável** — falta `AvailabilityPicker` e o preflight que cancela
+   agendamento anterior (`StorePage.tsx:998-1030`). Enquanto não existir,
+   `motivoDeBloqueio` mantém agendável **fora do carrinho** da loja nova, com a
+   pessoa mandada para a loja atual — pedido sem hora marcada é pior que
+   produto ausente. Item agendável que **venha do carrinho da loja atual** já
+   traz o horário e o checkout novo o processa certo.
 5. **Link de indicação** — botão de compartilhar e atribuição no pedido
    (`pendingReferrerStudentId`, `product_referral_rules`, `indicableProductIds`).
-   Sem isso **perde-se comissão de indicação**.
+   Sem isso **perde-se comissão de indicação**. `criarProximoPedido` já aceita
+   `referrerStudentId`; hoje ninguém preenche, então sai `null` — o pedido é
+   válido, só não tem indicador.
 6. **Deep link** — `?produto=<id>` e `?checkout=1` são validados só em
    `student.store.tsx`.
-7. **Modal de detalhe** — o da loja nova é somente leitura. Falta galeria, faixa
-   de preço, agendamento e botão de adicionar.
+7. **Modal de detalhe** — já tem botão de adicionar e trata estoque zerado e
+   agendável. Falta galeria de imagens e faixa de preço (`isPriceRange`), que o
+   catálogo unificado ainda nem carrega.
 
 ### Navegação (pedido, não iniciado)
 
@@ -319,3 +353,11 @@ não tocar no que está vendendo. Unificar depois, quando a nova provar-se.
   anônima). O player abriu na prática, então provavelmente sim.
 - **Produtos com `restrict_to_networks` sem `allowed_coach_ids`** ficam escondidos
   de todos. Se algum sumir da loja nova, verificar isso antes de suspeitar do código.
+- **O checkout da loja nova não foi exercido contra o Mercado Pago.** O código é
+  cópia do que está vendendo e o type-check está limpo, mas nenhuma compra foi
+  concluída por esta tela. A primeira deve ser de valor baixo e feita por quem
+  tem o gate — é uma cobrança real.
+- **`create_partner_company_order` exige `students.id`.** Na loja nova ele vem de
+  `ctx.studentId` (`store-personalization.ts:90`). Perfil de master admin **sem
+  linha em `students`** recebe "Conta de aluno não encontrada" ao comprar de
+  parceiro — é a mensagem certa, mas vale saber antes de achar que é bug.
