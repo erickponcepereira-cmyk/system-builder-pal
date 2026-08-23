@@ -46,6 +46,14 @@ export type UnifiedProduct = {
   sellerId: string | null;
   /** Marcado como destaque no admin. Alimenta o banner da loja. */
   isFeatured: boolean;
+  /** Coach que criou o produto. Isenta o proprio criador do filtro de rede. */
+  creatorCoachId: string | null;
+  /** Publicos que podem ver. Vazio ou nulo = todos. */
+  visibilityAudiences: string[] | null;
+  /** Produto restrito a redes especificas. */
+  restrictToNetworks: boolean;
+  allowedCoachIds: string[];
+  subcategoryId: string | null;
   sectionId: string | null;
   categoryId: string | null;
   cardDays: number;
@@ -149,7 +157,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .order("sort_order"),
     supabase
       .from("products" as never)
-      .select("id,section_id,category_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,card_access_days,challenge_tokens_amount" as never)
+      .select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,card_access_days,challenge_tokens_amount,visibility_audiences,creator_coach_id" as never)
       .not("kind" as never, "is", null)
       .eq("is_active" as never, true as never)
       .order("sort_order" as never),
@@ -175,7 +183,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .order("sort_order"),
     supabase
       .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,partners(fantasy_name,city,upline_coach_id)" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,partners(fantasy_name,city,upline_coach_id)" as never)
       .eq("status" as never, "approved" as never)
       .eq("kind" as never, "paid" as never)
       .eq("is_active_by_partner" as never, true as never)
@@ -185,7 +193,7 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       .limit(5000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
@@ -225,6 +233,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCity: null,
       sellerId: null,
       isFeatured: false,
+      creatorCoachId: null,
+      visibilityAudiences: null,
+      restrictToNetworks: false,
+      allowedCoachIds: [],
+      subcategoryId: null,
       sectionId: null,
       categoryId: null,
       cardDays: num(r.card_access_days),
@@ -251,6 +264,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCity: null,
       sellerId: null,
       isFeatured: false,
+      creatorCoachId: (r.creator_coach_id as string) || null,
+      visibilityAudiences: Array.isArray(r.visibility_audiences) ? (r.visibility_audiences as string[]) : null,
+      restrictToNetworks: false,
+      allowedCoachIds: [],
+      subcategoryId: (r.subcategory_id as string) || null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: num(r.card_access_days),
@@ -277,6 +295,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCity: null,
       sellerId: null,
       isFeatured: r.is_featured === true,
+      creatorCoachId: null,
+      visibilityAudiences: null,
+      restrictToNetworks: false,
+      allowedCoachIds: [],
+      subcategoryId: null,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -303,6 +326,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCity: null,
       sellerId: null,
       isFeatured: false,
+      creatorCoachId: null,
+      visibilityAudiences: null,
+      restrictToNetworks: false,
+      allowedCoachIds: [],
+      subcategoryId: null,
       sectionId: null,
       categoryId: null,
       cardDays: 0,
@@ -331,6 +359,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: partner?.upline_coach_id ?? null,
       sellerId: (r.partner_id as string) || null,
       isFeatured: false,
+      creatorCoachId: partner?.upline_coach_id ?? null,
+      visibilityAudiences: null,
+      restrictToNetworks: r.restrict_to_networks === true,
+      allowedCoachIds: Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [],
+      subcategoryId: null,
       sellerCity: partner?.city ?? null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
@@ -360,6 +393,11 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       sellerCoachId: (r.coach_id as string) || null,
       sellerId: (r.coach_id as string) || null,
       isFeatured: false,
+      creatorCoachId: (r.coach_id as string) || null,
+      visibilityAudiences: null,
+      restrictToNetworks: r.restrict_to_networks === true,
+      allowedCoachIds: Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [],
+      subcategoryId: null,
       sellerCity: null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,

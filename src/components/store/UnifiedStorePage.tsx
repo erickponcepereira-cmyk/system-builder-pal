@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
+import { useVisibilidadeLoja } from "@/lib/store-visibility";
 import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
 
 import {
@@ -67,6 +68,10 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const navigate = useNavigate();
   const [banners, setBanners] = useState<BannerRow[]>([]);
 
+  // As tres regras de visibilidade. Faltar qualquer uma e vazamento de
+  // catalogo entre redes, nao falta de recurso.
+  const visibilidade = useVisibilidadeLoja(audience === "coach", audience === "coach" ? "coach" : "student");
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -107,12 +112,16 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
 
   const products = catalog?.products ?? [];
 
-  const usableSections = useMemo(() => {
-    const used = new Set(products.map((p) => p.sectionId).filter(Boolean) as string[]);
-    return (catalog?.sections ?? []).filter((s) => used.has(s.id));
-  }, [catalog, products]);
+  const visiveis = useMemo(() => visibilidade.filtrar(products), [products, visibilidade]);
 
-  const noLocal = useMemo(() => aplicarLocal(products, local, ondeEstou), [products, local, ondeEstou]);
+  const usableSections = useMemo(() => {
+    const used = new Set(visiveis.map((p) => p.sectionId).filter(Boolean) as string[]);
+    return (catalog?.sections ?? [])
+      .filter((s) => used.has(s.id))
+      .filter((s) => visibilidade.secaoVisivel(s.id));
+  }, [catalog, visiveis, visibilidade]);
+
+  const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
 
   const filtered = useMemo(
     () => noLocal.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
@@ -121,7 +130,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
 
   /** Acabaram os vendedores locais: sobrou so o catalogo nacional. */
   const semLojaLocal =
-    ondeEstou.modo === "cidade" && contarLocais(products, local, ondeEstou.chave) === 0;
+    ondeEstou.modo === "cidade" && contarLocais(visiveis, local, ondeEstou.chave) === 0;
 
   const searching = foldText(query).length > 0;
   const browsing = !searching && !sectionId;
@@ -163,7 +172,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
         </p>
         <h1 className="text-2xl font-bold text-foreground">FitMind Club</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {products.length} produtos de {groupBySeller(products).length} vendedores, numa vitrine só.
+          {visiveis.length} produtos de {groupBySeller(visiveis).length} vendedores, numa vitrine só.
         </p>
       </header>
 
@@ -225,7 +234,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           categoria. Precisa de algo na frente. */}
       {browsing && (
         <StoreBanner
-          produtos={products}
+          produtos={visiveis}
           banners={banners}
           onAbrir={setDetail}
           onNavegar={(url) => navigate({ to: url })}
