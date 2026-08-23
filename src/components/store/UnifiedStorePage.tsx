@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
-import { AlertTriangle, IdCard, Loader2, MapPin, Search, ShoppingBag, Ticket, Timer, X } from "lucide-react";
+import { AlertTriangle, IdCard, Loader2, MapPin, Minus, Plus, Search, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, X } from "lucide-react";
 
 import {
   foldText,
@@ -35,6 +36,11 @@ import {
   sortShowcase,
   type StoreContext,
 } from "@/lib/store-personalization";
+import {
+  type CartItem,
+  type OrderStep,
+  useCarrinho,
+} from "@/lib/store-cart";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -67,6 +73,11 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const [seletorAberto, setSeletorAberto] = useState(false);
   const navigate = useNavigate();
   const [banners, setBanners] = useState<BannerRow[]>([]);
+  const [carrinhoAberto, setCarrinhoAberto] = useState(false);
+
+  // Mesmo carrinho da loja atual — mesma chave de storage, mesmo formato de
+  // item. Quem montou o carrinho lá encontra ele aqui, e vice-versa.
+  const carrinho = useCarrinho(audience);
 
   // As tres regras de visibilidade. Faltar qualquer uma e vazamento de
   // catalogo entre redes, nao falta de recurso.
@@ -146,6 +157,24 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
       .filter((group) => group.items.length > 0);
   }, [showcase]);
 
+  /**
+   * Adiciona e abre o carrinho.
+   *
+   * Abrir na hora é escolha: o carrinho é onde está o aviso de quantos pedidos
+   * a compra vira, e esconder isso até o fim é a queixa que originou a
+   * mudança. Recusa (sem estoque, agendável sem horário) vira toast e o
+   * carrinho fica fechado.
+   */
+  const adicionarAoCarrinho = (product: UnifiedProduct) => {
+    const recusa = carrinho.adicionar(product);
+    if (recusa) {
+      toast.error(recusa);
+      return;
+    }
+    setDetail(null);
+    setCarrinhoAberto(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -160,20 +189,37 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-500">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            <b>Vitrine de teste.</b> Dados reais de produção, somente leitura — nada aqui compra
-            nem altera pedido. Visível apenas para master admin.
+            <b>Vitrine de teste.</b> Dados reais de produção. Nada aqui cria pedido nem cobra —
+            o carrinho é o mesmo da loja atual e o que você montar aqui aparece lá. Visível
+            apenas para master admin.
           </span>
         </p>
       </div>
 
-      <header className="pt-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          Loja {audience === "coach" ? "· modo coach" : ""}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">FitMind Club</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {visiveis.length} produtos de {groupBySeller(visiveis).length} vendedores, numa vitrine só.
-        </p>
+      <header className="flex items-start justify-between gap-3 pt-1">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Loja {audience === "coach" ? "· modo coach" : ""}
+          </p>
+          <h1 className="text-2xl font-bold text-foreground">FitMind Club</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {visiveis.length} produtos de {groupBySeller(visiveis).length} vendedores, numa vitrine só.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setCarrinhoAberto(true)}
+          aria-label={`Carrinho com ${carrinho.quantidade} ${carrinho.quantidade === 1 ? "item" : "itens"}`}
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card"
+        >
+          <ShoppingCart className="h-5 w-5 text-foreground" />
+          {carrinho.quantidade > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              {carrinho.quantidade}
+            </span>
+          )}
+        </button>
       </header>
 
       {/* Barra de local. Fica no topo como no iFood: o que muda o catalogo
@@ -424,7 +470,25 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
 
       <StorePopup banners={banners} onNavegar={(url) => navigate({ to: url })} />
 
-      {detail && <DetailSheet product={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <DetailSheet
+          product={detail}
+          onClose={() => setDetail(null)}
+          onAdd={adicionarAoCarrinho}
+          noCarrinho={carrinho.cart.some((item) => item.sourceId === detail.sourceId && item.kind === detail.kind)}
+        />
+      )}
+
+      {carrinhoAberto && (
+        <CartSheet
+          cart={carrinho.cart}
+          subtotal={carrinho.subtotal}
+          steps={carrinho.steps}
+          onQuantidade={carrinho.alterarQuantidade}
+          onRemover={carrinho.remover}
+          onClose={() => setCarrinhoAberto(false)}
+        />
+      )}
     </div>
   );
 }
@@ -575,7 +639,7 @@ function CitySheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
@@ -655,10 +719,22 @@ function CitySheet({
   );
 }
 
-function DetailSheet({ product, onClose }: { product: UnifiedProduct; onClose: () => void }) {
+function DetailSheet({
+  product,
+  onClose,
+  onAdd,
+  noCarrinho,
+}: {
+  product: UnifiedProduct;
+  onClose: () => void;
+  onAdd: (product: UnifiedProduct) => void;
+  noCarrinho: boolean;
+}) {
+  const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
@@ -701,9 +777,196 @@ function DetailSheet({ product, onClose }: { product: UnifiedProduct; onClose: (
           )}
         </div>
 
-        <p className="rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
-          Vitrine de teste: a compra continua na loja atual. Este ambiente serve para avaliar
-          busca, ordenação, recomendação e leitura do card.
+        {product.isSchedulable ? (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
+            Este atendimento tem hora marcada e o seletor de horário ainda não existe nesta
+            vitrine. Reserve pela loja atual — aqui ele não entra no carrinho sem horário.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            disabled={semEstoque}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {semEstoque ? "Sem estoque" : noCarrinho ? "Adicionar mais um" : "Adicionar ao carrinho"}
+          </button>
+        )}
+
+        <p className="mt-3 rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+          Vitrine de teste: o carrinho é o mesmo da loja atual, então o que você montar aqui
+          aparece lá. O pagamento ainda acontece na loja atual.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Carrinho.
+ *
+ * O aviso de quantos pedidos o carrinho vira fica ACIMA da lista, não no
+ * rodapé: é informação que muda a decisão de comprar, e no rodapé ela chega
+ * depois de a pessoa já ter decidido.
+ */
+function CartSheet({
+  cart,
+  subtotal,
+  steps,
+  onQuantidade,
+  onRemover,
+  onClose,
+}: {
+  cart: CartItem[];
+  subtotal: number;
+  steps: OrderStep[];
+  onQuantidade: (id: string, delta: number) => void;
+  onRemover: (id: string) => void;
+  onClose: () => void;
+}) {
+  const multiplo = steps.length > 1;
+
+  return (
+    <div
+      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Carrinho"
+      >
+        <div className="modal-head -mx-5 -mt-5 mb-3 flex items-start justify-between gap-3 px-5 pb-3 pt-5">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Seu carrinho</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {cart.length === 0
+                ? "Nada aqui ainda."
+                : `${cart.length} ${cart.length === 1 ? "produto" : "produtos"} · ${fmt(subtotal)}`}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {multiplo && (
+          <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+            <p className="text-[11px] font-bold text-amber-500">
+              Este carrinho vira {steps.length} pedidos
+            </p>
+            <p className="mt-1 text-[10px] leading-relaxed text-amber-500/80">
+              Cada vendedor recebe o pedido dele. Você paga um de cada vez — ao concluir um, o
+              próximo abre em seguida.
+            </p>
+            <ul className="mt-2 space-y-0.5">
+              {steps.map((step, index) => (
+                <li key={step.key} className="text-[10px] text-amber-500/80">
+                  {index + 1}. {step.label} ·{" "}
+                  {fmt(step.items.reduce((soma, item) => soma + item.price * item.quantity, 0))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {cart.length === 0 ? (
+          <p className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">
+            Seu carrinho está vazio.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {cart.map((item) => (
+              <div key={item.id} className="flex items-center gap-2.5 rounded-xl bg-muted p-2.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-card">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <ShoppingBag className="h-4 w-4 text-muted-foreground opacity-50" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
+                    {item.sellerName}
+                  </p>
+                  <p className="line-clamp-2 text-xs font-semibold leading-snug text-foreground">
+                    {item.title}
+                  </p>
+                  <p className="text-[10px] tabular-nums text-muted-foreground">{fmt(item.price)} cada</p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onQuantidade(item.id, -1)}
+                    aria-label={`Diminuir ${item.title}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-card"
+                  >
+                    <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  <span className="w-5 text-center text-xs font-bold tabular-nums text-foreground">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onQuantidade(item.id, 1)}
+                    aria-label={`Aumentar ${item.title}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-card"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-primary" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemover(item.id)}
+                    aria-label={`Remover ${item.title}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {cart.length > 0 && (
+          <div className="mt-3 rounded-xl bg-muted p-3">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-muted-foreground">Total</span>
+              <b className="tabular-nums text-primary">{fmt(subtotal)}</b>
+            </div>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+              Taxas de cartão são aplicadas no checkout, não aqui.
+            </p>
+          </div>
+        )}
+
+        <div className="modal-foot -mx-5 -mb-5 mt-3 flex gap-2 px-5 pb-5 pt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            disabled
+            title="O pagamento ainda acontece na loja atual"
+            className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {multiplo ? `Pagar 1 de ${steps.length}` : "Finalizar"}
+          </button>
+        </div>
+
+        <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground">
+          O botão de pagar ainda não está ligado nesta vitrine. Seu carrinho está salvo e abre
+          igual na loja atual, onde a compra se conclui.
         </p>
       </div>
     </div>
