@@ -4841,6 +4841,208 @@ export type Database = {
         }
         Relationships: []
       }
+      course_certificates: {
+        Row: {
+          code: string
+          digital_product_id: string
+          id: string
+          issued_at: string
+          student_id: string
+        }
+        Insert: {
+          code: string
+          digital_product_id: string
+          id?: string
+          issued_at?: string
+          student_id: string
+        }
+        Update: {
+          code?: string
+          digital_product_id?: string
+          id?: string
+          issued_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_certificates_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_exam_attempts: {
+        Row: {
+          answers: Json
+          created_at: string
+          exam_id: string
+          id: string
+          passed: boolean
+          score: number
+          student_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          exam_id: string
+          id?: string
+          passed: boolean
+          score: number
+          student_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          exam_id?: string
+          id?: string
+          passed?: boolean
+          score?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_exam_attempts_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "course_exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_exam_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_exam_options: {
+        Row: {
+          id: string
+          is_correct: boolean
+          label: string
+          question_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          is_correct?: boolean
+          label: string
+          question_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          is_correct?: boolean
+          label?: string
+          question_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_exam_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "course_exam_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_exam_questions: {
+        Row: {
+          created_at: string
+          exam_id: string
+          explanation: string | null
+          id: string
+          prompt: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          explanation?: string | null
+          id?: string
+          prompt: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          explanation?: string | null
+          id?: string
+          prompt?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_exam_questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "course_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_exams: {
+        Row: {
+          created_at: string
+          description: string | null
+          digital_product_id: string
+          id: string
+          is_active: boolean
+          max_attempts: number | null
+          module_id: string | null
+          passing_score: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          digital_product_id: string
+          id?: string
+          is_active?: boolean
+          max_attempts?: number | null
+          module_id?: string | null
+          passing_score?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          digital_product_id?: string
+          id?: string
+          is_active?: boolean
+          max_attempts?: number | null
+          module_id?: string | null
+          passing_score?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_exams_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_exams_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "digital_product_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_teacher_commissions: {
         Row: {
           commission_percentage: number
@@ -15335,6 +15537,13 @@ export type Database = {
         Returns: boolean
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emitir_certificado: {
+        Args: { _digital_product_id: string }
+        Returns: {
+          codigo: string
+          emitido_em: string
+        }[]
+      }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -15423,6 +15632,17 @@ export type Database = {
           _coach_id: string
         }
         Returns: string
+      }
+      gabarito_da_prova: {
+        Args: { _exam_id: string }
+        Returns: {
+          explanation: string
+          is_correct: boolean
+          label: string
+          option_id: string
+          prompt: string
+          question_id: string
+        }[]
       }
       generate_competition_groups: {
         Args: { _competition_id: string; _month: number; _year: number }
@@ -15901,6 +16121,17 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      prova_para_responder: {
+        Args: { _exam_id: string }
+        Returns: {
+          label: string
+          option_id: string
+          option_order: number
+          prompt: string
+          question_id: string
+          sort_order: number
+        }[]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -16249,6 +16480,15 @@ export type Database = {
         Args: { _digital_product_id: string }
         Returns: boolean
       }
+      submeter_prova: {
+        Args: { _exam_id: string; _respostas: Json }
+        Returns: {
+          acertos: number
+          aprovado: boolean
+          nota: number
+          total_perguntas: number
+        }[]
+      }
       submit_coach_application:
         | {
             Args: {
@@ -16356,6 +16596,14 @@ export type Database = {
           tipo: string
           uf: string
           vendedor_id: string
+        }[]
+      }
+      verificar_certificado: {
+        Args: { _code: string }
+        Returns: {
+          aluno: string
+          curso: string
+          emitido_em: string
         }[]
       }
       voltar_curso_para_rascunho: {
