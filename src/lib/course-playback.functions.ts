@@ -23,6 +23,8 @@ const LINK_SEGUNDOS = 4 * 60 * 60;
 export type LessonPlayback = {
   url: string;
   titulo: string;
+  /** O que o player deve montar: player de vídeo ou leitor de documento. */
+  formato: "video" | "documento";
   posicaoSegundos: number;
   duracaoSegundos: number | null;
   marcaDagua: string | null;
@@ -44,13 +46,26 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
     const { data: lesson } = await admin
       .from("digital_product_lessons")
       .select(
-        "id, module_id, title, kind, video_key, thumbnail_key, duration_seconds, allow_download, require_watermark, digital_product_modules!inner(digital_product_id)",
+        "id, module_id, title, kind, video_key, file_path, thumbnail_key, duration_seconds, allow_download, require_watermark, digital_product_modules!inner(digital_product_id)",
       )
       .eq("id", data.lessonId)
       .maybeSingle();
 
     if (!lesson) throw new Error("Aula não encontrada");
-    if (!lesson.video_key) throw new Error("Esta aula ainda não tem vídeo publicado");
+
+    // Vídeo mora em `video_key`; ebook, material e link mora em `file_path`.
+    // Antes esta função exigia `video_key` sempre, então QUALQUER aula que não
+    // fosse vídeo estourava — e o aluno recebia "esta aula ainda não tem vídeo
+    // publicado" numa aula que nunca teve vídeo.
+    const ehVideo = lesson.kind === "video";
+    const chave: string | null = ehVideo ? lesson.video_key : (lesson.file_path || lesson.video_key);
+    if (!chave) {
+      throw new Error(
+        ehVideo
+          ? "Esta aula ainda não tem vídeo publicado"
+          : "Esta aula ainda não tem material publicado",
+      );
+    }
 
     const produtoId = lesson.digital_product_modules?.digital_product_id;
     if (!produtoId) throw new Error("Aula sem curso vinculado");
@@ -90,7 +105,7 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
 
     const { data: signed, error } = await admin.storage
       .from("course-videos")
-      .createSignedUrl(lesson.video_key, LINK_SEGUNDOS);
+      .createSignedUrl(chave, LINK_SEGUNDOS);
     if (error || !signed) throw new Error(error?.message || "Erro ao liberar a aula");
 
     // Marca d'água: nome + CPF mascarado. Identifica quem gravou sem expor o
@@ -114,6 +129,7 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
     return {
       url: signed.signedUrl,
       titulo: String(lesson.title || ""),
+      formato: ehVideo ? "video" : "documento",
       posicaoSegundos: posicao,
       duracaoSegundos: lesson.duration_seconds ?? null,
       marcaDagua: marca,

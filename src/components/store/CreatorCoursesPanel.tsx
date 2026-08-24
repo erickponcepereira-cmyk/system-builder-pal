@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { CourseExamBuilder } from "@/components/store/CourseExamBuilder";
 import {
   atualizarAula,
   atualizarCurso,
@@ -31,12 +32,24 @@ import {
   rotuloDoStatus,
   subirArquivoDaAula,
   subirCapaDoCurso,
+  subirMaterialDaAula,
   voltarCursoParaRascunho,
   type AulaAdmin,
   type CursoAdmin,
   type ModuloAdmin,
   type ProgressoTurma,
 } from "@/lib/course-admin";
+
+/**
+ * Tipos de aula. O schema já aceitava os quatro; a tela só criava vídeo, e por
+ * isso ebook e material só nasciam por SQL.
+ */
+const TIPOS: Array<{ id: string; label: string; ajuda: string }> = [
+  { id: "video", label: "Vídeo", ajuda: "Aula gravada, com marca d'água e sem download" },
+  { id: "ebook", label: "Ebook", ajuda: "PDF lido na tela, sem baixar" },
+  { id: "download", label: "Material", ajuda: "Arquivo de apoio, que o aluno pode baixar" },
+  { id: "live", label: "Ao vivo", ajuda: "Encontro marcado; use a descrição para o link" },
+];
 
 const REGRAS: Array<{ id: string; label: string; ajuda: string }> = [
   { id: "none", label: "Liberada", ajuda: "Disponível assim que a pessoa entra" },
@@ -236,6 +249,13 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
             />
           )}
 
+          {curso && (
+            <CourseExamBuilder
+              digitalProductId={curso.id}
+              modulos={modulos.map((m) => ({ id: m.id, title: m.title }))}
+            />
+          )}
+
           {modulos.map((m) => {
             const aberto = abertos.has(m.id);
             const doModulo = aulas.filter((a) => a.moduleId === m.id);
@@ -362,6 +382,21 @@ function LinhaAula({
         />
 
         <select
+          defaultValue={aula.kind}
+          onChange={(e) => void onAcao("k-" + aula.id, () => atualizarAula(aula.id, {
+            kind: e.target.value,
+            // Ebook lê na tela; material de apoio existe para ser baixado.
+            // Vídeo nunca libera, e o servidor força isso de novo.
+            allowDownload: e.target.value === "download",
+            requireWatermark: e.target.value !== "download",
+          }))}
+          title={TIPOS.find((t) => t.id === aula.kind)?.ajuda}
+          className="shrink-0 rounded-lg border border-border bg-muted px-2 py-1.5 text-[11px] text-foreground"
+        >
+          {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+
+        <select
           defaultValue={aula.unlockRule}
           onChange={(e) => void onAcao("r-" + aula.id, () => atualizarAula(aula.id, { unlockRule: e.target.value }))}
           title={REGRAS.find((r) => r.id === aula.unlockRule)?.ajuda}
@@ -370,11 +405,33 @@ function LinhaAula({
           {REGRAS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
         </select>
 
-        <label className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold ${aula.videoKey ? "border-emerald-500/40 text-emerald-500" : "border-border text-muted-foreground"}`}>
-          {enviando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-          {aula.videoKey ? "Trocar vídeo" : "Vídeo"}
-          <input type="file" accept="video/*" className="hidden" onChange={enviar("video")} disabled={ocupado !== null} />
-        </label>
+        {aula.kind === "video" ? (
+          <label className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold ${aula.videoKey ? "border-emerald-500/40 text-emerald-500" : "border-border text-muted-foreground"}`}>
+            {enviando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {aula.videoKey ? "Trocar vídeo" : "Vídeo"}
+            <input type="file" accept="video/*" className="hidden" onChange={enviar("video")} disabled={ocupado !== null} />
+          </label>
+        ) : aula.kind === "live" ? null : (
+          <label className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold ${aula.filePath ? "border-emerald-500/40 text-emerald-500" : "border-border text-muted-foreground"}`}>
+            {enviando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {aula.filePath ? "Trocar arquivo" : "Arquivo"}
+            <input
+              type="file"
+              accept={aula.kind === "ebook" ? "application/pdf" : undefined}
+              className="hidden"
+              disabled={ocupado !== null}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                void onAcao("up-" + aula.id, async () => {
+                  await subirMaterialDaAula(cursoId, aula.id, file);
+                  toast.success("Material publicado.");
+                });
+              }}
+            />
+          </label>
+        )}
 
         <label className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold ${aula.thumbnailKey ? "border-emerald-500/40 text-emerald-500" : "border-border text-muted-foreground"}`}>
           <ImageIcon className="h-3 w-3" />
@@ -433,8 +490,17 @@ function LinhaAula({
           <Users className="h-3 w-3" />
           {turma ? `${turma.concluiram} de ${turma.iniciaram} concluíram` : "sem acesso ainda"}
         </span>
-        {!aula.videoKey && <span className="text-amber-500">sem vídeo publicado</span>}
+        {aula.kind === "video" && !aula.videoKey && (
+          <span className="text-amber-500">sem vídeo publicado</span>
+        )}
+        {(aula.kind === "ebook" || aula.kind === "download") && !aula.filePath && (
+          <span className="text-amber-500">sem arquivo publicado</span>
+        )}
+        {aula.kind === "live" && (
+          <span>encontro ao vivo · ponha o link na descrição</span>
+        )}
         {aula.requireWatermark && <span>marca d&apos;água ligada</span>}
+        {aula.allowDownload && <span>o aluno pode baixar</span>}
       </div>
     </div>
   );

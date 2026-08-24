@@ -40,6 +40,8 @@ export type AulaAdmin = {
   unlockAt: string | null;
   durationSeconds: number | null;
   videoKey: string | null;
+  /** Ebook / material. Fica em `file_path`, no mesmo bucket privado. */
+  filePath: string | null;
   thumbnailKey: string | null;
   requireWatermark: boolean;
   allowDownload: boolean;
@@ -110,7 +112,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
   if (!moduleIds.length) return [];
   const { data, error } = await supabase
     .from("digital_product_lessons" as never)
-    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,unlock_at,duration_seconds,video_key,thumbnail_key,require_watermark,allow_download" as never)
+    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,unlock_at,duration_seconds,video_key,file_path,thumbnail_key,require_watermark,allow_download" as never)
     .in("module_id" as never, moduleIds as never)
     .order("sort_order" as never);
   if (error) { console.error("[course-admin] aulas", error); return []; }
@@ -125,6 +127,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
     unlockAt: (l.unlock_at as string) || null,
     durationSeconds: l.duration_seconds == null ? null : Number(l.duration_seconds),
     videoKey: (l.video_key as string) || null,
+    filePath: (l.file_path as string) || null,
     thumbnailKey: (l.thumbnail_key as string) || null,
     requireWatermark: l.require_watermark === true,
     allowDownload: l.allow_download === true,
@@ -186,6 +189,7 @@ export async function atualizarAula(
     unlockAt: string | null;
     durationSeconds: number | null;
     videoKey: string | null;
+    filePath: string | null;
     thumbnailKey: string | null;
     requireWatermark: boolean;
     allowDownload: boolean;
@@ -203,6 +207,7 @@ export async function atualizarAula(
   if (dados.unlockAt !== undefined) payload.unlock_at = dados.unlockAt;
   if (dados.durationSeconds !== undefined) payload.duration_seconds = dados.durationSeconds;
   if (dados.videoKey !== undefined) payload.video_key = dados.videoKey;
+  if (dados.filePath !== undefined) payload.file_path = dados.filePath;
   if (dados.thumbnailKey !== undefined) payload.thumbnail_key = dados.thumbnailKey;
   if (dados.requireWatermark !== undefined) payload.require_watermark = dados.requireWatermark;
   if (dados.allowDownload !== undefined) payload.allow_download = dados.allowDownload;
@@ -244,6 +249,35 @@ export async function subirArquivoDaAula(
   if (error) throw new Error(error.message);
 
   await atualizarAula(lessonId, tipo === "video" ? { videoKey: key } : { thumbnailKey: key });
+  return key;
+}
+
+/**
+ * Sobe o material de uma aula que não é vídeo (ebook, apostila, download).
+ *
+ * Mesmo bucket privado do vídeo, e é isso que faz o arquivo só sair por link
+ * assinado. A diferença está na coluna: vídeo grava `video_key`, material
+ * grava `file_path` — e é `file_path` que o servidor de entrega procura
+ * quando a aula não é vídeo.
+ *
+ * `allow_download` decide se o aluno pode salvar o arquivo. Para ebook o
+ * padrão é falso: a leitura acontece na tela, e o PDF não vira arquivo solto
+ * circulando por aí. Vídeo nunca libera, independentemente da coluna.
+ */
+export async function subirMaterialDaAula(
+  productId: string,
+  lessonId: string,
+  file: File,
+): Promise<string> {
+  const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+  const key = `${productId}/${lessonId}-material.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("course-videos")
+    .upload(key, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw new Error(error.message);
+
+  await atualizarAula(lessonId, { filePath: key });
   return key;
 }
 

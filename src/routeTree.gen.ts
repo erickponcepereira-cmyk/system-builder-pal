@@ -37,6 +37,7 @@ import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-ch
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-checkin.$eventId'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
+import { Route as CertificadoCodeRouteImport } from './routes/certificado.$code'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated/student'
 import { Route as AuthenticatedProfessionalRouteImport } from './routes/_authenticated/professional'
@@ -302,6 +303,11 @@ const FitmindCheckinEventIdRoute = FitmindCheckinEventIdRouteImport.update({
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   id: '/checkin/$studentId',
   path: '/checkin/$studentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificadoCodeRoute = CertificadoCodeRouteImport.update({
+  id: '/certificado/$code',
+  path: '/certificado/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -1074,6 +1080,7 @@ export interface FileRoutesByFullPath {
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/certificado/$code': typeof CertificadoCodeRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1228,6 +1235,7 @@ export interface FileRoutesByTo {
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/certificado/$code': typeof CertificadoCodeRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1386,6 +1394,7 @@ export interface FileRoutesById {
   '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/certificado/$code': typeof CertificadoCodeRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1544,6 +1553,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/student'
     | '/auth/callback'
+    | '/certificado/$code'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1698,6 +1708,7 @@ export interface FileRouteTypes {
     | '/portal-selector'
     | '/professional'
     | '/auth/callback'
+    | '/certificado/$code'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1855,6 +1866,7 @@ export interface FileRouteTypes {
     | '/_authenticated/professional'
     | '/_authenticated/student'
     | '/auth/callback'
+    | '/certificado/$code'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -2006,6 +2018,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  CertificadoCodeRoute: typeof CertificadoCodeRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -2230,6 +2243,13 @@ declare module '@tanstack/react-router' {
       path: '/checkin/$studentId'
       fullPath: '/checkin/$studentId'
       preLoaderRoute: typeof CheckinStudentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificado/$code': {
+      id: '/certificado/$code'
+      path: '/certificado/$code'
+      fullPath: '/certificado/$code'
+      preLoaderRoute: typeof CertificadoCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -3483,6 +3503,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  CertificadoCodeRoute: CertificadoCodeRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,

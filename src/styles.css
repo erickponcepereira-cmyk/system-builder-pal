@@ -566,3 +566,30 @@ select option {
 
 
 
+
+/* ---------------------------------------------------------------
+   Impressão do certificado.
+
+   `window.print()` imprimiria o app inteiro atrás do modal. A receita
+   clássica resolve sem depender de seletores modernos: some com tudo por
+   visibilidade (que não tira do fluxo e por isso não quebra o layout da
+   folha) e devolve visibilidade só para a folha e seus filhos.
+
+   Não use `display:none` no lugar de `visibility` aqui: o pai da folha
+   também sumiria, e com ele a folha.
+---------------------------------------------------------------- */
+@media print {
+  body * { visibility: hidden; }
+
+  .folha-certificado,
+  .folha-certificado * { visibility: visible; }
+
+  .folha-certificado {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+  }
+}

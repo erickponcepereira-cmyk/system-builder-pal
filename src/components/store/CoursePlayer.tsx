@@ -6,12 +6,23 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Download,
   Loader2,
   Lock,
   Play,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { CourseExamCard, CourseExamSheet } from "@/components/store/CourseExam";
+import { CourseCertificateCard } from "@/components/store/CourseCertificate";
+import {
+  listarProvas,
+  meuCertificado,
+  minhasTentativas,
+  type Certificado,
+  type Prova,
+  type Tentativa,
+} from "@/lib/course-exams";
 import { getLessonPlayback, type LessonPlayback } from "@/lib/course-playback.functions";
 import {
   flatten,
@@ -49,13 +60,19 @@ export function CoursePlayer({ productId }: { productId: string }) {
    * continua sem data, e continua liberando tudo: isso é intencional.
    */
   const [compradoEm, setCompradoEm] = useState<string | null>(null);
+  const [provas, setProvas] = useState<Prova[]>([]);
+  const [tentativas, setTentativas] = useState<Tentativa[]>([]);
+  const [certificado, setCertificado] = useState<Certificado | null>(null);
+  const [nomeAluno, setNomeAluno] = useState<string | null>(null);
+  const [provaAberta, setProvaAberta] = useState<Prova | null>(null);
 
   const recarregar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErro("Faça login para acessar o curso."); setLoading(false); return; }
 
     const { data: profile } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+      .from("profiles").select("id,name").eq("user_id", user.id).maybeSingle();
+    setNomeAluno((profile as { name?: string } | null)?.name ?? null);
     const { data: student } = profile?.id
       ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
       : { data: null };
@@ -84,9 +101,24 @@ export function CoursePlayer({ productId }: { productId: string }) {
     }
     setCourse(c);
     setAbertos((prev) => (prev.size ? prev : new Set(c.modules.slice(0, 1).map((m) => m.id))));
+
+    // Provas e certificado não travam a aula: se falharem, o curso abre igual
+    // e só os cartões somem. Conteúdo é o que a pessoa veio buscar.
+    const ps = await listarProvas(productId);
+    setProvas(ps);
+    setTentativas(ps.length ? await minhasTentativas(ps.map((x) => x.id)) : []);
+    setCertificado(await meuCertificado(productId, sid));
+
     setLoading(false);
     return c;
   }, [productId]);
+
+  /** Recarrega só o que a prova muda, sem repuxar o curso inteiro. */
+  const recarregarProvas = useCallback(async () => {
+    if (!provas.length) return;
+    setTentativas(await minhasTentativas(provas.map((x) => x.id)));
+    setCertificado(await meuCertificado(productId, studentId));
+  }, [provas, productId, studentId]);
 
   useEffect(() => { void recarregar(); }, [recarregar]);
 
@@ -96,6 +128,31 @@ export function CoursePlayer({ productId }: { productId: string }) {
   );
   const pct = course ? percentual(course) : 0;
   const proxima = course ? proximaAula(course, compradoEm) : null;
+  const provaFinal = provas.find((x) => x.moduleId === null && x.isActive) ?? null;
+  const provasPorModulo = useMemo(() => {
+    const m = new Map<string, Prova>();
+    for (const x of provas) if (x.moduleId && x.isActive) m.set(x.moduleId, x);
+    return m;
+  }, [provas]);
+
+  /**
+   * Concluiu para efeito de certificado.
+   *
+   * Conta só as aulas com `countsForCertificate` — que é diferente de 100% da
+   * barra, e é de propósito: aula de boas-vindas ou aviso não deveria segurar
+   * o certificado de ninguém. Quem decide de verdade é o banco; isto aqui só
+   * escolhe qual cartão mostrar.
+   */
+  const concluiuParaCertificado = useMemo(() => {
+    if (!course) return false;
+    const contam = flatten(course).filter((l) => l.countsForCertificate);
+    if (!contam.length) return false;
+    const todasFeitas = contam.every((l) => course.progress.get(l.id)?.completedAt);
+    if (!todasFeitas) return false;
+    if (provaFinal) return tentativas.some((t) => t.examId === provaFinal.id && t.passed);
+    return true;
+  }, [course, provaFinal, tentativas]);
+
   const totalAulas = course ? flatten(course).length : 0;
   const feitas = course
     ? flatten(course).filter((l) => course.progress.get(l.id)?.completedAt).length
@@ -233,9 +290,44 @@ export function CoursePlayer({ productId }: { productId: string }) {
                   </button>
                 );
               })}
+
+            {aberto && provasPorModulo.get(m.id) && (
+              <div className="border-t border-border p-3">
+                <CourseExamCard
+                  prova={provasPorModulo.get(m.id) as Prova}
+                  tentativas={tentativas}
+                  onAbrir={() => setProvaAberta(provasPorModulo.get(m.id) as Prova)}
+                />
+              </div>
+            )}
           </section>
         );
       })}
+
+      {provaFinal && (
+        <CourseExamCard
+          prova={provaFinal}
+          tentativas={tentativas}
+          onAbrir={() => setProvaAberta(provaFinal)}
+        />
+      )}
+
+      <CourseCertificateCard
+        digitalProductId={productId}
+        cursoTitulo={course.title}
+        alunoNome={nomeAluno}
+        certificado={certificado}
+        concluido={concluiuParaCertificado}
+        onEmitido={setCertificado}
+      />
+
+      {provaAberta && (
+        <CourseExamSheet
+          prova={provaAberta}
+          onClose={() => setProvaAberta(null)}
+          onEntregue={() => void recarregarProvas()}
+        />
+      )}
 
       {aulaAtiva && (
         <PlayerSheet
@@ -359,7 +451,73 @@ function PlayerSheet({
           </div>
         )}
 
-        {pb && (
+        {pb && pb.formato === "documento" && (
+          <>
+            {/*
+              Leitura de material: ebook, apostila, anexo.
+
+              O arquivo é servido por link assinado e curto, dentro de um
+              <iframe> — o PDF abre no leitor do próprio navegador, que já
+              existe em todo celular e computador. Não embutimos leitor
+              próprio: seria uma dependência nova para reimplementar, pior,
+              algo que o sistema já faz.
+
+              Honestidade sobre o limite: isto NÃO impede salvar o arquivo.
+              Nada em navegador impede — o leitor nativo tem botão de baixar,
+              e print existe. O que protege é o link morrer sozinho e a marca
+              d'água dizer de quem é a cópia. É a mesma regra do vídeo.
+            */}
+            <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
+              <iframe
+                src={pb.url}
+                title={pb.titulo}
+                className="h-[60vh] w-full bg-white"
+              />
+              {pb.marcaDagua && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-3 select-none rounded bg-black/45 px-2 py-1 font-mono text-[10px] text-white/80"
+                >
+                  {pb.marcaDagua}
+                </span>
+              )}
+            </div>
+
+            {pb.permiteBaixar && (
+              <a
+                href={pb.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground hover:bg-accent"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Baixar material
+              </a>
+            )}
+
+            {lesson.description && (
+              <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+                {lesson.description}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void concluir()}
+              disabled={salvando}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Concluir e ir para a próxima
+            </button>
+
+            <p className="mt-2 text-center text-[10px] text-muted-foreground">
+              Link temporário, válido por 4 horas e ligado à sua conta.
+            </p>
+          </>
+        )}
+
+        {pb && pb.formato === "video" && (
           <>
             {/* A marca d'água fica FORA do elemento de vídeo, sobreposta.
                 Não impede gravação — nada impede. Ela identifica quem gravou,
