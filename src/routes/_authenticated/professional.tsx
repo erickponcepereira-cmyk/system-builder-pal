@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2, KanbanSquare } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2, KanbanSquare, BookOpen } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts } from "@/lib/collab.functions";
@@ -269,6 +269,20 @@ function ProfessionalPanel() {
           </div>
           <span className="text-xs text-primary font-medium">Abrir →</span>
         </Link>
+
+        <a
+          href="/professional/cursos"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 hover:bg-sky-500/15 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-5 w-5 text-sky-300" />
+            <div>
+              <p className="text-sm font-bold text-white">Cursos</p>
+              <p className="text-[11px] text-white/60">Crie o curso, monte as aulas e envie para aprovação</p>
+            </div>
+          </div>
+          <span className="text-xs text-sky-300 font-medium">Abrir →</span>
+        </a>
 
         <Link
           to="/professional/herbalife-boletos"

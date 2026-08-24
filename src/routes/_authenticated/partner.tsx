@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell, BookOpen } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CrmBoard } from "@/components/crm/CrmBoard";
 import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
@@ -556,6 +556,19 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
           </div>
         </div>
         <span className="text-xs text-primary font-medium">Abrir →</span>
+      </a>
+      <a
+        href="/partner/cursos"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 hover:bg-sky-500/15 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <BookOpen className="h-5 w-5 text-sky-300" />
+          <div>
+            <p className="text-sm font-bold text-white">Cursos</p>
+            <p className="text-[11px] text-white/60">Crie o curso, monte as aulas e envie para aprovação</p>
+          </div>
+        </div>
+        <span className="text-xs text-sky-300 font-medium">Abrir →</span>
       </a>
       <a
         href="/partner/herbalife-boletos"

@@ -6,23 +6,32 @@ import {
   ChevronRight,
   Image as ImageIcon,
   Loader2,
+  Pencil,
   Plus,
+  Send,
   Trash2,
+  Undo2,
   Upload,
   Users,
 } from "lucide-react";
 
 import {
   atualizarAula,
+  atualizarCurso,
   criarAula,
+  criarCurso,
   criarModulo,
+  enviarCursoParaAprovacao,
   excluirAula,
   excluirModulo,
   listarAulas,
   listarCursosGeridos,
   listarModulos,
   progressoDaTurma,
+  rotuloDoStatus,
   subirArquivoDaAula,
+  subirCapaDoCurso,
+  voltarCursoParaRascunho,
   type AulaAdmin,
   type CursoAdmin,
   type ModuloAdmin,
@@ -53,6 +62,16 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
   const [loading, setLoading] = useState(true);
   const [ocupado, setOcupado] = useState<string | null>(null);
 
+  const [editando, setEditando] = useState(false);
+
+  /** Relê a lista de cursos, opcionalmente já selecionando um. */
+  const recarregarCursos = useCallback(async (selecionar?: string) => {
+    const lista = await listarCursosGeridos();
+    setCursos(lista);
+    if (selecionar) setCursoId(selecionar);
+    else setCursoId((atual) => atual ?? lista[0]?.id ?? null);
+  }, []);
+
   useEffect(() => {
     let vivo = true;
     (async () => {
@@ -64,6 +83,42 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
     })();
     return () => { vivo = false; };
   }, []);
+
+  /**
+   * Cria o curso e já abre para edição.
+   *
+   * Nasce como rascunho: a loja lê `status = 'active'` e quem promove para lá
+   * é admin. Sem esse degrau, todo curso criado entraria na vitrine no mesmo
+   * instante, sem ninguém ter olhado o conteúdo nem o preço.
+   */
+  const novoCurso = async () => {
+    setOcupado("novo-curso");
+    try {
+      const id = await criarCurso("Curso sem título");
+      await recarregarCursos(id);
+      setAbertos(new Set());
+      setEditando(true);
+      toast.success("Curso criado como rascunho. Dê um nome e monte o conteúdo.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar o curso.");
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  /** Ação sobre o curso (salvar, enviar, voltar) que relê a lista depois. */
+  const comCurso = async (chave: string, fn: () => Promise<void>, sucesso?: string) => {
+    setOcupado(chave);
+    try {
+      await fn();
+      await recarregarCursos();
+      if (sucesso) toast.success(sucesso);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setOcupado(null);
+    }
+  };
 
   const recarregar = useCallback(async (id: string) => {
     const mods = await listarModulos(id);
@@ -115,50 +170,70 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
           <BookOpen className="mx-auto mb-3 h-7 w-7 text-muted-foreground opacity-50" />
           <p className="text-sm font-bold text-foreground">Você ainda não tem curso</p>
           <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-            O curso é criado como produto digital e vinculado a você pela FitMind. Depois disso
-            ele aparece aqui para você montar o conteúdo.
+            Crie o curso, monte os módulos e as aulas, e envie para aprovação. Ele só aparece na
+            loja depois que a FitMind aprovar.
           </p>
+          <button
+            type="button"
+            onClick={() => void novoCurso()}
+            disabled={ocupado !== null}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-60"
+          >
+            {ocupado === "novo-curso" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+            Criar curso
+          </button>
         </div>
       ) : (
         <>
-          {cursos.length > 1 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {cursos.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => { setCursoId(c.id); setAbertos(new Set()); }}
-                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                    c.id === cursoId ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  {c.title}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {cursos.length > 1 && cursos.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { setCursoId(c.id); setAbertos(new Set()); setEditando(false); }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  c.id === cursoId ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {c.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => void novoCurso()}
+              disabled={ocupado !== null}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent disabled:opacity-60"
+            >
+              {ocupado === "novo-curso" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Novo curso
+            </button>
+          </div>
 
           {curso && (
-            <div className="mb-4 rounded-2xl border border-border bg-card p-4">
-              <h2 className="text-sm font-bold text-foreground">{curso.title}</h2>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {modulos.length} {modulos.length === 1 ? "módulo" : "módulos"} ·{" "}
-                {aulas.length} {aulas.length === 1 ? "aula" : "aulas"}
-              </p>
-              <button
-                type="button"
-                disabled={ocupado !== null}
-                onClick={() =>
-                  comOcupado("novo-modulo", () =>
-                    criarModulo(curso.id, "Novo módulo", modulos.length + 1),
-                  )
-                }
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
-              >
-                {ocupado === "novo-modulo" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                Novo módulo
-              </button>
-            </div>
+            <CursoCard
+              curso={curso}
+              modulos={modulos.length}
+              aulas={aulas.length}
+              editando={editando}
+              onEditar={setEditando}
+              ocupado={ocupado}
+              onSalvar={(campos) =>
+                comCurso("salvar-curso", () => atualizarCurso(curso.id, campos), "Curso salvo.")}
+              onCapa={(file) =>
+                comCurso("capa-curso", async () => {
+                  const url = await subirCapaDoCurso(curso.id, file);
+                  await atualizarCurso(curso.id, { coverUrl: url });
+                }, "Capa publicada.")}
+              onEnviar={() =>
+                comCurso("enviar-curso", () => enviarCursoParaAprovacao(curso.id),
+                  "Enviado para aprovação da FitMind.")}
+              onVoltar={() =>
+                comCurso("voltar-curso", () => voltarCursoParaRascunho(curso.id),
+                  "De volta a rascunho.")}
+              onNovoModulo={() =>
+                comOcupado("novo-modulo", () =>
+                  criarModulo(curso.id, "Novo módulo", modulos.length + 1))}
+            />
           )}
 
           {modulos.map((m) => {
@@ -322,6 +397,25 @@ function LinhaAula({
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+        {/* "Data fixa" sem data se comportava como "Liberada", em silêncio:
+            `course-engine` só tranca quando `unlockAt` existe. Agora a data é
+            pedida — e o CHECK do banco recusa a regra sem ela. */}
+        {aula.unlockRule === "date" && (
+          <label className="inline-flex items-center gap-1">
+            Abre em
+            <input
+              type="datetime-local"
+              defaultValue={aula.unlockAt ? aula.unlockAt.slice(0, 16) : ""}
+              onBlur={(e) => void onAcao("dt-" + aula.id, () => atualizarAula(aula.id, {
+                unlockAt: e.target.value ? new Date(e.target.value).toISOString() : null,
+              }))}
+              className="rounded border border-border bg-muted px-1.5 py-0.5 text-foreground"
+            />
+          </label>
+        )}
+        {aula.unlockRule === "date" && !aula.unlockAt && (
+          <span className="text-amber-500">escolha a data, senão a aula abre para todo mundo</span>
+        )}
         {aula.unlockRule === "drip" && (
           <label className="inline-flex items-center gap-1">
             Abre após
@@ -342,6 +436,202 @@ function LinhaAula({
         {!aula.videoKey && <span className="text-amber-500">sem vídeo publicado</span>}
         {aula.requireWatermark && <span>marca d&apos;água ligada</span>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Cartão do curso — onde o curso deixa de ser só um título.
+ *
+ * Preço, descrição e capa já vinham carregados de `listarCursosGeridos` e eram
+ * descartados pela tela. Agora são editáveis, e ao lado deles fica a única
+ * coisa que o criador NÃO controla: a publicação.
+ *
+ * O ciclo é rascunho → em análise → no ar. Quem coloca no ar é a FitMind, e
+ * está escrito na tela — porque o criador precisa saber por que o curso dele
+ * ainda não aparece na loja.
+ */
+function CursoCard({
+  curso,
+  modulos,
+  aulas,
+  editando,
+  onEditar,
+  ocupado,
+  onSalvar,
+  onCapa,
+  onEnviar,
+  onVoltar,
+  onNovoModulo,
+}: {
+  curso: CursoAdmin;
+  modulos: number;
+  aulas: number;
+  editando: boolean;
+  onEditar: (v: boolean) => void;
+  ocupado: string | null;
+  onSalvar: (campos: { title?: string; description?: string | null; price?: number }) => Promise<void>;
+  onCapa: (file: File) => Promise<void>;
+  onEnviar: () => Promise<void>;
+  onVoltar: () => Promise<void>;
+  onNovoModulo: () => Promise<void>;
+}) {
+  const [titulo, setTitulo] = useState(curso.title);
+  const [descricao, setDescricao] = useState(curso.description ?? "");
+  const [preco, setPreco] = useState(String(curso.price ?? 0));
+
+  // O curso trocado por baixo (seletor) precisa recarregar os campos, senão o
+  // formulário mostra os dados do curso anterior.
+  useEffect(() => {
+    setTitulo(curso.title);
+    setDescricao(curso.description ?? "");
+    setPreco(String(curso.price ?? 0));
+  }, [curso.id, curso.title, curso.description, curso.price]);
+
+  const noAr = curso.status === "active";
+  const emAnalise = curso.status === "pending_review";
+  const tomDoStatus = noAr
+    ? "bg-emerald-500/15 text-emerald-500"
+    : emAnalise
+      ? "bg-amber-500/15 text-amber-500"
+      : "bg-muted text-muted-foreground";
+
+  return (
+    <div className="mb-4 rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-foreground">{curso.title}</h2>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tomDoStatus}`}>
+              {rotuloDoStatus(curso.status)}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {modulos} {modulos === 1 ? "módulo" : "módulos"} ·{" "}
+            {aulas} {aulas === 1 ? "aula" : "aulas"} ·{" "}
+            {Number(curso.price || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onEditar(!editando)}
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-accent"
+        >
+          <Pencil className="h-3 w-3" />
+          {editando ? "Fechar" : "Editar"}
+        </button>
+      </div>
+
+      {editando && (
+        <div className="mt-3 grid gap-2 rounded-xl bg-muted p-3">
+          <label className="grid gap-1 text-[11px] text-muted-foreground">
+            Nome do curso
+            <input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+
+          <label className="grid gap-1 text-[11px] text-muted-foreground">
+            Descrição
+            <textarea
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              rows={3}
+              className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+
+          <label className="grid gap-1 text-[11px] text-muted-foreground">
+            Preço (R$)
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={preco}
+              onChange={(e) => setPreco(e.target.value)}
+              className="w-32 rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              type="button"
+              disabled={ocupado !== null}
+              onClick={() => void onSalvar({
+                title: titulo,
+                description: descricao.trim() ? descricao : null,
+                price: Number(preco) || 0,
+              })}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+            >
+              {ocupado === "salvar-curso" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              Salvar
+            </button>
+
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-[11px] font-semibold text-muted-foreground hover:bg-accent">
+              {ocupado === "capa-curso" ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImageIcon className="h-3 w-3" />}
+              {curso.coverUrl ? "Trocar capa" : "Capa"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={ocupado !== null}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void onCapa(f); e.target.value = ""; }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={ocupado !== null}
+          onClick={() => void onNovoModulo()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+        >
+          {ocupado === "novo-modulo" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          Novo módulo
+        </button>
+
+        {/* Curso no ar não volta por aqui: tirar da loja é decisão da FitMind,
+            não do criador — pode haver quem já comprou. */}
+        {!noAr && !emAnalise && (
+          <button
+            type="button"
+            disabled={ocupado !== null || aulas === 0}
+            title={aulas === 0 ? "Publique pelo menos uma aula antes de enviar." : undefined}
+            onClick={() => void onEnviar()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            {ocupado === "enviar-curso" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Enviar para aprovação
+          </button>
+        )}
+
+        {emAnalise && (
+          <button
+            type="button"
+            disabled={ocupado !== null}
+            onClick={() => void onVoltar()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-accent disabled:opacity-60"
+          >
+            {ocupado === "voltar-curso" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+            Voltar para rascunho
+          </button>
+        )}
+      </div>
+
+      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+        {noAr
+          ? "Este curso está na loja. Mudanças de conteúdo valem na hora para quem já comprou."
+          : emAnalise
+            ? "Na fila da FitMind. Enquanto estiver em análise ele não aparece na loja."
+            : "Rascunho: só você enxerga. Ele entra na loja depois que a FitMind aprovar."}
+      </p>
     </div>
   );
 }

@@ -81,9 +81,11 @@ import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_a
 import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional.orders-in-progress'
 import { Route as AuthenticatedProfessionalHerbalifeBoletosRouteImport } from './routes/_authenticated/professional.herbalife-boletos'
 import { Route as AuthenticatedProfessionalCursosTesteRouteImport } from './routes/_authenticated/professional.cursos-teste'
+import { Route as AuthenticatedProfessionalCursosRouteImport } from './routes/_authenticated/professional.cursos'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
 import { Route as AuthenticatedPartnerHerbalifeBoletosRouteImport } from './routes/_authenticated/partner.herbalife-boletos'
 import { Route as AuthenticatedPartnerCursosTesteRouteImport } from './routes/_authenticated/partner.cursos-teste'
+import { Route as AuthenticatedPartnerCursosRouteImport } from './routes/_authenticated/partner.cursos'
 import { Route as AuthenticatedCoachLojaTesteRouteImport } from './routes/_authenticated/coach.loja-teste'
 import { Route as AuthenticatedAdminWhatsappRouteImport } from './routes/_authenticated/admin.whatsapp'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
@@ -556,6 +558,12 @@ const AuthenticatedProfessionalCursosTesteRoute =
     path: '/cursos-teste',
     getParentRoute: () => AuthenticatedProfessionalRoute,
   } as any)
+const AuthenticatedProfessionalCursosRoute =
+  AuthenticatedProfessionalCursosRouteImport.update({
+    id: '/cursos',
+    path: '/cursos',
+    getParentRoute: () => AuthenticatedProfessionalRoute,
+  } as any)
 const AuthenticatedPartnerOrdersInProgressRoute =
   AuthenticatedPartnerOrdersInProgressRouteImport.update({
     id: '/orders-in-progress',
@@ -572,6 +580,12 @@ const AuthenticatedPartnerCursosTesteRoute =
   AuthenticatedPartnerCursosTesteRouteImport.update({
     id: '/cursos-teste',
     path: '/cursos-teste',
+    getParentRoute: () => AuthenticatedPartnerRoute,
+  } as any)
+const AuthenticatedPartnerCursosRoute =
+  AuthenticatedPartnerCursosRouteImport.update({
+    id: '/cursos',
+    path: '/cursos',
     getParentRoute: () => AuthenticatedPartnerRoute,
   } as any)
 const AuthenticatedCoachLojaTesteRoute =
@@ -1129,9 +1143,11 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
+  '/partner/cursos': typeof AuthenticatedPartnerCursosRoute
   '/partner/cursos-teste': typeof AuthenticatedPartnerCursosTesteRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/cursos': typeof AuthenticatedProfessionalCursosRoute
   '/professional/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
@@ -1281,9 +1297,11 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
+  '/partner/cursos': typeof AuthenticatedPartnerCursosRoute
   '/partner/cursos-teste': typeof AuthenticatedPartnerCursosTesteRoute
   '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/cursos': typeof AuthenticatedProfessionalCursosRoute
   '/professional/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
@@ -1437,9 +1455,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/whatsapp': typeof AuthenticatedAdminWhatsappRoute
   '/_authenticated/coach/loja-teste': typeof AuthenticatedCoachLojaTesteRoute
+  '/_authenticated/partner/cursos': typeof AuthenticatedPartnerCursosRoute
   '/_authenticated/partner/cursos-teste': typeof AuthenticatedPartnerCursosTesteRoute
   '/_authenticated/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/_authenticated/professional/cursos': typeof AuthenticatedProfessionalCursosRoute
   '/_authenticated/professional/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/_authenticated/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/_authenticated/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
@@ -1593,9 +1613,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/whatsapp'
     | '/coach/loja-teste'
+    | '/partner/cursos'
     | '/partner/cursos-teste'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
+    | '/professional/cursos'
     | '/professional/cursos-teste'
     | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
@@ -1745,9 +1767,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/whatsapp'
     | '/coach/loja-teste'
+    | '/partner/cursos'
     | '/partner/cursos-teste'
     | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
+    | '/professional/cursos'
     | '/professional/cursos-teste'
     | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
@@ -1900,9 +1924,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/whatsapp'
     | '/_authenticated/coach/loja-teste'
+    | '/_authenticated/partner/cursos'
     | '/_authenticated/partner/cursos-teste'
     | '/_authenticated/partner/herbalife-boletos'
     | '/_authenticated/partner/orders-in-progress'
+    | '/_authenticated/professional/cursos'
     | '/_authenticated/professional/cursos-teste'
     | '/_authenticated/professional/herbalife-boletos'
     | '/_authenticated/professional/orders-in-progress'
@@ -2514,6 +2540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfessionalCursosTesteRouteImport
       parentRoute: typeof AuthenticatedProfessionalRoute
     }
+    '/_authenticated/professional/cursos': {
+      id: '/_authenticated/professional/cursos'
+      path: '/cursos'
+      fullPath: '/professional/cursos'
+      preLoaderRoute: typeof AuthenticatedProfessionalCursosRouteImport
+      parentRoute: typeof AuthenticatedProfessionalRoute
+    }
     '/_authenticated/partner/orders-in-progress': {
       id: '/_authenticated/partner/orders-in-progress'
       path: '/orders-in-progress'
@@ -2533,6 +2566,13 @@ declare module '@tanstack/react-router' {
       path: '/cursos-teste'
       fullPath: '/partner/cursos-teste'
       preLoaderRoute: typeof AuthenticatedPartnerCursosTesteRouteImport
+      parentRoute: typeof AuthenticatedPartnerRoute
+    }
+    '/_authenticated/partner/cursos': {
+      id: '/_authenticated/partner/cursos'
+      path: '/cursos'
+      fullPath: '/partner/cursos'
+      preLoaderRoute: typeof AuthenticatedPartnerCursosRouteImport
       parentRoute: typeof AuthenticatedPartnerRoute
     }
     '/_authenticated/coach/loja-teste': {
@@ -3254,12 +3294,14 @@ const AuthenticatedCoachRouteWithChildren =
   AuthenticatedCoachRoute._addFileChildren(AuthenticatedCoachRouteChildren)
 
 interface AuthenticatedPartnerRouteChildren {
+  AuthenticatedPartnerCursosRoute: typeof AuthenticatedPartnerCursosRoute
   AuthenticatedPartnerCursosTesteRoute: typeof AuthenticatedPartnerCursosTesteRoute
   AuthenticatedPartnerHerbalifeBoletosRoute: typeof AuthenticatedPartnerHerbalifeBoletosRoute
   AuthenticatedPartnerOrdersInProgressRoute: typeof AuthenticatedPartnerOrdersInProgressRoute
 }
 
 const AuthenticatedPartnerRouteChildren: AuthenticatedPartnerRouteChildren = {
+  AuthenticatedPartnerCursosRoute: AuthenticatedPartnerCursosRoute,
   AuthenticatedPartnerCursosTesteRoute: AuthenticatedPartnerCursosTesteRoute,
   AuthenticatedPartnerHerbalifeBoletosRoute:
     AuthenticatedPartnerHerbalifeBoletosRoute,
@@ -3271,6 +3313,7 @@ const AuthenticatedPartnerRouteWithChildren =
   AuthenticatedPartnerRoute._addFileChildren(AuthenticatedPartnerRouteChildren)
 
 interface AuthenticatedProfessionalRouteChildren {
+  AuthenticatedProfessionalCursosRoute: typeof AuthenticatedProfessionalCursosRoute
   AuthenticatedProfessionalCursosTesteRoute: typeof AuthenticatedProfessionalCursosTesteRoute
   AuthenticatedProfessionalHerbalifeBoletosRoute: typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   AuthenticatedProfessionalOrdersInProgressRoute: typeof AuthenticatedProfessionalOrdersInProgressRoute
@@ -3278,6 +3321,7 @@ interface AuthenticatedProfessionalRouteChildren {
 
 const AuthenticatedProfessionalRouteChildren: AuthenticatedProfessionalRouteChildren =
   {
+    AuthenticatedProfessionalCursosRoute: AuthenticatedProfessionalCursosRoute,
     AuthenticatedProfessionalCursosTesteRoute:
       AuthenticatedProfessionalCursosTesteRoute,
     AuthenticatedProfessionalHerbalifeBoletosRoute:

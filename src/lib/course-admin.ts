@@ -36,6 +36,8 @@ export type AulaAdmin = {
   sortOrder: number;
   unlockRule: string;
   unlockDays: number | null;
+  /** Só a regra "date" usa. Sem ele a aula fica liberada em silêncio. */
+  unlockAt: string | null;
   durationSeconds: number | null;
   videoKey: string | null;
   thumbnailKey: string | null;
@@ -108,7 +110,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
   if (!moduleIds.length) return [];
   const { data, error } = await supabase
     .from("digital_product_lessons" as never)
-    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,duration_seconds,video_key,thumbnail_key,require_watermark,allow_download" as never)
+    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,unlock_at,duration_seconds,video_key,thumbnail_key,require_watermark,allow_download" as never)
     .in("module_id" as never, moduleIds as never)
     .order("sort_order" as never);
   if (error) { console.error("[course-admin] aulas", error); return []; }
@@ -120,6 +122,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
     sortOrder: Number(l.sort_order || 0),
     unlockRule: String(l.unlock_rule || "none"),
     unlockDays: l.unlock_days == null ? null : Number(l.unlock_days),
+    unlockAt: (l.unlock_at as string) || null,
     durationSeconds: l.duration_seconds == null ? null : Number(l.duration_seconds),
     videoKey: (l.video_key as string) || null,
     thumbnailKey: (l.thumbnail_key as string) || null,
@@ -180,6 +183,7 @@ export async function atualizarAula(
     kind: string;
     unlockRule: string;
     unlockDays: number | null;
+    unlockAt: string | null;
     durationSeconds: number | null;
     videoKey: string | null;
     thumbnailKey: string | null;
@@ -192,6 +196,11 @@ export async function atualizarAula(
   if (dados.kind !== undefined) payload.kind = dados.kind;
   if (dados.unlockRule !== undefined) payload.unlock_rule = dados.unlockRule;
   if (dados.unlockDays !== undefined) payload.unlock_days = dados.unlockDays;
+  // Sem isto, "Data fixa" gravava a regra e nunca a data — e
+  // `course-engine.ts:209` só tranca quando `unlockAt` existe, então a aula
+  // ficava liberada sem ninguém perceber. O CHECK `dpl_date_needs_at` do
+  // banco recusa a regra "date" sem data, o que agora vira erro visível.
+  if (dados.unlockAt !== undefined) payload.unlock_at = dados.unlockAt;
   if (dados.durationSeconds !== undefined) payload.duration_seconds = dados.durationSeconds;
   if (dados.videoKey !== undefined) payload.video_key = dados.videoKey;
   if (dados.thumbnailKey !== undefined) payload.thumbnail_key = dados.thumbnailKey;
@@ -263,4 +272,116 @@ export async function progressoDaTurma(lessonIds: string[]): Promise<Map<string,
     if (r.completed_at) it.concluiram += 1;
   }
   return out;
+}
+
+// ─── O curso em si ─────────────────────────────────────────────────────────
+//
+// Tudo aqui passa por RPC security-definer (`docs/propostas/2026-08-23-criar-curso.sql`),
+// e não por insert/update direto, por um motivo específico: uma policy de
+// UPDATE aberta no `digital_products` deixaria o criador mudar o próprio
+// `status` para 'active' e se autopublicar na loja. As funções tocam só as
+// colunas que ele pode mesmo mudar.
+//
+// O ciclo é: draft → pending_review → (admin) active. Só 'active' aparece na
+// loja, e só admin chega lá.
+
+/** Estados possíveis de um curso, na ordem em que acontecem. */
+export type StatusCurso = "draft" | "pending_review" | "active" | "inactive";
+
+export function rotuloDoStatus(status: string | null): string {
+  switch (status) {
+    case "draft": return "Rascunho";
+    case "pending_review": return "Em análise";
+    case "active": return "No ar";
+    case "inactive": return "Fora do ar";
+    default: return status || "—";
+  }
+}
+
+/**
+ * Diz em português quando o banco ainda não recebeu as funções.
+ *
+ * Sem isto o criador veria "Could not find the function public.criar_curso in
+ * the schema cache" — mensagem que não ajuda ninguém a saber o que fazer. O
+ * SQL vive em `docs/propostas/2026-08-23-criar-curso.sql` e é aplicado à mão.
+ */
+function erroDeCurso(error: { message: string; code?: string }): Error {
+  if (error.code === "PGRST202" || /schema cache|does not exist/i.test(error.message)) {
+    return new Error(
+      "A criação de cursos ainda não foi liberada neste ambiente. Avise a FitMind.",
+    );
+  }
+  return new Error(error.message);
+}
+
+/** Cria o curso e o vínculo de autoria numa transação só. Devolve o id. */
+export async function criarCurso(
+  title: string,
+  description?: string | null,
+  price = 0,
+  coverUrl?: string | null,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("criar_curso" as never, {
+    _title: title,
+    _description: description ?? null,
+    _price: price,
+    _cover_url: coverUrl ?? null,
+  } as never);
+  if (error) throw erroDeCurso(error);
+  const id = data as unknown as string | null;
+  if (!id) throw new Error("O curso não foi criado.");
+  return id;
+}
+
+/**
+ * Salva o que mudou. Campo não enviado é campo que não muda — a RPC trata
+ * `null` como "não mexe", então dá para salvar um campo sem reenviar o resto.
+ */
+export async function atualizarCurso(
+  digitalProductId: string,
+  campos: { title?: string; description?: string | null; price?: number; coverUrl?: string | null },
+): Promise<void> {
+  const { error } = await supabase.rpc("atualizar_curso" as never, {
+    _digital_product_id: digitalProductId,
+    _title: campos.title ?? null,
+    _description: campos.description ?? null,
+    _price: campos.price ?? null,
+    _cover_url: campos.coverUrl ?? null,
+  } as never);
+  if (error) throw erroDeCurso(error);
+}
+
+/** Manda para a fila do revisor. O banco recusa curso sem nenhuma aula. */
+export async function enviarCursoParaAprovacao(digitalProductId: string): Promise<void> {
+  const { error } = await supabase.rpc("enviar_curso_para_aprovacao" as never, {
+    _digital_product_id: digitalProductId,
+  } as never);
+  if (error) throw erroDeCurso(error);
+}
+
+/** Tira da fila para continuar editando. Curso já no ar não volta por aqui. */
+export async function voltarCursoParaRascunho(digitalProductId: string): Promise<void> {
+  const { error } = await supabase.rpc("voltar_curso_para_rascunho" as never, {
+    _digital_product_id: digitalProductId,
+  } as never);
+  if (error) throw erroDeCurso(error);
+}
+
+/**
+ * Sobe a capa do curso.
+ *
+ * Vai para `store-images` e não para `course-videos`, e a diferença importa:
+ * `course-videos` é privado — é o que faz o vídeo só abrir por link assinado.
+ * Capa precisa aparecer na vitrine para quem ainda NÃO comprou, então tem que
+ * ser pública. Guardar capa no bucket privado daria uma imagem quebrada na loja.
+ */
+export async function subirCapaDoCurso(digitalProductId: string, file: File): Promise<string> {
+  const extensao = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const caminho = `cursos/${digitalProductId}/capa-${Date.now()}.${extensao}`;
+  const { error } = await supabase.storage
+    .from("store-images")
+    .upload(caminho, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from("store-images").getPublicUrl(caminho);
+  return data.publicUrl;
 }
