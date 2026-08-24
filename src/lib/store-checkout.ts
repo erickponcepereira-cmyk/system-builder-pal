@@ -169,13 +169,21 @@ async function criarPedidoDeVendedor(
   } else if (item.isSchedulable) {
     throw new Error("Selecione um horário para este atendimento.");
   } else {
-    const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
+    // `_checkout` e nao a função crua: ele CHAMA `create_partner_product_order`
+    // por dentro — mesmo pedido, mesma cadeia de comissão — e ainda confere se
+    // o número do pedido saiu no formato certo, estourando quando não saiu.
+    //
+    // Sem essa conferência o pedido nasce sem número, o link `/pay/<número>`
+    // fica quebrado e ninguém descobre até o comprador reclamar. É a mesma RPC
+    // que a aba de parceiros da loja atual já usa em produção.
+    const { data, error } = await supabase.rpc("create_partner_product_order_checkout" as never, {
       _professional_product_id: item.sourceId,
       _payment_method: metodo,
       _referred_by_student_id: indicador,
     } as never);
     if (error) throw new Error(error.message);
-    pedidoId = data as unknown as string;
+    const r = data as unknown as { order_id?: string } | null;
+    pedidoId = r?.order_id ?? null;
   }
 
   if (!pedidoId) throw new Error("Pedido não retornado");
@@ -354,13 +362,17 @@ async function criarPedidoDeVendedorPeloCoach(
   } else if (item.isSchedulable) {
     throw new Error("Selecione um horário para este atendimento.");
   } else {
-    const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
+    // Mesma razão do caminho do aluno: o invólucro confere o número do pedido,
+    // e no modo coach o número é ainda mais crítico — é dele que sai o link
+    // que o coach manda para o aluno pagar.
+    const { data, error } = await supabase.rpc("create_partner_product_order_checkout" as never, {
       _professional_product_id: item.sourceId,
       _payment_method: metodo,
       _buyer_student_id: client.id,
     } as never);
     if (error) throw new Error(error.message);
-    pedidoId = data as unknown as string;
+    const r = data as unknown as { order_id?: string } | null;
+    pedidoId = r?.order_id ?? null;
   }
 
   if (!pedidoId) throw new Error("Pedido não retornado");
