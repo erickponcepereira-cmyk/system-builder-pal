@@ -16,6 +16,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureOrderNumber } from "@/lib/order-number";
 import { ehDeVendedor, type CartItem } from "@/lib/store-cart";
+import type { SaleClient } from "@/lib/store-coach";
 
 export type PaymentMethod = "pix" | "credit_card" | "debit_card";
 
@@ -281,4 +282,152 @@ async function anexarEntrega(
       shipping_location_url: shipping.location_url || undefined,
     },
   });
+}
+
+// ─── Modo coach: o coach não compra, ele vende ────────────────────────────
+
+type CriarVendaParams = {
+  cart: CartItem[];
+  paymentMethod: PaymentMethod;
+  /** Aluno em nome de quem a venda sai. Sem ele não existe pedido. */
+  client: SaleClient;
+};
+
+/**
+ * Cria o próximo pedido de uma venda feita pelo coach.
+ *
+ * Mesma ordem do checkout do aluno — parceiro/profissional um por vez, FitMind
+ * por último — mas com três diferenças que não são cosméticas:
+ *
+ * 1. Os itens FitMind vão para `create_coach_sale`, não para
+ *    `create_store_order`. É outra RPC porque é outro fato: uma venda tem
+ *    vendedor, e o vendedor entra na cadeia de comissão.
+ * 2. Cada RPC de parceiro recebe o aluno num parâmetro **de nome diferente**
+ *    (`_student_id` numa, `_buyer_student_id` na outra). Trocar um pelo outro
+ *    não dá erro de compilação e cria o pedido no nome errado.
+ * 3. Não há indicação aluno→aluno numa venda do coach: `_referred_by_student_id`
+ *    vai explícito como `null` para o Postgres não ficar em dúvida de assinatura.
+ */
+export async function criarProximaVendaDoCoach({
+  cart,
+  paymentMethod,
+  client,
+}: CriarVendaParams): Promise<PayOrder | null> {
+  if (cart.length === 0) return null;
+
+  const deVendedor = cart.filter((item) => ehDeVendedor(item.kind));
+  const daFitMind = cart.filter((item) => !ehDeVendedor(item.kind));
+
+  if (deVendedor.length > 0) {
+    return criarPedidoDeVendedorPeloCoach(deVendedor[0], paymentMethod, client);
+  }
+
+  return criarVendaFitMind(daFitMind, paymentMethod, client);
+}
+
+async function criarPedidoDeVendedorPeloCoach(
+  item: CartItem,
+  paymentMethod: PaymentMethod,
+  client: SaleClient,
+): Promise<PayOrder> {
+  const metodo = partnerRpcPaymentMethod(paymentMethod);
+  let pedidoId: string | null = null;
+
+  if (item.kind === "partner_company") {
+    const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
+      _partner_product_id: item.sourceId,
+      _student_id: client.id,
+      _payment_method: metodo,
+      _referred_by_student_id: null,
+    } as never);
+    if (error) throw new Error(error.message);
+    pedidoId = data as unknown as string;
+  } else if (item.isSchedulable && item.scheduledSlot) {
+    const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
+      _professional_product_id: item.sourceId,
+      _starts_at: item.scheduledSlot,
+      _payment_method: metodo,
+      _student_id: client.id,
+    } as never);
+    if (error) throw new Error(error.message);
+    pedidoId = data as unknown as string;
+  } else if (item.isSchedulable) {
+    throw new Error("Selecione um horário para este atendimento.");
+  } else {
+    const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
+      _professional_product_id: item.sourceId,
+      _payment_method: metodo,
+      _buyer_student_id: client.id,
+    } as never);
+    if (error) throw new Error(error.message);
+    pedidoId = data as unknown as string;
+  }
+
+  if (!pedidoId) throw new Error("Pedido não retornado");
+
+  const { data: linha } = await supabase
+    .from("partner_product_orders" as never)
+    .select("id,order_number,gross_amount" as never)
+    .eq("id" as never, pedidoId as never)
+    .maybeSingle();
+  const pedido = linha as unknown as { id: string; order_number: string; gross_amount: number } | null;
+
+  return {
+    id: pedido?.id || String(pedidoId),
+    total: Number(pedido?.gross_amount || item.price),
+    number: (await ensureOrderNumber("partner_product_order", String(pedidoId), pedido?.order_number)) || "",
+    email: client.email || "",
+    name: client.name,
+    sourceKind: "partner_product_order",
+    paidItemIds: [item.id],
+  };
+}
+
+async function criarVendaFitMind(
+  itens: CartItem[],
+  paymentMethod: PaymentMethod,
+  client: SaleClient,
+): Promise<PayOrder> {
+  const payload = itens.map((item) => ({
+    productId: item.sourceId,
+    kind: item.kind,
+    title: item.title,
+    unitPrice: item.price,
+    quantity: item.quantity,
+    // Só o modelo novo (`item`) distingue digital de físico, e é o estoque que
+    // distingue: estoque nulo é coisa que não se entrega.
+    itemKind: item.kind === "item"
+      ? (item.stock === null || item.stock === undefined ? "digital" : "physical")
+      : undefined,
+  }));
+
+  const { data: res, error } = await supabase.rpc("create_coach_sale" as never, {
+    _client_id: client.id,
+    _items: payload,
+    _payment_method: paymentMethod,
+    _notes: null,
+  } as never);
+  if (error) throw new Error(error.message);
+
+  // A RPC devolve linha ou array de uma linha, e os nomes dos campos variam
+  // entre snake_case e camelCase conforme a versão. Aceitar os dois é mais
+  // barato que descobrir na produção qual chegou.
+  const row = (Array.isArray(res) ? res[0] : res) as {
+    order_id?: string; orderId?: string;
+    order_number?: string; orderNumber?: string;
+    total?: number; total_amount?: number;
+  } | null;
+
+  const pedidoId = row?.order_id || row?.orderId;
+  if (!pedidoId) throw new Error("Pedido não retornado pelo servidor");
+
+  return {
+    id: String(pedidoId),
+    total: Number(row?.total ?? row?.total_amount ?? itens.reduce((soma, i) => soma + i.price * i.quantity, 0)),
+    number: (await ensureOrderNumber("store_order", String(pedidoId), row?.order_number || row?.orderNumber)) || "",
+    email: client.email || "",
+    name: client.name,
+    sourceKind: "store_order",
+    paidItemIds: itens.map((item) => item.id),
+  };
 }

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
+import { comAbsolutosReais, type ComissaoBruta, type GanhoReal } from "@/lib/store-earnings";
 
 /**
  * Camada de leitura da vitrine unificada (superfície de teste).
@@ -11,8 +12,11 @@ import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
  *
  * Duas coisas que não podem mudar aqui:
  *
- *  1. Nenhuma coluna financeira entra no `select`. A vitrine do aluno nunca vê
- *     custo, taxa ou comissão — isso só existe no modo coach da tela antiga.
+ *  1. Coluna financeira só entra no `select` quando `paraCoach` é verdadeiro.
+ *     A vitrine do aluno nunca vê custo, taxa ou comissão — e a garantia é
+ *     esta consulta, não uma checagem de papel lá na tela. A policy de
+ *     `products` é `USING (true) TO authenticated`: qualquer logado leria as
+ *     colunas se pedisse. Quem não pede, não recebe.
  *  2. A taxonomia (`store_sections` / `store_categories`) é compartilhada pelos
  *     dois lados; é justamente por isso que dá para fundir as abas sem tocar no
  *     modelo de dados. Aqui ela é carregada uma vez e serve todo mundo.
@@ -60,6 +64,14 @@ export type UnifiedProduct = {
   challengeTickets: number;
   stock: number | null;
   isSchedulable: boolean;
+  /** Pontos de carreira do coach por venda. Só faz sentido em modo coach. */
+  pointsPerSale: number;
+  /**
+   * Colunas financeiras. **Só vêm preenchidas em modo coach** — a consulta é
+   * que decide, e é assim de propósito: sem os dados, nenhuma tela consegue
+   * mostrar comissão para aluno, nem por engano.
+   */
+  comissao: ComissaoBruta | null;
   /** Texto já normalizado (sem acento, minúsculo) usado pela busca. */
   haystack: string;
 };
@@ -131,7 +143,73 @@ function firstImage(imageUrl: unknown, imageUrls: unknown): string | null {
  * Carrega tudo em paralelo. Cada fonte falha isolada: uma tabela indisponível
  * derruba a própria seção, não a vitrine inteira.
  */
-export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
+/**
+ * As duas listas de colunas do catálogo legado.
+ *
+ * Escritas por extenso porque o `select` tipado do Supabase é validado em
+ * tempo de compilação por um parser de tipos, e esse parser **não lida com
+ * união**: passar `paraCoach ? A : B` faz o tipo virar `A | B` e ele devolve
+ * `ParserError` mesmo quando as duas strings são válidas. Por isso a chamada
+ * abaixo casta o argumento — a validação de coluna se perde nesta consulta,
+ * como já acontece nas outras cinco.
+ *
+ * Consequência prática: **coluna errada aqui só aparece em runtime**, como
+ * erro 400 do PostgREST. Se a vitrine ficar vazia depois de mexer nesta lista,
+ * é aqui que se olha primeiro.
+ *
+ * A parte financeira espelha `COLUNAS_FINANCEIRAS` de `StorePage.tsx:232`.
+ */
+const SELECT_LEGADO =
+  "id,name,subtitle,description,price,original_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale";
+const SELECT_LEGADO_COACH =
+  "id,name,subtitle,description,price,original_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs";
+
+export type CatalogOptions = {
+  /** Liga as colunas financeiras. Só a loja em modo coach passa `true`. */
+  paraCoach?: boolean;
+  /**
+   * `listProductsWithRealEarnings` já embrulhado por `useServerFn`. Devolve a
+   * sobra real calculada pelo motor de slots, que é mais confiável que o
+   * percentual da linha. Opcional: sem ele o cálculo cai no fallback.
+   */
+  ganhosReais?: () => Promise<unknown>;
+};
+
+export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<UnifiedCatalog> {
+  const paraCoach = opts.paraCoach === true;
+
+  // Espelha `COLUNAS_FINANCEIRAS` de `StorePage.tsx:232`. Mesma lista, porque
+  // é a mesma tabela e o mesmo cálculo do outro lado.
+  const COLUNAS_FINANCEIRAS = paraCoach
+    ? ",commission_coach,commission_level1,commission_level2,commission_level3"
+      + ",app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage"
+      + ",tax_percentage,cost,other_costs"
+    : "";
+
+  const comissaoDaLinha = (r: Record<string, unknown>): ComissaoBruta | null => {
+    if (!paraCoach) return null;
+    return {
+      commissionCoach: numOrNull(r.commission_coach),
+      commissionLevel1: numOrNull(r.commission_level1),
+      commissionLevel2: numOrNull(r.commission_level2),
+      commissionLevel3: numOrNull(r.commission_level3),
+      commissionCoachAbsolute: null,
+      commissionLevel1Absolute: null,
+      commissionLevel2Absolute: null,
+      commissionLevel3Absolute: null,
+      commissionCoachAbsoluteCard: null,
+      commissionLevel1AbsoluteCard: null,
+      commissionLevel2AbsoluteCard: null,
+      commissionLevel3AbsoluteCard: null,
+      appFee: numOrNull(r.app_fee),
+      appFeePercentage: numOrNull(r.app_fee_percentage),
+      cardFeePercentage: numOrNull(r.card_fee_percentage),
+      taxPercentage: numOrNull(r.tax_percentage),
+      cost: numOrNull(r.cost),
+      otherCosts: numOrNull(r.other_costs),
+    };
+  };
+
   const errors: string[] = [];
   const note = (label: string, error: unknown) => {
     if (error) {
@@ -139,6 +217,13 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       errors.push(label);
     }
   };
+
+  // Dispara junto com o catálogo, não depois: são independentes.
+  const ganhosPromise: Promise<unknown> = paraCoach && opts.ganhosReais
+    ? Promise.resolve()
+        .then(() => opts.ganhosReais!())
+        .catch((e) => { console.warn("[unified-store] ganhos reais", e); return []; })
+    : Promise.resolve([]);
 
   const [
     legacyRes,
@@ -152,12 +237,12 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
   ] = await Promise.all([
     supabase
       .from("products")
-      .select("id,name,subtitle,description,price,original_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access")
+      .select((paraCoach ? SELECT_LEGADO_COACH : SELECT_LEGADO) as never)
       .eq("status", "active")
       .order("sort_order"),
     supabase
       .from("products" as never)
-      .select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,card_access_days,challenge_tokens_amount,visibility_audiences,creator_coach_id" as never)
+      .select(`id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,card_access_days,challenge_tokens_amount,visibility_audiences,creator_coach_id,points_per_sale${COLUNAS_FINANCEIRAS}` as never)
       .not("kind" as never, "is", null)
       .eq("is_active" as never, true as never)
       .order("sort_order" as never),
@@ -211,13 +296,24 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
   note("produtos de parceiros", partnerRes.error);
   note("produtos de profissionais", professionalRes.error);
 
+  const ganhoPorId = new Map<string, GanhoReal>();
+  for (const g of ((await ganhosPromise) as GanhoReal[] | null) || []) {
+    if (g && g.id) ganhoPorId.set(String(g.id), g);
+  }
+
+  /** Comissão da linha, já com os absolutos do motor de slots por cima. */
+  const comissaoDoProduto = (r: Record<string, unknown>): ComissaoBruta | null => {
+    const bruta = comissaoDaLinha(r);
+    return bruta ? comAbsolutosReais(bruta, ganhoPorId.get(String(r.id))) : null;
+  };
+
   const products: UnifiedProduct[] = [];
   const push = (p: Omit<UnifiedProduct, "haystack">) => {
     products.push({ ...p, haystack: expand(`${p.title} ${p.sellerName} ${p.description || ""}`) });
   };
 
   // --- FitMind: catálogo legado ---
-  for (const r of (legacyRes.data as Array<Record<string, unknown>>) || []) {
+  for (const r of (legacyRes.data as unknown as Array<Record<string, unknown>>) || []) {
     push({
       id: `challenge-${r.id}`,
       sourceId: String(r.id),
@@ -244,6 +340,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: r.has_challenge_access ? num(r.challenge_tokens_amount) : 0,
       stock: null,
       isSchedulable: false,
+      pointsPerSale: num(r.points_per_sale),
+      comissao: comissaoDoProduto(r),
     });
   }
 
@@ -275,6 +373,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: num(r.challenge_tokens_amount),
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      pointsPerSale: num(r.points_per_sale),
+      comissao: comissaoDoProduto(r),
     });
   }
 
@@ -306,6 +406,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: 0,
       stock: null,
       isSchedulable: false,
+      pointsPerSale: 0,
+      comissao: null,
     });
   }
 
@@ -337,6 +439,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: 0,
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      pointsPerSale: 0,
+      comissao: null,
     });
   }
 
@@ -371,6 +475,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: false,
+      pointsPerSale: 0,
+      comissao: null,
     });
   }
 
@@ -405,6 +511,8 @@ export async function loadUnifiedCatalog(): Promise<UnifiedCatalog> {
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: !!r.is_schedulable,
+      pointsPerSale: 0,
+      comissao: null,
     });
   }
 

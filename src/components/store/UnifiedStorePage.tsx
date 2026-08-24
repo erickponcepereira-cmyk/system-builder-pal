@@ -5,12 +5,18 @@ import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
+import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
+import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
+import { calcularGanhos, type Ganhos } from "@/lib/store-earnings";
+import { supabase } from "@/integrations/supabase/client";
+import { getShareOrigin } from "@/lib/auth-redirects";
+import { maskCPFSensitive } from "@/lib/masks";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
-import { AlertTriangle, IdCard, Loader2, MapPin, Minus, Plus, Search, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
 import {
   foldText,
@@ -48,6 +54,7 @@ import {
   useCarrinho,
 } from "@/lib/store-cart";
 import {
+  criarProximaVendaDoCoach,
   criarProximoPedido,
   faltaParaEntrega,
   limparErroDeCheckout,
@@ -56,6 +63,7 @@ import {
   SHIPPING_VAZIO,
   type ShippingForm,
 } from "@/lib/store-checkout";
+import { type CoachSaleRow, type SaleClient, useCoachContext } from "@/lib/store-coach";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -102,6 +110,15 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const [payOrder, setPayOrder] = useState<PayOrder | null>(null);
   const [comprado, setComprado] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
   const attachShipping = useServerFn(attachShippingToOrder);
+  const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
+
+  // Modo coach: o coach não compra, vende para um aluno. Sem aluno escolhido
+  // não existe pedido — por isso o seletor é pré-condição, não enfeite.
+  const modoCoach = audience === "coach";
+  const coach = useCoachContext(modoCoach);
+  const [selectedClient, setSelectedClient] = useState<SaleClient | null>(null);
+  const [seletorAlunoAberto, setSeletorAlunoAberto] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
 
   // As tres regras de visibilidade. Faltar qualquer uma e vazamento de
   // catalogo entre redes, nao falta de recurso.
@@ -111,7 +128,12 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     let active = true;
     (async () => {
       try {
-        const data = await loadUnifiedCatalog();
+        // As colunas financeiras só descem em modo coach, e a garantia é esta
+        // chamada — não uma checagem de papel na renderização.
+        const data = await loadUnifiedCatalog({
+          paraCoach: audience === "coach",
+          ganhosReais: audience === "coach" ? () => fetchRealEarnings() : undefined,
+        });
         if (!active) return;
         setCatalog(data);
 
@@ -143,6 +165,9 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
       }
     })();
     return () => { active = false; };
+    // A audiência vem da rota e não muda enquanto a tela vive; recarregar o
+    // catálogo por causa dela seria trabalho para um caso que não existe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const products = catalog?.products ?? [];
@@ -209,27 +234,44 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
    */
   const finalizar = async () => {
     if (carrinho.cart.length === 0 || criandoPedido) return;
-    if (audience === "coach") {
-      toast.error("Venda como coach ainda não está ligada nesta vitrine. Use a loja atual.");
+
+    // Coach sem aluno escolhido: abre o seletor em vez de recusar. Recusar
+    // seria dizer "faltou algo" sem levar até onde se resolve.
+    if (modoCoach && !selectedClient) {
+      setCarrinhoAberto(false);
+      setSeletorAlunoAberto(true);
       return;
     }
-    if (precisaEntrega && carrinho.steps[0]?.key === "fitmind") {
+
+    // A venda do coach não tem entrega: `create_coach_sale` não recebe
+    // endereço. Quem compra físico pelo coach acerta a entrega no painel.
+    if (!modoCoach && precisaEntrega && carrinho.steps[0]?.key === "fitmind") {
       const falta = faltaParaEntrega(shipping, aceitouPrazo, aceitouEndereco);
       if (falta) { toast.error(falta); return; }
     }
 
     setCriandoPedido(true);
     try {
-      const pedido = await criarProximoPedido({
-        cart: carrinho.cart,
-        paymentMethod,
-        shipping,
-        studentId: ctx.studentId,
-        attachShipping,
-      });
+      const pedido = modoCoach && selectedClient
+        ? await criarProximaVendaDoCoach({
+            cart: carrinho.cart,
+            paymentMethod,
+            client: selectedClient,
+          })
+        : await criarProximoPedido({
+            cart: carrinho.cart,
+            paymentMethod,
+            shipping,
+            studentId: ctx.studentId,
+            attachShipping,
+          });
       if (!pedido) return;
       setCarrinhoAberto(false);
       setPayOrder(pedido);
+      if (modoCoach) {
+        toast.success("Venda criada. Finalize o pagamento.");
+        void coach.recarregar();
+      }
     } catch (erro) {
       toast.error(limparErroDeCheckout(erro));
     } finally {
@@ -254,7 +296,10 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   /** Pagou: tira do carrinho o que este pedido cobria e mostra a aprovação. */
   const aoPagar = () => {
     const ids = payOrder?.paidItemIds || [];
-    setComprado({ items: itensComprados(ids), buyerName: payOrder?.name || null });
+    setComprado({
+      items: itensComprados(ids),
+      buyerName: (modoCoach ? selectedClient?.name : payOrder?.name) || null,
+    });
     carrinho.limpar(ids);
     if (payOrder?.sourceKind === "store_order") {
       setShipping(SHIPPING_VAZIO);
@@ -262,6 +307,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
       setAceitouEndereco(false);
     }
     setPayOrder(null);
+    if (modoCoach) void coach.recarregar();
   };
 
   /** Sobrou item: reabre o carrinho, que é onde o próximo pedido começa. */
@@ -302,20 +348,74 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setCarrinhoAberto(true)}
-          aria-label={`Carrinho com ${carrinho.quantidade} ${carrinho.quantidade === 1 ? "item" : "itens"}`}
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card"
-        >
-          <ShoppingCart className="h-5 w-5 text-foreground" />
-          {carrinho.quantidade > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-              {carrinho.quantidade}
-            </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {modoCoach && <MasterCoachCommissionSelector />}
+          {modoCoach && (
+            <button
+              type="button"
+              onClick={() => setHistoricoAberto((v) => !v)}
+              aria-expanded={historicoAberto}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-card px-3 text-[10px] font-bold text-foreground"
+            >
+              <History className="h-3.5 w-3.5 text-primary" /> Histórico ({coach.sales.length})
+            </button>
           )}
-        </button>
+
+          <button
+            type="button"
+            onClick={() => setCarrinhoAberto(true)}
+            aria-label={`Carrinho com ${carrinho.quantidade} ${carrinho.quantidade === 1 ? "item" : "itens"}`}
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card"
+          >
+            <ShoppingCart className="h-5 w-5 text-foreground" />
+            {carrinho.quantidade > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {carrinho.quantidade}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
+
+      {/* Aluno da venda. Fica no topo porque muda o significado de tudo que
+          vem abaixo: o preço que o coach vê é o que aquele aluno vai pagar. */}
+      {modoCoach && (
+        <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary">
+            Selecione seu aluno
+          </p>
+          <button
+            type="button"
+            onClick={() => setSeletorAlunoAberto(true)}
+            className="flex w-full items-center justify-between gap-3 rounded-xl bg-card px-4 py-3 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <UserRound className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-foreground">
+                  {selectedClient?.name || "Selecione seu aluno"}
+                </span>
+                {selectedClient?.coachName && (
+                  <span className="block truncate text-[11px] font-semibold text-primary">
+                    Coach: {selectedClient.coachName}
+                  </span>
+                )}
+                {selectedClient?.email && (
+                  <span className="block truncate text-[11px] text-muted-foreground">{selectedClient.email}</span>
+                )}
+                {selectedClient?.cpf && (
+                  <span className="block text-[11px] text-muted-foreground">
+                    CPF: {maskCPFSensitive(selectedClient.cpf)}
+                  </span>
+                )}
+              </span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        </section>
+      )}
+
+      {modoCoach && historicoAberto && <CoachSalesPanel sales={coach.sales} />}
 
       {/* Barra de local. Fica no topo como no iFood: o que muda o catalogo
           inteiro precisa estar visivel antes do catalogo. */}
@@ -442,7 +542,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           </p>
           {byOrigin.map((group) => (
             <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
-              <Grid items={group.items} stock={stock} onOpen={setDetail} />
+              <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
             </Block>
           ))}
         </>
@@ -470,7 +570,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             <Block title="Para você" hint="por regra, não por palpite">
               <Rail>
                 {recommendations.map(({ product, reason }) => (
-                  <Card key={product.id} product={product} onOpen={setDetail} reason={reason} variant="rail" />
+                  <Card key={product.id} product={product} onOpen={setDetail} reason={reason} variant="rail" mostrarPontos={modoCoach} />
                 ))}
               </Rail>
             </Block>
@@ -481,7 +581,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             <Block title="Da sua rede" hint="seu coach e a rede dele">
               <Rail>
                 {network.map((product) => (
-                  <Card key={product.id} product={product} onOpen={setDetail} variant="rail" />
+                  <Card key={product.id} product={product} onOpen={setDetail} variant="rail" mostrarPontos={modoCoach} />
                 ))}
               </Rail>
             </Block>
@@ -519,12 +619,15 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
 
           {/* 7. Vitrine ordenada por score, empate em ordem alfabética */}
           <Block title="Vitrine" hint={`${showcase.length} itens`}>
-            <Grid items={showcase} stock={stock} onOpen={setDetail} />
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
           </Block>
 
           {/* Pedidos: a loja antiga mostrava "Meus pedidos" aqui, e depois de
               comprar e na loja que a pessoa procura o pedido - nao no perfil. */}
-          {browsing && <StoreOrders studentId={ctx.studentId} />}
+          {/* Só no modo aluno. Em modo coach isto mostraria os pedidos que o
+              coach fez COMO ALUNO, dentro da tela onde ele vende para outra
+              pessoa — o histórico do coach é o de vendas, não o de compras. */}
+          {browsing && !modoCoach && <StoreOrders studentId={ctx.studentId} />}
 
           {/* 8. A navegação de hoje, preservada para quem já sabe usar */}
           {browsing && usableSections.length > 0 && (
@@ -571,6 +674,8 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           onClose={() => setDetail(null)}
           onAdd={adicionarAoCarrinho}
           noCarrinho={carrinho.cart.some((item) => item.sourceId === detail.sourceId && item.kind === detail.kind)}
+          modoCoach={modoCoach}
+          hasUpline={coach.hasUpline}
         />
       )}
 
@@ -594,10 +699,24 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             onAceitouEndereco: setAceitouEndereco,
             criando: criandoPedido,
             onFinalizar: finalizar,
-            bloqueio: audience === "coach"
-              ? "Venda como coach ainda não está ligada aqui — falta o seletor de aluno. Use a loja atual."
-              : null,
+            modoCoach,
+            clienteNome: selectedClient?.name ?? null,
+            onTrocarCliente: () => { setCarrinhoAberto(false); setSeletorAlunoAberto(true); },
           }}
+        />
+      )}
+
+      {seletorAlunoAberto && (
+        <ClientPickerSheet
+          clients={coach.clients}
+          isMaster={coach.isMaster}
+          carregando={coach.carregando}
+          onPick={(cliente) => {
+            setSelectedClient(cliente);
+            setSeletorAlunoAberto(false);
+            if (carrinho.cart.length > 0) setCarrinhoAberto(true);
+          }}
+          onClose={() => setSeletorAlunoAberto(false)}
         />
       )}
 
@@ -606,6 +725,7 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           order={payOrder}
           paymentMethod={paymentMethod}
           restante={carrinho.steps.length - 1}
+          cliente={modoCoach ? selectedClient : null}
           onPaid={aoPagar}
           onClose={() => setPayOrder(null)}
         />
@@ -643,7 +763,7 @@ function Rail({ children }: { children: ReactNode }) {
   );
 }
 
-function Grid({ items, stock, onOpen }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void }) {
+function Grid({ items, stock, onOpen, mostrarPontos = false }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {items.map((item) => {
@@ -651,7 +771,7 @@ function Grid({ items, stock, onOpen }: { items: UnifiedProduct[]; stock: StockM
         const flag = info && info.stock > 0 && info.remaining > 0 && info.remaining <= 3
           ? `${info.remaining} de ${info.stock} vagas`
           : undefined;
-        return <Card key={item.id} product={item} onOpen={onOpen} flag={flag} />;
+        return <Card key={item.id} product={item} onOpen={onOpen} flag={flag} mostrarPontos={mostrarPontos} />;
       })}
     </div>
   );
@@ -671,11 +791,14 @@ function Card({
   reason,
   flag,
   variant = "grid",
+  mostrarPontos = false,
 }: {
   product: UnifiedProduct;
   onOpen: (p: UnifiedProduct) => void;
   reason?: string;
   flag?: string;
+  /** Pontos de carreira só fazem sentido para quem vende. */
+  mostrarPontos?: boolean;
   /** "rail" tem largura própria porque rola na horizontal; "grid" obedece a célula. */
   variant?: "grid" | "rail";
 }) {
@@ -708,8 +831,13 @@ function Card({
           {product.title}
         </p>
 
-        {(product.cardDays > 0 || product.challengeTickets > 0) && (
+        {(product.cardDays > 0 || product.challengeTickets > 0 || (mostrarPontos && product.pointsPerSale > 0)) && (
           <div className="flex flex-wrap gap-1">
+            {mostrarPontos && product.pointsPerSale > 0 && (
+              <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                <Trophy className="h-2.5 w-2.5" />+{product.pointsPerSale} pts
+              </span>
+            )}
             {product.cardDays > 0 && (
               <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-500">
                 <IdCard className="h-2.5 w-2.5" />+{product.cardDays}d
@@ -853,13 +981,18 @@ function DetailSheet({
   onClose,
   onAdd,
   noCarrinho,
+  modoCoach,
+  hasUpline,
 }: {
   product: UnifiedProduct;
   onClose: () => void;
   onAdd: (product: UnifiedProduct) => void;
   noCarrinho: boolean;
+  modoCoach: boolean;
+  hasUpline: boolean;
 }) {
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
+  const ganhos = modoCoach ? calcularGanhos(product.price, product.comissao, hasUpline) : null;
 
   return (
     <div
@@ -906,6 +1039,20 @@ function DetailSheet({
           )}
         </div>
 
+        {ganhos && <BlocoDeComissao ganhos={ganhos} hasUpline={hasUpline} />}
+
+        {modoCoach && product.pointsPerSale > 0 && (
+          <div className="mb-3 rounded-xl bg-muted p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Carreira do coach
+            </p>
+            <p className="mt-0.5 text-xs text-foreground">
+              <b className="text-primary">+{product.pointsPerSale} pontos</b> por venda, para
+              premiações (jantar / viagem).
+            </p>
+          </div>
+        )}
+
         {product.isSchedulable ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
             Este atendimento tem hora marcada e o seletor de horário ainda não existe nesta
@@ -919,7 +1066,11 @@ function DetailSheet({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             <ShoppingCart className="h-4 w-4" />
-            {semEstoque ? "Sem estoque" : noCarrinho ? "Adicionar mais um" : "Adicionar ao carrinho"}
+            {semEstoque
+              ? "Sem estoque"
+              : noCarrinho
+                ? "Adicionar mais um"
+                : modoCoach ? "Adicionar à venda" : "Adicionar ao carrinho"}
           </button>
         )}
 
@@ -928,6 +1079,99 @@ function DetailSheet({
           também.
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Comissão do produto, para o coach.
+ *
+ * Começa FECHADO de propósito. O coach abre a loja na frente do aluno, e
+ * número de comissão à mostra nessa hora é constrangimento — foi por isso que
+ * a loja atual pôs um olho aqui, e não porque o dado seja secreto.
+ */
+function BlocoDeComissao({ ganhos, hasUpline }: { ganhos: Ganhos; hasUpline: boolean }) {
+  const [revelado, setRevelado] = useState(false);
+  const temNiveis = !hasUpline && (ganhos.extraPix > 0 || ganhos.extraCard > 0);
+
+  return (
+    <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <button
+        type="button"
+        onClick={() => setRevelado((v) => !v)}
+        aria-expanded={revelado}
+        className="flex w-full items-center justify-between gap-2"
+      >
+        <span className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">
+            Comissões deste produto
+          </span>
+        </span>
+        {revelado ? <EyeOff className="h-4 w-4 text-primary" /> : <Eye className="h-4 w-4 text-primary" />}
+      </button>
+
+      {revelado && (
+        <>
+          <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+            {[
+              { label: "Você", pix: ganhos.coachPix, card: ganhos.coachCard },
+              { label: "Nível 1", pix: ganhos.l1Pix, card: ganhos.l1Card },
+              { label: "Nível 2", pix: ganhos.l2Pix, card: ganhos.l2Card },
+              { label: "Nível 3", pix: ganhos.l3Pix, card: ganhos.l3Card },
+            ].map((c) => (
+              <div key={c.label} className="rounded-lg bg-card p-2">
+                <p className="text-muted-foreground">{c.label}</p>
+                <p className="mt-1 flex items-center justify-between gap-1 text-[10px]">
+                  <span className="text-muted-foreground">PIX</span>
+                  <span className="font-bold tabular-nums text-foreground">{fmt(c.pix)}</span>
+                </p>
+                <p className="flex items-center justify-between gap-1 text-[10px]">
+                  <span className="text-muted-foreground">Cartão</span>
+                  <span className="font-bold tabular-nums text-foreground">{fmt(c.card)}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 rounded-lg bg-card p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Sua comissão estimada (PIX)</span>
+              <span className="font-bold tabular-nums text-primary">{fmt(ganhos.coachPix)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Sua comissão estimada (Cartão)</span>
+              <span className="font-bold tabular-nums text-primary">{fmt(ganhos.coachCard)}</span>
+            </div>
+
+            {temNiveis && (
+              <>
+                <div className="mt-2 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">+ Níveis (sem upline) — PIX</span>
+                  <span className="font-bold tabular-nums text-foreground">{fmt(ganhos.extraPix)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">+ Níveis (sem upline) — Cartão</span>
+                  <span className="font-bold tabular-nums text-foreground">{fmt(ganhos.extraCard)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
+                  <span className="text-foreground">Total estimado (PIX)</span>
+                  <span className="font-bold tabular-nums text-primary">{fmt(ganhos.totalPix)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-foreground">Total estimado (Cartão)</span>
+                  <span className="font-bold tabular-nums text-primary">{fmt(ganhos.totalCard)}</span>
+                </div>
+              </>
+            )}
+
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+              Cálculo sobre o valor líquido (preço − taxas do app, cartão/PIX, reserva fiscal e
+              custos). PIX não tem taxa de cartão, por isso a comissão é maior.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -951,8 +1195,10 @@ type CheckoutProps = {
   onAceitouEndereco: (valor: boolean) => void;
   criando: boolean;
   onFinalizar: () => void;
-  /** Por que não dá para comprar agora, ou `null`. */
-  bloqueio: string | null;
+  /** Venda do coach: muda o rótulo e exige aluno antes de qualquer pedido. */
+  modoCoach: boolean;
+  clienteNome: string | null;
+  onTrocarCliente: () => void;
 };
 
 const CAMPOS_ENTREGA: Array<{ campo: keyof ShippingForm; label: string }> = [
@@ -1014,6 +1260,28 @@ function CartSheet({
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
+
+        {checkout.modoCoach && (
+          <button
+            type="button"
+            onClick={checkout.onTrocarCliente}
+            className={`mb-3 flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left ${
+              checkout.clienteNome ? "bg-muted" : "border border-primary/30 bg-primary/10"
+            }`}
+          >
+            <span className="min-w-0">
+              <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                Venda para
+              </span>
+              <span className="block truncate text-sm font-bold text-foreground">
+                {checkout.clienteNome || "Escolher aluno"}
+              </span>
+            </span>
+            <span className="shrink-0 text-[11px] font-bold text-primary">
+              {checkout.clienteNome ? "Trocar" : "Escolher"}
+            </span>
+          </button>
+        )}
 
         {multiplo && (
           <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
@@ -1115,7 +1383,17 @@ function CartSheet({
               ))}
             </div>
 
-            {checkout.precisaEntrega && (
+            {/* Venda do coach não coleta endereço: `create_coach_sale` não
+                recebe entrega. Mostrar o formulário aqui seria pedir um dado
+                que não vai a lugar nenhum. */}
+            {checkout.modoCoach && checkout.precisaEntrega && (
+              <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
+                Há produto físico no carrinho. A venda do coach não coleta endereço — a entrega
+                é combinada com o aluno depois, pelo painel de pedidos.
+              </p>
+            )}
+
+            {!checkout.modoCoach && checkout.precisaEntrega && (
               <div className="mt-3 grid gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs font-bold text-primary">Entrega (produto físico)</p>
                 {!entregaAgora && (
@@ -1170,12 +1448,6 @@ function CartSheet({
           </>
         )}
 
-        {checkout.bloqueio && cart.length > 0 && (
-          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
-            {checkout.bloqueio}
-          </p>
-        )}
-
         <div className="modal-foot -mx-5 -mb-5 mt-3 flex gap-2 px-5 pb-5 pt-3">
           <button
             type="button"
@@ -1187,14 +1459,16 @@ function CartSheet({
           <button
             type="button"
             onClick={checkout.onFinalizar}
-            disabled={cart.length === 0 || checkout.criando || !!checkout.bloqueio}
+            disabled={cart.length === 0 || checkout.criando}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {checkout.criando
               ? "Processando…"
-              : multiplo
-                ? `Pagar 1 de ${steps.length}`
-                : "Finalizar"}
+              : checkout.modoCoach && !checkout.clienteNome
+                ? "Selecionar aluno →"
+                : multiplo
+                  ? `Pagar 1 de ${steps.length}`
+                  : "Finalizar"}
           </button>
         </div>
       </div>
@@ -1212,12 +1486,15 @@ function PaySheet({
   order,
   paymentMethod,
   restante,
+  cliente,
   onPaid,
   onClose,
 }: {
   order: PayOrder;
   paymentMethod: PaymentMethod;
   restante: number;
+  /** Preenchido só na venda do coach — habilita o link de pagamento do aluno. */
+  cliente: SaleClient | null;
   onPaid: () => void;
   onClose: () => void;
 }) {
@@ -1270,8 +1547,236 @@ function PaySheet({
           initialMethod={paymentMethod === "pix" ? "pix" : "card"}
           onApproved={() => { toast.success("Pagamento aprovado!"); onPaid(); }}
         />
+
+        {cliente && !order.number && (
+          <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+            Número do pedido indisponível no momento. Recarregue a tela para gerar o link de
+            pagamento do cliente.
+          </p>
+        )}
+
+        {cliente && !!order.number && <LinkDePagamento order={order} cliente={cliente} />}
       </div>
     </div>
+  );
+}
+
+/**
+ * Link para o aluno pagar sozinho.
+ *
+ * Existe porque a venda do coach quase nunca termina na tela do coach: ele
+ * registra a venda com o aluno na frente ou por mensagem, e quem paga é o
+ * aluno, no aparelho dele. Sem o link, a venda criada fica pendente para
+ * sempre.
+ */
+function LinkDePagamento({ order, cliente }: { order: PayOrder; cliente: SaleClient }) {
+  const link = `${getShareOrigin()}/pay/${order.number}`;
+  const telefone = cliente.phone?.replace(/\D/g, "") || "";
+  const mensagem = encodeURIComponent(
+    `Olá ${cliente.name || ""}! Segue o link para finalizar seu pagamento:\n\n${link}`,
+  );
+  const whatsapp = telefone ? `https://wa.me/55${telefone}?text=${mensagem}` : `https://wa.me/?text=${mensagem}`;
+
+  return (
+    <div className="mt-4 space-y-3 rounded-xl bg-muted p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Link de pagamento do cliente
+      </p>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+        <span className="flex-1 truncate font-mono text-[11px] text-primary">{link}</span>
+        <button
+          type="button"
+          onClick={() => { void navigator.clipboard.writeText(link); toast.success("Link copiado!"); }}
+          className="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20"
+        >
+          Copiar
+        </button>
+      </div>
+      <a
+        href={whatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white hover:bg-[#20bd5a]"
+      >
+        {telefone ? `Enviar pelo WhatsApp para ${cliente.name}` : "Enviar pelo WhatsApp (sem telefone)"}
+      </a>
+    </div>
+  );
+}
+
+/**
+ * Seletor de aluno da venda.
+ *
+ * Cópia do `ClientPickerModal` da loja atual. A aba "todos os clientes" só
+ * aparece para master coach, e a busca por CPF foi deixada de fora de
+ * propósito: LGPD — não se descobre pessoa por CPF.
+ */
+function ClientPickerSheet({
+  clients,
+  isMaster,
+  carregando,
+  onPick,
+  onClose,
+}: {
+  clients: SaleClient[];
+  isMaster: boolean;
+  carregando: boolean;
+  onPick: (cliente: SaleClient) => void;
+  onClose: () => void;
+}) {
+  const [busca, setBusca] = useState("");
+  const [aba, setAba] = useState<"meus" | "todos">("meus");
+  const [todos, setTodos] = useState<SaleClient[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const soDigitos = (s: string) => s.replace(/\D/g, "");
+
+  const meus = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return clients;
+    const digitos = soDigitos(termo);
+    return clients.filter((c) =>
+      c.name.toLowerCase().includes(termo)
+      || (!!c.email && c.email.toLowerCase().includes(termo))
+      || (digitos.length > 0 && !!c.phone && soDigitos(c.phone).includes(digitos)));
+  }, [clients, busca]);
+
+  // Master coach busca no banco inteiro, com atraso para não disparar uma
+  // consulta por tecla.
+  useEffect(() => {
+    if (!isMaster || aba !== "todos") return;
+    const handle = setTimeout(async () => {
+      setBuscando(true);
+      const { data, error } = await supabase.rpc("list_all_students_for_master" as never, { _q: busca } as never);
+      setBuscando(false);
+      if (error) { toast.error(error.message || "Erro na busca"); return; }
+      setTodos(((data || []) as Array<Record<string, unknown>>).map((s) => ({
+        id: String(s.id),
+        name: (s.name as string) || "Cliente",
+        email: (s.email as string) || null,
+        phone: (s.phone as string) || null,
+        cpf: (s.cpf as string) || null,
+      })));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [isMaster, aba, busca]);
+
+  const lista = aba === "todos" ? todos : meus;
+
+  return (
+    <div
+      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Selecione o aluno"
+      >
+        <div className="modal-head -mx-5 -mt-5 mb-3 flex items-start justify-between gap-3 px-5 pb-3 pt-5">
+          <h2 className="text-base font-bold text-foreground">Selecione o aluno</h2>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {isMaster && (
+          <div className="mb-3 flex rounded-lg bg-muted p-0.5">
+            {([["meus", "Meus clientes"], ["todos", "Todos os clientes"]] as const).map(([id, rotulo]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setAba(id)}
+                aria-pressed={aba === id}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition ${
+                  aba === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            autoFocus
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            placeholder="Buscar por nome, telefone ou e-mail…"
+            aria-label="Buscar aluno"
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+
+        {carregando && aba === "meus" ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Carregando seus alunos…</p>
+        ) : aba === "meus" && clients.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
+        ) : aba === "todos" && buscando ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Buscando…</p>
+        ) : lista.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {aba === "todos" && !busca ? "Digite para buscar entre todos os alunos." : "Nenhum aluno encontrado."}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {lista.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onPick(c)}
+                className="w-full rounded-xl bg-muted p-3 text-left transition-colors hover:bg-accent"
+              >
+                <p className="text-sm font-bold text-foreground">{c.name}</p>
+                {c.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {c.coachName}</p>}
+                {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
+                {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {maskCPFSensitive(c.cpf)}</p>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Vendas já feitas por este coach. */
+function CoachSalesPanel({ sales }: { sales: CoachSaleRow[] }) {
+  return (
+    <section className="rounded-2xl bg-card p-4">
+      <h2 className="mb-3 text-sm font-bold text-foreground">Minhas vendas</h2>
+      {sales.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Nenhuma venda registrada ainda.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {sales.map((s) => (
+            <div key={s.orderId} className="rounded-xl bg-muted p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-xs font-bold text-foreground">{s.clientName}</p>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                    s.status === "paid" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
+                  }`}
+                >
+                  {s.status}
+                </span>
+              </div>
+              <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">{s.productTitles}</p>
+              <div className="mt-1 flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">
+                  {s.createdAt ? new Date(s.createdAt).toLocaleDateString("pt-BR") : ""}
+                </span>
+                <span className="font-bold tabular-nums text-foreground">{fmt(s.total)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
