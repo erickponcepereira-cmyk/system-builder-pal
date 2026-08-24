@@ -12,6 +12,10 @@ import { StudentFreebieReservations } from "@/components/student/StudentFreebieR
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { loadPartnersById } from "@/lib/partner-public";
+import { InactiveCardModal } from "@/components/student/InactiveCardModal";
+
+
 
 type PartnerFreeProduct = {
   id: string;
@@ -69,6 +73,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [schedulesByProduct, setSchedulesByProduct] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showCardBlock, setShowCardBlock] = useState(false);
+
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [openBenefit, setOpenBenefit] = useState<PartnerFreeProduct | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
@@ -111,17 +118,29 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         }
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address,whatsapp,public_whatsapp)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,partner_id" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
         .is("deleted_at" as never, null as never)
         .order("sort_order" as never, { ascending: true } as never)
         .order("created_at" as never, { ascending: false });
-      const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
+      if (error) {
+        console.error("[BenefitsTab] partner_products", error);
+        setLoadError(error.message || "Erro desconhecido ao carregar benefícios.");
+        setLoading(false);
+        return;
+      }
+      setLoadError(null);
+      const rawProducts = (data as unknown as PartnerFreeProduct[]) || [];
+      const partnerMap = await loadPartnersById(Array.from(new Set(rawProducts.map((p) => p.partner_id).filter(Boolean))));
+      const pf = rawProducts
+        .map((p) => ({ ...p, partners: partnerMap.get(p.partner_id) ?? null }))
+        .filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);
+
 
       // Fetch schedules for the products we display
       const ids = pf.map((p) => p.id);
@@ -157,9 +176,22 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     })();
   }, []);
 
+  const requireCard = () => {
+    if (cardActive) return true;
+    setShowCardBlock(true);
+    return false;
+  };
+
+  const openBooking = (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
+    setBookingProduct(p);
+  };
+
   const generateCoupon = async (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+
     setGenerating(null);
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
@@ -192,24 +224,23 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         <p className="text-sm text-white/50">Brindes e descontos de empresas parceiras aprovados pelo admin</p>
       </div>
 
+      {!loading && !cardActive && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+          <p className="text-[11px] text-yellow-100/80">
+            Sua carteirinha está inativa — você pode ver os benefícios, mas o resgate fica bloqueado.
+            {cardValidUntil ? ` Validade anterior: ${new Date(cardValidUntil).toLocaleDateString("pt-BR")}.` : ""}
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-sm text-white/50">Carregando...</p>
         </div>
-      ) : !cardActive ? (
-        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 text-center">
-          <ShieldAlert className="mx-auto h-8 w-8 text-yellow-400" />
-          <p className="mt-3 text-sm font-bold text-white">Sua carteirinha de coach está inativa</p>
-          <p className="mt-1 text-xs text-white/60">
-            Para acessar o portal de gratuitos é necessário ter a carteirinha ativa. Renove comprando o curso de coach ou solicite ativação ao admin.
-          </p>
-          {cardValidUntil && (
-            <p className="mt-2 text-[11px] text-white/40">Validade anterior: {new Date(cardValidUntil).toLocaleDateString("pt-BR")}</p>
-          )}
-        </div>
       ) : (
         <>
+
           {(() => {
             const filteredPartner = partnerFreebies.filter((p) =>
               pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
@@ -289,7 +320,19 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
 
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-            {(() => {
+            {loadError ? (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                <p className="text-sm font-bold text-red-300">Não foi possível carregar os benefícios</p>
+                <p className="mt-1 break-words text-xs text-red-200/70">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
+                >
+                  Tentar de novo
+                </button>
+              </div>
+            ) : (() => {
               const list = partnerFreebies.filter((p) =>
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
               );
@@ -307,9 +350,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     return (
                       <div
                         key={p.id}
-                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full"
+                        className={`text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full ${cardActive ? "" : "opacity-80"}`}
                         style={{ backgroundColor: "#0F0F0F" }}
                       >
+
                         {isDiscount && p.discount_percent ? (
                           <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-xs font-extrabold px-2.5 py-1 rounded-lg shadow-lg">
                             {p.discount_percent}% OFF
@@ -389,7 +433,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             <button
                               type="button"
                               onClick={() => {
-                                if (isScheduled && !isDiscount) setBookingProduct(p);
+                                if (isScheduled && !isDiscount) openBooking(p);
                                 else generateCoupon(p);
                               }}
                               disabled={generating === p.id}
@@ -547,7 +591,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     const p = openBenefit;
                     const scheduled = (schedulesByProduct[p.id] || []).length > 0;
                     setOpenBenefit(null);
-                    if (scheduled && p.redemption_mode !== "discount") setBookingProduct(p);
+                    if (scheduled && p.redemption_mode !== "discount") openBooking(p);
                     else generateCoupon(p);
                   }}
                   disabled={generating === openBenefit.id}
@@ -578,7 +622,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           onReserved={() => { setBookingProduct(null); setReservationsRefresh((v) => v + 1); refetchUsage(); toast.success("Reserva criada! O QR aparece em Minhas reservas no horário agendado."); }}
         />
       )}
+
+      {showCardBlock && <InactiveCardModal onClose={() => setShowCardBlock(false)} validUntil={cardValidUntil} />}
     </>
+
   );
 }
 

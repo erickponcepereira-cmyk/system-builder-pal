@@ -1522,6 +1522,30 @@ export type Database = {
           },
         ]
       }
+      auditoria_fechamento_rede_202607: {
+        Row: {
+          congelado_em: string | null
+          disponivel_antes: number | null
+          name: string | null
+          pendente_antes: number | null
+          profile_id: string | null
+        }
+        Insert: {
+          congelado_em?: string | null
+          disponivel_antes?: number | null
+          name?: string | null
+          pendente_antes?: number | null
+          profile_id?: string | null
+        }
+        Update: {
+          congelado_em?: string | null
+          disponivel_antes?: number | null
+          name?: string | null
+          pendente_antes?: number | null
+          profile_id?: string | null
+        }
+        Relationships: []
+      }
       bioimpedance_evaluations: {
         Row: {
           bmi: number | null
@@ -7057,6 +7081,70 @@ export type Database = {
           },
         ]
       }
+      membership_card_overrides: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+          escopo: string
+          id: string
+          motivo: string | null
+          profile_id: string
+          revogado_em: string | null
+          revogado_por: string | null
+          valido_ate: string
+          valor_anterior: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          escopo: string
+          id?: string
+          motivo?: string | null
+          profile_id: string
+          revogado_em?: string | null
+          revogado_por?: string | null
+          valido_ate: string
+          valor_anterior?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+          escopo?: string
+          id?: string
+          motivo?: string | null
+          profile_id?: string
+          revogado_em?: string | null
+          revogado_por?: string | null
+          valido_ate?: string
+          valor_anterior?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_card_overrides_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_card_overrides_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_card_overrides_revogado_por_fkey"
+            columns: ["revogado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercadopago_payments: {
         Row: {
           amount: number
@@ -7250,6 +7338,80 @@ export type Database = {
           quote?: string
         }
         Relationships: []
+      }
+      network_month_transfers: {
+        Row: {
+          amount: number
+          closed_by: string | null
+          created_at: string
+          from_profile_id: string
+          id: string
+          levels_up: number | null
+          new_commission_id: string | null
+          origin_commission_id: string
+          period_month: number
+          period_year: number
+          to_profile_id: string | null
+          to_system: boolean
+        }
+        Insert: {
+          amount: number
+          closed_by?: string | null
+          created_at?: string
+          from_profile_id: string
+          id?: string
+          levels_up?: number | null
+          new_commission_id?: string | null
+          origin_commission_id: string
+          period_month: number
+          period_year: number
+          to_profile_id?: string | null
+          to_system?: boolean
+        }
+        Update: {
+          amount?: number
+          closed_by?: string | null
+          created_at?: string
+          from_profile_id?: string
+          id?: string
+          levels_up?: number | null
+          new_commission_id?: string | null
+          origin_commission_id?: string
+          period_month?: number
+          period_year?: number
+          to_profile_id?: string | null
+          to_system?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "network_month_transfers_from_profile_id_fkey"
+            columns: ["from_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_month_transfers_new_commission_id_fkey"
+            columns: ["new_commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_month_transfers_origin_commission_id_fkey"
+            columns: ["origin_commission_id"]
+            isOneToOne: true
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_month_transfers_to_profile_id_fkey"
+            columns: ["to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       network_unlock_history: {
         Row: {
@@ -14910,6 +15072,21 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      carteirinha_definir_excecao: {
+        Args: {
+          _admin_user_id: string
+          _escopo: string
+          _motivo: string
+          _profile_id: string
+          _valido_ate: string
+        }
+        Returns: Json
+      }
+      carteirinha_revogar_excecao: {
+        Args: { _admin_user_id: string; _override_id: string }
+        Returns: Json
+      }
+      carteirinha_situacao: { Args: { _profile_id: string }; Returns: Json }
       catalogo_publico: {
         Args: never
         Returns: {
@@ -15185,6 +15362,21 @@ export type Database = {
       extend_user_membership_cards: {
         Args: { _days?: number; _user_id: string }
         Returns: undefined
+      }
+      fechar_rede_do_mes: {
+        Args: {
+          _admin_user_id: string
+          _ano: number
+          _mes: number
+          _simular?: boolean
+        }
+        Returns: {
+          acao: string
+          comissoes: number
+          de: string
+          para: string
+          valor: number
+        }[]
       }
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
@@ -15966,6 +16158,7 @@ export type Database = {
         Returns: undefined
       }
       run_stats: { Args: { _profile_id: string }; Returns: Json }
+      saldo_disponivel: { Args: { _profile_id: string }; Returns: number }
       search_approved_coaches: {
         Args: { _limit?: number; _query?: string }
         Returns: {

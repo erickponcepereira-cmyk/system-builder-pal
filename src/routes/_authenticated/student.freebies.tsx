@@ -13,6 +13,9 @@ import { StudentFreebieReservations } from "@/components/student/StudentFreebieR
 import { FreebieLimitTags } from "@/components/student/FreebieLimitTags";
 import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { loadPartnersById } from "@/lib/partner-public";
+import { InactiveCardModal } from "@/components/student/InactiveCardModal";
+
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -132,9 +135,23 @@ function StudentFreebies() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showCardBlock, setShowCardBlock] = useState(false);
   const { usage, refetchUsage } = useFreebieUsage();
 
+  const requireCard = () => {
+    if (cardActive) return true;
+    setShowCardBlock(true);
+    return false;
+  };
+
+  const openBooking = (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
+    setBookingProduct(p);
+  };
+
   const generateCoupon = async (p: PartnerFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
     setGenerating(null);
@@ -146,6 +163,7 @@ function StudentFreebies() {
   };
 
   const generateProCoupon = async (p: ProfessionalFreeProduct) => {
+    if (!requireCard()) return;
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_professional_coupon" as never, { p_professional_product_id: p.id } as never);
     setGenerating(null);
@@ -155,6 +173,7 @@ function StudentFreebies() {
     setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: null, locationUrl: null });
     refetchUsage();
   };
+
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -187,7 +206,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id,partners(fantasy_name,photo_url,status,business_area,address,whatsapp,public_whatsapp)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,monthly_redeem_limit,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -206,11 +225,19 @@ function StudentFreebies() {
       supabase.from("store_categories" as never).select("id,section_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
       supabase.from("store_subcategories" as never).select("id,category_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
     ]);
+    if (c.error) console.error("[student.freebies] partner_products", c.error);
+    if (d.error) console.error("[student.freebies] professional_products", d.error);
+    setLoadError(c.error?.message || d.error?.message || null);
     setItems((a.data as unknown as Freebie[]) || []);
     setMine((b.data as unknown as Redemption[]) || []);
-    const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
+    const rawProducts = (c.data as unknown as PartnerFreeProduct[]) || [];
+    const partnerMap = await loadPartnersById(Array.from(new Set(rawProducts.map((p) => p.partner_id).filter(Boolean))));
+    const pf = rawProducts
+      .map((p) => ({ ...p, partners: (partnerMap.get(p.partner_id) as PartnerFreeProduct["partners"]) ?? null }))
+      .filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
     setProfessionalFreebies((d.data as unknown as ProfessionalFreeProduct[]) || []);
+
     setSections((secRes.data as unknown as StoreSection[]) || []);
     setCategories((catRes.data as unknown as StoreCategory[]) || []);
     setSubcategories((subRes.data as unknown as StoreSubcategory[]) || []);
@@ -239,7 +266,9 @@ function StudentFreebies() {
   useEffect(() => { load(); }, []);
 
   const redeem = async (id: string) => {
+    if (!requireCard()) return;
     setRedeeming(id);
+
     const { error } = await supabase.rpc("redeem_freebie" as never, { _freebie_id: id } as never);
     setRedeeming(null);
     if (error) return toast.error(error.message);
@@ -305,21 +334,31 @@ function StudentFreebies() {
       </div>
 
       <div className="p-4">
+        {!loading && !cardActive && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+            <p className="text-[11px] text-yellow-100/80">
+              Sua carteirinha está inativa — você pode ver os benefícios, mas o resgate fica bloqueado.
+            </p>
+          </div>
+        )}
         {loading ? (
           <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-primary" />
-        ) : !cardActive ? (
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 text-center">
-            <ShieldAlert className="mx-auto h-8 w-8 text-yellow-400" />
-            <p className="mt-3 text-sm font-bold text-white">Sua carteirinha está inativa</p>
-            <p className="mt-1 text-xs text-white/60">
-              Para acessar o portal de gratuitos é necessário ter a carteirinha ativa. Compre um plano ou produto para ativar.
-            </p>
-            <Link to="/student/store" className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
-              Ver loja
-            </Link>
+        ) : loadError ? (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
+            <p className="text-sm font-bold text-red-300">Não foi possível carregar os benefícios</p>
+            <p className="mt-1 break-words text-xs text-red-200/70">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
+            >
+              Tentar de novo
+            </button>
           </div>
         ) : (
           <>
+
             {/* QR actions */}
             <div className="mb-5 grid grid-cols-2 gap-3">
               <button
@@ -472,7 +511,7 @@ function StudentFreebies() {
                           return (
                             <div
                               key={p.id}
-                              className="text-left rounded-2xl overflow-hidden border border-white/5 block relative"
+                              className={`text-left rounded-2xl overflow-hidden border border-white/5 block relative ${cardActive ? "" : "opacity-80"}`}
                               style={{ backgroundColor: "#1A1A1A" }}
                             >
                               {isDiscount && p.discount_percent ? (
@@ -537,7 +576,7 @@ function StudentFreebies() {
                                   {p.uses_scheduling && !isDiscount ? (
                                     <button
                                       type="button"
-                                      onClick={() => setBookingProduct(p)}
+                                      onClick={() => openBooking(p)}
                                       className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground"
                                     >
                                       <Clock className="h-3.5 w-3.5" /> Reservar horário
@@ -582,7 +621,7 @@ function StudentFreebies() {
                       const proName = p.coaches?.profiles?.name || "Profissional";
                       const proAvatar = p.coaches?.profiles?.avatar_url || null;
                       return (
-                        <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
+                        <div key={p.id} className={`text-left rounded-2xl overflow-hidden border border-white/5 block relative ${cardActive ? "" : "opacity-80"}`} style={{ backgroundColor: "#1A1A1A" }}>
                           {isDiscount && p.discount_percent ? (
                             <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-lg">
                               {p.discount_percent}% OFF
@@ -825,6 +864,8 @@ function StudentFreebies() {
           </div>
         </div>
       )}
+
+      {showCardBlock && <InactiveCardModal onClose={() => setShowCardBlock(false)} validUntil={cardValidUntil} />}
     </div>
   );
 }
