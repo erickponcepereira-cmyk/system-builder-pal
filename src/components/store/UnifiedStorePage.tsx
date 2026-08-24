@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
-import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
 import {
   foldText,
@@ -64,6 +64,8 @@ import {
   type ShippingForm,
 } from "@/lib/store-checkout";
 import { type CoachSaleRow, type SaleClient, useCoachContext } from "@/lib/store-coach";
+import { useIndicacao } from "@/lib/store-referral";
+import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -83,7 +85,17 @@ type StockMap = Record<string, { stock: number; remaining: number }>;
  * sozinho quando não tem dado — vitrine sem "Perto de você" é melhor que
  * "Perto de você" vazio.
  */
-export function UnifiedStorePage({ audience = "student" }: { audience?: "student" | "coach" }) {
+export function UnifiedStorePage({
+  audience = "student",
+  requestedProductId,
+  openCheckout = false,
+}: {
+  audience?: "student" | "coach";
+  /** `?produto=<id>` — abre o detalhe direto. Vem de indicação ou anúncio. */
+  requestedProductId?: string;
+  /** `?checkout=1` — veio da loja pública com o carrinho montado. */
+  openCheckout?: boolean;
+}) {
   const [catalog, setCatalog] = useState<UnifiedCatalog | null>(null);
   const [ctx, setCtx] = useState<StoreContext>(EMPTY_CONTEXT);
   const [stock, setStock] = useState<StockMap>({});
@@ -118,6 +130,10 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
   const coach = useCoachContext(modoCoach);
   const [selectedClient, setSelectedClient] = useState<SaleClient | null>(null);
   const [seletorAlunoAberto, setSeletorAlunoAberto] = useState(false);
+
+  // Indicação: metade divulgar, metade atribuir. A segunda é a que passa
+  // batido, porque nada quebra quando falta — só falta comissão.
+  const indicacao = useIndicacao(audience);
   const [historicoAberto, setHistoricoAberto] = useState(false);
 
   // As tres regras de visibilidade. Faltar qualquer uma e vazamento de
@@ -170,7 +186,10 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const products = catalog?.products ?? [];
+  // `?? []` cria um array novo a cada render, e isso reexecutava todo memo e
+  // todo efeito que depende de `products`. Estabilizar a referência aqui é
+  // mais barato que espalhar guardas por quem consome.
+  const products = useMemo(() => catalog?.products ?? [], [catalog]);
 
   const visiveis = useMemo(() => visibilidade.filtrar(products), [products, visibilidade]);
 
@@ -224,6 +243,64 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
     setCarrinhoAberto(true);
   };
 
+  /**
+   * Abre o produto pedido pela URL, uma vez só.
+   *
+   * Espera o catálogo terminar: antes disso `products` está vazio e o id não
+   * casa com nada. O `useRef` impede reabrir o modal cada vez que a lista
+   * muda — fechar e ver o modal voltar sozinho é o tipo de coisa que faz a
+   * pessoa desistir.
+   */
+  const deepLinkTratado = useRef(false);
+  useEffect(() => {
+    if (deepLinkTratado.current || loading || !requestedProductId) return;
+    const achado = products.find(
+      (p) => p.sourceId === requestedProductId || p.id === requestedProductId,
+    );
+    deepLinkTratado.current = true;
+    if (achado) setDetail(achado);
+    else toast.error("Este produto não está mais disponível.");
+  }, [loading, products, requestedProductId]);
+
+  /**
+   * Adota o carrinho montado na loja pública.
+   *
+   * A loja pública usa outra chave (`fitmind_public_cart`), e é a loja logada
+   * que faz a ponte. Sem esta importação, quem monta o carrinho antes de se
+   * cadastrar chega aqui com a loja vazia — e o funil inteiro de captação
+   * termina em nada.
+   *
+   * Casa por id aceitando sufixo porque a loja pública grava o id da tabela de
+   * origem, sem o prefixo da vitrine. Preço e estoque vêm SEMPRE do catálogo
+   * real: o que estava no carrinho público é intenção, não preço.
+   */
+  const publicoImportado = useRef(false);
+  useEffect(() => {
+    if (publicoImportado.current || loading || audience === "coach") return;
+    publicoImportado.current = true;
+
+    const linhas = readPublicCart();
+    if (!linhas.length) return;
+
+    let entraram = 0;
+    for (const linha of linhas) {
+      const achado = products.find(
+        (p) => p.id === linha.id || p.sourceId === linha.id || p.id.endsWith(`-${linha.id}`),
+      );
+      if (achado && !carrinho.adicionar(achado)) entraram += 1;
+    }
+    clearPublicCart();
+
+    if (entraram < linhas.length) {
+      toast.info("Alguns itens do seu carrinho não estão mais disponíveis.");
+    }
+    if (entraram > 0 && openCheckout) setCarrinhoAberto(true);
+    // `carrinho` fora das dependências de propósito: incluí-lo re-dispararia a
+    // importação a cada mudança do carrinho, e o guard de `useRef` já garante
+    // uma vez só.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, products, audience, openCheckout]);
+
   const precisaEntrega = exigeEntrega(carrinho.cart);
 
   /**
@@ -263,6 +340,9 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
             paymentMethod,
             shipping,
             studentId: ctx.studentId,
+            // Sem isto o link de indicação funciona, a compra acontece, e a
+            // comissão de quem indicou não existe.
+            referrerStudentId: indicacao.indicadoPor,
             attachShipping,
           });
       if (!pedido) return;
@@ -676,6 +756,8 @@ export function UnifiedStorePage({ audience = "student" }: { audience?: "student
           noCarrinho={carrinho.cart.some((item) => item.sourceId === detail.sourceId && item.kind === detail.kind)}
           modoCoach={modoCoach}
           hasUpline={coach.hasUpline}
+          podeIndicar={indicacao.podeIndicar(detail.sourceId)}
+          onIndicar={() => void indicacao.compartilhar(detail.sourceId, indicacao.meuCodigo)}
         />
       )}
 
@@ -983,6 +1065,8 @@ function DetailSheet({
   noCarrinho,
   modoCoach,
   hasUpline,
+  podeIndicar,
+  onIndicar,
 }: {
   product: UnifiedProduct;
   onClose: () => void;
@@ -990,6 +1074,9 @@ function DetailSheet({
   noCarrinho: boolean;
   modoCoach: boolean;
   hasUpline: boolean;
+  /** Produto liberado para indicação por quem está olhando. */
+  podeIndicar: boolean;
+  onIndicar: () => void;
 }) {
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
   const ganhos = modoCoach ? calcularGanhos(product.price, product.comissao, hasUpline) : null;
@@ -1071,6 +1158,17 @@ function DetailSheet({
               : noCarrinho
                 ? "Adicionar mais um"
                 : modoCoach ? "Adicionar à venda" : "Adicionar ao carrinho"}
+          </button>
+        )}
+
+        {podeIndicar && (
+          <button
+            type="button"
+            onClick={onIndicar}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 px-4 py-2.5 text-xs font-bold text-primary"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Indicar e ganhar comissão
           </button>
         )}
 
