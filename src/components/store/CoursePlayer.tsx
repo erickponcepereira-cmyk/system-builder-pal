@@ -40,6 +40,15 @@ export function CoursePlayer({ productId }: { productId: string }) {
   const [erro, setErro] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const [aulaAtiva, setAulaAtiva] = useState<Lesson | null>(null);
+  /**
+   * Quando a pessoa comprou. É o relógio do gotejamento.
+   *
+   * A tela passava `null` aqui, e `lessonStates` só tranca a regra "drip"
+   * quando a data existe — resultado: gotejamento nunca trancou nada e o
+   * aluno via o curso inteiro no primeiro dia. Curso incluso na mensalidade
+   * continua sem data, e continua liberando tudo: isso é intencional.
+   */
+  const [compradoEm, setCompradoEm] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -54,6 +63,19 @@ export function CoursePlayer({ productId }: { productId: string }) {
     const sid = (student as { id?: string } | null)?.id ?? null;
     setStudentId(sid);
 
+    if (sid) {
+      const { data: compra, error: erroCompra } = await supabase
+        .from("digital_purchases")
+        .select("created_at")
+        .eq("student_id", sid)
+        .eq("digital_product_id", productId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (erroCompra) console.error("[curso] data da compra", erroCompra);
+      setCompradoEm((compra as { created_at?: string } | null)?.created_at ?? null);
+    }
+
     const c = await loadCourse(productId, sid);
     if (!c) {
       setErro("Curso não encontrado, ou você ainda não tem acesso a ele.");
@@ -63,16 +85,17 @@ export function CoursePlayer({ productId }: { productId: string }) {
     setCourse(c);
     setAbertos((prev) => (prev.size ? prev : new Set(c.modules.slice(0, 1).map((m) => m.id))));
     setLoading(false);
+    return c;
   }, [productId]);
 
   useEffect(() => { void recarregar(); }, [recarregar]);
 
   const estados = useMemo(
-    () => (course ? lessonStates(course, null) : new Map()),
-    [course],
+    () => (course ? lessonStates(course, compradoEm) : new Map()),
+    [course, compradoEm],
   );
   const pct = course ? percentual(course) : 0;
-  const proxima = course ? proximaAula(course, null) : null;
+  const proxima = course ? proximaAula(course, compradoEm) : null;
   const totalAulas = course ? flatten(course).length : 0;
   const feitas = course
     ? flatten(course).filter((l) => course.progress.get(l.id)?.completedAt).length
@@ -197,6 +220,13 @@ export function CoursePlayer({ productId }: { productId: string }) {
                         {travada && st.estado === "travada" ? st.motivo : mmss(l.durationSeconds)}
                       </span>
                     </span>
+                    {/* `hasVideo` já vinha carregado e ninguém usava: a pessoa
+                        clicava e só então recebia o erro do servidor. */}
+                    {l.kind === "video" && !l.hasVideo && (
+                      <span className="shrink-0 text-[9px] font-bold text-amber-500">
+                        em preparação
+                      </span>
+                    )}
                     <span className="shrink-0 font-mono text-[9px] uppercase text-muted-foreground">
                       {l.kind === "video" ? "vídeo" : l.kind}
                     </span>
@@ -213,8 +243,15 @@ export function CoursePlayer({ productId }: { productId: string }) {
           studentId={studentId}
           onClose={() => setAulaAtiva(null)}
           onConcluida={async () => {
-            await recarregar();
-            setAulaAtiva(null);
+            // O botão promete "e ir para a próxima". Antes ele só fechava o
+            // modal e devolvia a pessoa para a lista, para procurar na mão.
+            const atualId = aulaAtiva.id;
+            const atualizado = await recarregar();
+            const seguinte = atualizado
+              ? proximaAula(atualizado, compradoEm)
+              : null;
+            if (seguinte && seguinte.id !== atualId) setAulaAtiva(seguinte);
+            else setAulaAtiva(null);
           }}
         />
       )}

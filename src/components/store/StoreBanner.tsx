@@ -96,7 +96,11 @@ export function StoreBanner({
         id: p.id, etiqueta: "Curso", titulo: p.title,
         apoio: p.price > 0 ? fmt(p.price) : "Incluído no seu plano",
         imagem: p.imageUrl, icone: GraduationCap,
-        destino: { tipo: "link", url: "/student/library" },
+        // Abre o PRODUTO, não "Meus cursos". O anúncio é para quem ainda não
+        // comprou; mandar essa pessoa para a biblioteca a levava a uma tela
+        // vazia, sem nenhum caminho até a compra. Os outros banners já usam
+        // "produto" — este era o único fora do padrão.
+        destino: { tipo: "produto", produto: p },
       });
     }
 

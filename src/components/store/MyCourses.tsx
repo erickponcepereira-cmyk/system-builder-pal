@@ -18,6 +18,7 @@ import { listMyCourses, type CourseSummary } from "@/lib/course-engine";
 export function MyCourses() {
   const [cursos, setCursos] = useState<CourseSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [falhou, setFalhou] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -35,7 +36,11 @@ export function MyCourses() {
         const lista = await listMyCourses((student as { id?: string } | null)?.id ?? null);
         if (vivo) setCursos(lista);
       } catch (error) {
+        // Falha de rede ou de permissão virava o mesmo estado vazio de
+        // "você não tem curso" — indistinguível de não ter curso nenhum. Foi
+        // exatamente esse silêncio que escondeu o incidente dos gratuitos.
         console.error("[meus-cursos]", error);
+        if (vivo) setFalhou(true);
       } finally {
         if (vivo) setLoading(false);
       }
@@ -58,7 +63,15 @@ export function MyCourses() {
         <h1 className="text-2xl font-bold text-foreground">Meus cursos</h1>
       </header>
 
-      {cursos.length === 0 ? (
+      {falhou ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-center">
+          <p className="text-sm font-bold text-destructive">Não conseguimos carregar seus cursos</p>
+          <p className="mt-1 text-xs leading-relaxed text-destructive/80">
+            Foi uma falha ao buscar, não uma lista vazia. Atualize a tela; se continuar, avise a
+            gente.
+          </p>
+        </div>
+      ) : cursos.length === 0 ? (
         <div className="rounded-2xl bg-card p-8 text-center">
           <BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-50" />
           <p className="text-sm font-bold text-foreground">Nenhum curso liberado</p>
