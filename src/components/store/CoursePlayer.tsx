@@ -280,19 +280,27 @@ function PlayerSheet({
   };
 
   return (
+    // `modal-safe` é o que ancora o overlay no viewport VISUAL (--vvo/--vvh) em
+    // vez do viewport de layout. Sem ele, no Chrome Android o rodapé do cartão
+    // — onde fica "Concluir" — cai abaixo da área visível, porque o shell do
+    // aluno trava a altura em 100dvh e a barra de endereço nunca recolhe.
+    //
+    // z-[60] e não z-50: a <nav> do MobileShell e o botão flutuante de suporte
+    // também são z-50 e vêm depois no DOM, então empatados eles pintavam por
+    // cima justamente da faixa do botão.
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/90 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-background/90 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-card p-4 sm:rounded-2xl"
+        className="w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-card p-4 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={lesson.title}
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="modal-head -mx-4 -mt-4 mb-3 flex items-start justify-between gap-3 px-4 pb-3 pt-4">
           <h2 className="text-base font-bold text-foreground">{lesson.title}</h2>
           <button type="button" onClick={onClose} className="shrink-0 text-xs font-bold text-muted-foreground">
             Fechar

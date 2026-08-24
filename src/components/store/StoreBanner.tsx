@@ -209,7 +209,7 @@ export function StorePopup({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
+      className="modal-safe fixed inset-0 z-[60] flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm"
       onClick={fechar}
       role="presentation"
     >
