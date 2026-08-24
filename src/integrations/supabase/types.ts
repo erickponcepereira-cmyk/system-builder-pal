@@ -14976,6 +14976,16 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: number
       }
+      atualizar_curso: {
+        Args: {
+          _cover_url?: string
+          _description?: string
+          _digital_product_id: string
+          _price?: number
+          _title?: string
+        }
+        Returns: undefined
+      }
       auto_ensure_subscription_for_profile: {
         Args: { _profile_id: string }
         Returns: undefined
@@ -15267,6 +15277,15 @@ export type Database = {
         }
         Returns: string
       }
+      criar_curso: {
+        Args: {
+          _cover_url?: string
+          _description?: string
+          _price?: number
+          _title: string
+        }
+        Returns: string
+      }
       crm_acesso_quadro: { Args: { _quadro_id: string }; Returns: boolean }
       crm_clonar_quadro: {
         Args: {
@@ -15344,6 +15363,10 @@ export type Database = {
       ensure_user_subscription: {
         Args: { _billing_day?: number; _user_id: string }
         Returns: string
+      }
+      enviar_curso_para_aprovacao: {
+        Args: { _digital_product_id: string }
+        Returns: undefined
       }
       expire_unpaid_product_orders: { Args: never; Returns: number }
       expire_unpaid_professional_appointments: { Args: never; Returns: number }
@@ -16334,6 +16357,10 @@ export type Database = {
           uf: string
           vendedor_id: string
         }[]
+      }
+      voltar_curso_para_rascunho: {
+        Args: { _digital_product_id: string }
+        Returns: undefined
       }
       wallet_base_available: { Args: { _profile_id: string }; Returns: number }
       wallet_statement: {
