@@ -66,6 +66,9 @@ import {
 import { type CoachSaleRow, type SaleClient, useCoachContext } from "@/lib/store-coach";
 import { useIndicacao } from "@/lib/store-referral";
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
+import { preflightDeAgendamento } from "@/lib/store-scheduling";
+import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
+import { cartIdDoProduto } from "@/lib/store-cart";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -233,8 +236,22 @@ export function UnifiedStorePage({
    * mudança. Recusa (sem estoque, agendável sem horário) vira toast e o
    * carrinho fica fechado.
    */
-  const adicionarAoCarrinho = (product: UnifiedProduct) => {
-    const recusa = carrinho.adicionar(product);
+  const adicionarAoCarrinho = async (product: UnifiedProduct, horario?: string | null) => {
+    // Atendimento com hora marcada: antes de reservar outro, resolve o que
+    // ficou pendente. Sem isso o aluno acumula duas reservas e o profissional
+    // vê dois horários bloqueados, um deles para um pedido que nunca será pago.
+    if (product.isSchedulable && horario) {
+      const { removerDoCarrinho, cancelados } = await preflightDeAgendamento({
+        professionalProductId: product.sourceId,
+        studentId: ctx.studentId,
+        novoHorarioISO: horario,
+        baseCartId: cartIdDoProduto(product),
+      });
+      removerDoCarrinho.forEach((id) => carrinho.remover(id));
+      if (cancelados > 0) toast.info("Agendamento anterior cancelado.");
+    }
+
+    const recusa = carrinho.adicionar(product, horario ?? null);
     if (recusa) {
       toast.error(recusa);
       return;
@@ -300,6 +317,32 @@ export function UnifiedStorePage({
     // uma vez só.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, products, audience, openCheckout]);
+
+  /**
+   * Liga/desliga uma ocultação da rede do coach.
+   *
+   * Recarregar o catálogo depois não é opcional: em modo coach o produto
+   * oculto continua na lista (o coach precisa vê-lo para poder reativar), mas
+   * o selo muda — e sem recarregar o selo mente até a próxima navegação.
+   */
+  const [curando, setCurando] = useState<string | null>(null);
+  const curar = async (
+    chave: string,
+    tipo: "section" | "category" | "product" | "vendor_fitmind",
+    kind: string | null,
+    targetId: string | null,
+    oculto: boolean,
+  ) => {
+    setCurando(chave);
+    try {
+      await visibilidade.alternarOculto(tipo, kind, targetId, oculto);
+      toast.success(oculto ? "Escondido da sua rede." : "Visível para sua rede de novo.");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível mudar agora.");
+    } finally {
+      setCurando(null);
+    }
+  };
 
   const precisaEntrega = exigeEntrega(carrinho.cart);
 
@@ -496,6 +539,47 @@ export function UnifiedStorePage({
       )}
 
       {modoCoach && historicoAberto && <CoachSalesPanel sales={coach.sales} />}
+
+      {/* Curadoria do catálogo FitMind inteiro. É o interruptor mais grosso:
+          o coach que só vende produto de parceiro desliga a FitMind de uma vez
+          em vez de esconder produto por produto. */}
+      {modoCoach && visibilidade.pronto && (() => {
+        const bloqueadoPeloUpline = visibilidade.ocultadoPorUpline("vendor_fitmind", null, null);
+        const escondi = visibilidade.ocultadoPorMim("vendor_fitmind", null, null);
+        if (bloqueadoPeloUpline) {
+          return (
+            <p className="rounded-2xl border border-border bg-card p-3 text-[11px] text-muted-foreground">
+              A FitMind está bloqueada pelo seu upline. Só ele pode reativar.
+            </p>
+          );
+        }
+        return (
+          <button
+            type="button"
+            disabled={curando !== null}
+            onClick={() => void curar("vendor", "vendor_fitmind", null, null, !escondi)}
+            className={`flex items-center justify-between gap-3 rounded-2xl border p-3 text-left disabled:opacity-60 ${
+              escondi ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-card"
+            }`}
+          >
+            <span className="min-w-0">
+              <span className="block text-xs font-bold text-foreground">
+                {escondi ? "FitMind escondida da sua rede" : "Produtos FitMind visíveis para sua rede"}
+              </span>
+              <span className="block text-[10px] leading-relaxed text-muted-foreground">
+                {escondi
+                  ? "Seus alunos não veem nenhum produto FitMind. Toque para mostrar de novo."
+                  : "Toque para esconder o catálogo FitMind dos seus alunos."}
+              </span>
+            </span>
+            {curando === "vendor"
+              ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+              : escondi
+                ? <EyeOff className="h-4 w-4 shrink-0 text-amber-500" />
+                : <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          </button>
+        );
+      })()}
 
       {/* Barra de local. Fica no topo como no iFood: o que muda o catalogo
           inteiro precisa estar visivel antes do catalogo. */}
@@ -713,12 +797,35 @@ export function UnifiedStorePage({
           {browsing && usableSections.length > 0 && (
             <Block title="Explorar por seção" hint="navegação de hoje">
               <div className="grid grid-cols-2 gap-3">
-                {usableSections.map((s) => (
+                {usableSections.map((s) => {
+                  const secaoEscondida = modoCoach
+                    && visibilidade.ocultadoPorMim("section", null, s.id);
+                  return (
+                  <div key={s.id} className="relative">
+                  {modoCoach && (
+                    <button
+                      type="button"
+                      disabled={curando !== null}
+                      aria-label={secaoEscondida ? "Mostrar seção para a rede" : "Esconder seção da rede"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void curar("sec-" + s.id, "section", null, s.id, !secaoEscondida);
+                      }}
+                      className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur"
+                    >
+                      {curando === "sec-" + s.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        : secaoEscondida
+                          ? <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                          : <Eye className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </button>
+                  )}
                   <button
-                    key={s.id}
                     type="button"
                     onClick={() => setSectionId(s.id)}
-                    className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+                    className={`w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${
+                      secaoEscondida ? "opacity-40" : ""
+                    }`}
                   >
                     {s.imageUrl ? (
                       <img src={s.imageUrl} alt="" className="h-24 w-full object-cover" loading="lazy" />
@@ -729,7 +836,9 @@ export function UnifiedStorePage({
                     )}
                     <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
                   </button>
-                ))}
+                  </div>
+                  );
+                })}
               </div>
             </Block>
           )}
@@ -758,6 +867,19 @@ export function UnifiedStorePage({
           hasUpline={coach.hasUpline}
           podeIndicar={indicacao.podeIndicar(detail.sourceId)}
           onIndicar={() => void indicacao.compartilhar(detail.sourceId, indicacao.meuCodigo)}
+          podeCurar={modoCoach && !!visibilidade.kindDeCuradoria(detail)}
+          escondidoDaRede={visibilidade.ocultadoPorMim(
+            "product",
+            visibilidade.kindDeCuradoria(detail),
+            detail.sourceId,
+          )}
+          onCurar={() => void curar(
+            "prod-" + detail.id,
+            "product",
+            visibilidade.kindDeCuradoria(detail),
+            detail.sourceId,
+            !visibilidade.ocultadoPorMim("product", visibilidade.kindDeCuradoria(detail), detail.sourceId),
+          )}
         />
       )}
 
@@ -1067,19 +1189,33 @@ function DetailSheet({
   hasUpline,
   podeIndicar,
   onIndicar,
+  podeCurar,
+  escondidoDaRede,
+  onCurar,
 }: {
   product: UnifiedProduct;
   onClose: () => void;
-  onAdd: (product: UnifiedProduct) => void;
+  onAdd: (product: UnifiedProduct, horario?: string | null) => Promise<void>;
   noCarrinho: boolean;
   modoCoach: boolean;
   hasUpline: boolean;
   /** Produto liberado para indicação por quem está olhando. */
   podeIndicar: boolean;
   onIndicar: () => void;
+  /**
+   * Curadoria só existe para produto que tem `product_kind` de override —
+   * ou seja, catálogo FitMind. Parceiro e profissional não têm, e oferecer o
+   * botão ali daria um toque que não faz nada.
+   */
+  podeCurar: boolean;
+  escondidoDaRede: boolean;
+  onCurar: () => void;
 }) {
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
   const ganhos = modoCoach ? calcularGanhos(product.price, product.comissao, hasUpline) : null;
+  const [horario, setHorario] = useState<string | null>(null);
+  const [adicionando, setAdicionando] = useState(false);
+  const [imagem, setImagem] = useState(0);
 
   return (
     <div
@@ -1107,8 +1243,34 @@ function DetailSheet({
           </button>
         </div>
 
-        {product.imageUrl && (
-          <img src={product.imageUrl} alt="" className="mb-3 max-h-56 w-full rounded-xl object-cover" />
+        {product.imageUrls.length > 0 && (
+          <div className="mb-3">
+            <img
+              src={product.imageUrls[Math.min(imagem, product.imageUrls.length - 1)]}
+              alt=""
+              className="max-h-56 w-full rounded-xl object-cover"
+            />
+            {/* Miniaturas só quando há mais de uma: uma fileira com um item só
+                é ruído que sugere que existe mais para ver. */}
+            {product.imageUrls.length > 1 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {product.imageUrls.map((url, i) => (
+                  <button
+                    key={url}
+                    type="button"
+                    onClick={() => setImagem(i)}
+                    aria-label={`Imagem ${i + 1}`}
+                    aria-pressed={i === imagem}
+                    className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 ${
+                      i === imagem ? "border-primary" : "border-transparent opacity-60"
+                    }`}
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {product.description && (
@@ -1118,8 +1280,18 @@ function DetailSheet({
         )}
 
         <div className="mb-3 flex flex-wrap items-baseline gap-2">
-          <span className="text-xl font-bold tabular-nums text-foreground">{fmt(product.price)}</span>
-          {product.originalPrice && product.originalPrice > product.price && (
+          {/* Preço variável mostra a faixa, não um número só: dizer "R$ 80"
+              num serviço que vai de 80 a 300 é a origem da reclamação de
+              "cobraram mais do que estava na loja". */}
+          {product.isPriceRange && product.minPrice != null && product.maxPrice != null ? (
+            <span className="text-xl font-bold tabular-nums text-foreground">
+              {fmt(product.minPrice)} <span className="text-sm font-normal text-muted-foreground">a</span>{" "}
+              {fmt(product.maxPrice)}
+            </span>
+          ) : (
+            <span className="text-xl font-bold tabular-nums text-foreground">{fmt(product.price)}</span>
+          )}
+          {product.originalPrice && product.originalPrice > product.price && !product.isPriceRange && (
             <span className="text-xs tabular-nums text-muted-foreground line-through">
               {fmt(product.originalPrice)}
             </span>
@@ -1140,24 +1312,55 @@ function DetailSheet({
           </div>
         )}
 
-        {product.isSchedulable ? (
+        {product.isSchedulable && product.sellerCoachId && (
+          <div className="mb-3">
+            <AvailabilityPicker
+              professionalCoachId={product.sellerCoachId}
+              durationMinutes={product.durationMinutes}
+              value={horario}
+              onChange={setHorario}
+            />
+          </div>
+        )}
+
+        {product.isSchedulable && !product.sellerCoachId ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
-            Este atendimento tem hora marcada e o seletor de horário ainda não existe nesta
-            vitrine. Reserve pela loja atual — aqui ele não entra no carrinho sem horário.
+            Este atendimento não tem profissional vinculado, então não há agenda para consultar.
           </p>
         ) : (
           <button
             type="button"
-            onClick={() => onAdd(product)}
-            disabled={semEstoque}
+            onClick={async () => {
+              setAdicionando(true);
+              try { await onAdd(product, horario); } finally { setAdicionando(false); }
+            }}
+            disabled={semEstoque || (product.isSchedulable && !horario) || adicionando}
+            title={product.isSchedulable && !horario ? "Escolha um horário antes de adicionar." : undefined}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
-            <ShoppingCart className="h-4 w-4" />
+            {adicionando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
             {semEstoque
               ? "Sem estoque"
-              : noCarrinho
-                ? "Adicionar mais um"
-                : modoCoach ? "Adicionar à venda" : "Adicionar ao carrinho"}
+              : product.isSchedulable && !horario
+                ? "Escolha um horário"
+                : noCarrinho
+                  ? "Adicionar mais um"
+                  : modoCoach ? "Adicionar à venda" : "Adicionar ao carrinho"}
+          </button>
+        )}
+
+        {podeCurar && (
+          <button
+            type="button"
+            onClick={onCurar}
+            className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold ${
+              escondidoDaRede
+                ? "border-amber-500/40 text-amber-500"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {escondidoDaRede ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {escondidoDaRede ? "Mostrar para minha rede" : "Esconder da minha rede"}
           </button>
         )}
 

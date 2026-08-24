@@ -37,8 +37,17 @@ export type UnifiedProduct = {
   title: string;
   description: string | null;
   imageUrl: string | null;
+  /** Todas as imagens, para a galeria do detalhe. A primeira é a `imageUrl`. */
+  imageUrls: string[];
   price: number;
   originalPrice: number | null;
+  /**
+   * Produto de preço variável ("de X a Y"). Só o catálogo legado tem, e é o
+   * caso de serviço cujo valor depende do que a pessoa contrata.
+   */
+  isPriceRange: boolean;
+  minPrice: number | null;
+  maxPrice: number | null;
   /** Quem vende: "FitMind", o nome fantasia do parceiro ou o nome do profissional. */
   sellerName: string;
   /** Coach dono do produto — é o que casa com o coach do aluno e com a rede dele. */
@@ -64,6 +73,8 @@ export type UnifiedProduct = {
   challengeTickets: number;
   stock: number | null;
   isSchedulable: boolean;
+  /** Duração do atendimento agendável, em minutos. Alimenta o seletor de horário. */
+  durationMinutes: number;
   /** Pontos de carreira do coach por venda. Só faz sentido em modo coach. */
   pointsPerSale: number;
   /**
@@ -133,6 +144,18 @@ export function matchesQuery(product: UnifiedProduct, query: string): boolean {
 const num = (v: unknown): number => Number(v ?? 0) || 0;
 const numOrNull = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v) || 0);
 
+/** Lista de imagens sem repetição e sem buraco, começando pela principal. */
+function galeria(imageUrl: unknown, imageUrls: unknown): string[] {
+  const out: string[] = [];
+  if (typeof imageUrl === "string" && imageUrl) out.push(imageUrl);
+  if (Array.isArray(imageUrls)) {
+    for (const u of imageUrls) {
+      if (typeof u === "string" && u && !out.includes(u)) out.push(u);
+    }
+  }
+  return out;
+}
+
 function firstImage(imageUrl: unknown, imageUrls: unknown): string | null {
   if (typeof imageUrl === "string" && imageUrl) return imageUrl;
   if (Array.isArray(imageUrls) && imageUrls.length && typeof imageUrls[0] === "string") return imageUrls[0];
@@ -160,9 +183,9 @@ function firstImage(imageUrl: unknown, imageUrls: unknown): string | null {
  * A parte financeira espelha `COLUNAS_FINANCEIRAS` de `StorePage.tsx:232`.
  */
 const SELECT_LEGADO =
-  "id,name,subtitle,description,price,original_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale";
+  "id,name,subtitle,description,price,original_price,is_price_range,min_price,max_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale";
 const SELECT_LEGADO_COACH =
-  "id,name,subtitle,description,price,original_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs";
+  "id,name,subtitle,description,price,original_price,is_price_range,min_price,max_price,type,image_url,image_urls,duration_days,card_access_days,challenge_tokens_amount,has_challenge_access,points_per_sale,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs";
 
 export type CatalogOptions = {
   /** Liga as colunas financeiras. Só a loja em modo coach passa `true`. */
@@ -278,7 +301,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .limit(5000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
@@ -322,6 +345,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.name || ""),
       description: (r.subtitle as string) || (r.description as string) || null,
       imageUrl: firstImage(r.image_url, r.image_urls),
+      imageUrls: galeria(r.image_url, r.image_urls),
+      isPriceRange: r.is_price_range === true,
+      minPrice: numOrNull(r.min_price),
+      maxPrice: numOrNull(r.max_price),
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
@@ -340,6 +367,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.has_challenge_access ? num(r.challenge_tokens_amount) : 0,
       stock: null,
       isSchedulable: false,
+      durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
     });
@@ -355,6 +383,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.name || ""),
       description: (r.short_description as string) || (r.description as string) || null,
       imageUrl: firstImage(r.image_url, r.image_urls),
+      imageUrls: galeria(r.image_url, r.image_urls),
+      isPriceRange: r.is_price_range === true,
+      minPrice: numOrNull(r.min_price),
+      maxPrice: numOrNull(r.max_price),
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
@@ -373,6 +405,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: num(r.challenge_tokens_amount),
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
     });
@@ -388,6 +421,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.title || ""),
       description: (r.description as string) || null,
       imageUrl: (r.cover_url as string) || null,
+      imageUrls: galeria(r.cover_url, null),
+      isPriceRange: false,
+      minPrice: null,
+      maxPrice: null,
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
@@ -406,6 +443,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: 0,
       stock: null,
       isSchedulable: false,
+      durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
     });
@@ -421,6 +459,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.name || ""),
       description: (r.description as string) || null,
       imageUrl: (r.image_url as string) || null,
+      imageUrls: galeria(r.image_url, null),
+      isPriceRange: false,
+      minPrice: null,
+      maxPrice: null,
       price: num(r.price),
       originalPrice: numOrNull(r.original_price),
       sellerName: "FitMind",
@@ -439,6 +481,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: 0,
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
     });
@@ -457,6 +500,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.name || ""),
       description: (r.description as string) || null,
       imageUrl: firstImage(r.image_url, r.image_urls),
+      imageUrls: galeria(r.image_url, r.image_urls),
+      isPriceRange: r.is_price_range === true,
+      minPrice: numOrNull(r.min_price),
+      maxPrice: numOrNull(r.max_price),
       price,
       originalPrice: numOrNull(r.original_price),
       sellerName: partner?.fantasy_name || "Parceiro",
@@ -475,6 +522,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: false,
+      durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
     });
@@ -493,6 +541,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       title: String(r.name || ""),
       description: (r.description as string) || null,
       imageUrl: firstImage(r.image_url, r.image_urls),
+      imageUrls: galeria(r.image_url, r.image_urls),
+      isPriceRange: r.is_price_range === true,
+      minPrice: numOrNull(r.min_price),
+      maxPrice: numOrNull(r.max_price),
       price,
       originalPrice: numOrNull(r.original_price),
       sellerName: coach?.profile?.name || "Profissional",
@@ -511,6 +563,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: !!r.is_schedulable,
+      durationMinutes: num(r.default_duration_minutes) || 30,
       pointsPerSale: 0,
       comissao: null,
     });

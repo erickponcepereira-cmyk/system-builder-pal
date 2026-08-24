@@ -43,6 +43,36 @@ export type VisibilidadeLoja = {
   filtrar: (produtos: UnifiedProduct[]) => UnifiedProduct[];
   /** Uma seção só aparece se não estiver oculta. */
   secaoVisivel: (sectionId: string) => boolean;
+
+  // ─── Curadoria (só faz sentido em modo coach) ───────────────────────────
+  //
+  // O coach esconde da REDE DELE o que não quer vender. Duas perguntas
+  // diferentes, e confundi-las trava a tela:
+  //
+  //   `ocultadoPorMim`   → fui eu que escondi; posso desfazer
+  //   `ocultadoPorUpline` → meu upline escondeu; não posso desfazer
+  //
+  /** Fui eu que escondi este alvo? */
+  ocultadoPorMim: (
+    tipo: "section" | "category" | "product" | "vendor_fitmind",
+    kind: string | null,
+    targetId: string | null,
+  ) => boolean;
+  /** Meu upline escondeu? Então está fora, e não há botão que resolva. */
+  ocultadoPorUpline: (
+    tipo: "section" | "category" | "product" | "vendor_fitmind",
+    kind: string | null,
+    targetId: string | null,
+  ) => boolean;
+  /** Liga/desliga a ocultação. Recarrega o contexto sozinho. */
+  alternarOculto: (
+    tipo: "section" | "category" | "product" | "vendor_fitmind",
+    kind: string | null,
+    targetId: string | null,
+    oculto: boolean,
+  ) => Promise<void>;
+  /** `product_kind` deste produto, ou `null` quando não há override possível. */
+  kindDeCuradoria: (produto: UnifiedProduct) => string | null;
 };
 
 export function useVisibilidadeLoja(
@@ -136,5 +166,19 @@ export function useVisibilidadeLoja(
     [coachMode, vis],
   );
 
-  return { pronto: carregou && vis.loaded, filtrar, secaoVisivel };
+  return {
+    pronto: carregou && vis.loaded,
+    filtrar,
+    secaoVisivel,
+    // Repasse direto do módulo antigo: a regra de ocultação é a mesma das duas
+    // lojas de propósito. Reimplementá-la aqui criaria duas verdades sobre o
+    // que a rede do coach enxerga.
+    ocultadoPorMim: (tipo, kind, targetId) =>
+      vis.isHiddenByMe(tipo as never, kind as never, targetId),
+    ocultadoPorUpline: (tipo, kind, targetId) =>
+      vis.isHiddenByUpline(tipo as never, kind as never, targetId),
+    alternarOculto: (tipo, kind, targetId, oculto) =>
+      vis.toggleHidden(tipo as never, kind as never, targetId, oculto),
+    kindDeCuradoria: (produto) => kindDeOverride(produto),
+  };
 }

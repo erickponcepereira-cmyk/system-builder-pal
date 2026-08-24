@@ -171,10 +171,11 @@ export function motivoDeBloqueio(product: UnifiedProduct, slot?: string | null):
     && product.stock !== null && product.stock !== undefined && product.stock <= 0) {
     return "Produto sem estoque.";
   }
-  // A vitrine nova ainda não tem seletor de horário. Enquanto não tiver,
-  // agendável fica fora do carrinho em vez de virar pedido sem hora marcada.
+  // Agendável sem horário nunca entra: o pedido nasceria sem hora marcada, e
+  // a agenda do profissional ficaria com um bloqueio sem dono. A tela já pede
+  // o horário antes de habilitar o botão; esta guarda é a rede embaixo.
   if (product.isSchedulable && !slot) {
-    return "Este atendimento precisa de horário. Use a loja atual para agendar.";
+    return "Escolha um horário para este atendimento.";
   }
   return null;
 }
