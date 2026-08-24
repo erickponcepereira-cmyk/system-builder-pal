@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { AlertCircle, CalendarDays, CheckCircle2, Clock, Loader2, MapPin, QrCode, X, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import { loadPartnersById } from "@/lib/partner-public";
 
 type Reservation = {
   id: string;
@@ -52,13 +53,40 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
     }
     const profileId = (profile as { id?: string } | null)?.id;
     if (!profileId) { setItems([]); setLoading(false); return; }
-    const { data } = await supabase
+    // Sem embed `partners(...)`: a tabela perdeu o SELECT direto e pedir
+    // `address` fazia o PostgREST recusar a consulta INTEIRA — a tela mostrava
+    // "nenhuma reserva" quando na verdade era 42501. O caminho autorizado é a
+    // RPC security-definer, via `loadPartnersById`.
+    const { data, error } = await supabase
       .from("partner_freebie_reservations" as never)
-      .select("id, qr_token, slot_start, slot_end, status, partner_products(name, redemption_location_name, redemption_location_url), partners(fantasy_name, address)")
+      .select("id, qr_token, slot_start, slot_end, status, partner_id, partner_products(name, redemption_location_name, redemption_location_url)")
       .eq("profile_id" as never, profileId as never)
       .gte("slot_end" as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString() as never)
       .order("slot_start" as never);
-    setItems(((data as unknown) as Reservation[]) || []);
+
+    // Falha de consulta e lista vazia são coisas diferentes, e precisam
+    // parecer diferentes na tela. Foi exatamente isto que escondeu o
+    // incidente dos gratuitos por horas.
+    if (error) {
+      console.error("[reservas de gratuito]", error);
+      toast.error("Não foi possível carregar suas reservas. Tente de novo.");
+      setLoading(false);
+      return;
+    }
+
+    const linhas = ((data as unknown) as Array<Reservation & { partner_id: string | null }>) || [];
+    const parceiros = await loadPartnersById(
+      Array.from(new Set(linhas.map((r) => r.partner_id).filter((id): id is string => !!id))),
+    );
+    setItems(linhas.map((r) => {
+      const parceiro = r.partner_id ? parceiros.get(r.partner_id) : undefined;
+      return {
+        ...r,
+        partners: parceiro
+          ? { fantasy_name: parceiro.fantasy_name, address: parceiro.address ?? null }
+          : null,
+      };
+    }));
     setLoading(false);
   };
 
@@ -72,11 +100,12 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
   useEffect(() => {
     if (!selected) return;
     const t = setInterval(async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("partner_freebie_reservations" as never)
         .select("status")
         .eq("id" as never, selected.id as never)
         .maybeSingle();
+      if (error) { console.error("[reserva: status]", error); return; }
       const s = (data as { status?: string } | null)?.status;
       if (s && s !== selected.status) { setSelected({ ...selected, status: s }); load(); }
     }, 5000);
