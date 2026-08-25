@@ -11,6 +11,8 @@ import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
+  buscarPessoasAcademia,
+
   GATILHOS_CRM,
   MOTIVO_DAYUSE,
   MOTIVO_EVENTO,
