@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { X } from "lucide-react";
+import { addDaysISO, formatDateOnlyBR, todayISOLocal } from "@/lib/date-only";
 import {
   FORMAS_PAGAMENTO,
   listarPlanosAcademia,
@@ -11,6 +12,12 @@ import {
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const numero = (s: string) => Number(String(s).replace(",", ".")) || 0;
+
+/** Base da contagem: quem renova adiantado não perde os dias que já pagou. */
+const baseDaRenovacao = (vencimentoAtual?: string | null) => {
+  const hoje = todayISOLocal();
+  return vencimentoAtual && vencimentoAtual > hoje ? vencimentoAtual : hoje;
+};
 
 /**
  * Renovar uma pessoa em um passo.
@@ -23,14 +30,18 @@ const numero = (s: string) => Number(String(s).replace(",", ".")) || 0;
  * desconto de balcão é regra, não exceção. O pagamento pode ser dividido entre
  * formas, porque metade no pix e metade no cartão é o que de fato acontece no
  * balcão, e cada forma tem a sua taxa.
+ *
+ * A validade também é sugestão: o plano define os dias (30, 90…), e a recepção
+ * pode ajustar a data antes de confirmar.
  */
 export function RenovarAluno({
-  partnerId, credencialId, studentId, nome, aoConcluir, aoCancelar,
+  partnerId, credencialId, studentId, nome, vencimentoAtual, aoConcluir, aoCancelar,
 }: {
   partnerId: string;
   credencialId: string | null;
   studentId: string | null;
   nome: string;
+  vencimentoAtual?: string | null;
   aoConcluir: () => void;
   aoCancelar: () => void;
 }) {
@@ -38,6 +49,7 @@ export function RenovarAluno({
   const renovar = useServerFn(renovarMensalidadeAcademia);
   const [planos, setPlanos] = useState<Array<{ id: string; nome: string; valor_padrao: number; dias: number }>>([]);
   const [planoId, setPlanoId] = useState("");
+  const [validoAte, setValidoAte] = useState("");
   const [partes, setPartes] = useState<Array<{ forma: FormaPagamento; valor: string }>>([
     { forma: "pix", valor: "" },
   ]);
@@ -54,6 +66,7 @@ export function RenovarAluno({
         if (primeiro) {
           setPlanoId(primeiro.id);
           setPartes([{ forma: "pix", valor: String(primeiro.valor_padrao) }]);
+          setValidoAte(addDaysISO(baseDaRenovacao(vencimentoAtual), Number(primeiro.dias) || 30));
         }
       })
       .catch(() => toast.error("Não consegui carregar os planos."));
@@ -70,8 +83,12 @@ export function RenovarAluno({
     const p = planos.find((x) => x.id === id);
     // Trocar de plano repõe o preço de tabela numa parte só. Manter a divisão
     // anterior deixaria a soma errada sem ninguém perceber.
-    if (p) setPartes([{ forma: partes[0]?.forma ?? "pix", valor: String(p.valor_padrao) }]);
+    if (p) {
+      setPartes([{ forma: partes[0]?.forma ?? "pix", valor: String(p.valor_padrao) }]);
+      setValidoAte(addDaysISO(baseDaRenovacao(vencimentoAtual), Number(p.dias) || 30));
+    }
   };
+
 
   const confirmar = async () => {
     if (!plano) { toast.error("Escolha o plano."); return; }
