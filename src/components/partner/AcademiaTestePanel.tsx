@@ -1903,6 +1903,43 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
         </select>
       </div>
 
+      {!cadastrando && !pessoaNova && (
+        <button
+          type="button"
+          onClick={() => { setCadastrando(true); setRenovandoId(null); }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+        >
+          <UserPlus className="h-3.5 w-3.5" /> Cadastrar pessoa nova (não é da FitMind)
+        </button>
+      )}
+
+      {cadastrando && (
+        <CadastrarPessoaAcademia
+          partnerId={partnerId}
+          aoCriar={(p) => { setCadastrando(false); setPessoaNova(p); }}
+          aoCancelar={() => setCadastrando(false)}
+        />
+      )}
+
+      {pessoaNova && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <p className="text-sm font-bold text-white">{pessoaNova.nome}</p>
+          <p className="text-[11px] text-white/50">
+            Identificador <span className="font-mono text-white/70">{pessoaNova.referencia}</span>
+          </p>
+          <RenovarAluno
+            partnerId={partnerId}
+            credencialId={pessoaNova.credencialId}
+            studentId={null}
+            nome={pessoaNova.nome}
+            aoConcluir={() => { setPessoaNova(null); recarregar(); }}
+            aoCancelar={() => setPessoaNova(null)}
+          />
+        </div>
+      )}
+
+
+
       {visiveis.length === 0 ? (
         <p className="py-8 text-center text-sm text-white/50">Nenhum aluno com mensalidade nesta academia.</p>
       ) : (
