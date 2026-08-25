@@ -798,7 +798,7 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
     .update({ role: "coach", status: profile.status === "active" ? "active" : "pending" })
     .eq("id", profile.id);
 
-  await ensureStudentForProfile(profile.id, uplineCoachId);
+  if (studentCoachId) await ensureStudentForProfile(profile.id, studentCoachId);
   return { ok: true, profileId: profile.id };
 }
 
