@@ -59,7 +59,10 @@ import {
   validarCredencialEvento,
   vincularCredencial,
   type FormaPagamento,
+  type PessoaAcademia,
 } from "@/lib/academia-teste.functions";
+import { formatDateOnlyBR } from "@/lib/date-only";
+
 
 type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "agente" | "config";
 
