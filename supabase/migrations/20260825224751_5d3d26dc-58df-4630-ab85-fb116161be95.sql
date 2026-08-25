@@ -1,0 +1,2 @@
+COMMENT ON FUNCTION public.academia_face_enfileirar_credencial(uuid, uuid, text) IS 'Enfileira foto para uma credencial local existente; chamada exclusiva do servidor autorizado.';
+COMMENT ON FUNCTION public.academia_agente_retrato(uuid, text) IS 'Retorna acessos ativos por credencial local ou aluno FitMind; agente autenticado por segredo.';

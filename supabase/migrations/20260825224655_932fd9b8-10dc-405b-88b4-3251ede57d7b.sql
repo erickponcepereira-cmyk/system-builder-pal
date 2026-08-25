@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.academia_face_enfileirar_credencial(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.academia_face_enfileirar_credencial(uuid, uuid, text) TO service_role;

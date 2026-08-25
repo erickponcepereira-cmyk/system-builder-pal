@@ -8,6 +8,7 @@ import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
+import { Button } from "@/components/ui/button";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
@@ -31,6 +32,7 @@ import {
   aplicarModeloTreino,
   criarEventoAcademia,
   enviarFoto,
+  enviarFotoCredencial,
   gerarCodigoAgente,
   inscreverNoEvento,
   obterAgenteAcademia,
@@ -954,6 +956,74 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
   );
 }
 
+function RostoDepoisDoCadastro({
+  partnerId, pessoa, aoFinalizar,
+}: {
+  partnerId: string;
+  pessoa: { credencialId: string; nome: string; referencia: string };
+  aoFinalizar: () => void;
+}) {
+  const enviar = useServerFn(enviarFotoCredencial);
+  const [capturando, setCapturando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  const enviarCaptura = async (fotoBase64: string) => {
+    setCapturando(false);
+    setEnviando(true);
+    try {
+      const resultado = await enviar({
+        data: { partnerId, credencialId: pessoa.credencialId, fotoBase64 },
+      });
+      toast.success(`Rosto enviado para a catraca no identificador ${resultado.referencia ?? pessoa.referencia}.`);
+      aoFinalizar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar o rosto.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div>
+        <p className="text-sm font-bold text-white">Mensalidade registrada</p>
+        <p className="mt-1 text-[11px] text-white/60">
+          {pessoa.nome} já será sincronizada com a catraca pelo identificador{" "}
+          <span className="font-mono text-white/80">{pessoa.referencia}</span>.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Button
+          type="button"
+          onClick={() => setCapturando(true)}
+          disabled={enviando}
+          size="sm"
+          className="w-full"
+        >
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          Cadastrar rosto agora
+        </Button>
+        <Button
+          type="button"
+          onClick={aoFinalizar}
+          disabled={enviando}
+          variant="outline"
+          size="sm"
+          className="w-full"
+        >
+          Fazer depois na catraca
+        </Button>
+      </div>
+      {capturando && (
+        <CapturaRosto
+          onPronta={(foto) => void enviarCaptura(foto)}
+          onCancelar={() => setCapturando(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 /**
  * Quem já tem rosto no leitor mas ainda não está ligado a um aluno.
  * Mesmo padrão do vínculo em avaliar aluno: sugere por semelhança de nome,
@@ -1814,6 +1884,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   // por isso não podia ser lançado. Depois de criar, a renovação abre na hora.
   const [cadastrando, setCadastrando] = useState(false);
   const [pessoaNova, setPessoaNova] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
+  const [pessoaParaRosto, setPessoaParaRosto] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
@@ -1936,10 +2007,22 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
             credencialId={pessoaNova.credencialId}
             studentId={null}
             nome={pessoaNova.nome}
-            aoConcluir={() => { setPessoaNova(null); recarregar(); }}
+            aoConcluir={() => {
+              setPessoaParaRosto(pessoaNova);
+              setPessoaNova(null);
+              recarregar();
+            }}
             aoCancelar={() => setPessoaNova(null)}
           />
         </div>
+      )}
+
+      {pessoaParaRosto && (
+        <RostoDepoisDoCadastro
+          partnerId={partnerId}
+          pessoa={pessoaParaRosto}
+          aoFinalizar={() => setPessoaParaRosto(null)}
+        />
       )}
 
 
@@ -2105,6 +2188,7 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
   const [termo, setTermo] = useState("");
   const [opcoes, setOpcoes] = useState<PessoaAcademia[]>([]);
   const [pessoa, setPessoa] = useState<PessoaAcademia | null>(null);
+  const [pessoaParaRosto, setPessoaParaRosto] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   const [cadastrando, setCadastrando] = useState(false);
   const [buscando, setBuscando] = useState(false);
 
@@ -2123,9 +2207,20 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
 
   const limpar = () => { setPessoa(null); setTermo(""); setOpcoes([]); };
 
+  const concluirMensalidade = () => {
+    if (pessoa?.credencialId && !pessoa.studentId && pessoa.referencia) {
+      setPessoaParaRosto({
+        credencialId: pessoa.credencialId,
+        nome: pessoa.nome,
+        referencia: pessoa.referencia,
+      });
+    }
+    limpar();
+  };
+
   return (
     <div className="space-y-3">
-      {!pessoa && !cadastrando && (
+      {!pessoa && !cadastrando && !pessoaParaRosto && (
         <>
           <Campo label="Quem está pagando">
             <input
@@ -2179,7 +2274,7 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
         />
       )}
 
-      {pessoa && (
+      {pessoa && !pessoaParaRosto && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -2197,10 +2292,18 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
             studentId={pessoa.studentId}
             nome={pessoa.nome}
             vencimentoAtual={pessoa.validoAte}
-            aoConcluir={limpar}
+            aoConcluir={concluirMensalidade}
             aoCancelar={limpar}
           />
         </div>
+      )}
+
+      {pessoaParaRosto && (
+        <RostoDepoisDoCadastro
+          partnerId={partnerId}
+          pessoa={pessoaParaRosto}
+          aoFinalizar={() => setPessoaParaRosto(null)}
+        />
       )}
     </div>
   );
