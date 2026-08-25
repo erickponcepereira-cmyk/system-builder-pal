@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { HerbalifeBoletosPanel } from "@/components/shipping/HerbalifeBoletosPanel";
 import { ArrowLeft } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/professional/herbalife-boletos")({
+export const Route = createFileRoute("/_authenticated/professional_/herbalife-boletos")({
   component: Page,
   head: () => ({ meta: [{ title: "Boletos Herbalife — Profissional" }] }),
 });

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { RecurrenceFields, normalizeRecurrence, recurrenceLabel } from "@/components/shared/RecurrenceFields";
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -544,8 +544,8 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
   return (
     <div className="space-y-3">
       <WhatsAppGroupCard />
-      <a
-        href="/partner/orders-in-progress"
+      <Link
+        to="/partner/orders-in-progress"
         className="flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 hover:bg-primary/15 transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -556,9 +556,9 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
           </div>
         </div>
         <span className="text-xs text-primary font-medium">Abrir →</span>
-      </a>
-      <a
-        href="/partner/cursos"
+      </Link>
+      <Link
+        to="/partner/cursos"
         className="flex items-center justify-between gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 hover:bg-sky-500/15 transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -569,9 +569,9 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
           </div>
         </div>
         <span className="text-xs text-sky-300 font-medium">Abrir →</span>
-      </a>
-      <a
-        href="/partner/herbalife-boletos"
+      </Link>
+      <Link
+        to="/partner/herbalife-boletos"
         className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 hover:bg-emerald-500/15 transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -582,7 +582,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount, coac
           </div>
         </div>
         <span className="text-xs text-emerald-300 font-medium">Abrir →</span>
-      </a>
+      </Link>
       {!hasActiveFree && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
           <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.

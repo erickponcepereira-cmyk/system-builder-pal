@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { UnifiedStorePage } from "@/components/store/UnifiedStorePage";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 
-export const Route = createFileRoute("/_authenticated/coach/loja-teste")({
+export const Route = createFileRoute("/_authenticated/coach_/loja-teste")({
   component: CoachTestStore,
 });
 

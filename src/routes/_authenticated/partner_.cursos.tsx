@@ -8,7 +8,7 @@ import { CreatorCoursesPanel } from "@/components/store/CreatorCoursesPanel";
  * que a pessoa consegue editar, e `criar_curso` recusa quem não é parceiro nem
  * profissional. Um gate de tela aqui seria uma segunda fonte de verdade.
  */
-export const Route = createFileRoute("/_authenticated/partner/cursos")({
+export const Route = createFileRoute("/_authenticated/partner_/cursos")({
   component: PartnerCourses,
 });
 

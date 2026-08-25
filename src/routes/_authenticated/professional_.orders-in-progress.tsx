@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OrdersInProgressPanel } from "@/components/shipping/OrdersInProgressPanel";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/professional/orders-in-progress")({
+export const Route = createFileRoute("/_authenticated/professional_/orders-in-progress")({
   component: ProfessionalOrdersInProgressPage,
   head: () => ({ meta: [{ title: "Compras em andamento — Profissional" }] }),
 });

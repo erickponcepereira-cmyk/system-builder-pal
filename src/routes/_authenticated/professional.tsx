@@ -270,8 +270,8 @@ function ProfessionalPanel() {
           <span className="text-xs text-primary font-medium">Abrir →</span>
         </Link>
 
-        <a
-          href="/professional/cursos"
+        <Link
+          to="/professional/cursos"
           className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 hover:bg-sky-500/15 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ function ProfessionalPanel() {
             </div>
           </div>
           <span className="text-xs text-sky-300 font-medium">Abrir →</span>
-        </a>
+        </Link>
 
         <Link
           to="/professional/herbalife-boletos"
