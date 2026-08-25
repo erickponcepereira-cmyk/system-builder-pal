@@ -693,7 +693,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   }
 
   await supabaseAdmin.from("profiles").update({ status: "pending", role: "coach" }).eq("id", profile.id);
-  await ensureStudentForProfile(profile.id, uplineCoachId);
+  if (studentCoachId) await ensureStudentForProfile(profile.id, studentCoachId);
   return { ok: true, profileId: profile.id };
 }
 export type UpgradeExistingToCoachInput = {
