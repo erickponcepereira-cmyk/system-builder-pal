@@ -1,0 +1,211 @@
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { X } from "lucide-react";
+import {
+  FORMAS_PAGAMENTO,
+  listarPlanosAcademia,
+  renovarMensalidadeAcademia,
+  type FormaPagamento,
+} from "@/lib/academia-teste.functions";
+
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const numero = (s: string) => Number(String(s).replace(",", ".")) || 0;
+
+/**
+ * Renovar uma pessoa em um passo.
+ *
+ * Era a operação mais comum da academia e a única impossível pela tela: o
+ * lançamento antigo exigia aluno da plataforma, e 400 das 401 pessoas só
+ * existem como credencial do leitor.
+ *
+ * O plano traz o preço de tabela já preenchido, e o valor continua editável —
+ * desconto de balcão é regra, não exceção. O pagamento pode ser dividido entre
+ * formas, porque metade no pix e metade no cartão é o que de fato acontece no
+ * balcão, e cada forma tem a sua taxa.
+ */
+export function RenovarAluno({
+  partnerId, credencialId, studentId, nome, aoConcluir, aoCancelar,
+}: {
+  partnerId: string;
+  credencialId: string | null;
+  studentId: string | null;
+  nome: string;
+  aoConcluir: () => void;
+  aoCancelar: () => void;
+}) {
+  const listarPlanos = useServerFn(listarPlanosAcademia);
+  const renovar = useServerFn(renovarMensalidadeAcademia);
+  const [planos, setPlanos] = useState<Array<{ id: string; nome: string; valor_padrao: number; dias: number }>>([]);
+  const [planoId, setPlanoId] = useState("");
+  const [partes, setPartes] = useState<Array<{ forma: FormaPagamento; valor: string }>>([
+    { forma: "pix", valor: "" },
+  ]);
+  const [obs, setObs] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    listarPlanos({ data: { partnerId } })
+      .then((r) => {
+        if (!vivo) return;
+        setPlanos(r.planos);
+        const primeiro = r.planos[0];
+        if (primeiro) {
+          setPlanoId(primeiro.id);
+          setPartes([{ forma: "pix", valor: String(primeiro.valor_padrao) }]);
+        }
+      })
+      .catch(() => toast.error("Não consegui carregar os planos."));
+    return () => { vivo = false; };
+  }, [partnerId]);
+
+  const plano = planos.find((p) => p.id === planoId) ?? null;
+  const total = partes.reduce((s, p) => s + numero(p.valor), 0);
+  const tabela = Number(plano?.valor_padrao ?? 0);
+  const difere = Boolean(plano) && Math.abs(total - tabela) > 0.005;
+
+  const escolherPlano = (id: string) => {
+    setPlanoId(id);
+    const p = planos.find((x) => x.id === id);
+    // Trocar de plano repõe o preço de tabela numa parte só. Manter a divisão
+    // anterior deixaria a soma errada sem ninguém perceber.
+    if (p) setPartes([{ forma: partes[0]?.forma ?? "pix", valor: String(p.valor_padrao) }]);
+  };
+
+  const confirmar = async () => {
+    if (!plano) { toast.error("Escolha o plano."); return; }
+    const pagamentos = partes
+      .map((p) => ({ forma: p.forma, valor: numero(p.valor) }))
+      .filter((p) => p.valor > 0);
+    if (pagamentos.length === 0) { toast.error("Informe o valor recebido."); return; }
+
+    setSalvando(true);
+    try {
+      const r = await renovar({
+        data: {
+          partnerId, credencialId, studentId,
+          plano: plano.nome, dias: plano.dias, pagamentos,
+          observacao: obs.trim() || undefined,
+        },
+      });
+      const ate = new Date(`${r.valido_ate}T12:00:00`).toLocaleDateString("pt-BR");
+      toast.success(`Renovado até ${ate} · líquido ${brl(Number(r.liquido))}`);
+      aoConcluir();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível renovar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
+      <p className="text-[11px] text-white/60">
+        Renovando <strong className="text-white">{nome}</strong>. Os dias entram
+        <strong className="text-white/80"> a partir do vencimento atual</strong> quando ele ainda não passou.
+      </p>
+
+      <div>
+        <p className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Plano</p>
+        <div className="flex flex-wrap gap-1.5">
+          {planos.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => escolherPlano(p.id)}
+              className={`rounded-lg px-2.5 py-1.5 text-left text-[11px] ${
+                p.id === planoId
+                  ? "bg-primary text-black"
+                  : "border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+              }`}
+            >
+              <span className="block font-bold">{p.nome}</span>
+              <span className="block opacity-80">{brl(Number(p.valor_padrao))} · {p.dias} dias</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-wider text-white/40">Como recebeu</p>
+          <button
+            type="button"
+            onClick={() => setPartes((a) => [...a, { forma: "dinheiro", valor: "" }])}
+            className="rounded px-2 py-0.5 text-[10px] font-bold text-primary hover:bg-white/10"
+          >
+            + dividir
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          {partes.map((p, i) => (
+            <div key={i} className="flex gap-1.5">
+              <select
+                value={p.forma}
+                onChange={(e) =>
+                  setPartes((a) => a.map((x, j) => (j === i ? { ...x, forma: e.target.value as FormaPagamento } : x)))
+                }
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white"
+              >
+                {FORMAS_PAGAMENTO.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <input
+                value={p.valor}
+                onChange={(e) => setPartes((a) => a.map((x, j) => (j === i ? { ...x, valor: e.target.value } : x)))}
+                inputMode="decimal"
+                placeholder="0,00"
+                aria-label="Valor recebido nesta forma"
+                className="w-24 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-white/30"
+              />
+              {partes.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPartes((a) => a.filter((_, j) => j !== i))}
+                  aria-label="Remover esta forma de pagamento"
+                  className="rounded px-2 text-white/40 hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Diferença é aviso, não bloqueio: desconto e acréscimo de balcão são
+            legítimos, e o que vale é o que a recepção recebeu de fato. */}
+        <p className={`mt-1 text-[11px] ${difere ? "text-amber-300" : "text-white/50"}`}>
+          Total {brl(total)}{difere ? ` · tabela é ${brl(tabela)}` : ""}
+        </p>
+      </div>
+
+      <input
+        value={obs}
+        onChange={(e) => setObs(e.target.value)}
+        placeholder="Observação (opcional)"
+        className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/40"
+      />
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => void confirmar()}
+          disabled={salvando || total <= 0}
+          className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
+        >
+          {salvando ? "Registrando…" : "Confirmar renovação"}
+        </button>
+        <button
+          type="button"
+          onClick={aoCancelar}
+          className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70 hover:bg-white/10"
+        >
+          Voltar
+        </button>
+      </div>
+    </div>
+  );
+}

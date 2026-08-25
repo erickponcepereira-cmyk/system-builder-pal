@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw } from "lucide-react";
+import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
@@ -1792,10 +1793,13 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
-    id: string; student_id: string | null; referencia: string | null; nome: string;
+    id: string; student_id: string | null; credencial_id: string | null;
+    referencia: string | null; nome: string;
     plano: string; valido_ate: string;
     dias_restantes: number | null; decisao: string; motivo: string; valor: number;
   }>>([]);
+  // id do lançamento com o formulário de renovação aberto
+  const [renovandoId, setRenovandoId] = useState<string | null>(null);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
@@ -1832,6 +1836,14 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
     } finally {
       setSalvandoCancel(false);
     }
+  };
+
+  // Recarrega depois de renovar: o vencimento e o selo de estado mudam na hora,
+  // e a recepção precisa ver que a renovação pegou sem sair da tela.
+  const recarregar = () => {
+    listar({ data: { partnerId } })
+      .then((r) => setLinhas(r.alunos as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"));
   };
 
   useEffect(() => {
@@ -1923,8 +1935,15 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
-                    {abertoId !== l.id && (
+                    {abertoId !== l.id && renovandoId !== l.id && (
                       <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { setRenovandoId(l.id); setAbertoId(null); }}
+                          className="flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary hover:bg-primary/25"
+                        >
+                          <RefreshCw className="h-3 w-3" /> Renovar
+                        </button>
                         {l.student_id && (
                           <button
                             type="button"
@@ -1945,6 +1964,17 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     )}
                   </div>
                 </div>
+
+                {renovandoId === l.id && (
+                  <RenovarAluno
+                    partnerId={partnerId}
+                    credencialId={l.credencial_id}
+                    studentId={l.student_id}
+                    nome={l.nome}
+                    aoConcluir={() => { setRenovandoId(null); recarregar(); }}
+                    aoCancelar={() => setRenovandoId(null)}
+                  />
+                )}
 
                 {abertoId === l.id && (
                   <div className="mt-3 space-y-2 border-t border-white/10 pt-3">

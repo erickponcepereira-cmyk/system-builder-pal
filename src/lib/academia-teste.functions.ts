@@ -1312,3 +1312,77 @@ export const salvarConfigAcademia = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/* ------------------------------------------------------------------ *
+ * Planos e renovação
+ *
+ * A renovação é a operação mais comum de uma academia e era a única
+ * impossível pela tela: registrarMensalidadeAcademia exige studentId, e 400
+ * das 401 pessoas só existem como credencial do leitor.
+ * ------------------------------------------------------------------ */
+
+/** Preços de tabela da academia. O valor é sugestão, editável na venda. */
+export const listarPlanosAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: linhas, error } = await admin
+      .from("academia_planos" as never)
+      .select("id, nome, valor_padrao, dias" as never)
+      .eq("partner_id" as never, data.partnerId)
+      .eq("ativo" as never, true)
+      .order("posicao" as never, { ascending: true });
+    if (error) throw new Error(error.message);
+    return {
+      planos: (linhas ?? []) as unknown as Array<{
+        id: string; nome: string; valor_padrao: number; dias: number;
+      }>,
+    };
+  });
+
+export type PagamentoDividido = { forma: FormaPagamento; valor: number };
+
+/**
+ * Lança ou renova, com o pagamento dividido entre formas.
+ *
+ * A conta fica no banco (`academia_renovar`), uma vez só: a taxa é por forma,
+ * e a data nova soma em cima do vencimento atual quando ele ainda está no
+ * futuro. Fazer isso aqui em TypeScript seria a quarta duplicação de régua
+ * deste projeto.
+ */
+export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; credencialId?: string | null; studentId?: string | null;
+    plano: string; dias: number; pagamentos: PagamentoDividido[]; observacao?: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const pagamentos = (data.pagamentos ?? [])
+      .map((p) => ({ forma: p.forma, valor: Math.round((Number(p.valor) || 0) * 100) / 100 }))
+      .filter((p) => p.valor > 0);
+    if (pagamentos.length === 0) throw new Error("Informe ao menos uma forma de pagamento com valor.");
+    if (!data.credencialId && !data.studentId) throw new Error("Informe a pessoa.");
+
+    const total = pagamentos.reduce((s, p) => s + p.valor, 0);
+
+    const { data: r, error } = await admin.rpc("academia_renovar" as never, {
+      p_partner_id: data.partnerId,
+      p_credencial_id: data.credencialId ?? null,
+      p_student_id: data.studentId ?? null,
+      p_plano: data.plano,
+      p_valor: total,
+      p_pagamentos: pagamentos,
+      p_dias: Number(data.dias) || 30,
+      p_registrado_por: profileId,
+      p_observacao: data.observacao ?? null,
+    } as never);
+    if (error) throw new Error(error.message);
+
+    const linha = (Array.isArray(r) ? r[0] : r) as unknown as {
+      mensalidade_id: string; valido_ate: string; bruto: number; taxas: number; liquido: number;
+    };
+    return linha;
+  });
