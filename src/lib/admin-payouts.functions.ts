@@ -882,17 +882,23 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         myCoprodCredits.set(oid, { amount: (prev?.amount || 0) + entry.amount, pct: entry.pct ?? prev?.pct ?? null });
       }
     }
+    // IMPORTANTE: nunca comparar null com null. Quem não tem cadastro de parceiro
+    // (partnerId null) casaria com todo pedido de produto de profissional (partner_id null)
+    // e apareceria como "criador" de produto alheio.
+    const isCreatorOrder = (o: { partner_id: string | null; professional_coach_id: string | null }) =>
+      (partnerId != null && o.partner_id === partnerId) || (coachId != null && o.professional_coach_id === coachId);
     const myCoprodDeduction = (o: { id: string; partner_id: string | null; professional_coach_id: string | null }) =>
       coprodDeduction(
         coprodIdx,
-        o.partner_id === partnerId ? partnerId : null,
-        o.professional_coach_id === coachId ? coachId : null,
+        partnerId != null && o.partner_id === partnerId ? partnerId : null,
+        coachId != null && o.professional_coach_id === coachId ? coachId : null,
         o.id,
       );
 
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
       const mc = mcInfoForOrder(o);
-      const isCreator = o.partner_id === partnerId || o.professional_coach_id === coachId;
+      const isCreator = isCreatorOrder(o);
+
       const coprodIn = myCoprodCredits.get(o.id)?.amount || 0;
       const creatorAmount = isCreator
         ? n(o.partner_net_amount) - myCoprodDeduction(o)
@@ -960,7 +966,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const productEarnings = [
       // 1) Ganhos como criador — já líquidos do repasse de co-produção
       ...paidOrders
-        .filter((o) => o.partner_id === partnerId || o.professional_coach_id === coachId)
+        .filter((o) => isCreatorOrder(o))
         .map((o) => {
           const { availableAt, released } = releaseInfo(o);
           const deduction = myCoprodDeduction(o);
