@@ -1,48 +1,41 @@
-# O "Criador" fantasma do Jorge em Pagamentos
+# O R$ 452,31 do Jorge: comissão de vendedor na compra dele mesmo
 
 ## O que está acontecendo (verificado no banco)
 
-O Jorge **não é dono** de nenhum produto:
+A linha grande que aparece agora no Jorge **não é mais** "produto criado" — é uma **comissão de vendedor** de R$ 452,31 (status pendente, criada em 21/08) sobre a venda:
 
-- "Mulheres Essenciais" é da Loureane; "Condomínio Chapada do Poente" é do Adriano.
-- Nenhum pedido tem o Jorge como criador (`professional_coach_id` dele: 0 pedidos).
-- O Jorge não tem cadastro de parceiro.
+- Produto: **adesão sistema estacionamento** (R$ 540,00) — não é produto do Jorge.
+- Comprador: **o próprio Jorge**.
+- Quem fez a venda: **Nathan Utuari** (venda registrada pelo painel dele).
+- Nessa mesma venda o Nathan recebeu só R$ 50,26 como "Master Coach (cross-sale)".
 
-O que ele tem são comissões pequenas de rede nesses pedidos (R$ 0,40 e R$ 0,18).
+Causa confirmada na função do banco `process_paid_transaction`: para decidir quem é o "coach da venda", ela primeiro procura se **o próprio comprador tem cadastro de coach aprovado** e, se tiver, usa esse cadastro. Como o Jorge é coach, ele virou o "vendedor" da própria compra e ficou com a fatia de vendedor (R$ 452,31), enquanto o vendedor real (Nathan) só recebeu o bônus de master coach.
 
-A causa é uma comparação errada na tela de Pagamentos: para decidir "esta pessoa é a criadora do produto", o código compara o parceiro do pedido com o parceiro da pessoa. Como o Jorge **não tem parceiro** (vazio) e os pedidos de produto de profissional também têm o campo de parceiro **vazio**, "vazio = vazio" dá verdadeiro — e a tela passa a exibir o **líquido inteiro do criador** (R$ 118,57 e R$ 8,84) como se fosse ganho dele.
+## Alcance (levantamento no banco)
 
-É só na exibição do admin. O cálculo oficial de saldo do banco (`wallet_statement`, `saldo_disponivel`) e o adiantamento (`admin_advance_creator_release`) usam a comparação correta, com proteção para valores vazios.
+Comissões em que o beneficiário é o próprio comprador da transação: **2 casos**, R$ 515,88 no total.
 
-## Se algo foi pago errado
+| Pessoa | Produto | Valor | Situação |
+|---|---|---|---|
+| Jorge Ramos de Oliveira | adesão sistema estacionamento | R$ 452,31 | pendente (ainda não pago) |
+| Vitória Berchieli Molina | Adesão Anual | R$ 63,57 | já liberado (jul/2026) |
 
-Os dois saques do Jorge (R$ 128,06 e R$ 59,00) foram pagos em **julho**, antes desses pedidos de agosto — então esse furo não gerou pagamento indevido para ele. Mesmo assim, a correção inclui uma conferência de todas as pessoas afetadas contra o que já foi pago.
-
-## Outras carteiras com o mesmo problema
-
-Levantamento feito no banco — pedidos pagos exibidos como "produto criado" para quem não é o criador:
-
-| Pessoa | Pedidos indevidos | Valor exibido a mais |
-|---|---|---|
-| Jorge Ramos de Oliveira | 8 | R$ 509,64 |
-| Loureane Barce da Silva | 4 | R$ 474,28 |
-| Carol Heming | 12 | R$ 474,18 |
-| Adriano Luiz de Albuquerque Nunes | 4 | R$ 35,36 |
-| rita de cassia vicentini utuari | 4 | R$ 35,36 |
-| Kátia da Conceição Costa | 1 | R$ 8,84 |
+Nenhum dos dois foi sacado como "produto criado"; o do Jorge ainda está pendente, então dá para corrigir antes de virar dinheiro.
 
 ## Correção
 
-1. Corrigir a regra de "é o criador?" na tela de Pagamentos para exigir que a pessoa realmente tenha o cadastro correspondente — nunca tratar "vazio = vazio" como igualdade. Isso vale nas três aberturas do mesmo teste: aba Vendas, aba Comissões ("Produto criado") e os totais do cabeçalho do modal.
-2. Refazer a conferência das 6 pessoas depois da correção, comparando o que a tela mostra com o extrato oficial do banco.
-3. Rodar a auditoria de carteiras já existente e confirmar que nenhum saque pago ficou acima do liberado real (nenhum adiantamento em aberto criado por esse furo).
+1. **Regra de quem é o vendedor** (`process_paid_transaction`): quando existir vendedor registrado na venda (venda feita pelo painel de um coach), ele é o vendedor. Quando não existir, vale o coach responsável pelo aluno. Em nenhuma hipótese o próprio comprador recebe a fatia de vendedor da compra dele mesmo — nesse caso a fatia vai para o coach responsável do comprador (ou, se não houver, para a carteira do sistema, como já acontece hoje quando não há coach).
+2. **Reprocessar a venda do Jorge** com a regra nova, para a comissão de vendedor ir para o Nathan e o valor sumir da carteira do Jorge.
+3. **Decidir o caso da Vitória (R$ 63,57, já liberado em julho)**: por padrão vou **deixar como está** e apenas registrar, para não mexer em saldo antigo já disponível — me avise se quiser estornar também.
+4. Rodar a auditoria de carteiras e conferir que nada pago ficou acima do liberado real.
 
 ## Como conferir
 
-Abrir o Jorge em Pagamentos: a aba Comissões deve mostrar apenas as comissões de rede dele (centavos), sem nenhuma linha "PRODUTO CRIADO", e o "Total ganho" do cabeçalho deve bater com o extrato do painel dele. Repetir com Carol Heming e Loureane (essa última é criadora de verdade em parte dos pedidos — devem sobrar só os pedidos dela).
+Abrir o Jorge em Pagamentos: a aba Comissões deve mostrar só as comissões reais dele (vendas para os alunos dele: Adesão Anual, Ticket Desafio) e **não** a linha de R$ 452,31 do "adesão sistema estacionamento". No Nathan, essa venda deve aparecer com a comissão de vendedor.
 
 ## Detalhes técnicos
 
-- `src/lib/admin-payouts.functions.ts`: em `ppoSales` (`isCreator`), em `productEarnings` (filtro do bloco 1) e em `myCoprodDeduction`, trocar `o.partner_id === partnerId || o.professional_coach_id === coachId` por comparações que exijam `partnerId != null` / `coachId != null`.
-- Conferir o mesmo padrão nos agregados do dashboard (`creatorAggDash`, `creatorAgg`) e em `admin-financial.functions.ts` antes de fechar.
-- Nenhuma migration necessária: as funções do banco (`wallet_statement`, `saldo_disponivel`, `admin_advance_creator_release`) já filtram corretamente.
+- Migration em `public.process_paid_transaction`: a resolução de `coach_row` hoje é "coach aprovado com o mesmo `profile_id` do comprador → senão `students.coach_id`". Passa a ser: `metadata->>'created_by_coach_id'` (quando existir e for coach válido) → `students.coach_id` → coach do próprio comprador **somente se não for a compra dele mesmo**.
+- Depois da migration, chamar `process_paid_transaction` para a transação `a767a6f7-745b-4be2-a113-1f4024bfb53f` (a função já apaga e recria as comissões da transação).
+- Conferir se `process_partner_product_order_paid` tem o mesmo padrão de auto-atribuição antes de fechar.
+- A correção anterior de "produto criado" em `src/lib/admin-payouts.functions.ts` continua válida; nenhuma tela precisa mudar nesta etapa.
