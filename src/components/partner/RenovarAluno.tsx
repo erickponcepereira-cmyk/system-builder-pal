@@ -148,6 +148,22 @@ export function RenovarAluno({
       </div>
 
       <div>
+        <p className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Válido até</p>
+        <input
+          value={validoAte}
+          onChange={(e) => setValidoAte(e.target.value)}
+          type="date"
+          aria-label="Válido até"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white"
+        />
+        <p className="mt-1 text-[11px] text-white/50">
+          Preenchido pelo plano ({plano ? `${plano.dias} dias` : "—"}); pode ajustar na mão.
+        </p>
+      </div>
+
+
+
+      <div>
         <div className="mb-1 flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-wider text-white/40">Como recebeu</p>
           <button
