@@ -1386,3 +1386,36 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
     };
     return linha;
   });
+
+/**
+ * Relatório da academia.
+ *
+ * O faturamento dela não aparecia em lugar nenhum: `academia_mensalidades` só
+ * era lido pelo próprio painel, e os relatórios do parceiro nunca souberam que
+ * a academia existe. Os números vêm todos de `academia_relatorio`, que usa a
+ * mesma régua da catraca — se a tela e a catraca discordassem sobre quem está
+ * liberado, o relatório seria pior que não ter relatório.
+ */
+export const relatorioAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; de?: string; ate?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_relatorio" as never, {
+      p_partner_id: data.partnerId,
+      p_de: data.de ?? null,
+      p_ate: data.ate ?? null,
+    } as never);
+    if (error) throw new Error(error.message);
+    return r as unknown as {
+      periodo: { de: string; ate: string; hoje: string };
+      financeiro: { lancamentos: number; bruto: number; taxas: number; liquido: number };
+      por_forma: Array<{ forma: string; bruto: number; taxas: number; liquido: number }>;
+      por_plano: Array<{ plano: string; vendas: number; bruto: number }>;
+      situacao: { liberados: number; em_carencia: number; a_vencer: number; bloqueados: number; total_com_mensalidade: number };
+      sem_mensalidade: number;
+      vencem_em_7: number;
+      frequencia: { entradas: number; pessoas: number; manuais: number };
+      negados: number;
+    };
+  });

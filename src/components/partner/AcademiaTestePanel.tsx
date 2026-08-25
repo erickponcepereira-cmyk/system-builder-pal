@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
-import { TestSurfaceGate } from "@/components/store/TestSurfaceGate";
+import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
@@ -58,7 +58,7 @@ import {
   type FormaPagamento,
 } from "@/lib/academia-teste.functions";
 
-type SubAba = "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "agente" | "config";
+type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "dayuse" | "eventos" | "agente" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -80,8 +80,12 @@ const ESTADOS: Record<string, { label: string; cls: string }> = {
 export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
   const [sub, setSub] = useState<SubAba>("alunos");
 
+  // Sem TestSurfaceGate: o painel saiu da fase de teste. Quem pode ver é quem
+  // é dono ou membro da unidade — o mesmo critério que `autorizar` aplica no
+  // servidor. Manter o gate de master admin aqui esconderia a academia
+  // justamente de quem trabalha nela.
   return (
-    <TestSurfaceGate>
+    <>
       <div className="space-y-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <p className="flex items-center gap-2 text-sm font-bold text-white">
@@ -94,6 +98,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
 
         <div className="flex gap-2 overflow-x-auto">
           {([
+            ["relatorio", "Relatório"],
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
             ["frequencia", "Frequência"],
@@ -115,6 +120,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           ))}
         </div>
 
+        {sub === "relatorio" && <RelatorioAcademia partnerId={partnerId} />}
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
         {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
@@ -126,7 +132,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "agente" && <AgenteAcademia partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
-    </TestSurfaceGate>
+    </>
   );
 }
 
