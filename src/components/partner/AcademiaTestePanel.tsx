@@ -8,6 +8,7 @@ import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
+import { Button } from "@/components/ui/button";
 import {
   FORMAS_PAGAMENTO,
   buscarAlunosParaMensalidade,
@@ -992,23 +993,26 @@ function RostoDepoisDoCadastro({
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <button
+        <Button
           type="button"
           onClick={() => setCapturando(true)}
           disabled={enviando}
-          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-50"
+          size="sm"
+          className="w-full"
         >
           {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
           Cadastrar rosto agora
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={aoFinalizar}
           disabled={enviando}
-          className="rounded-xl border border-white/10 px-3 py-2.5 text-xs font-semibold text-white/70 hover:bg-white/10 disabled:opacity-50"
+          variant="outline"
+          size="sm"
+          className="w-full"
         >
           Fazer depois na catraca
-        </button>
+        </Button>
       </div>
       {capturando && (
         <CapturaRosto
@@ -1880,6 +1884,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   // por isso não podia ser lançado. Depois de criar, a renovação abre na hora.
   const [cadastrando, setCadastrando] = useState(false);
   const [pessoaNova, setPessoaNova] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
+  const [pessoaParaRosto, setPessoaParaRosto] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
@@ -2002,10 +2007,22 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
             credencialId={pessoaNova.credencialId}
             studentId={null}
             nome={pessoaNova.nome}
-            aoConcluir={() => { setPessoaNova(null); recarregar(); }}
+            aoConcluir={() => {
+              setPessoaParaRosto(pessoaNova);
+              setPessoaNova(null);
+              recarregar();
+            }}
             aoCancelar={() => setPessoaNova(null)}
           />
         </div>
+      )}
+
+      {pessoaParaRosto && (
+        <RostoDepoisDoCadastro
+          partnerId={partnerId}
+          pessoa={pessoaParaRosto}
+          aoFinalizar={() => setPessoaParaRosto(null)}
+        />
       )}
 
 
@@ -2171,6 +2188,7 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
   const [termo, setTermo] = useState("");
   const [opcoes, setOpcoes] = useState<PessoaAcademia[]>([]);
   const [pessoa, setPessoa] = useState<PessoaAcademia | null>(null);
+  const [pessoaParaRosto, setPessoaParaRosto] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   const [cadastrando, setCadastrando] = useState(false);
   const [buscando, setBuscando] = useState(false);
 
@@ -2189,9 +2207,20 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
 
   const limpar = () => { setPessoa(null); setTermo(""); setOpcoes([]); };
 
+  const concluirMensalidade = () => {
+    if (pessoa?.credencialId && !pessoa.studentId && pessoa.referencia) {
+      setPessoaParaRosto({
+        credencialId: pessoa.credencialId,
+        nome: pessoa.nome,
+        referencia: pessoa.referencia,
+      });
+    }
+    limpar();
+  };
+
   return (
     <div className="space-y-3">
-      {!pessoa && !cadastrando && (
+      {!pessoa && !cadastrando && !pessoaParaRosto && (
         <>
           <Campo label="Quem está pagando">
             <input
@@ -2245,7 +2274,7 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
         />
       )}
 
-      {pessoa && (
+      {pessoa && !pessoaParaRosto && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -2263,10 +2292,18 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
             studentId={pessoa.studentId}
             nome={pessoa.nome}
             vencimentoAtual={pessoa.validoAte}
-            aoConcluir={limpar}
+            aoConcluir={concluirMensalidade}
             aoCancelar={limpar}
           />
         </div>
+      )}
+
+      {pessoaParaRosto && (
+        <RostoDepoisDoCadastro
+          partnerId={partnerId}
+          pessoa={pessoaParaRosto}
+          aoFinalizar={() => setPessoaParaRosto(null)}
+        />
       )}
     </div>
   );
