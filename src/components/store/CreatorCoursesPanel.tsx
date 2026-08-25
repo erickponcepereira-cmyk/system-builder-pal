@@ -6,6 +6,8 @@ import {
   ChevronRight,
   Image as ImageIcon,
   Loader2,
+  ArrowLeft,
+  Check as CheckIcon,
   Pencil,
   Plus,
   Send,
@@ -15,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { Link } from "@tanstack/react-router";
 import { CourseExamBuilder } from "@/components/store/CourseExamBuilder";
 import {
   atualizarAula,
@@ -51,11 +54,22 @@ const TIPOS: Array<{ id: string; label: string; ajuda: string }> = [
   { id: "live", label: "Ao vivo", ajuda: "Encontro marcado; use a descrição para o link" },
 ];
 
+/**
+ * Regras de liberação.
+ *
+ * Os rótulos dizem QUANDO a aula abre, e não o nome técnico da regra:
+ * "gotejamento" é jargão de plataforma, e quem está montando o curso quer
+ * saber o efeito. O valor gravado (`drip`, `date`) continua o mesmo.
+ *
+ * As duas últimas exigem complemento — dias ou data. O banco tem CHECK para
+ * isso (`dpl_drip_needs_days`, `dpl_date_needs_at`), e era exatamente aí que
+ * a tela quebrava: mandava a regra sozinha e levava erro de constraint.
+ */
 const REGRAS: Array<{ id: string; label: string; ajuda: string }> = [
-  { id: "none", label: "Liberada", ajuda: "Disponível assim que a pessoa entra" },
-  { id: "sequential", label: "Sequencial", ajuda: "Abre ao concluir a aula anterior" },
-  { id: "drip", label: "Gotejamento", ajuda: "Abre X dias após a compra" },
-  { id: "date", label: "Data fixa", ajuda: "Abre numa data marcada" },
+  { id: "none", label: "Livre", ajuda: "Abre assim que a pessoa entra no curso" },
+  { id: "sequential", label: "Em ordem", ajuda: "Abre quando a aula anterior for concluída" },
+  { id: "drip", label: "Após N dias", ajuda: "Abre alguns dias depois da compra (gotejamento)" },
+  { id: "date", label: "Em uma data", ajuda: "Abre numa data marcada, igual para todos" },
 ];
 
 /**
@@ -76,6 +90,15 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
   const [ocupado, setOcupado] = useState<string | null>(null);
 
   const [editando, setEditando] = useState(false);
+  /**
+   * Quando foi o último salvamento.
+   *
+   * O painel grava ao sair do campo, e isso é bom — ninguém perde trabalho por
+   * esquecer de clicar. Mas salvar sem dizer nada faz parecer que NÃO salvou,
+   * que foi exatamente o relato. O indicador resolve o que um botão de salvar
+   * resolveria, sem devolver o risco de perder o que foi digitado.
+   */
+  const [salvoEm, setSalvoEm] = useState<Date | null>(null);
 
   /** Relê a lista de cursos, opcionalmente já selecionando um. */
   const recarregarCursos = useCallback(async (selecionar?: string) => {
@@ -125,6 +148,7 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
     try {
       await fn();
       await recarregarCursos();
+      setSalvoEm(new Date());
       if (sucesso) toast.success(sucesso);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
@@ -149,6 +173,7 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
     try {
       await fn();
       if (cursoId) await recarregar(cursoId);
+      setSalvoEm(new Date());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {
@@ -169,13 +194,45 @@ export function CreatorCoursesPanel({ role }: { role: "partner" | "professional"
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <header className="mb-5">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          {role === "partner" ? "Parceiro" : "Profissional"}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground">Cursos</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Monte os módulos e as aulas, e acompanhe quem está estudando.
-        </p>
+        <Link
+          to={role === "partner" ? "/partner" : "/professional"}
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Voltar ao painel
+        </Link>
+
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              {role === "partner" ? "Parceiro" : "Profissional"}
+            </p>
+            <h1 className="text-2xl font-bold text-foreground">Cursos</h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Monte os módulos e as aulas, e acompanhe quem está estudando.
+            </p>
+          </div>
+
+          {/* Diz o que está acontecendo. Sem isto, salvar ao sair do campo
+              parece não salvar — e a pessoa procura um botão que não existe. */}
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[11px] font-semibold">
+            {ocupado !== null ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Salvando…</span>
+              </>
+            ) : salvoEm ? (
+              <>
+                <CheckIcon className="h-3 w-3 text-emerald-500" />
+                <span className="text-emerald-500">
+                  Salvo às {salvoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Salva sozinho ao sair do campo</span>
+            )}
+          </span>
+        </div>
       </header>
 
       {cursos.length === 0 ? (
@@ -398,7 +455,19 @@ function LinhaAula({
 
         <select
           defaultValue={aula.unlockRule}
-          onChange={(e) => void onAcao("r-" + aula.id, () => atualizarAula(aula.id, { unlockRule: e.target.value }))}
+          onChange={(e) => {
+            const regra = e.target.value;
+            // O banco recusa "após N dias" sem dias e "em uma data" sem data.
+            // Mandar a regra sozinha era o bug: virava erro de constraint, com
+            // uma mensagem que não ajuda ninguém. Vai o complemento junto, com
+            // um padrão que o criador ajusta em seguida.
+            const emSeteDias = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+            void onAcao("r-" + aula.id, () => atualizarAula(aula.id, {
+              unlockRule: regra,
+              unlockDays: regra === "drip" ? (aula.unlockDays ?? 7) : null,
+              unlockAt: regra === "date" ? (aula.unlockAt ?? emSeteDias) : null,
+            }));
+          }}
           title={REGRAS.find((r) => r.id === aula.unlockRule)?.ajuda}
           className="shrink-0 rounded-lg border border-border bg-muted px-2 py-1.5 text-[11px] text-foreground"
         >
@@ -473,6 +542,9 @@ function LinhaAula({
         {aula.unlockRule === "date" && !aula.unlockAt && (
           <span className="text-amber-500">escolha a data, senão a aula abre para todo mundo</span>
         )}
+        {aula.unlockRule === "drip" && !aula.unlockDays && (
+          <span className="text-amber-500">defina em quantos dias abre</span>
+        )}
         {aula.unlockRule === "drip" && (
           <label className="inline-flex items-center gap-1">
             Abre após
@@ -501,6 +573,22 @@ function LinhaAula({
         )}
         {aula.requireWatermark && <span>marca d&apos;água ligada</span>}
         {aula.allowDownload && <span>o aluno pode baixar</span>}
+
+        {/* A isca. Aula grátis abre para quem ainda NÃO comprou, enquanto o
+            curso estiver na loja — é o que Kiwify e Hotmart chamam de
+            degustação, e é o que faz a pessoa decidir comprar. */}
+        <label className="inline-flex cursor-pointer items-center gap-1.5">
+          <input
+            type="checkbox"
+            checked={aula.isPreview}
+            onChange={(e) => void onAcao("p-" + aula.id, () =>
+              atualizarAula(aula.id, { isPreview: e.target.checked }))}
+            disabled={ocupado !== null}
+          />
+          <span className={aula.isPreview ? "font-bold text-emerald-500" : ""}>
+            {aula.isPreview ? "grátis — aparece para quem não comprou" : "aula grátis (isca)"}
+          </span>
+        </label>
       </div>
     </div>
   );

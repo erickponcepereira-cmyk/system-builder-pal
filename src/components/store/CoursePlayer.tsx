@@ -299,6 +299,13 @@ export function CoursePlayer({ productId }: { productId: string }) {
                         {travada && st.estado === "travada" ? st.motivo : mmss(l.durationSeconds)}
                       </span>
                     </span>
+                    {/* Aula de degustação: o selo é o argumento de venda —
+                        quem ainda não comprou precisa VER que tem o que assistir. */}
+                    {l.isPreview && (
+                      <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-500">
+                        grátis
+                      </span>
+                    )}
                     {/* `hasVideo` já vinha carregado e ninguém usava: a pessoa
                         clicava e só então recebia o erro do servidor. */}
                     {l.kind === "video" && !l.hasVideo && (

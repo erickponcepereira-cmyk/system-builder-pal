@@ -40,6 +40,8 @@ export type AulaAdmin = {
   unlockAt: string | null;
   durationSeconds: number | null;
   videoKey: string | null;
+  /** Aula de degustação: abre para quem ainda não comprou. É a isca. */
+  isPreview: boolean;
   /** Ebook / material. Fica em `file_path`, no mesmo bucket privado. */
   filePath: string | null;
   thumbnailKey: string | null;
@@ -112,7 +114,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
   if (!moduleIds.length) return [];
   const { data, error } = await supabase
     .from("digital_product_lessons" as never)
-    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,unlock_at,duration_seconds,video_key,file_path,thumbnail_key,require_watermark,allow_download" as never)
+    .select("id,module_id,title,kind,sort_order,unlock_rule,unlock_days,unlock_at,duration_seconds,video_key,file_path,thumbnail_key,require_watermark,allow_download,is_preview" as never)
     .in("module_id" as never, moduleIds as never)
     .order("sort_order" as never);
   if (error) { console.error("[course-admin] aulas", error); return []; }
@@ -127,6 +129,7 @@ export async function listarAulas(moduleIds: string[]): Promise<AulaAdmin[]> {
     unlockAt: (l.unlock_at as string) || null,
     durationSeconds: l.duration_seconds == null ? null : Number(l.duration_seconds),
     videoKey: (l.video_key as string) || null,
+    isPreview: l.is_preview === true,
     filePath: (l.file_path as string) || null,
     thumbnailKey: (l.thumbnail_key as string) || null,
     requireWatermark: l.require_watermark === true,
@@ -189,6 +192,7 @@ export async function atualizarAula(
     unlockAt: string | null;
     durationSeconds: number | null;
     videoKey: string | null;
+    isPreview: boolean;
     filePath: string | null;
     thumbnailKey: string | null;
     requireWatermark: boolean;
@@ -208,6 +212,7 @@ export async function atualizarAula(
   if (dados.durationSeconds !== undefined) payload.duration_seconds = dados.durationSeconds;
   if (dados.videoKey !== undefined) payload.video_key = dados.videoKey;
   if (dados.filePath !== undefined) payload.file_path = dados.filePath;
+  if (dados.isPreview !== undefined) payload.is_preview = dados.isPreview;
   if (dados.thumbnailKey !== undefined) payload.thumbnail_key = dados.thumbnailKey;
   if (dados.requireWatermark !== undefined) payload.require_watermark = dados.requireWatermark;
   if (dados.allowDownload !== undefined) payload.allow_download = dados.allowDownload;

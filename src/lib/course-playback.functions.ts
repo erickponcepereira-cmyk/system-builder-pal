@@ -77,10 +77,14 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!profile) throw new Error("Perfil não encontrado");
 
-    // A mesma regra que a RLS usa, avaliada aqui como o usuário chamador:
-    // comprou, ou é coach adimplente num curso incluso, ou administra o curso.
-    const { data: pode } = await admin.rpc("can_view_digital_product_for", {
-      _digital_product_id: produtoId,
+    // Uma pergunta, uma função: `pode_assistir_aula` cobre tanto o acesso
+    // normal (comprou, mensalidade, administra) quanto a aula de degustação,
+    // que abre para quem ainda não comprou enquanto o curso estiver na loja.
+    //
+    // Antes eram duas regras em lugares diferentes para a mesma pergunta, e é
+    // assim que uma passa a divergir da outra sem ninguém notar.
+    const { data: pode } = await admin.rpc("pode_assistir_aula", {
+      _lesson_id: data.lessonId,
       _user_id: context.userId,
     });
 

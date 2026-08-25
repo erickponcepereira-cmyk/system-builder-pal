@@ -26,6 +26,8 @@ export type Lesson = {
   requireWatermark: boolean;
   countsForCertificate: boolean;
   sortOrder: number;
+  /** Aula de degustação: abre sem comprar, enquanto o curso estiver na loja. */
+  isPreview: boolean;
   /** video_key e file_path nunca vão para a tela: só o servidor os usa. */
   hasVideo: boolean;
   hasFile: boolean;
@@ -94,7 +96,7 @@ export async function loadCourse(productId: string, studentId: string | null): P
     ? await supabase
         .from("digital_product_lessons" as never)
         .select(
-          "id,module_id,title,description,kind,duration_seconds,unlock_rule,unlock_days,unlock_at,allow_download,require_watermark,counts_for_certificate,sort_order,video_key,file_path" as never,
+          "id,module_id,title,description,kind,duration_seconds,unlock_rule,unlock_days,unlock_at,allow_download,require_watermark,counts_for_certificate,sort_order,video_key,file_path,is_preview" as never,
         )
         .in("module_id" as never, moduleIds as never)
         .eq("is_active" as never, true as never)
@@ -119,6 +121,7 @@ export async function loadCourse(productId: string, studentId: string | null): P
       unlockRule: String(r.unlock_rule || "none") as UnlockRule,
       unlockDays: num(r.unlock_days),
       unlockAt: (r.unlock_at as string) || null,
+      isPreview: r.is_preview === true,
       allowDownload: r.allow_download !== false,
       requireWatermark: r.require_watermark === true,
       countsForCertificate: r.counts_for_certificate !== false,
