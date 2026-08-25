@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
+import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
