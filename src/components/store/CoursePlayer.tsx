@@ -15,6 +15,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CourseExamCard, CourseExamSheet } from "@/components/store/CourseExam";
 import { CourseCertificateCard } from "@/components/store/CourseCertificate";
+import { CourseUpsellCard } from "@/components/store/CourseUpsell";
+import { escolherOferta, type OfertaDeCurso } from "@/lib/course-upsell";
+import { listMyCourses } from "@/lib/course-engine";
 import {
   listarProvas,
   meuCertificado,
@@ -65,6 +68,9 @@ export function CoursePlayer({ productId }: { productId: string }) {
   const [certificado, setCertificado] = useState<Certificado | null>(null);
   const [nomeAluno, setNomeAluno] = useState<string | null>(null);
   const [provaAberta, setProvaAberta] = useState<Prova | null>(null);
+  const [oferta, setOferta] = useState<OfertaDeCurso | null>(null);
+  /** Módulo cujo fim acabou de ser alcançado. Some ao trocar de aula. */
+  const [moduloConcluido, setModuloConcluido] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,6 +114,16 @@ export function CoursePlayer({ productId }: { productId: string }) {
     setProvas(ps);
     setTentativas(ps.length ? await minhasTentativas(ps.map((x) => x.id)) : []);
     setCertificado(await meuCertificado(productId, sid));
+
+    // Oferta é acessório: se falhar, o curso abre igual e o cartão some.
+    // Filtra pelo que a pessoa JÁ ACESSA, e não pelo que pagou — curso incluso
+    // na mensalidade não tem linha de compra e apareceria como novidade.
+    try {
+      const meus = await listMyCourses(sid);
+      setOferta(await escolherOferta(meus.map((c) => c.productId), productId));
+    } catch (erro) {
+      console.error("[curso] oferta", erro);
+    }
 
     setLoading(false);
     return c;
@@ -206,6 +222,12 @@ export function CoursePlayer({ productId }: { productId: string }) {
         )}
       </section>
 
+      {/* Ponto 1 — entrada. Depois do progresso e ANTES dos módulos: quem
+          abriu o curso para estudar já viu o que veio buscar. */}
+      {oferta && feitas === 0 && (
+        <CourseUpsellCard oferta={oferta} ponto="entrada" onDispensar={() => setOferta(null)} />
+      )}
+
       {course.modules.map((m) => {
         const aberto = abertos.has(m.id);
         return (
@@ -291,6 +313,18 @@ export function CoursePlayer({ productId }: { productId: string }) {
                 );
               })}
 
+            {/* Ponto 2 — fim de módulo. Só quando o módulo está inteiro
+                concluído: oferecer no meio é atrapalhar quem está no embalo. */}
+            {aberto && oferta && moduloConcluido === m.id && (
+              <div className="border-t border-border p-3">
+                <CourseUpsellCard
+                  oferta={oferta}
+                  ponto="fim-de-modulo"
+                  onDispensar={() => setOferta(null)}
+                />
+              </div>
+            )}
+
             {aberto && provasPorModulo.get(m.id) && (
               <div className="border-t border-border p-3">
                 <CourseExamCard
@@ -338,7 +372,18 @@ export function CoursePlayer({ productId }: { productId: string }) {
             // O botão promete "e ir para a próxima". Antes ele só fechava o
             // modal e devolvia a pessoa para a lista, para procurar na mão.
             const atualId = aulaAtiva.id;
+            const moduloDaAula = aulaAtiva.moduleId;
             const atualizado = await recarregar();
+
+            // Ponto 3 — o módulo desta aula acabou de fechar? Então o cartão
+            // aparece na lista, ao lado do módulo, e não por cima do vídeo.
+            if (atualizado) {
+              const doModulo = atualizado.modules.find((mm) => mm.id === moduloDaAula);
+              const fechou = !!doModulo
+                && doModulo.lessons.length > 0
+                && doModulo.lessons.every((l) => atualizado.progress.get(l.id)?.completedAt);
+              setModuloConcluido(fechou ? moduloDaAula : null);
+            }
             const seguinte = atualizado
               ? proximaAula(atualizado, compradoEm)
               : null;
