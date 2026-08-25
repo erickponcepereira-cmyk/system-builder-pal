@@ -760,6 +760,47 @@ export type Database = {
           },
         ]
       }
+      academia_mensalidade_pagamentos: {
+        Row: {
+          created_at: string
+          forma_pagamento: string
+          id: string
+          mensalidade_id: string
+          taxa_percentual: number
+          taxa_valor: number
+          valor: number
+          valor_liquido: number
+        }
+        Insert: {
+          created_at?: string
+          forma_pagamento: string
+          id?: string
+          mensalidade_id: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          valor: number
+          valor_liquido?: number
+        }
+        Update: {
+          created_at?: string
+          forma_pagamento?: string
+          id?: string
+          mensalidade_id?: string
+          taxa_percentual?: number
+          taxa_valor?: number
+          valor?: number
+          valor_liquido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_mensalidade_pagamentos_mensalidade_id_fkey"
+            columns: ["mensalidade_id"]
+            isOneToOne: false
+            referencedRelation: "academia_mensalidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academia_mensalidades: {
         Row: {
           cancelado_em: string | null
@@ -874,6 +915,50 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_planos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dias: number
+          id: string
+          nome: string
+          partner_id: string
+          posicao: number
+          updated_at: string
+          valor_padrao: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dias?: number
+          id?: string
+          nome: string
+          partner_id: string
+          posicao?: number
+          updated_at?: string
+          valor_padrao?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dias?: number
+          id?: string
+          nome?: string
+          partner_id?: string
+          posicao?: number
+          updated_at?: string
+          valor_padrao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_planos_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -14895,6 +14980,7 @@ export type Database = {
       academia_crm_sincronizar: {
         Args: { p_partner_id: string }
         Returns: {
+          arquivados: number
           assumidos: number
           criados: number
           gatilho: string
@@ -15037,6 +15123,30 @@ export type Database = {
           com_telefone: number
           faixa: string
           pessoas: number
+        }[]
+      }
+      academia_relatorio: {
+        Args: { p_ate?: string; p_de?: string; p_partner_id: string }
+        Returns: Json
+      }
+      academia_renovar: {
+        Args: {
+          p_credencial_id: string
+          p_dias: number
+          p_observacao?: string
+          p_pagamentos: Json
+          p_partner_id: string
+          p_plano: string
+          p_registrado_por?: string
+          p_student_id: string
+          p_valor: number
+        }
+        Returns: {
+          bruto: number
+          liquido: number
+          mensalidade_id: string
+          taxas: number
+          valido_ate: string
         }[]
       }
       academia_sombra_placar: {
@@ -15856,6 +15966,7 @@ export type Database = {
           photo_url: string
           state: string
           status: string
+          tem_academia: boolean
         }[]
       }
       move_to_dlq: {
