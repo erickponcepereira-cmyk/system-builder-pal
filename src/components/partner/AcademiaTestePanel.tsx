@@ -2022,6 +2022,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     credencialId={l.credencial_id}
                     studentId={l.student_id}
                     nome={l.nome}
+                    vencimentoAtual={l.valido_ate}
+
                     aoConcluir={() => { setRenovandoId(null); recarregar(); }}
                     aoCancelar={() => setRenovandoId(null)}
                   />
