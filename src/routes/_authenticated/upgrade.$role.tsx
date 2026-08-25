@@ -31,6 +31,7 @@ function UpgradePage() {
   const [err, setErr] = useState<string | null>(null);
   const [upline, setUpline] = useState<CoachOption | null>(null);
   const [uplineLocked, setUplineLocked] = useState(false);
+  const [isRoot, setIsRoot] = useState(false);
   const [uplineReady, setUplineReady] = useState(false);
 
   // coach
