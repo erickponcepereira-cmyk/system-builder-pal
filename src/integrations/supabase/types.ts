@@ -15747,6 +15747,7 @@ export type Database = {
         Args: { _group_id: string }
         Returns: undefined
       }
+      liberar_cursos_do_pedido: { Args: { _order_id: string }; Returns: number }
       link_partner_collaborator: {
         Args: { _partner_id: string; _student_id: string }
         Returns: undefined
