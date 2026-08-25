@@ -724,9 +724,10 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
   if (profileErr) throw new Error(profileErr.message);
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
-  const boundCoachId = await resolveBoundCoachId(profile.id);
-  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
-  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
+  const bound = await resolveBoundCoach(profile.id);
+  const uplineCoachId = bound.locked ? bound.coachId : clean(input.uplineCoachId);
+  if (!uplineCoachId && !bound.locked) throw new Error("Selecione um coach indicador para continuar.");
+  const studentCoachId = uplineCoachId ?? bound.selfCoachId;
 
   const { data: existingCoach } = await supabaseAdmin
     .from("coaches")
