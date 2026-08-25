@@ -71,10 +71,23 @@ function UpgradePage() {
             setUplineReady(true);
             return;
           }
+          if (bound?.locked) {
+            // Raiz da própria rede: sem coach acima, campo travado.
+            setUpline(
+              bound.selfCoachId
+                ? { id: bound.selfCoachId, profileId: "", name: "Você é raiz da própria rede" }
+                : null,
+            );
+            setIsRoot(true);
+            setUplineLocked(true);
+            setUplineReady(true);
+            return;
+          }
         } catch (e) {
           console.error("[upgrade] falha ao buscar coach vinculado:", e);
         }
       }
+
 
       // Indicação vinda do link /r/{code} (inclusive via loja pública e Google).
       const ref = readReferralSignup();
