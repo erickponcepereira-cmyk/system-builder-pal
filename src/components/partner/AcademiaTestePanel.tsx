@@ -1806,6 +1806,10 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   }>>([]);
   // id do lançamento com o formulário de renovação aberto
   const [renovandoId, setRenovandoId] = useState<string | null>(null);
+  // Cadastro de balcão: quem não é da FitMind não existia em lugar nenhum e
+  // por isso não podia ser lançado. Depois de criar, a renovação abre na hora.
+  const [cadastrando, setCadastrando] = useState(false);
+  const [pessoaNova, setPessoaNova] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
