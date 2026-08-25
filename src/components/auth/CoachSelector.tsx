@@ -118,6 +118,24 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *", lo
     );
   }
 
+  // Travado sem coach acima (raiz da própria rede): nunca abre a busca.
+  if (locked) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-white/70">{label}</Label>
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+          <UserCheck className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-white">Você é raiz da própria rede</span>
+        </div>
+        <p className="text-[11px] text-white/40">
+          O vínculo da sua conta já está definido e não pode ser alterado.
+        </p>
+      </div>
+    );
+  }
+
+
+
 
   return (
     <div className="space-y-2">
