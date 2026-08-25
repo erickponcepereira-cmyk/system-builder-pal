@@ -520,7 +520,7 @@ function CoachDashboard() {
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} initialSort={studentsSort} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
           {activeTab === "networkRanking" && <NetworkRankingTab />}
-          {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
+          {activeTab === "physicalStore" && <PhysicalStoreTab />}
           {activeTab === "partnerApprovals" && canApprovePartners && <PartnersApprovalTab />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}

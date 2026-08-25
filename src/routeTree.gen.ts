@@ -66,6 +66,7 @@ import { Route as AuthenticatedStudentOrdersInProgressRouteImport } from './rout
 import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated/student.notifications'
 import { Route as AuthenticatedStudentMedicalRecordRouteImport } from './routes/_authenticated/student.medical-record'
 import { Route as AuthenticatedStudentLojaTesteRouteImport } from './routes/_authenticated/student.loja-teste'
+import { Route as AuthenticatedStudentLojaAntigaRouteImport } from './routes/_authenticated/student.loja-antiga'
 import { Route as AuthenticatedStudentLibraryRouteImport } from './routes/_authenticated/student.library'
 import { Route as AuthenticatedStudentHealthRouteImport } from './routes/_authenticated/student.health'
 import { Route as AuthenticatedStudentGroupRouteImport } from './routes/_authenticated/student.group'
@@ -132,6 +133,7 @@ import { Route as AuthenticatedAdminFinanceiroRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/_authenticated/admin.evaluation-links'
 import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
+import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin.cursos'
 import { Route as AuthenticatedAdminCrmRouteImport } from './routes/_authenticated/admin.crm'
 import { Route as AuthenticatedAdminCoachesRouteImport } from './routes/_authenticated/admin.coaches'
 import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_authenticated/admin.coach-releases'
@@ -466,6 +468,12 @@ const AuthenticatedStudentLojaTesteRoute =
   AuthenticatedStudentLojaTesteRouteImport.update({
     id: '/loja-teste',
     path: '/loja-teste',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
+const AuthenticatedStudentLojaAntigaRoute =
+  AuthenticatedStudentLojaAntigaRouteImport.update({
+    id: '/loja-antiga',
+    path: '/loja-antiga',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
 const AuthenticatedStudentLibraryRoute =
@@ -861,6 +869,12 @@ const AuthenticatedAdminDigitalProductsRoute =
     path: '/digital-products',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminCursosRoute =
+  AuthenticatedAdminCursosRouteImport.update({
+    id: '/cursos',
+    path: '/cursos',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCrmRoute = AuthenticatedAdminCrmRouteImport.update({
   id: '/crm',
   path: '/crm',
@@ -1105,6 +1119,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1171,6 +1186,7 @@ export interface FileRoutesByFullPath {
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
   '/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/student/loja-antiga': typeof AuthenticatedStudentLojaAntigaRoute
   '/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -1260,6 +1276,7 @@ export interface FileRoutesByTo {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1326,6 +1343,7 @@ export interface FileRoutesByTo {
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
   '/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/student/loja-antiga': typeof AuthenticatedStudentLojaAntigaRoute
   '/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -1419,6 +1437,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/_authenticated/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/_authenticated/admin/crm': typeof AuthenticatedAdminCrmRoute
+  '/_authenticated/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
@@ -1485,6 +1504,7 @@ export interface FileRoutesById {
   '/_authenticated/student/group': typeof AuthenticatedStudentGroupRoute
   '/_authenticated/student/health': typeof AuthenticatedStudentHealthRoute
   '/_authenticated/student/library': typeof AuthenticatedStudentLibraryRoute
+  '/_authenticated/student/loja-antiga': typeof AuthenticatedStudentLojaAntigaRoute
   '/_authenticated/student/loja-teste': typeof AuthenticatedStudentLojaTesteRoute
   '/_authenticated/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -1578,6 +1598,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
+    | '/admin/cursos'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1644,6 +1665,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/loja-antiga'
     | '/student/loja-teste'
     | '/student/medical-record'
     | '/student/notifications'
@@ -1733,6 +1755,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/crm'
+    | '/admin/cursos'
     | '/admin/digital-products'
     | '/admin/email-releases'
     | '/admin/evaluation-links'
@@ -1799,6 +1822,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/loja-antiga'
     | '/student/loja-teste'
     | '/student/medical-record'
     | '/student/notifications'
@@ -1891,6 +1915,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/coach-releases'
     | '/_authenticated/admin/coaches'
     | '/_authenticated/admin/crm'
+    | '/_authenticated/admin/cursos'
     | '/_authenticated/admin/digital-products'
     | '/_authenticated/admin/email-releases'
     | '/_authenticated/admin/evaluation-links'
@@ -1957,6 +1982,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/group'
     | '/_authenticated/student/health'
     | '/_authenticated/student/library'
+    | '/_authenticated/student/loja-antiga'
     | '/_authenticated/student/loja-teste'
     | '/_authenticated/student/medical-record'
     | '/_authenticated/student/notifications'
@@ -2448,6 +2474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentLojaTesteRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/student/loja-antiga': {
+      id: '/_authenticated/student/loja-antiga'
+      path: '/loja-antiga'
+      fullPath: '/student/loja-antiga'
+      preLoaderRoute: typeof AuthenticatedStudentLojaAntigaRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/student/library': {
       id: '/_authenticated/student/library'
       path: '/library'
@@ -2910,6 +2943,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDigitalProductsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/cursos': {
+      id: '/_authenticated/admin/cursos'
+      path: '/cursos'
+      fullPath: '/admin/cursos'
+      preLoaderRoute: typeof AuthenticatedAdminCursosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/crm': {
       id: '/_authenticated/admin/crm'
       path: '/crm'
@@ -3174,6 +3214,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCoachReleasesRoute: typeof AuthenticatedAdminCoachReleasesRoute
   AuthenticatedAdminCoachesRoute: typeof AuthenticatedAdminCoachesRouteWithChildren
   AuthenticatedAdminCrmRoute: typeof AuthenticatedAdminCrmRoute
+  AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
   AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
@@ -3238,6 +3279,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCoachReleasesRoute: AuthenticatedAdminCoachReleasesRoute,
   AuthenticatedAdminCoachesRoute: AuthenticatedAdminCoachesRouteWithChildren,
   AuthenticatedAdminCrmRoute: AuthenticatedAdminCrmRoute,
+  AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
   AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
@@ -3345,6 +3387,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentGroupRoute: typeof AuthenticatedStudentGroupRoute
   AuthenticatedStudentHealthRoute: typeof AuthenticatedStudentHealthRoute
   AuthenticatedStudentLibraryRoute: typeof AuthenticatedStudentLibraryRoute
+  AuthenticatedStudentLojaAntigaRoute: typeof AuthenticatedStudentLojaAntigaRoute
   AuthenticatedStudentLojaTesteRoute: typeof AuthenticatedStudentLojaTesteRoute
   AuthenticatedStudentMedicalRecordRoute: typeof AuthenticatedStudentMedicalRecordRoute
   AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
@@ -3375,6 +3418,7 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentGroupRoute: AuthenticatedStudentGroupRoute,
   AuthenticatedStudentHealthRoute: AuthenticatedStudentHealthRoute,
   AuthenticatedStudentLibraryRoute: AuthenticatedStudentLibraryRoute,
+  AuthenticatedStudentLojaAntigaRoute: AuthenticatedStudentLojaAntigaRoute,
   AuthenticatedStudentLojaTesteRoute: AuthenticatedStudentLojaTesteRoute,
   AuthenticatedStudentMedicalRecordRoute:
     AuthenticatedStudentMedicalRecordRoute,

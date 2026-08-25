@@ -449,17 +449,6 @@ export function UnifiedStorePage({
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3">
-        <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-500">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            <b>Vitrine de teste, com compra de verdade.</b> Dados reais de produção: o pedido
-            é criado e o pagamento é cobrado como em qualquer outra tela. O carrinho é o mesmo
-            da loja atual. Visível apenas para master admin.
-          </span>
-        </p>
-      </div>
-
       <header className="flex items-start justify-between gap-3 pt-1">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">

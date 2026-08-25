@@ -3,15 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StorePage } from "@/components/student/StorePage";
+import { UnifiedStorePage } from "@/components/store/UnifiedStorePage";
 import { money } from "@/routes/_authenticated/coach";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 
 type StoreProductRow = { id: string; name: string; description: string | null; price: number; original_price: number | null; category: string | null; stock: number | null; is_herbalife: boolean | null; status: string | null };
 type DigitalProductRow = { id: string; title: string; description: string | null; price: number; original_price: number | null; type: string; duration_hours: number | null; access_days: number | null; is_featured: boolean | null; instructor: string | null; status: string | null };
 
-export function PhysicalStoreTab({ hasUpline }: { hasUpline: boolean }) {
-  return <StorePage coachMode hasUpline={hasUpline} />;
+/**
+ * Loja do coach.
+ *
+ * Serve a loja unificada desde 24/08/2026. `hasUpline` não é mais prop: a
+ * loja nova descobre a cadeia na própria linha do coach, que é quem sabe.
+ * Manter o parâmetro daria duas fontes para o mesmo fato.
+ */
+export function PhysicalStoreTab() {
+  return <UnifiedStorePage audience="coach" />;
 }
 
 export function DigitalStoreTab() {

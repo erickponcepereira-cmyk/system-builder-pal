@@ -5,8 +5,7 @@ import {
   Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare, Bot,
 
   Blocks, MessageCircle,
-  Image, IdCard,
-} from "lucide-react";
+  Image, IdCard, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -43,6 +42,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
   { to: "/admin/banners", label: "Banners da loja", icon: Image, perm: "store" },
+  { to: "/admin/cursos", label: "Cursos (aprovação)", icon: BookOpen, perm: "store" },
   { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
   { to: "/admin/store-reports", label: "Relatórios da Loja", icon: TrendingUp, perm: "store_reports" },
   { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },

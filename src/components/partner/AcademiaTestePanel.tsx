@@ -61,6 +61,11 @@ type SubAba = "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | 
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+// Quantas credenciais sem vínculo a tela desenha de uma vez. Com 400 pessoas no
+// leitor, desenhar todas empurra o resto da aba para fora da tela — e ninguém
+// liga 400 vínculos rolando uma lista.
+const LIMITE_PENDENTES = 20;
+
 // Chaveado pelos motivos que a função acesso_classificar devolve, para a tela
 // não manter uma segunda versão da régua.
 const ESTADOS: Record<string, { label: string; cls: string }> = {
@@ -952,6 +957,8 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
   const [aberto, setAberto] = useState<string | null>(null);
   const [termo, setTermo] = useState("");
   const [achados, setAchados] = useState<Array<{ studentId: string; nome: string }>>([]);
+  // Filtro da própria lista de pendentes, que não é a mesma busca de aluno.
+  const [filtroPend, setFiltroPend] = useState("");
 
   const carregar = () => {
     setLoading(true);
@@ -980,6 +987,14 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
     }
   };
 
+  const visiveisPend = useMemo(() => {
+    const t = filtroPend.trim().toLowerCase();
+    const todos = dados?.pendentes ?? [];
+    if (!t) return todos;
+    return todos.filter((c) =>
+      (c.nome_no_equipamento ?? "").toLowerCase().includes(t) || c.referencia.toLowerCase().includes(t));
+  }, [dados, filtroPend]);
+
   if (loading) return <Loader2 className="mx-auto my-5 h-5 w-5 animate-spin text-primary" />;
   if (!dados || dados.total === 0) return null;
 
@@ -993,7 +1008,20 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
         <strong className="text-white/80"> ninguém precisa recadastrar</strong>. Sem vínculo, a pessoa não entra.
       </p>
 
-      {dados.pendentes.map((c) => (
+      {/* Despejar as centenas de pendentes de uma vez enterra o resto da aba.
+          Aqui a lista é de trabalho: procure a pessoa, ligue, siga. */}
+      <input
+        value={filtroPend}
+        onChange={(e) => setFiltroPend(e.target.value)}
+        placeholder="Procurar na lista por nome ou identificador"
+        className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder:text-white/40"
+      />
+
+      {visiveisPend.length === 0 ? (
+        <p className="py-3 text-center text-[11px] text-white/50">Ninguém com esse nome ou identificador.</p>
+      ) : null}
+
+      {visiveisPend.slice(0, LIMITE_PENDENTES).map((c) => (
         <div key={c.id} className="rounded-lg border border-white/10 bg-white/5 p-2.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -1061,6 +1089,12 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
           )}
         </div>
       ))}
+
+      {visiveisPend.length > LIMITE_PENDENTES && (
+        <p className="pt-1 text-center text-[11px] text-white/50">
+          Mostrando {LIMITE_PENDENTES} de {visiveisPend.length}. Use a busca acima para achar quem você quer ligar.
+        </p>
+      )}
     </div>
   );
 }
@@ -1758,7 +1792,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
-    id: string; student_id: string; nome: string; plano: string; valido_ate: string;
+    id: string; student_id: string | null; referencia: string | null; nome: string;
+    plano: string; valido_ate: string;
     dias_restantes: number | null; decisao: string; motivo: string; valor: number;
   }>>([]);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
@@ -1809,10 +1844,15 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
     return () => { alive = false; };
   }, [partnerId]);
 
-  const visiveis = useMemo(() => linhas.filter((l) =>
-    (filtro === "todos" || l.motivo === filtro) &&
-    (!busca.trim() || l.nome.toLowerCase().includes(busca.trim().toLowerCase()))
-  ), [linhas, filtro, busca]);
+  // Busca também pelo identificador do leitor: é o número que a recepção tem em
+  // mãos quando alguém para na catraca e não passa.
+  const visiveis = useMemo(() => {
+    const t = busca.trim().toLowerCase();
+    return linhas.filter((l) =>
+      (filtro === "todos" || l.motivo === filtro) &&
+      (!t || l.nome.toLowerCase().includes(t) || (l.referencia ?? "").toLowerCase().includes(t))
+    );
+  }, [linhas, filtro, busca]);
 
   if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
 
@@ -1824,7 +1864,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome"
+            placeholder="Buscar por nome ou identificador"
             className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/40"
           />
         </div>
@@ -1851,15 +1891,27 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
               <div key={l.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => setFichaId(l.student_id)}
-                      className="flex items-center gap-1.5 text-left font-semibold text-white hover:text-primary"
-                    >
-                      <span className="truncate">{l.nome}</span>
-                      <FileText className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                    </button>
-                    <p className="text-[11px] text-white/50">{l.plano} · {brl(Number(l.valor) || 0)}</p>
+                    {/* Ficha completa só existe para quem é aluno da plataforma.
+                        Aluno só da academia mora na credencial do leitor e não
+                        tem ficha — o botão sumir é melhor do que abrir vazio. */}
+                    {l.student_id ? (
+                      <button
+                        type="button"
+                        onClick={() => setFichaId(l.student_id)}
+                        className="flex items-center gap-1.5 text-left font-semibold text-white hover:text-primary"
+                      >
+                        <span className="truncate">{l.nome}</span>
+                        <FileText className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </button>
+                    ) : (
+                      <p className="truncate font-semibold text-white">{l.nome}</p>
+                    )}
+                    <p className="text-[11px] text-white/50">
+                      {l.plano} · {brl(Number(l.valor) || 0)}
+                      {l.referencia && (
+                        <> · <span className="font-mono text-white/70">id {l.referencia}</span></>
+                      )}
+                    </p>
                     <p className="text-[11px] text-white/50">
                       Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")}
                       {l.dias_restantes !== null && (
@@ -1873,13 +1925,15 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
                     {abertoId !== l.id && (
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setTreinoDe({ id: l.student_id, nome: l.nome })}
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
-                        >
-                          <Dumbbell className="h-3 w-3" /> Treino
-                        </button>
+                        {l.student_id && (
+                          <button
+                            type="button"
+                            onClick={() => setTreinoDe({ id: l.student_id as string, nome: l.nome })}
+                            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                          >
+                            <Dumbbell className="h-3 w-3" /> Treino
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => { setAbertoId(l.id); setMotivo(""); setTipoCancel("cancelada"); }}
