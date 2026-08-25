@@ -44,16 +44,11 @@ function PainelAcademia() {
         const unidades = await carregarUnidades(perfil.id);
         if (unidades.length === 0) { if (vivo) setAcademias([]); return; }
 
-        // Só as unidades que têm controle de acesso montado. Uma unidade de
-        // parceiro comum não vira academia por acidente.
-        const { data: configs } = await supabase
-          .from("partner_acesso_config" as never)
-          .select("partner_id" as never)
-          .in("partner_id" as never, unidades.map((u) => u.partnerId));
-        const comAcademia = new Set(
-          ((configs ?? []) as unknown as Array<{ partner_id: string }>).map((c) => c.partner_id),
-        );
-        const lista = unidades.filter((u) => comAcademia.has(u.partnerId));
+        // Só as unidades que têm controle de acesso montado. A flag vem da RPC
+        // (SECURITY DEFINER) e não de uma consulta direta a
+        // partner_acesso_config: política de RLS que devolve vazio não dá erro,
+        // só faz a academia sumir da tela sem explicação.
+        const lista = unidades.filter((u) => u.temAcademia);
         if (!vivo) return;
         setAcademias(lista);
 

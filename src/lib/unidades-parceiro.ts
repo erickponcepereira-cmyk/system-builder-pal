@@ -70,6 +70,8 @@ export interface Unidade {
   status: string;
   papel: PapelUnidade;
   permissoes: Permissao[];
+  /** A unidade tem controle de acesso montado — ou seja, é uma academia. */
+  temAcademia: boolean;
 }
 
 const CHAVE_LS = "fitmind_unidade_parceiro";
@@ -83,6 +85,7 @@ type LinhaRpc = {
   status: string | null;
   papel: string | null;
   permissoes: string[] | null;
+  tem_academia: boolean | null;
 };
 
 /**
@@ -105,6 +108,7 @@ export async function carregarUnidades(perfilId: string): Promise<Unidade[]> {
         status: l.status || "pending",
         papel: (l.papel as PapelUnidade) || "staff",
         permissoes: (l.permissoes || []) as Permissao[],
+        temAcademia: Boolean(l.tem_academia),
       }));
     }
   } catch {
@@ -134,6 +138,9 @@ export async function carregarUnidades(perfilId: string): Promise<Unidade[]> {
     status: p.status || "pending",
     papel: "owner" as PapelUnidade,
     permissoes: [...PERMISSOES],
+    // O caminho de emergência não sabe dizer se há academia. Esconder é melhor
+    // do que abrir um painel que não vai carregar.
+    temAcademia: false,
   }));
 }
 

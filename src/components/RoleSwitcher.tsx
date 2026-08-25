@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Dumbbell, FlaskConical, Repeat, ShieldCheck, Stethoscope, Store, UserRound, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { carregarUnidades } from "@/lib/unidades-parceiro";
 
 type RoleOption = {
   key: "admin" | "coach" | "professional" | "partner" | "academia" | "student"
@@ -50,35 +51,29 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       if (!profile?.id || !active) return;
       const found: RoleOption["key"][] = [];
       if (profile.role === "admin") found.push("admin");
-      const [{ data: coach }, { data: partner }, { data: student }, { data: membro }] = await Promise.all([
+      const [{ data: coach }, { data: partner }, { data: student }, unidades] = await Promise.all([
         supabase.from("coaches").select("id, is_professional, approved_at").eq("profile_id", profile.id).maybeSingle(),
         // Um login pode ter várias unidades: nunca usar maybeSingle aqui.
         supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id),
         supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-        supabase.from("partner_members" as never).select("partner_id" as never).eq("profile_id" as never, profile.id),
+        // Pela RPC, que é SECURITY DEFINER. Consultar as tabelas direto daqui
+        // depende de RLS, e política que devolve vazio não dá erro nenhum —
+        // o painel só some da lista, que foi o que aconteceu com "Academia".
+        carregarUnidades(profile.id),
       ]);
       if (coach) {
         found.push("coach");
         if ((coach as any).is_professional && (coach as any).approved_at) found.push("professional");
       }
 
-      // Unidades deste login: as que ele possui e as em que é membro.
-      const comoDono = ((partner ?? []) as unknown as Array<{ id: string }>).map((p) => p.id);
-      const comoMembro = ((membro ?? []) as unknown as Array<{ partner_id: string }>).map((m) => m.partner_id);
-      const unidades = Array.from(new Set([...comoDono, ...comoMembro]));
-      if (unidades.length > 0) found.push("partner");
+      const temUnidade = unidades.length > 0
+        || ((partner ?? []) as unknown as Array<{ id: string }>).length > 0;
+      if (temUnidade) found.push("partner");
 
       // "Academia" aparece só para quem tem unidade com controle de acesso
       // montado. É a mesma configuração que a catraca usa — não existe flag
       // separada dizendo "isto aqui é academia".
-      if (unidades.length > 0) {
-        const { data: comAcesso } = await supabase
-          .from("partner_acesso_config" as never)
-          .select("partner_id" as never)
-          .in("partner_id" as never, unidades)
-          .limit(1);
-        if ((Array.isArray(comAcesso) ? comAcesso.length : 0) > 0) found.push("academia");
-      }
+      if (unidades.some((u) => u.temAcademia)) found.push("academia");
 
       if (student) found.push("student");
 
