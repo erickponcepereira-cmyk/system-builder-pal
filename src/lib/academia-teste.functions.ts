@@ -1455,6 +1455,8 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
   .inputValidator((d: {
     partnerId: string; credencialId?: string | null; studentId?: string | null;
     plano: string; dias: number; pagamentos: PagamentoDividido[]; observacao?: string;
+    /** Validade escolhida na mão; quando ausente, o banco soma os dias do plano. */
+    validoAte?: string | null;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin, profileId } = await autorizar(context.userId, data.partnerId);
@@ -1477,7 +1479,9 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
       p_dias: Number(data.dias) || 30,
       p_registrado_por: profileId,
       p_observacao: data.observacao ?? null,
+      p_valido_ate: data.validoAte || null,
     } as never);
+
     if (error) throw new Error(error.message);
 
     const linha = (Array.isArray(r) ? r[0] : r) as unknown as {
