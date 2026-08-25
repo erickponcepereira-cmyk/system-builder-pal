@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, FlaskConical, Repeat, ShieldCheck, Stethoscope, Store, UserRound, Users } from "lucide-react";
+import { ChevronDown, Dumbbell, FlaskConical, Repeat, ShieldCheck, Stethoscope, Store, UserRound, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type RoleOption = {
-  key: "admin" | "coach" | "professional" | "partner" | "student"
+  key: "admin" | "coach" | "professional" | "partner" | "academia" | "student"
      | "student_test" | "coach_test" | "partner_test" | "professional_test";
   label: string;
-  to: "/admin" | "/coach" | "/professional" | "/partner" | "/student"
+  to: "/admin" | "/coach" | "/professional" | "/partner" | "/academia" | "/student"
     | "/student/loja-teste" | "/coach/loja-teste"
     | "/partner/cursos-teste" | "/professional/cursos-teste";
   icon: typeof Users;
@@ -19,6 +19,10 @@ const ALL: RoleOption[] = [
   { key: "coach", label: "Coach", to: "/coach", icon: Users, color: "text-primary" },
   { key: "professional", label: "Profissional", to: "/professional", icon: Stethoscope, color: "text-cyan-400" },
   { key: "partner", label: "Parceiro", to: "/partner", icon: Store, color: "text-emerald-400" },
+  // Painel próprio de quem toca academia: catraca, alunos, mensalidade e avisos.
+  // Separado de Parceiro porque quem trabalha na recepção não mexe em produto,
+  // carteira nem comissão — e não deveria atravessar tudo isso para chegar lá.
+  { key: "academia", label: "Academia", to: "/academia", icon: Dumbbell, color: "text-orange-400" },
   { key: "student", label: "Aluno", to: "/student", icon: UserRound, color: "text-white" },
   // Superfícies de teste da loja unificada. Só entram na lista para master
   // admin — ver o carregamento de `is_master_admin` abaixo.
@@ -49,15 +53,32 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       const [{ data: coach }, { data: partner }, { data: student }, { data: membro }] = await Promise.all([
         supabase.from("coaches").select("id, is_professional, approved_at").eq("profile_id", profile.id).maybeSingle(),
         // Um login pode ter várias unidades: nunca usar maybeSingle aqui.
-        supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).limit(1),
+        supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id),
         supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-        supabase.from("partner_members" as never).select("id" as never).eq("profile_id" as never, profile.id).limit(1).maybeSingle(),
+        supabase.from("partner_members" as never).select("partner_id" as never).eq("profile_id" as never, profile.id),
       ]);
       if (coach) {
         found.push("coach");
         if ((coach as any).is_professional && (coach as any).approved_at) found.push("professional");
       }
-      if ((Array.isArray(partner) ? partner.length : 0) > 0 || membro) found.push("partner");
+
+      // Unidades deste login: as que ele possui e as em que é membro.
+      const comoDono = ((partner ?? []) as unknown as Array<{ id: string }>).map((p) => p.id);
+      const comoMembro = ((membro ?? []) as unknown as Array<{ partner_id: string }>).map((m) => m.partner_id);
+      const unidades = Array.from(new Set([...comoDono, ...comoMembro]));
+      if (unidades.length > 0) found.push("partner");
+
+      // "Academia" aparece só para quem tem unidade com controle de acesso
+      // montado. É a mesma configuração que a catraca usa — não existe flag
+      // separada dizendo "isto aqui é academia".
+      if (unidades.length > 0) {
+        const { data: comAcesso } = await supabase
+          .from("partner_acesso_config" as never)
+          .select("partner_id" as never)
+          .in("partner_id" as never, unidades)
+          .limit(1);
+        if ((Array.isArray(comAcesso) ? comAcesso.length : 0) > 0) found.push("academia");
+      }
 
       if (student) found.push("student");
 

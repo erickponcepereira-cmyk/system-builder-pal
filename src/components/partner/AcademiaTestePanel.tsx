@@ -84,10 +84,10 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
       <div className="space-y-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <p className="flex items-center gap-2 text-sm font-bold text-white">
-            <Dumbbell className="h-4 w-4 text-primary" /> Academia (teste)
+            <Dumbbell className="h-4 w-4 text-primary" /> Gestão da academia
           </p>
           <p className="text-[11px] text-white/50">
-            Superfície de teste — visível apenas para admin master. A academia só monitora a frequência; o aluno continua do coach responsável.
+            Catraca, alunos, mensalidade e avisos. A academia só monitora a frequência; o aluno continua do coach responsável.
           </p>
         </div>
 

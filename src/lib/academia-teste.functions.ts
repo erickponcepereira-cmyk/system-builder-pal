@@ -35,9 +35,7 @@ async function autorizar(userId: string, partnerId: string): Promise<{ admin: Ad
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!profile || !(profile as { is_master_admin?: boolean }).is_master_admin) {
-    throw new Error("Sem acesso.");
-  }
+  if (!profile) throw new Error("Sem acesso.");
   const profileId = (profile as { id: string }).id;
 
   const [{ data: membro }, { data: dono }] = await Promise.all([
@@ -45,7 +43,17 @@ async function autorizar(userId: string, partnerId: string): Promise<{ admin: Ad
     supabaseAdmin.from("partners").select("id").eq("id", partnerId).eq("profile_id", profileId).maybeSingle(),
   ]);
 
-  if (!membro && !dono) throw new Error("Sem acesso a esta academia.");
+  /*
+   * Quem pode agir na academia: dono da unidade, membro da equipe, ou master
+   * admin para suporte.
+   *
+   * Até aqui exigia `is_master_admin` ANTES de olhar o vínculo — era o gate da
+   * fase de teste. Mantê-lo agora entregaria o pior sintoma que este projeto já
+   * teve: a pessoa enxerga a academia na tela e leva "Sem acesso." em cada
+   * clique, porque quem lista aprendeu sobre membro e quem age não.
+   */
+  const master = Boolean((profile as { is_master_admin?: boolean }).is_master_admin);
+  if (!membro && !dono && !master) throw new Error("Sem acesso a esta academia.");
 
   return { admin: supabaseAdmin as Admin, profileId };
 }

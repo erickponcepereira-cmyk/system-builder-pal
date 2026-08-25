@@ -47,8 +47,6 @@ import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanne
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
 import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
-import { AcademiaTestePanel } from "@/components/partner/AcademiaTestePanel";
-import { useTestPanelAccess } from "@/lib/test-access";
 
 import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
 import { getShareOrigin } from "@/lib/auth-redirects";
@@ -62,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group" | "academia_teste";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
 
 
 interface Partner {
@@ -131,7 +129,6 @@ function formatBenefitWindow(start?: string | null, end?: string | null) {
 
 function PartnerPanel() {
   const navigate = useNavigate();
-  const { allowed: testeAcademiaLiberado } = useTestPanelAccess();
   const [tab, setTab] = useState<Tab>("overview");
   const [partner, setPartner] = useState<Partner | null>(null);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
@@ -274,7 +271,6 @@ function PartnerPanel() {
   robo: "robo",
     profile: "profile.editar",
     members: "members.gerenciar",
-    academia_teste: "overview.ver",
   };
 
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
@@ -303,7 +299,6 @@ function PartnerPanel() {
     { key: "robo" as Tab, label: "Rob\u00f4 WhatsApp", icon: Bot },
     { key: "members" as Tab, label: "Membros", icon: ShieldCheck },
     { key: "wa_group" as Tab, label: "Meu grupo WhatsApp", icon: MessageCircle },
-    ...(testeAcademiaLiberado ? [{ key: "academia_teste" as Tab, label: "Academia (teste)", icon: Dumbbell }] : []),
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ].filter((t) => pode(unidadeAtiva, PERMISSAO_DA_ABA[t.key]));
 
@@ -452,7 +447,6 @@ function PartnerPanel() {
         {abaAtiva === "crm" && crmQuadroId && <CrmBoard quadroId={crmQuadroId} />}
             {abaAtiva === "robo" && partner?.id && <PartnerRoboPanel partnerId={partner.id} />}
         {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
-        {abaAtiva === "academia_teste" && partner && testeAcademiaLiberado && <AcademiaTestePanel partnerId={partner.id} />}
         {abaAtiva === "wa_group" && partner && <WhatsappGroupSettings ownerKind="partner" ownerId={partner.id} ownerName={partner.fantasy_name} />}
 
 

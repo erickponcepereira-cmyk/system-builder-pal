@@ -46,6 +46,7 @@ import { Route as AuthenticatedPartnerRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAcademiaRouteImport } from './routes/_authenticated/academia'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
@@ -352,6 +353,11 @@ const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAcademiaRoute = AuthenticatedAcademiaRouteImport.update({
+  id: '/academia',
+  path: '/academia',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -1086,6 +1092,7 @@ export interface FileRoutesByFullPath {
   '/termos-profissional': typeof TermosProfissionalRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/academia': typeof AuthenticatedAcademiaRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
@@ -1245,6 +1252,7 @@ export interface FileRoutesByTo {
   '/termos-profissional': typeof TermosProfissionalRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/academia': typeof AuthenticatedAcademiaRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
@@ -1404,6 +1412,7 @@ export interface FileRoutesById {
   '/termos-profissional': typeof TermosProfissionalRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/academia': typeof AuthenticatedAcademiaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
@@ -1565,6 +1574,7 @@ export interface FileRouteTypes {
     | '/termos-profissional'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/academia'
     | '/admin'
     | '/assinatura'
     | '/coach'
@@ -1724,6 +1734,7 @@ export interface FileRouteTypes {
     | '/termos-profissional'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/academia'
     | '/assinatura'
     | '/coach'
     | '/partner'
@@ -1882,6 +1893,7 @@ export interface FileRouteTypes {
     | '/termos-profissional'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/academia'
     | '/_authenticated/admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/coach'
@@ -2332,6 +2344,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/academia': {
+      id: '/_authenticated/academia'
+      path: '/academia'
+      fullPath: '/academia'
+      preLoaderRoute: typeof AuthenticatedAcademiaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/.well-known/oauth-protected-resource': {
@@ -3445,6 +3464,7 @@ const AuthenticatedStudentRouteWithChildren =
   AuthenticatedStudentRoute._addFileChildren(AuthenticatedStudentRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAcademiaRoute: typeof AuthenticatedAcademiaRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
@@ -3465,6 +3485,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAcademiaRoute: AuthenticatedAcademiaRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
@@ -3550,13 +3571,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
