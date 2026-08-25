@@ -2086,134 +2086,121 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   );
 }
 
+/**
+ * Registrar / renovar — o mesmo lançamento da aba de alunos.
+ *
+ * O formulário antigo era outro caminho para a mesma tabela: exigia aluno da
+ * plataforma, plano digitado à mão, data digitada à mão e uma única forma de
+ * pagamento — e por isso não gravava o detalhamento por forma que o relatório
+ * usa. Agora as duas abas usam a mesma busca, os mesmos planos e a mesma
+ * régua de data e taxa.
+ */
 function FormMensalidade({ partnerId }: { partnerId: string }) {
-  const buscar = useServerFn(buscarAlunosParaMensalidade);
-  const preview = useServerFn(previewTaxaAcademia);
-  const registrar = useServerFn(registrarMensalidadeAcademia);
-
+  const buscar = useServerFn(buscarPessoasAcademia);
   const [termo, setTermo] = useState("");
-  const [opcoes, setOpcoes] = useState<Array<{ studentId: string; nome: string }>>([]);
-  const [aluno, setAluno] = useState<{ studentId: string; nome: string } | null>(null);
-  const [plano, setPlano] = useState("Mensal");
-  const [valor, setValor] = useState(0);
-  const [origem, setOrigem] = useState<"interna" | "externa">("externa");
-  const [forma, setForma] = useState<FormaPagamento>("dinheiro");
-  const [validoAte, setValidoAte] = useState("");
-  const [obs, setObs] = useState("");
-  const [taxa, setTaxa] = useState<{ taxaPercentual: number; taxaValor: number; valorLiquido: number; fonte: string } | null>(null);
-  const [salvando, setSalvando] = useState(false);
+  const [opcoes, setOpcoes] = useState<PessoaAcademia[]>([]);
+  const [pessoa, setPessoa] = useState<PessoaAcademia | null>(null);
+  const [cadastrando, setCadastrando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
 
   useEffect(() => {
-    if (termo.trim().length < 3) { setOpcoes([]); return; }
+    if (pessoa || termo.trim().length < 3) { setOpcoes([]); return; }
     let alive = true;
+    setBuscando(true);
     const t = setTimeout(() => {
       buscar({ data: { partnerId, termo } })
-        .then((r) => { if (alive) setOpcoes(r.alunos); })
-        .catch(() => {});
+        .then((r) => { if (alive) setOpcoes(r.pessoas); })
+        .catch(() => {})
+        .finally(() => { if (alive) setBuscando(false); });
     }, 350);
     return () => { alive = false; clearTimeout(t); };
-  }, [termo, partnerId]);
+  }, [termo, partnerId, pessoa]);
 
-  useEffect(() => {
-    let alive = true;
-    preview({ data: { partnerId, origem, formaPagamento: forma, valor } })
-      .then((r) => { if (alive) setTaxa(r); })
-      .catch(() => { if (alive) setTaxa(null); });
-    return () => { alive = false; };
-  }, [partnerId, origem, forma, valor]);
-
-  const fonteTexto = taxa?.fonte === "dinheiro" ? "Dinheiro — sem taxa"
-    : taxa?.fonte === "plataforma" ? "Taxa automática da plataforma"
-    : taxa?.fonte === "academia" ? "Taxa configurada pela academia"
-    : "Taxa não configurada para esta forma de pagamento — usando zero";
-
-  const salvar = async () => {
-    if (!aluno) return toast.error("Escolha o aluno.");
-    if (!validoAte) return toast.error("Informe a nova validade.");
-    if (!plano.trim()) return toast.error("Informe o plano.");
-    setSalvando(true);
-    try {
-      await registrar({ data: { partnerId, studentId: aluno.studentId, plano, valor, validoAte, origem, formaPagamento: forma, observacao: obs || undefined } });
-      toast.success("Mensalidade registrada.");
-      setAluno(null); setTermo(""); setObs(""); setValor(0); setValidoAte("");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao registrar");
-    } finally {
-      setSalvando(false);
-    }
-  };
+  const limpar = () => { setPessoa(null); setTermo(""); setOpcoes([]); };
 
   return (
     <div className="space-y-3">
-      <Campo label="Aluno">
-        {aluno ? (
-          <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-            <span className="text-sm text-white">{aluno.nome}</span>
-            <button onClick={() => setAluno(null)} className="text-[11px] text-primary">trocar</button>
-          </div>
-        ) : (
-          <>
+      {!pessoa && !cadastrando && (
+        <>
+          <Campo label="Quem está pagando">
             <input
               value={termo}
               onChange={(e) => setTermo(e.target.value)}
-              placeholder="Digite ao menos 3 letras do nome"
+              placeholder="Nome, telefone ou identificador da catraca"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
             />
+            {buscando && <p className="mt-1 text-[11px] text-white/40">Buscando…</p>}
             {opcoes.length > 0 && (
-              <div className="mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#141414]">
-                {opcoes.map((o) => (
-                  <button key={o.studentId} onClick={() => { setAluno(o); setOpcoes([]); }} className="block w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5">
-                    {o.nome}
+              <div className="mt-1 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-[#141414]">
+                {opcoes.map((o, i) => (
+                  <button
+                    key={`${o.credencialId ?? o.studentId}-${i}`}
+                    type="button"
+                    onClick={() => { setPessoa(o); setOpcoes([]); }}
+                    className="block w-full px-3 py-2 text-left hover:bg-white/5"
+                  >
+                    <span className="block text-sm text-white">{o.nome}</span>
+                    <span className="block text-[11px] text-white/45">
+                      {o.referencia ? `id ${o.referencia}` : o.studentId ? "aluno FitMind" : "cadastro da academia"}
+                      {o.validoAte ? ` · vence ${formatDateOnlyBR(o.validoAte)}` : " · sem mensalidade"}
+                    </span>
                   </button>
                 ))}
               </div>
             )}
-          </>
-        )}
-      </Campo>
+          </Campo>
 
-      <Campo label="Plano">
-        <input value={plano} onChange={(e) => setPlano(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
-      </Campo>
+          <button
+            type="button"
+            onClick={() => setCadastrando(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+          >
+            <UserPlus className="h-3.5 w-3.5" /> Cadastrar pessoa nova (não é da FitMind)
+          </button>
+        </>
+      )}
 
-      <Campo label="Valor">
-        <CurrencyInputBRL value={valor} onChange={setValor} />
-      </Campo>
+      {cadastrando && (
+        <CadastrarPessoaAcademia
+          partnerId={partnerId}
+          aoCriar={(p) => {
+            setCadastrando(false);
+            setPessoa({
+              credencialId: p.credencialId, studentId: null,
+              nome: p.nome, referencia: p.referencia, validoAte: null,
+            });
+          }}
+          aoCancelar={() => setCadastrando(false)}
+        />
+      )}
 
-      <Campo label="Origem da venda">
-        <select value={origem} onChange={(e) => setOrigem(e.target.value as "interna" | "externa")} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
-          <option value="interna">Interna (vendida na plataforma)</option>
-          <option value="externa">Externa (vendida na recepção)</option>
-        </select>
-      </Campo>
-
-      <Campo label="Forma de pagamento">
-        <select value={forma} onChange={(e) => setForma(e.target.value as FormaPagamento)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
-          {FORMAS_PAGAMENTO.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </Campo>
-
-      <Campo label="Válido até">
-        <input type="date" value={validoAte} onChange={(e) => setValidoAte(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
-      </Campo>
-
-      <Campo label="Observação">
-        <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
-      </Campo>
-
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/80">
-        <p className="text-[11px] uppercase tracking-wider text-white/40">Resumo</p>
-        <p>Taxa: {taxa ? `${Number(taxa.taxaPercentual).toFixed(2)}% · ${brl(taxa.taxaValor)}` : "—"}</p>
-        <p>Valor líquido: <span className="font-bold text-white">{taxa ? brl(taxa.valorLiquido) : "—"}</span></p>
-        <p className={`text-[11px] ${taxa?.fonte === "nao_configurada" ? "text-amber-400" : "text-white/50"}`}>{fonteTexto}</p>
-      </div>
-
-      <button onClick={salvar} disabled={salvando} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">
-        {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Registrar mensalidade
-      </button>
+      {pessoa && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-white">{pessoa.nome}</p>
+              <p className="text-[11px] text-white/50">
+                {pessoa.referencia ? <>Identificador <span className="font-mono text-white/70">{pessoa.referencia}</span></> : "Aluno FitMind"}
+                {pessoa.validoAte ? ` · vence ${formatDateOnlyBR(pessoa.validoAte)}` : ""}
+              </p>
+            </div>
+            <button type="button" onClick={limpar} className="text-[11px] text-primary">trocar</button>
+          </div>
+          <RenovarAluno
+            partnerId={partnerId}
+            credencialId={pessoa.credencialId}
+            studentId={pessoa.studentId}
+            nome={pessoa.nome}
+            vencimentoAtual={pessoa.validoAte}
+            aoConcluir={limpar}
+            aoCancelar={limpar}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
 
 function ConfigAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterConfigAcademia);
