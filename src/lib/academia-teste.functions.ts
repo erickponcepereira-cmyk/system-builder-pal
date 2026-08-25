@@ -283,6 +283,105 @@ export const buscarAlunosParaMensalidade = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Busca de PESSOA (não só de aluno da plataforma).
+ *
+ * A recepção não sabe — nem precisa saber — se quem está no balcão tem conta na
+ * FitMind. A maioria só existe como credencial do leitor, e a busca antiga
+ * simplesmente não achava essas pessoas, o que tornava impossível lançar a
+ * mensalidade delas por esta aba.
+ *
+ * Devolve junto o vencimento vigente, porque é ele (e não a data de hoje) que
+ * define a nova validade de quem renova adiantado.
+ */
+export type PessoaAcademia = {
+  credencialId: string | null;
+  studentId: string | null;
+  nome: string;
+  referencia: string | null;
+  validoAte: string | null;
+};
+
+export const buscarPessoasAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; termo: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const termo = (data.termo || "").trim();
+    if (termo.length < 3) return { pessoas: [] as PessoaAcademia[] };
+
+    const pessoas: PessoaAcademia[] = [];
+
+    // 1) Credenciais da unidade (inclui quem não é da FitMind).
+    const like = `%${termo}%`;
+    const { data: creds } = await admin
+      .from("academia_credenciais")
+      .select("id, student_id, nome_no_equipamento, referencia, telefone")
+      .eq("partner_id", data.partnerId)
+      .eq("ativo", true)
+      .or(`nome_no_equipamento.ilike.${like},referencia.ilike.${like},telefone.ilike.${like}`)
+      .limit(20);
+
+    for (const c of (creds ?? []) as Array<{
+      id: string; student_id: string | null; nome_no_equipamento: string | null;
+      referencia: string | null; telefone: string | null;
+    }>) {
+      pessoas.push({
+        credencialId: c.id,
+        studentId: c.student_id,
+        nome: c.nome_no_equipamento || "Sem nome",
+        referencia: c.referencia,
+        validoAte: null,
+      });
+    }
+
+    // 2) Alunos da plataforma ligados a esta unidade, sem duplicar quem já veio
+    //    pela credencial.
+    const { data: alunos } = await admin.rpc("academia_buscar_aluno", {
+      p_partner_id: data.partnerId,
+      p_termo: termo,
+    });
+    const jaTem = new Set(pessoas.map((p) => p.studentId).filter(Boolean) as string[]);
+    for (const a of (alunos ?? []) as Array<{ student_id: string; nome: string }>) {
+      if (jaTem.has(a.student_id)) continue;
+      pessoas.push({
+        credencialId: null,
+        studentId: a.student_id,
+        nome: a.nome,
+        referencia: null,
+        validoAte: null,
+      });
+    }
+
+    // 3) Vencimento vigente de cada um.
+    const credIds = pessoas.map((p) => p.credencialId).filter(Boolean) as string[];
+    const studIds = pessoas.map((p) => p.studentId).filter(Boolean) as string[];
+    if (credIds.length || studIds.length) {
+      const filtros: string[] = [];
+      if (credIds.length) filtros.push(`credencial_id.in.(${credIds.join(",")})`);
+      if (studIds.length) filtros.push(`student_id.in.(${studIds.join(",")})`);
+      const { data: mens } = await admin
+        .from("academia_mensalidades")
+        .select("credencial_id, student_id, valido_ate")
+        .eq("partner_id", data.partnerId)
+        .eq("status", "ativa")
+        .or(filtros.join(","));
+      for (const m of (mens ?? []) as Array<{
+        credencial_id: string | null; student_id: string | null; valido_ate: string;
+      }>) {
+        for (const p of pessoas) {
+          const bate =
+            (m.credencial_id && p.credencialId === m.credencial_id) ||
+            (m.student_id && p.studentId === m.student_id);
+          if (bate && (!p.validoAte || m.valido_ate > p.validoAte)) p.validoAte = m.valido_ate;
+        }
+      }
+    }
+
+    return { pessoas: pessoas.slice(0, 25) };
+  });
+
+
 export const registrarMensalidadeAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
@@ -1356,6 +1455,8 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
   .inputValidator((d: {
     partnerId: string; credencialId?: string | null; studentId?: string | null;
     plano: string; dias: number; pagamentos: PagamentoDividido[]; observacao?: string;
+    /** Validade escolhida na mão; quando ausente, o banco soma os dias do plano. */
+    validoAte?: string | null;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin, profileId } = await autorizar(context.userId, data.partnerId);
@@ -1378,7 +1479,9 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
       p_dias: Number(data.dias) || 30,
       p_registrado_por: profileId,
       p_observacao: data.observacao ?? null,
+      p_valido_ate: data.validoAte || null,
     } as never);
+
     if (error) throw new Error(error.message);
 
     const linha = (Array.isArray(r) ? r[0] : r) as unknown as {

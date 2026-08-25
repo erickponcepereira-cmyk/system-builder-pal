@@ -15132,26 +15132,48 @@ export type Database = {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: Json
       }
-      academia_renovar: {
-        Args: {
-          p_credencial_id: string
-          p_dias: number
-          p_observacao?: string
-          p_pagamentos: Json
-          p_partner_id: string
-          p_plano: string
-          p_registrado_por?: string
-          p_student_id: string
-          p_valor: number
-        }
-        Returns: {
-          bruto: number
-          liquido: number
-          mensalidade_id: string
-          taxas: number
-          valido_ate: string
-        }[]
-      }
+      academia_renovar:
+        | {
+            Args: {
+              p_credencial_id: string
+              p_dias: number
+              p_observacao?: string
+              p_pagamentos: Json
+              p_partner_id: string
+              p_plano: string
+              p_registrado_por?: string
+              p_student_id: string
+              p_valor: number
+            }
+            Returns: {
+              bruto: number
+              liquido: number
+              mensalidade_id: string
+              taxas: number
+              valido_ate: string
+            }[]
+          }
+        | {
+            Args: {
+              p_credencial_id: string
+              p_dias: number
+              p_observacao?: string
+              p_pagamentos: Json
+              p_partner_id: string
+              p_plano: string
+              p_registrado_por?: string
+              p_student_id: string
+              p_valido_ate?: string
+              p_valor: number
+            }
+            Returns: {
+              bruto: number
+              liquido: number
+              mensalidade_id: string
+              taxas: number
+              valido_ate: string
+            }[]
+          }
       academia_sombra_placar: {
         Args: { p_partner_id: string }
         Returns: {
