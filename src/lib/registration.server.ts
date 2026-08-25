@@ -57,22 +57,35 @@ const makeReferralCode = () =>
 /**
  * Coach responsável definitivo da conta. Uma vez vinculado (como aluno,
  * coach/profissional ou parceiro), o vínculo não muda em novos perfis.
+ *
+ * `locked` = a conta já tem vínculo resolvido (inclusive quem é raiz da
+ * própria rede, com `coachId` nulo). Nesse caso o valor enviado pela tela
+ * é ignorado.
  */
-export async function resolveBoundCoachId(profileId: string): Promise<string | null> {
+export async function resolveBoundCoach(profileId: string): Promise<{
+  coachId: string | null;
+  locked: boolean;
+  selfCoachId: string | null;
+}> {
+  const { data: ownCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id, upline_coach_id")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  if (ownCoach?.id) {
+    return { coachId: ownCoach.upline_coach_id ?? null, locked: true, selfCoachId: ownCoach.id };
+  }
+
   const { data: student } = await supabaseAdmin
     .from("students")
     .select("coach_id, coach_assignment_pending")
     .eq("profile_id", profileId)
     .maybeSingle();
   const studentRow = student as { coach_id?: string | null; coach_assignment_pending?: boolean | null } | null;
-  if (studentRow?.coach_id && studentRow.coach_assignment_pending === false) return studentRow.coach_id;
-
-  const { data: coach } = await supabaseAdmin
-    .from("coaches")
-    .select("upline_coach_id")
-    .eq("profile_id", profileId)
-    .maybeSingle();
-  if (coach?.upline_coach_id) return coach.upline_coach_id;
+  if (studentRow?.coach_id && studentRow.coach_assignment_pending === false) {
+    return { coachId: studentRow.coach_id, locked: true, selfCoachId: null };
+  }
 
   const { data: partner } = await supabaseAdmin
     .from("partners")
@@ -81,34 +94,66 @@ export async function resolveBoundCoachId(profileId: string): Promise<string | n
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
-  if (partner?.upline_coach_id) return partner.upline_coach_id;
+  if (partner?.upline_coach_id) {
+    return { coachId: partner.upline_coach_id, locked: true, selfCoachId: null };
+  }
 
-  return studentRow?.coach_id ?? null;
+  if (studentRow?.coach_id) {
+    return { coachId: studentRow.coach_id, locked: true, selfCoachId: null };
+  }
+
+  return { coachId: null, locked: false, selfCoachId: null };
+}
+
+export async function resolveBoundCoachId(profileId: string): Promise<string | null> {
+  return (await resolveBoundCoach(profileId)).coachId;
 }
 
 export async function getBoundCoachForUser(userId: string) {
+  const empty = {
+    coachId: null as string | null,
+    coachName: null as string | null,
+    locked: false,
+    isRoot: false,
+    selfCoachId: null as string | null,
+  };
+
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!profile?.id) return { coachId: null as string | null, coachName: null as string | null };
+  if (!profile?.id) return empty;
 
-  const coachId = await resolveBoundCoachId(profile.id);
-  if (!coachId) return { coachId: null as string | null, coachName: null as string | null };
+  const bound = await resolveBoundCoach(profile.id);
+  if (!bound.locked) return empty;
+
+  if (!bound.coachId) {
+    // Raiz da própria rede: vínculo definido, sem ninguém acima.
+    return { ...empty, locked: true, isRoot: true, selfCoachId: bound.selfCoachId };
+  }
 
   const { data: coach } = await supabaseAdmin
     .from("coaches")
     .select("id, profile_id, profiles:profile_id(name)")
-    .eq("id", coachId)
+    .eq("id", bound.coachId)
     .maybeSingle();
-  // Nunca devolve o próprio usuário como coach responsável.
+
   if (!coach?.id || coach.profile_id === profile.id) {
-    return { coachId: null as string | null, coachName: null as string | null };
+    // O "coach responsável" é o próprio cadastro da pessoa → é raiz.
+    return { ...empty, locked: true, isRoot: true, selfCoachId: bound.selfCoachId ?? bound.coachId };
   }
+
   const name = (coach as { profiles?: { name?: string | null } | null }).profiles?.name ?? null;
-  return { coachId, coachName: name };
+  return {
+    coachId: bound.coachId,
+    coachName: name,
+    locked: true,
+    isRoot: false,
+    selfCoachId: bound.selfCoachId,
+  };
 }
+
 
 export async function ensureStudentForProfile(
   profileId: string,
@@ -588,9 +633,10 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
-  const boundCoachId = await resolveBoundCoachId(profile.id);
-  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
-  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
+  const bound = await resolveBoundCoach(profile.id);
+  const uplineCoachId = bound.locked ? bound.coachId : clean(input.uplineCoachId);
+  if (!uplineCoachId && !bound.locked) throw new Error("Selecione um coach indicador para continuar.");
+  const studentCoachId = uplineCoachId ?? bound.selfCoachId;
 
   const activationPatch = input.alreadyProfessional
     ? {
@@ -647,7 +693,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   }
 
   await supabaseAdmin.from("profiles").update({ status: "pending", role: "coach" }).eq("id", profile.id);
-  await ensureStudentForProfile(profile.id, uplineCoachId);
+  if (studentCoachId) await ensureStudentForProfile(profile.id, studentCoachId);
   return { ok: true, profileId: profile.id };
 }
 export type UpgradeExistingToCoachInput = {
@@ -678,9 +724,10 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
   if (profileErr) throw new Error(profileErr.message);
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
-  const boundCoachId = await resolveBoundCoachId(profile.id);
-  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
-  if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
+  const bound = await resolveBoundCoach(profile.id);
+  const uplineCoachId = bound.locked ? bound.coachId : clean(input.uplineCoachId);
+  if (!uplineCoachId && !bound.locked) throw new Error("Selecione um coach indicador para continuar.");
+  const studentCoachId = uplineCoachId ?? bound.selfCoachId;
 
   const { data: existingCoach } = await supabaseAdmin
     .from("coaches")
@@ -751,7 +798,7 @@ export async function upgradeExistingToCoach(input: UpgradeExistingToCoachInput)
     .update({ role: "coach", status: profile.status === "active" ? "active" : "pending" })
     .eq("id", profile.id);
 
-  await ensureStudentForProfile(profile.id, uplineCoachId);
+  if (studentCoachId) await ensureStudentForProfile(profile.id, studentCoachId);
   return { ok: true, profileId: profile.id };
 }
 
@@ -789,8 +836,12 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
-  const boundCoachId = await resolveBoundCoachId(profile.id);
-  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
+  const bound = await resolveBoundCoach(profile.id);
+  // Parceiro exige um coach acima: quem é raiz da própria rede fica sob o
+  // próprio cadastro de coach (comportamento já existente na base).
+  const uplineCoachId = bound.locked
+    ? (bound.coachId ?? bound.selfCoachId)
+    : clean(input.uplineCoachId);
   if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
 
   const nowIso = new Date().toISOString();
