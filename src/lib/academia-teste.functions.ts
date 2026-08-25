@@ -1313,6 +1313,28 @@ export const enviarFoto = createServerFn({ method: "POST" })
     return { ok: true, referencia: linha?.referencia ?? null };
   });
 
+/** Enfileira a face de uma pessoa cadastrada somente na academia. */
+export const enviarFotoCredencial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; credencialId: string; fotoBase64: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const b64 = String(data.fotoBase64 || "").replace(/^data:[^;]+;base64,/, "");
+    if (b64.length < 1000) throw new Error("Foto ausente ou pequena demais.");
+    if (b64.length > 2_000_000) throw new Error("Foto muito grande. Use uma imagem menor.");
+
+    const { data: resultado, error } = await admin.rpc("academia_face_enfileirar_credencial", {
+      p_partner_id: data.partnerId,
+      p_credencial_id: data.credencialId,
+      p_foto_base64: b64,
+    } as never);
+    if (error) throw new Error(error.message);
+
+    const linha = ((resultado ?? []) as Array<{ envio_id: string; referencia: string }>)[0];
+    return { ok: true, referencia: linha?.referencia ?? null };
+  });
+
 /** Fotos na fila, para a recepção acompanhar. */
 export const obterFilaDeFotos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

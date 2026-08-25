@@ -31,6 +31,7 @@ import {
   aplicarModeloTreino,
   criarEventoAcademia,
   enviarFoto,
+  enviarFotoCredencial,
   gerarCodigoAgente,
   inscreverNoEvento,
   obterAgenteAcademia,
@@ -950,6 +951,71 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
           {f.nome}: {f.erro}
         </p>
       ))}
+    </div>
+  );
+}
+
+function RostoDepoisDoCadastro({
+  partnerId, pessoa, aoFinalizar,
+}: {
+  partnerId: string;
+  pessoa: { credencialId: string; nome: string; referencia: string };
+  aoFinalizar: () => void;
+}) {
+  const enviar = useServerFn(enviarFotoCredencial);
+  const [capturando, setCapturando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  const enviarCaptura = async (fotoBase64: string) => {
+    setCapturando(false);
+    setEnviando(true);
+    try {
+      const resultado = await enviar({
+        data: { partnerId, credencialId: pessoa.credencialId, fotoBase64 },
+      });
+      toast.success(`Rosto enviado para a catraca no identificador ${resultado.referencia ?? pessoa.referencia}.`);
+      aoFinalizar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar o rosto.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div>
+        <p className="text-sm font-bold text-white">Mensalidade registrada</p>
+        <p className="mt-1 text-[11px] text-white/60">
+          {pessoa.nome} já será sincronizada com a catraca pelo identificador{" "}
+          <span className="font-mono text-white/80">{pessoa.referencia}</span>.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setCapturando(true)}
+          disabled={enviando}
+          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-50"
+        >
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          Cadastrar rosto agora
+        </button>
+        <button
+          type="button"
+          onClick={aoFinalizar}
+          disabled={enviando}
+          className="rounded-xl border border-white/10 px-3 py-2.5 text-xs font-semibold text-white/70 hover:bg-white/10 disabled:opacity-50"
+        >
+          Fazer depois na catraca
+        </button>
+      </div>
+      {capturando && (
+        <CapturaRosto
+          onPronta={(foto) => void enviarCaptura(foto)}
+          onCancelar={() => setCapturando(false)}
+        />
+      )}
     </div>
   );
 }
