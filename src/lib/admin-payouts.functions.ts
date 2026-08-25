@@ -966,7 +966,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const productEarnings = [
       // 1) Ganhos como criador — já líquidos do repasse de co-produção
       ...paidOrders
-        .filter((o) => o.partner_id === partnerId || o.professional_coach_id === coachId)
+        .filter((o) => isCreatorOrder(o))
         .map((o) => {
           const { availableAt, released } = releaseInfo(o);
           const deduction = myCoprodDeduction(o);
