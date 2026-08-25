@@ -269,30 +269,33 @@ export type Database = {
       academia_crm_cartoes: {
         Row: {
           cartao_id: string | null
+          credencial_id: string | null
           criado_em: string
           gatilho: string
           id: string
           partner_id: string
           referencia: string
-          student_id: string
+          student_id: string | null
         }
         Insert: {
           cartao_id?: string | null
+          credencial_id?: string | null
           criado_em?: string
           gatilho: string
           id?: string
           partner_id: string
           referencia: string
-          student_id: string
+          student_id?: string | null
         }
         Update: {
           cartao_id?: string | null
+          credencial_id?: string | null
           criado_em?: string
           gatilho?: string
           id?: string
           partner_id?: string
           referencia?: string
-          student_id?: string
+          student_id?: string | null
         }
         Relationships: [
           {
@@ -300,6 +303,13 @@ export type Database = {
             columns: ["cartao_id"]
             isOneToOne: false
             referencedRelation: "crm_cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_crm_cartoes_credencial_id_fkey"
+            columns: ["credencial_id"]
+            isOneToOne: false
+            referencedRelation: "academia_credenciais"
             referencedColumns: ["id"]
           },
           {
