@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
+import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
@@ -1806,6 +1807,10 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   }>>([]);
   // id do lançamento com o formulário de renovação aberto
   const [renovandoId, setRenovandoId] = useState<string | null>(null);
+  // Cadastro de balcão: quem não é da FitMind não existia em lugar nenhum e
+  // por isso não podia ser lançado. Depois de criar, a renovação abre na hora.
+  const [cadastrando, setCadastrando] = useState(false);
+  const [pessoaNova, setPessoaNova] = useState<{ credencialId: string; nome: string; referencia: string } | null>(null);
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
@@ -1898,6 +1903,43 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
           <option value="vencido_bloqueado">Bloqueados</option>
         </select>
       </div>
+
+      {!cadastrando && !pessoaNova && (
+        <button
+          type="button"
+          onClick={() => { setCadastrando(true); setRenovandoId(null); }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+        >
+          <UserPlus className="h-3.5 w-3.5" /> Cadastrar pessoa nova (não é da FitMind)
+        </button>
+      )}
+
+      {cadastrando && (
+        <CadastrarPessoaAcademia
+          partnerId={partnerId}
+          aoCriar={(p) => { setCadastrando(false); setPessoaNova(p); }}
+          aoCancelar={() => setCadastrando(false)}
+        />
+      )}
+
+      {pessoaNova && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <p className="text-sm font-bold text-white">{pessoaNova.nome}</p>
+          <p className="text-[11px] text-white/50">
+            Identificador <span className="font-mono text-white/70">{pessoaNova.referencia}</span>
+          </p>
+          <RenovarAluno
+            partnerId={partnerId}
+            credencialId={pessoaNova.credencialId}
+            studentId={null}
+            nome={pessoaNova.nome}
+            aoConcluir={() => { setPessoaNova(null); recarregar(); }}
+            aoCancelar={() => setPessoaNova(null)}
+          />
+        </div>
+      )}
+
+
 
       {visiveis.length === 0 ? (
         <p className="py-8 text-center text-sm text-white/50">Nenhum aluno com mensalidade nesta academia.</p>

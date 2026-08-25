@@ -1419,3 +1419,78 @@ export const relatorioAcademia = createServerFn({ method: "POST" })
       negados: number;
     };
   });
+
+/**
+ * Cadastro local de quem não é da FitMind.
+ *
+ * A recepção precisa lançar mensalidade para gente que nunca vai criar conta.
+ * Isso vira uma credencial da própria academia (sem `student_id`), com nome,
+ * telefone e nascimento — o suficiente para achar a pessoa depois e para
+ * cadastrar o rosto no leitor. Não cria usuário, não manda e-mail.
+ */
+export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; nome: string; telefone: string; nascimento: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const nome = (data.nome || "").trim().replace(/\s+/g, " ");
+    if (nome.length < 3) throw new Error("Informe o nome completo.");
+
+    const telefone = (data.telefone || "").replace(/\D/g, "");
+    if (telefone.length < 10 || telefone.length > 11) throw new Error("Telefone inválido (DDD + número).");
+
+    const nascimento = (data.nascimento || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) throw new Error("Informe a data de nascimento.");
+    const nasc = new Date(`${nascimento}T12:00:00`);
+    const anos = (Date.now() - nasc.getTime()) / (365.25 * 24 * 3600 * 1000);
+    if (!Number.isFinite(anos) || anos < 3 || anos > 110) throw new Error("Data de nascimento inválida.");
+
+    // Mesmo telefone na mesma academia é a mesma pessoa. Duplicar aqui
+    // significa duas fichas e duas mensalidades para quem paga uma.
+    const { data: existente } = await admin
+      .from("academia_credenciais")
+      .select("id, referencia, nome_no_equipamento")
+      .eq("partner_id", data.partnerId)
+      .eq("telefone", telefone)
+      .eq("ativo", true)
+      .maybeSingle();
+    if (existente) {
+      const e = existente as { id: string; referencia: string; nome_no_equipamento: string | null };
+      return { credencialId: e.id, referencia: e.referencia, nome: e.nome_no_equipamento ?? nome, jaExistia: true };
+    }
+
+    // Identificador numérico livre: é o que a recepção digita para liberar na
+    // mão e o que amarra o rosto depois.
+    const { data: usados } = await admin
+      .from("academia_credenciais")
+      .select("referencia")
+      .eq("partner_id", data.partnerId)
+      .eq("tipo", "pin");
+    const ocupados = new Set(((usados ?? []) as Array<{ referencia: string }>).map((u) => u.referencia));
+
+    let referencia = "";
+    for (let i = 0; i < 200 && !referencia; i++) {
+      const candidato = String(Math.floor(100000 + Math.random() * 900000));
+      if (!ocupados.has(candidato)) referencia = candidato;
+    }
+    if (!referencia) throw new Error("Não consegui gerar um identificador. Tente de novo.");
+
+    const { data: criada, error } = await admin
+      .from("academia_credenciais")
+      .insert({
+        partner_id: data.partnerId,
+        student_id: null,
+        tipo: "pin",
+        referencia,
+        ativo: true,
+        nome_no_equipamento: nome,
+        telefone,
+        nascimento,
+      } as never)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return { credencialId: (criada as { id: string }).id, referencia, nome, jaExistia: false };
+  });

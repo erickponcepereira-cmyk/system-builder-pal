@@ -218,6 +218,7 @@ export type Database = {
           created_at: string
           id: string
           importado_em: string | null
+          nascimento: string | null
           nome_no_equipamento: string | null
           partner_id: string
           referencia: string
@@ -230,6 +231,7 @@ export type Database = {
           created_at?: string
           id?: string
           importado_em?: string | null
+          nascimento?: string | null
           nome_no_equipamento?: string | null
           partner_id: string
           referencia: string
@@ -242,6 +244,7 @@ export type Database = {
           created_at?: string
           id?: string
           importado_em?: string | null
+          nascimento?: string | null
           nome_no_equipamento?: string | null
           partner_id?: string
           referencia?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.academia_credenciais ADD COLUMN IF NOT EXISTS nascimento date;
