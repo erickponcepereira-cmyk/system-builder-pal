@@ -136,7 +136,7 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await admin
       .from("academia_mensalidades")
-      .select("id, student_id, plano, valor, valido_ate, origem, forma_pagamento, taxa_percentual, taxa_valor, valor_liquido, created_at")
+      .select("id, student_id, credencial_id, plano, valor, valido_ate, origem, forma_pagamento, taxa_percentual, taxa_valor, valor_liquido, created_at")
       .eq("partner_id", data.partnerId)
       // Lançamento cancelado/estornado continua no histórico financeiro, mas não
       // conta para acesso. Mesmo filtro aplicado em acesso_avaliar.
@@ -144,17 +144,42 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
       .order("valido_ate", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const lista = (rows ?? []) as Array<{
-      id: string; student_id: string; plano: string; valor: number; valido_ate: string;
-      origem: string; forma_pagamento: string; taxa_percentual: number; taxa_valor: number;
-      valor_liquido: number; created_at: string;
+    // Cast por `unknown`: o types.ts gerado ainda não tem `credencial_id` nem o
+    // `student_id` anulável, que entraram na migration de 19/08. O Lovable
+    // regenera esse arquivo no sync; quando regenerar, o cast direto volta a
+    // bastar. O banco é a verdade aqui, não o types.ts.
+    const lista = (rows ?? []) as unknown as Array<{
+      id: string; student_id: string | null; credencial_id: string | null; plano: string;
+      valor: number; valido_ate: string; origem: string; forma_pagamento: string;
+      taxa_percentual: number; taxa_valor: number; valor_liquido: number; created_at: string;
     }>;
 
-    // Mantém apenas o registro de maior validade por aluno
-    const porAluno = new Map<string, (typeof lista)[number]>();
-    for (const r of lista) if (!porAluno.has(r.student_id)) porAluno.set(r.student_id, r);
+    /*
+     * Uma linha por PESSOA — e pessoa aqui pode ser credencial do leitor, não só
+     * aluno da plataforma.
+     *
+     * Agrupar por student_id era certo enquanto toda mensalidade tinha aluno.
+     * Depois que o aluno de academia deixou de precisar ser usuário do app, 400
+     * das 401 mensalidades passaram a ter student_id nulo — e todas elas
+     * colapsavam numa única linha com chave nula. A tela mostrava duas pessoas
+     * onde havia quatrocentas, sem dar erro nenhum.
+     *
+     * A mesma chave já é usada por acesso_avaliar_academia no banco. Aqui a
+     * listagem só passou a segui-la.
+     */
+    const chaveDe = (r: { student_id: string | null; credencial_id: string | null }) =>
+      r.credencial_id ?? r.student_id ?? "";
+    const porPessoa = new Map<string, (typeof lista)[number]>();
+    for (const r of lista) {
+      const k = chaveDe(r);
+      if (k && !porPessoa.has(k)) porPessoa.set(k, r);
+    }
 
-    const studentIds = Array.from(porAluno.keys());
+    const registros = Array.from(porPessoa.values());
+    const studentIds = registros.map((r) => r.student_id).filter((x): x is string => Boolean(x));
+    const credIds = registros.map((r) => r.credencial_id).filter((x): x is string => Boolean(x));
+
+    // Nome do aluno da plataforma, quando existe.
     const nomes = new Map<string, string>();
     if (studentIds.length > 0) {
       const { data: studs } = await admin.from("students").select("id, profile_id").in("id", studentIds);
@@ -166,6 +191,19 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
       }
     }
 
+    // Nome e identificador de quem só existe no leitor. Sem isto a recepção vê
+    // uma lista de "Sem nome" e não consegue achar ninguém.
+    const porCredencial = new Map<string, { nome: string; referencia: string }>();
+    if (credIds.length > 0) {
+      const { data: creds } = await admin
+        .from("academia_credenciais")
+        .select("id, nome_no_equipamento, referencia")
+        .in("id", credIds);
+      for (const c of (creds ?? []) as Array<{ id: string; nome_no_equipamento: string | null; referencia: string }>) {
+        porCredencial.set(c.id, { nome: c.nome_no_equipamento?.trim() || "Sem nome no leitor", referencia: c.referencia });
+      }
+    }
+
     // A régua vive só no banco (acesso_classificar). A tela pergunta em vez de
     // recalcular, senão a listagem e a catraca podem discordar.
     const { data: avaliacoes, error: erroAval } = await admin.rpc("acesso_avaliar_academia", {
@@ -173,19 +211,29 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
     });
     if (erroAval) throw new Error(erroAval.message);
 
-    const porStudent = new Map(
-      ((avaliacoes ?? []) as Array<{
-        student_id: string; decisao: string; motivo: string; dias_restantes: number | null;
-      }>).map((a) => [a.student_id, a]),
+    // Mesma chave da listagem: a régua devolve as duas pontas justamente para
+    // que os dois lados casem sem inventar regra nova aqui.
+    const porPessoaAval = new Map(
+      // Mesmo motivo do cast acima: acesso_avaliar_academia já devolve
+      // credencial_id, mas o types.ts ainda descreve a assinatura antiga.
+      ((avaliacoes ?? []) as unknown as Array<{
+        student_id: string | null; credencial_id: string | null;
+        decisao: string; motivo: string; dias_restantes: number | null;
+      }>).map((a) => [chaveDe(a), a]),
     );
 
     return {
       carencia,
-      alunos: Array.from(porAluno.values()).map((r) => {
-        const aval = porStudent.get(r.student_id);
+      alunos: registros.map((r) => {
+        const aval = porPessoaAval.get(chaveDe(r));
+        const cred = r.credencial_id ? porCredencial.get(r.credencial_id) : undefined;
         return {
           ...r,
-          nome: nomes.get(r.student_id) ?? "Sem nome",
+          nome: (r.student_id ? nomes.get(r.student_id) : undefined) ?? cred?.nome ?? "Sem nome",
+          // O identificador do leitor é o que a recepção usa para liberar na mão
+          // e para cadastrar rosto. Sem ele na tela, a pessoa existe e ninguém
+          // consegue agir sobre ela.
+          referencia: cred?.referencia ?? null,
           dias_restantes: aval?.dias_restantes ?? null,
           decisao: aval?.decisao ?? "negado",
           motivo: aval?.motivo ?? "sem_mensalidade",

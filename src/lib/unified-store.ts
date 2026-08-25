@@ -73,6 +73,12 @@ export type UnifiedProduct = {
   challengeTickets: number;
   stock: number | null;
   isSchedulable: boolean;
+  /**
+   * Benefício gratuito do parceiro. Aparece na vitrine para TODO MUNDO — o que
+   * a carteirinha decide é o resgate, não a visibilidade. Esconder de quem não
+   * tem carteirinha é esconder justamente o argumento de tirar uma.
+   */
+  isFreebie: boolean;
   /** Duração do atendimento agendável, em minutos. Alimenta o seletor de horário. */
   durationMinutes: number;
   /** Pontos de carreira do coach por venda. Só faz sentido em modo coach. */
@@ -291,9 +297,9 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     supabase
       .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,partners(fantasy_name,city,upline_coach_id)" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,partners(fantasy_name,city,upline_coach_id)" as never)
       .eq("status" as never, "approved" as never)
-      .eq("kind" as never, "paid" as never)
+      .in("kind" as never, ["paid", "free"] as never)
       .eq("is_active_by_partner" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
       .is("deleted_at" as never, null as never)
@@ -301,11 +307,11 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .limit(5000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
-      .neq("kind" as never, "free" as never)
+      .order("sort_order" as never)
       .order("sort_order" as never)
       .limit(5000),
   ]);
@@ -367,6 +373,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.has_challenge_access ? num(r.challenge_tokens_amount) : 0,
       stock: null,
       isSchedulable: false,
+      isFreebie: false,
       durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
@@ -405,6 +412,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: num(r.challenge_tokens_amount),
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      isFreebie: false,
       durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
@@ -443,6 +451,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: 0,
       stock: null,
       isSchedulable: false,
+      isFreebie: false,
       durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
@@ -481,6 +490,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: 0,
       stock: numOrNull(r.stock),
       isSchedulable: false,
+      isFreebie: false,
       durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
@@ -522,6 +532,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: false,
+      isFreebie: r.kind === "free",
       durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
@@ -563,6 +574,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
       isSchedulable: !!r.is_schedulable,
+      isFreebie: r.kind === "free",
       durationMinutes: num(r.default_duration_minutes) || 30,
       pointsPerSale: 0,
       comissao: null,

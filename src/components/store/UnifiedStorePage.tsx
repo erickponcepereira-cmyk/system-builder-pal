@@ -65,6 +65,14 @@ import {
 } from "@/lib/store-checkout";
 import { type CoachSaleRow, type SaleClient, useCoachContext } from "@/lib/store-coach";
 import { useIndicacao } from "@/lib/store-referral";
+import { StoreFilterButton, StoreFilterSheet } from "@/components/store/StoreFilters";
+import {
+  aplicarFiltros,
+  contarFiltros,
+  FILTROS_VAZIOS,
+  ordenar,
+  type FiltrosDaLoja,
+} from "@/lib/store-filters";
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 import { preflightDeAgendamento } from "@/lib/store-scheduling";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
@@ -109,6 +117,8 @@ export function UnifiedStorePage({
   const [local, setLocal] = useState<StoreLocation>(EMPTY_LOCATION);
   const [ondeEstou, setOndeEstou] = useState<LocalSelecionado>({ modo: "todas" });
   const [seletorAberto, setSeletorAberto] = useState(false);
+  const [filtros, setFiltros] = useState<FiltrosDaLoja>(FILTROS_VAZIOS);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const navigate = useNavigate();
   const [banners, setBanners] = useState<BannerRow[]>([]);
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
@@ -205,9 +215,15 @@ export function UnifiedStorePage({
 
   const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
 
-  const filtered = useMemo(
+  /** Antes dos filtros. É o conjunto que decide qual opção é útil. */
+  const antesDosFiltros = useMemo(
     () => noLocal.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
     [noLocal, query, sectionId],
+  );
+
+  const filtered = useMemo(
+    () => aplicarFiltros(antesDosFiltros, filtros),
+    [antesDosFiltros, filtros],
   );
 
   /** Acabaram os vendedores locais: sobrou so o catalogo nacional. */
@@ -220,7 +236,12 @@ export function UnifiedStorePage({
   const scarcity = useMemo(() => buildScarcity(filtered, stock), [filtered, stock]);
   const recommendations = useMemo(() => buildRecommendations(filtered, ctx), [filtered, ctx]);
   const network = useMemo(() => buildNetwork(filtered, ctx), [filtered, ctx]);
-  const showcase = useMemo(() => sortShowcase(filtered, ctx, stock), [filtered, ctx, stock]);
+  // A ordem de recomendação (compra anterior, escassez, rede) é a que vale
+  // enquanto a pessoa não pedir outra. Só então ela é sobrescrita.
+  const showcase = useMemo(
+    () => ordenar(sortShowcase(filtered, ctx, stock), filtros.ordenacao),
+    [filtered, ctx, stock, filtros.ordenacao],
+  );
 
   const byOrigin = useMemo(() => {
     return (["fitmind", "partner", "professional"] as UnifiedOrigin[])
@@ -600,28 +621,42 @@ export function UnifiedStorePage({
       ) : null}
 
       {/* 1. Carteirinha — o argumento de compra mais forte, e o número já está no banco. */}
+      {/* O número é a promessa; o toque tem de levar até ela. Antes isto era
+          texto morto: mostrava "R$ 1.200 em gratuitos" e não havia caminho. */}
       {browsing && !ctx.cardActive && ctx.freebiesValue > 0 && (
-        <section className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-          <div className="flex items-baseline gap-2">
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/student/freebies" })}
+          className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-left"
+        >
+          <span className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-primary">{fmt(ctx.freebiesValue)}</span>
             <span className="text-[11px] leading-tight text-muted-foreground">
               em {ctx.freebiesCount} gratuitos<br />esperando você
             </span>
-          </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          </span>
+          <span className="mt-2 block text-[11px] leading-relaxed text-muted-foreground">
             Sua carteirinha está inativa. Ela ativa na primeira compra e libera o resgate dos
             gratuitos dos parceiros — cadastrar-se sozinho não basta.
-          </p>
-        </section>
+          </span>
+          <span className="mt-2 block text-[11px] font-bold text-primary">
+            Ver os gratuitos →
+          </span>
+        </button>
       )}
 
       {browsing && ctx.cardActive && ctx.freebiesValue > 0 && (
-        <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-          <p className="text-[11px] leading-relaxed text-emerald-500">
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/student/freebies" })}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-left"
+        >
+          <span className="text-[11px] leading-relaxed text-emerald-500">
             <b>Carteirinha ativa</b> até {new Date(ctx.cardValidUntil as string).toLocaleDateString("pt-BR")} ·
             {" "}{fmt(ctx.freebiesValue)} em gratuitos disponíveis para resgate.
-          </p>
-        </section>
+          </span>
+          <span className="shrink-0 text-[11px] font-bold text-emerald-500">Resgatar →</span>
+        </button>
       )}
 
       {/* Banner: quem abre a loja sem intencao definida nao clica em
@@ -635,22 +670,44 @@ export function UnifiedStorePage({
         />
       )}
 
-      {/* 2. Busca */}
-      <div className="flex items-center gap-2 rounded-full bg-card px-4 py-3">
-        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Busque em toda a loja…"
-          aria-label="Buscar produtos"
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-        />
-        {query && (
-          <button type="button" onClick={() => setQuery("")} aria-label="Limpar busca">
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        )}
+      {/* 2. Busca e filtros. Busca resolve quem sabe o nome; filtro resolve
+             quem sabe o que quer mas não como se chama — e com mil e quinhentos
+             produtos de quatro fontes, o segundo caso é a maioria. */}
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-4 py-3">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Busque em toda a loja…"
+            aria-label="Buscar produtos"
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} aria-label="Limpar busca">
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        <StoreFilterButton filtros={filtros} onAbrir={() => setFiltrosAbertos(true)} />
       </div>
+
+      {/* Filtro ligado muda o que a lista significa. Dizer isso na tela evita
+          a conclusão errada de que a loja não tem o produto. */}
+      {contarFiltros(filtros) > 0 && (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2">
+          <span className="text-[11px] text-muted-foreground">
+            {filtered.length} de {antesDosFiltros.length} produtos, com filtro
+          </span>
+          <button
+            type="button"
+            onClick={() => setFiltros({ ...FILTROS_VAZIOS, ordenacao: filtros.ordenacao })}
+            className="shrink-0 text-[11px] font-bold text-primary"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
 
       {/* 3. Taxonomia como filtro, não como pasta */}
       {usableSections.length > 0 && (
@@ -685,8 +742,21 @@ export function UnifiedStorePage({
         <div className="rounded-2xl bg-card p-8 text-center">
           <ShoppingBag className="mx-auto mb-3 h-7 w-7 text-muted-foreground opacity-50" />
           <p className="text-sm text-muted-foreground">
-            {searching ? `Nada encontrado para "${query}".` : "Nenhum produto nesta seção."}
+            {contarFiltros(filtros) > 0
+              ? "Nenhum produto com esses filtros."
+              : searching
+                ? `Nada encontrado para "${query}".`
+                : "Nenhum produto nesta seção."}
           </p>
+          {contarFiltros(filtros) > 0 && (
+            <button
+              type="button"
+              onClick={() => setFiltros({ ...FILTROS_VAZIOS, ordenacao: filtros.ordenacao })}
+              className="mt-3 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       ) : searching ? (
         <>
@@ -834,6 +904,16 @@ export function UnifiedStorePage({
         </>
       )}
 
+      {filtrosAbertos && (
+        <StoreFilterSheet
+          filtros={filtros}
+          onMudar={setFiltros}
+          produtos={antesDosFiltros}
+          resultado={filtered.length}
+          onClose={() => setFiltrosAbertos(false)}
+        />
+      )}
+
       {seletorAberto && (
         <CitySheet
           cidades={local.cidades}
@@ -869,6 +949,8 @@ export function UnifiedStorePage({
             detail.sourceId,
             !visibilidade.ocultadoPorMim("product", visibilidade.kindDeCuradoria(detail), detail.sourceId),
           )}
+          carteirinhaAtiva={ctx.cardActive}
+          onVerGratuitos={() => navigate({ to: "/student/freebies" })}
         />
       )}
 
@@ -1045,12 +1127,21 @@ function Card({
         )}
 
         <div className="mt-auto flex flex-wrap items-baseline gap-1.5 pt-1">
-          <span className="text-sm font-bold tabular-nums text-foreground">{fmt(product.price)}</span>
-          {product.originalPrice && product.originalPrice > product.price && (
+          {product.isFreebie ? (
+            <span className="text-sm font-bold text-emerald-500">Gratuito</span>
+          ) : (
+            <span className="text-sm font-bold tabular-nums text-foreground">{fmt(product.price)}</span>
+          )}
+          {!product.isFreebie && product.originalPrice && product.originalPrice > product.price && (
             <span className="text-[10px] tabular-nums text-muted-foreground line-through">
               {fmt(product.originalPrice)}
             </span>
           )}
+          {product.isFreebie && product.originalPrice ? (
+            <span className="text-[10px] tabular-nums text-muted-foreground line-through">
+              {fmt(product.originalPrice)}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -1181,6 +1272,8 @@ function DetailSheet({
   podeCurar,
   escondidoDaRede,
   onCurar,
+  carteirinhaAtiva,
+  onVerGratuitos,
 }: {
   product: UnifiedProduct;
   onClose: () => void;
@@ -1199,6 +1292,8 @@ function DetailSheet({
   podeCurar: boolean;
   escondidoDaRede: boolean;
   onCurar: () => void;
+  carteirinhaAtiva: boolean;
+  onVerGratuitos: () => void;
 }) {
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
   const ganhos = modoCoach ? calcularGanhos(product.price, product.comissao, hasUpline) : null;
@@ -1301,7 +1396,28 @@ function DetailSheet({
           </div>
         )}
 
-        {product.isSchedulable && product.sellerCoachId && (
+        {/* Gratuito não passa por carrinho: o resgate acontece na carteirinha,
+            com QR e horário. Mandar para lá é mais honesto que simular uma
+            compra de R$ 0 que o backend não conhece. */}
+        {product.isFreebie && (
+          <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <p className="text-xs font-bold text-emerald-500">Benefício gratuito</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              {carteirinhaAtiva
+                ? "Sua carteirinha está ativa. O resgate acontece na tela de gratuitos, com horário e QR."
+                : "Para resgatar é preciso ter a carteirinha ativa — ela ativa na primeira compra. Você pode ver o benefício mesmo sem ela."}
+            </p>
+            <button
+              type="button"
+              onClick={onVerGratuitos}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white"
+            >
+              {carteirinhaAtiva ? "Resgatar" : "Ver na carteirinha"}
+            </button>
+          </div>
+        )}
+
+        {!product.isFreebie && product.isSchedulable && product.sellerCoachId && (
           <div className="mb-3">
             <AvailabilityPicker
               professionalCoachId={product.sellerCoachId}
@@ -1312,7 +1428,7 @@ function DetailSheet({
           </div>
         )}
 
-        {product.isSchedulable && !product.sellerCoachId ? (
+        {product.isFreebie ? null : product.isSchedulable && !product.sellerCoachId ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
             Este atendimento não tem profissional vinculado, então não há agenda para consultar.
           </p>
