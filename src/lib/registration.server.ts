@@ -836,8 +836,12 @@ export async function upgradeExistingToPartner(input: UpgradeExistingToPartnerIn
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
-  const boundCoachId = await resolveBoundCoachId(profile.id);
-  const uplineCoachId = boundCoachId || clean(input.uplineCoachId);
+  const bound = await resolveBoundCoach(profile.id);
+  // Parceiro exige um coach acima: quem é raiz da própria rede fica sob o
+  // próprio cadastro de coach (comportamento já existente na base).
+  const uplineCoachId = bound.locked
+    ? (bound.coachId ?? bound.selfCoachId)
+    : clean(input.uplineCoachId);
   if (!uplineCoachId) throw new Error("Selecione um coach indicador para continuar.");
 
   const nowIso = new Date().toISOString();
