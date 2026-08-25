@@ -104,6 +104,7 @@ export function RenovarAluno({
           partnerId, credencialId, studentId,
           plano: plano.nome, dias: plano.dias, pagamentos,
           observacao: obs.trim() || undefined,
+          validoAte: validoAte || null,
         },
       });
       const ate = new Date(`${r.valido_ate}T12:00:00`).toLocaleDateString("pt-BR");
@@ -119,9 +120,11 @@ export function RenovarAluno({
   return (
     <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
       <p className="text-[11px] text-white/60">
-        Renovando <strong className="text-white">{nome}</strong>. Os dias entram
-        <strong className="text-white/80"> a partir do vencimento atual</strong> quando ele ainda não passou.
+        Lançando <strong className="text-white">{nome}</strong>. Os dias entram
+        <strong className="text-white/80"> a partir do vencimento atual</strong> quando ele ainda não passou
+        {vencimentoAtual ? ` (hoje vence ${formatDateOnlyBR(vencimentoAtual)})` : ""}.
       </p>
+
 
       <div>
         <p className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Plano</p>
