@@ -1,0 +1,1 @@
+ALTER FUNCTION public.academia_face_enfileirar_credencial(uuid, uuid, text) SECURITY INVOKER;
