@@ -15036,6 +15036,17 @@ export type Database = {
           referencia: string
         }[]
       }
+      academia_face_enfileirar_credencial: {
+        Args: {
+          p_credencial_id: string
+          p_foto_base64: string
+          p_partner_id: string
+        }
+        Returns: {
+          envio_id: string
+          referencia: string
+        }[]
+      }
       academia_faces_a_remover: {
         Args: { p_partner_id: string }
         Returns: {
