@@ -508,11 +508,72 @@ export const corrigirMensalidadeAcademia = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Até quando o aluno ficaria liberado se este lançamento fosse cancelado.
+ *
+ * A recepção precisa ver isso ANTES de confirmar. Cancelar sem saber onde o
+ * acesso vai parar é o tipo de coisa que só aparece dois dias depois, quando a
+ * pessoa é barrada na porta e ninguém liga uma coisa à outra.
+ *
+ * Devolve nulo quando não sobra nenhuma mensalidade ativa — ou seja, o aluno
+ * fica sem acesso nenhum.
+ */
+export const preverCancelamentoAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; mensalidadeId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const { data: alvo } = await admin
+      .from("academia_mensalidades")
+      .select("id, credencial_id, student_id, valido_ate")
+      .eq("id", data.mensalidadeId)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+    const m = alvo as {
+      id: string; credencial_id: string | null; student_id: string | null; valido_ate: string;
+    } | null;
+    if (!m) throw new Error("Lançamento não encontrado nesta academia.");
+
+    // As duas pontas, como no resto do projeto: a mensalidade pode estar presa
+    // à credencial da catraca ou ao aluno da plataforma.
+    let q = admin
+      .from("academia_mensalidades")
+      .select("id, valido_ate")
+      .eq("partner_id", data.partnerId)
+      .eq("status", "ativa")
+      .neq("id", data.mensalidadeId)
+      .order("valido_ate", { ascending: false })
+      .limit(1);
+    q = m.credencial_id
+      ? q.eq("credencial_id", m.credencial_id)
+      : q.eq("student_id", m.student_id as string);
+
+    const { data: resto, error } = await q.maybeSingle();
+    if (error) throw new Error(error.message);
+
+    const sobra = resto as { id: string; valido_ate: string } | null;
+    return {
+      valeAte: m.valido_ate,
+      valeAteDepois: sobra?.valido_ate ?? null,
+      mensalidadeQueSobra: sobra?.id ?? null,
+    };
+  });
+
 export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
     partnerId: string; mensalidadeId: string;
     status: "cancelada" | "estornada"; motivo: string;
+    /**
+     * Nova data de acesso depois do cancelamento.
+     *
+     * Cancelar sozinho já devolve a pessoa ao vencimento anterior — a régua usa
+     * a mensalidade ativa de vencimento mais longe. Isto existe para o caso em
+     * que a recepção quer OUTRA data: cobrou dez dias a mais, corrige para o
+     * dia certo em vez de voltar ao que era.
+     */
+    ajustarValidoAte?: string | null;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin, profileId } = await autorizar(context.userId, data.partnerId);
@@ -549,6 +610,40 @@ export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
       .eq("partner_id", data.partnerId)
       .eq("status", "ativa");
     if (error) throw new Error(error.message);
+
+    // Ajusta o que SOBROU, se pediram uma data diferente. Sem isto a única
+    // saída seria cancelar tudo e lançar de novo — e o aluno ficaria sem acesso
+    // no meio do caminho.
+    const novaData = (data.ajustarValidoAte || "").trim();
+    if (novaData) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(novaData)) throw new Error("Data de acesso inválida.");
+
+      const { data: dono } = await admin
+        .from("academia_mensalidades")
+        .select("credencial_id, student_id")
+        .eq("id", data.mensalidadeId).maybeSingle();
+      const quem = dono as { credencial_id: string | null; student_id: string | null } | null;
+
+      let q = admin
+        .from("academia_mensalidades")
+        .select("id")
+        .eq("partner_id", data.partnerId).eq("status", "ativa")
+        .neq("id", data.mensalidadeId)
+        .order("valido_ate", { ascending: false }).limit(1);
+      q = quem?.credencial_id
+        ? q.eq("credencial_id", quem.credencial_id)
+        : q.eq("student_id", quem?.student_id as string);
+
+      const { data: sobra } = await q.maybeSingle();
+      const alvoAjuste = (sobra as { id: string } | null)?.id;
+      if (alvoAjuste) {
+        const { error: e3 } = await admin
+          .from("academia_mensalidades")
+          .update({ valido_ate: novaData, updated_at: new Date().toISOString() })
+          .eq("id", alvoAjuste).eq("partner_id", data.partnerId);
+        if (e3) throw new Error(e3.message);
+      }
+    }
 
     return { ok: true };
   });

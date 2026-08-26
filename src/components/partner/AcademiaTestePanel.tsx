@@ -31,6 +31,7 @@ import {
   buscarProdutosParaVincular,
   cancelarMensalidadeAcademia,
   corrigirMensalidadeAcademia,
+  preverCancelamentoAcademia,
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
@@ -2242,6 +2243,11 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const listar = useServerFn(listarAlunosAcademia);
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
   const corrigir = useServerFn(corrigirMensalidadeAcademia);
+  const prever = useServerFn(preverCancelamentoAcademia);
+  // Até quando o aluno fica liberado DEPOIS de cancelar. Nulo = não sobra
+  // mensalidade nenhuma, ele fica sem acesso.
+  const [depoisDe, setDepoisDe] = useState<string | null>(null);
+  const [preverPronto, setPreverPronto] = useState(false);
   // Correcao de lancamento errado. Cancelar e lancar de novo tira o aluno da
   // liberacao no meio do caminho -- com fila na porta isso nao serve.
   const [corrigindoId, setCorrigindoId] = useState<string | null>(null);
@@ -2308,7 +2314,10 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
     }
     setSalvandoCancel(true);
     try {
-      await cancelar({ data: { partnerId, mensalidadeId, status: tipoCancel, motivo: motivo.trim() } });
+      await cancelar({ data: {
+        partnerId, mensalidadeId, status: tipoCancel, motivo: motivo.trim(),
+        ajustarValidoAte: depoisDe,
+      } });
       // O lançamento sai da lista porque ela mostra apenas os ativos; a linha
       // continua existindo no banco para o histórico financeiro.
       setLinhas((atual) => atual.filter((l) => l.id !== mensalidadeId));
@@ -2508,7 +2517,19 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         </button>
                         <button
                           type="button"
-                          onClick={() => { setAbertoId(l.id); setCorrigindoId(null); setMotivo(""); setTipoCancel("cancelada"); }}
+                          onClick={() => {
+                            setAbertoId(l.id);
+                            setCorrigindoId(null);
+                            setRenovandoId(null);
+                            setMotivo("");
+                            setTipoCancel("cancelada");
+                            setDepoisDe(null);
+                            setPreverPronto(false);
+                            void prever({ data: { partnerId, mensalidadeId: l.id } })
+                              .then((r) => setDepoisDe(r.valeAteDepois))
+                              .catch(() => setDepoisDe(null))
+                              .finally(() => setPreverPronto(true));
+                          }}
                           className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
                         >
                           <Ban className="h-3 w-3" /> Cancelar
@@ -2591,8 +2612,33 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                   <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
                     <p className="text-[11px] text-white/60">
                       O lançamento continua no histórico financeiro e deixa de valer para acesso.
-                      {l.decisao === "liberado" && " Este aluno perde a liberação imediatamente."}
                     </p>
+
+                    {/*
+                      Onde o acesso vai parar, antes de confirmar.
+                      Cancelar sem ver isso é o tipo de coisa que só aparece dois
+                      dias depois, com a pessoa barrada na porta e ninguém ligando
+                      uma coisa à outra.
+                    */}
+                    {!preverPronto ? (
+                      <p className="text-[11px] text-white/40">Conferindo até quando ele fica liberado…</p>
+                    ) : depoisDe ? (
+                      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
+                        <span className="text-[11px] text-white/60">Depois de cancelar, o acesso vai até</span>
+                        <input
+                          type="date"
+                          value={depoisDe}
+                          onChange={(ev) => setDepoisDe(ev.target.value)}
+                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white"
+                        />
+                        <span className="text-[10px] text-white/40">dá para mudar</span>
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-red-400/20 bg-red-500/5 p-2 text-[11px] text-red-300">
+                        Não sobra nenhuma mensalidade ativa: o aluno fica <strong>sem acesso</strong> assim que
+                        você confirmar.
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <select
                         value={tipoCancel}
