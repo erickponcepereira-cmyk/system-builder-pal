@@ -186,7 +186,7 @@ export function useVisibilidadeLoja(
         return true;
       });
     },
-    [audiencia, cadeia, carregou, coachMode, meuCoachId, vis],
+    [audiencia, cadeia, carregou, coachMode, meuCoachId, meusVendedores, souAdmin, vis],
   );
 
   const secaoVisivel = useCallback(
