@@ -125,6 +125,9 @@ export function UnifiedStorePage({
   const [seletorAberto, setSeletorAberto] = useState(false);
   const [filtros, setFiltros] = useState<FiltrosDaLoja>(FILTROS_VAZIOS);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  /** Aba da vitrine: pago e gratuito não dividem a mesma grade. */
+  const [aba, setAba] = useState<AbaDaLoja>("tudo");
+
   const navigate = useNavigate();
   const [banners, setBanners] = useState<BannerRow[]>([]);
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
