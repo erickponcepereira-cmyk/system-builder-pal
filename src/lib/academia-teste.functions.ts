@@ -1640,7 +1640,20 @@ export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
       .insert({
         partner_id: data.partnerId,
         student_id: null,
-        tipo: "pin",
+        /*
+         * 'facial', não 'pin'.
+         *
+         * A chave única de academia_credenciais é (partner_id, tipo,
+         * referencia) — o tipo faz parte dela. Cadastrando como 'pin', a mesma
+         * pessoa virava DUAS linhas assim que o agente a criasse no leitor e o
+         * import a trouxesse de volta como 'facial'. Aconteceu com a credencial
+         * 537364 em 25/08: duas linhas, uma com a mensalidade e outra com o
+         * vínculo do equipamento.
+         *
+         * E 'facial' é o que ela de fato é: nesta academia a pessoa é
+         * reconhecida por rosto na catraca, não por PIN digitado.
+         */
+        tipo: "facial",
         referencia,
         ativo: true,
         nome_no_equipamento: nome,
