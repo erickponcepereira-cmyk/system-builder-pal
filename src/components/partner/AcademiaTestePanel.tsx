@@ -5,6 +5,7 @@ import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSqu
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
+import { CrmBoard } from "@/components/crm/CrmBoard";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
@@ -1573,6 +1574,8 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
   const [colunas, setColunas] = useState<Array<{ id: string; quadro_id: string; nome: string }>>([]);
   const [regras, setRegras] = useState<Record<string, { quadroId: string; colunaId: string; ativo: boolean }>>({});
   const [emVarios, setEmVarios] = useState<Array<{ nome: string; funis: number; quadros: string }>>([]);
+  // O funil e a vista de trabalho; a automacao e configuracao, olhada de vez em quando.
+  const [vista, setVista] = useState<"funil" | "automacao">("funil");
 
   const carregar = () => {
     setLoading(true);
@@ -1628,8 +1631,48 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
 
   if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
 
+  /*
+   * O quadro mora aqui, não só no painel de parceiro.
+   *
+   * A automação joga cartão num funil que só dava para abrir do outro lado do
+   * sistema — quem cuida da academia tinha que sair daqui, entrar em Parceiro e
+   * procurar o CRM para ver o trabalho que ela mesma gerou. Sem sentido: a
+   * gestão da academia acontece nesta tela.
+   */
+  const quadroDaAcademia = quadros[0]?.id ?? null;
+
   return (
     <div className="space-y-3">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setVista("funil")}
+          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "funil" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+        >
+          Funil
+        </button>
+        <button
+          type="button"
+          onClick={() => setVista("automacao")}
+          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "automacao" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+        >
+          Automação
+        </button>
+      </div>
+
+      {vista === "funil" && (
+        quadroDaAcademia
+          ? <CrmBoard quadroId={quadroDaAcademia} />
+          : (
+            <p className="py-8 text-center text-sm text-white/50">
+              Esta unidade ainda não tem funil de CRM. Crie um na aba Automação
+              escolhendo um quadro para as situações.
+            </p>
+          )
+      )}
+
+      {vista === "automacao" && (
+      <>
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
         <p className="text-[11px] text-white/60">
           Usa os funis que já existem no CRM da unidade. Cada situação manda o
@@ -1722,6 +1765,8 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
             Gerar cartões agora
           </button>
         </>
+      )}
+      </>
       )}
     </div>
   );
