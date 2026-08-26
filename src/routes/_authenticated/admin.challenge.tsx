@@ -97,6 +97,13 @@ function AdminChallengePage() {
   const [enrollStudentId, setEnrollStudentId] = useState("");
   const [enrollGender, setEnrollGender] = useState<"M" | "F">("M");
   const [enrolling, setEnrolling] = useState(false);
+  const [enrollTicketMode, setEnrollTicketMode] = useState<"consume" | "courtesy">("consume");
+  const [ticketInfo, setTicketInfo] = useState<StudentTicketInfo | null>(null);
+  const [grantingTicket, setGrantingTicket] = useState(false);
+  const runEnroll = useServerFn(adminEnrollStudent);
+  const runGrantTickets = useServerFn(grantChallengeTickets);
+  const runTicketInfo = useServerFn(getStudentTicketInfo);
+
 
   // Group CRUD
   const [groupModal, setGroupModal] = useState<{ compId: string; form: GroupForm } | null>(null);
