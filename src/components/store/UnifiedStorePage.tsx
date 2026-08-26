@@ -809,12 +809,32 @@ export function UnifiedStorePage({
         <div className="rounded-2xl bg-card p-8 text-center">
           <ShoppingBag className="mx-auto mb-3 h-7 w-7 text-muted-foreground opacity-50" />
           <p className="text-sm text-muted-foreground">
-            {contarFiltros(filtros) > 0
-              ? "Nenhum produto com esses filtros."
+            {motivoVazio
+              ? `Nenhum produto — a ${motivoVazio} está escondendo o resto.`
               : searching
                 ? `Nada encontrado para "${query}".`
-                : "Nenhum produto nesta seção."}
+                : aba === "gratuitos"
+                  ? "Nenhum gratuito disponível agora."
+                  : "Nenhum produto nesta seção."}
           </p>
+          {achariaEmOutraCidade > 0 && (
+            <button
+              type="button"
+              onClick={() => setOndeEstou({ modo: "todas" })}
+              className="mt-3 rounded-xl bg-card px-4 py-2.5 text-xs font-bold text-primary ring-1 ring-primary/40"
+            >
+              Ver {achariaEmOutraCidade} resultado{achariaEmOutraCidade === 1 ? "" : "s"} em todas as cidades
+            </button>
+          )}
+          {(aba !== "tudo" || sectionId) && (
+            <button
+              type="button"
+              onClick={() => { setAba("tudo"); setSectionId(null); }}
+              className="mt-3 ml-2 rounded-xl bg-card px-4 py-2.5 text-xs font-bold text-primary ring-1 ring-primary/40"
+            >
+              Buscar na loja inteira
+            </button>
+          )}
           {contarFiltros(filtros) > 0 && (
             <button
               type="button"
@@ -830,12 +850,21 @@ export function UnifiedStorePage({
           <p className="text-xs text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "resultado" : "resultados"} em toda a loja.
           </p>
-          {byOrigin.map((group) => (
-            <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
-              <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
-            </Block>
-          ))}
+          {/* Resultado de busca sai em lista única, na ordem de relevância.
+              Agrupar por origem aqui quebrava o motivo de existir da busca: o
+              item mais parecido com o que a pessoa digitou ia parar no fim,
+              embaixo de um cabeçalho que ela não pediu. */}
+          {filtros.ordenacao === "relevancia" ? (
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
+          ) : (
+            byOrigin.map((group) => (
+              <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
+                <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
+              </Block>
+            ))
+          )}
         </>
+
       ) : (
         <>
           {/* 4. Escassez verdadeira — só produto com vaga contada */}
