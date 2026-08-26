@@ -224,7 +224,17 @@ export function UnifiedStorePage({
 
   const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
 
+  /** Quantos itens cada aba teria — o número que aparece na própria aba. */
+  const contagemDaAba = useMemo(() => {
+    const base = noLocal
+      .filter((p) => !sectionId || p.sectionId === sectionId)
+      .filter((p) => matchesQuery(p, query));
+    const gratuitos = base.filter((p) => p.isFreebie).length;
+    return { tudo: base.length, gratuitos, pagos: base.length - gratuitos };
+  }, [noLocal, sectionId, query]);
+
   /** Antes dos filtros. É o conjunto que decide qual opção é útil. */
+
   const antesDosFiltros = useMemo(() => {
     const naSecao = noLocal.filter((p) => !sectionId || p.sectionId === sectionId);
     const naAba = aplicarAba(naSecao, aba);
