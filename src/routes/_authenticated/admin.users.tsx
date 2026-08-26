@@ -40,7 +40,7 @@ interface AuditRow {
 
 function AdminUsersPage() {
   const confirmEmailFn = useServerFn(confirmUserEmailByProfileId);
-  const [tab, setTab] = useState<"users" | "merge" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "merge" | "duplicates" | "audit">("users");
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
