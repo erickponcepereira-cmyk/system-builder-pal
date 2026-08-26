@@ -61,6 +61,26 @@ export const Route = createFileRoute("/api/bot/confirmar")({
           .eq("id", id);
 
         if (error) return json({ erro: error.message }, 500);
+
+        /*
+         * O alvo da campanha anda junto com a mensagem.
+         *
+         * Sem isto ele ficava "enfileirado" para sempre: a mensagem chegava ao
+         * cliente, o painel continuava dizendo que estava na fila, e o resumo
+         * da campanha (que conta por status de alvo) nunca fechava. Foi o que
+         * o Erick viu em 26/08 — "enviada" no conector, "enfileirado" na tela.
+         *
+         * A ligação já existia desde sempre: dispararCampanha grava
+         * `mensagem_id` no alvo. Faltava alguém usar.
+         */
+        await db
+          .from("bot_disparo_alvos")
+          .update({
+            status: status === "enviada" ? "enviado" : "erro",
+            erro: status === "erro" && corpo.erro ? String(corpo.erro).slice(0, 300) : null,
+          })
+          .eq("mensagem_id", id);
+
         return json({ ok: true });
       },
     },
