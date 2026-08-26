@@ -44,6 +44,117 @@ async function contexto(userId: string, disparoId: string) {
 
 const soDigitos = (s: string) => (s || "").replace(/\D/g, "");
 
+/**
+ * Confere que quem chamou pode mandar mensagem por esta academia.
+ *
+ * Mesma regra do `contexto` das campanhas, mas ancorada no parceiro em vez da
+ * campanha: aqui não existe campanha nenhuma, é uma mensagem só.
+ */
+async function contextoParceiro(userId: string, partnerId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as unknown as Db;
+
+  const { data: perfil } = await db.from("profiles").select("id, role").eq("user_id", userId).maybeSingle();
+  const p = perfil as { id: string; role: string } | null;
+  if (!p) throw new Error("Perfil não encontrado");
+
+  if (p.role !== "admin") {
+    const { data: membro } = await db
+      .from("partner_members").select("papel, permissoes")
+      .eq("partner_id", partnerId).eq("profile_id", p.id).maybeSingle();
+    const m = membro as { papel: string; permissoes: string[] | null } | null;
+    const pode = m && (m.papel === "owner" || (m.permissoes ?? []).includes("robo"));
+    if (!pode) throw new Error("Sem permissão para mandar mensagem por esta academia");
+  }
+
+  return { db, profileId: p.id };
+}
+
+/**
+ * Uma mensagem para uma pessoa só, direto do cartão do CRM.
+ *
+ * Existe para tirar o `wa.me` do caminho. Abrir o WhatsApp Web para responder
+ * um lead que já está na tela significa sair do sistema, procurar a conversa
+ * de novo, e voltar — e o que foi dito ali não fica registrado em lugar nenhum.
+ * Por aqui a mensagem entra na mesma fila do resto, com o mesmo "digitando", e
+ * a conversa fica ligada ao cartão.
+ *
+ * NÃO passa por `bot_escolher_conexao` de propósito. Aquela função recusa o
+ * número quando o limite diário do chip acabou — regra certa para campanha,
+ * errada aqui: depois de um disparo grande a recepção ficaria impedida de
+ * responder um cliente que acabou de escrever. Limite existe para rajada, não
+ * para conversa.
+ */
+export const enviarMensagemDireta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      partnerId: z.string().uuid(),
+      telefone: z.string().min(8),
+      nome: z.string().optional(),
+      cartaoId: z.string().uuid().optional(),
+      texto: z.string().trim().min(1).max(4000),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { db } = await contextoParceiro(context.userId, data.partnerId);
+
+    const telefone = soDigitos(data.telefone);
+    if (telefone.length < 10) throw new Error("Telefone incompleto — falta o DDD.");
+
+    const { data: cx } = await db
+      .from("bot_conexoes")
+      .select("id, status")
+      .eq("escopo", "parceiro").eq("owner_id", data.partnerId)
+      .is("arquivado_em", null).is("bloqueado_em", null)
+      .eq("status", "conectado")
+      .order("prioridade")
+      .limit(1).maybeSingle();
+
+    const conexao = cx as { id: string } | null;
+    if (!conexao) {
+      throw new Error("O WhatsApp da academia não está conectado. Abra o conector no computador da recepção.");
+    }
+
+    // Reaproveita a conversa que já existe com este número: duas conversas para
+    // a mesma pessoa dividem o histórico em dois e ninguém acha nada depois.
+    const { data: existente } = await db
+      .from("bot_conversas")
+      .select("id")
+      .eq("conexao_id", conexao.id).eq("telefone", telefone)
+      .maybeSingle();
+
+    let conversaId = (existente as { id: string } | null)?.id ?? null;
+
+    if (!conversaId) {
+      const { data: nova, error } = await db.from("bot_conversas").insert({
+        conexao_id: conexao.id,
+        telefone,
+        nome: data.nome?.trim() || null,
+        cartao_id: data.cartaoId ?? null,
+        // Quem escreveu foi gente, então o robô não entra por cima.
+        estado: "humano",
+      }).select("id").single();
+      if (error) throw new Error(error.message);
+      conversaId = (nova as { id: string }).id;
+    } else {
+      await db.from("bot_conversas")
+        .update({ estado: "humano", ...(data.cartaoId ? { cartao_id: data.cartaoId } : {}) })
+        .eq("id", conversaId);
+    }
+
+    const { error: erroMsg } = await db.from("bot_mensagens").insert({
+      conversa_id: conversaId,
+      direcao: "saida",
+      tipo: "texto",
+      corpo: data.texto.trim(),
+      status: "pendente",
+    });
+    if (erroMsg) throw new Error(erroMsg.message);
+
+    return { ok: true, conversaId };
+  });
+
 /** Puxa os telefones do funil do CRM para dentro da campanha. */
 export const alvosDoFunil = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { enviarMensagemDireta } from "@/lib/bot-disparos.functions";
 import { toast } from "sonner";
 import {
   Plus, X, Loader2, Clock, Phone, Mail, Trash2, ArrowRight,
-  Pencil, Upload, GripVertical, Check,
+  Pencil, Upload, GripVertical, Check, Send,
 } from "lucide-react";
 
 // As tabelas crm_* ainda não estão no types.ts gerado.
@@ -62,7 +64,19 @@ const TIPO_PONTO: Record<string, string> = {
 const campoCls =
   "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-primary/50 focus:outline-none";
 
-export function CrmBoard({ quadroId, tipo = "funil" }: { quadroId: string; tipo?: TipoQuadro }) {
+export function CrmBoard({
+  quadroId,
+  tipo = "funil",
+  partnerId,
+}: {
+  quadroId: string;
+  tipo?: TipoQuadro;
+  /**
+   * Só a academia passa. É o que habilita mandar mensagem pelo próprio sistema
+   * em vez de abrir o WhatsApp Web — os outros quadros continuam com o link.
+   */
+  partnerId?: string;
+}) {
   const [colunas, setColunas] = useState<Coluna[]>([]);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -508,6 +522,7 @@ export function CrmBoard({ quadroId, tipo = "funil" }: { quadroId: string; tipo?
           cartao={aberto}
           colunas={colunas}
           ehFunil={ehFunil}
+          partnerId={partnerId}
           onFechar={() => setAberto(null)}
           onArquivar={() => void arquivar(aberto.id)}
           onSalvo={(c) => {
@@ -543,11 +558,12 @@ const ROTULO_ATIVIDADE: Record<string, string> = {
 };
 
 function DetalheCartao({
-  cartao, colunas, ehFunil, onFechar, onArquivar, onSalvo,
+  cartao, colunas, ehFunil, partnerId, onFechar, onArquivar, onSalvo,
 }: {
   cartao: Cartao;
   colunas: Coluna[];
   ehFunil: boolean;
+  partnerId?: string;
   onFechar: () => void;
   onArquivar: () => void;
   onSalvo: (c: Cartao) => void;
@@ -556,6 +572,9 @@ function DetalheCartao({
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [comentario, setComentario] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [mensagem, setMensagem] = useState("");
+  const [mandando, setMandando] = useState(false);
+  const mandarMensagem = useServerFn(enviarMensagemDireta);
 
   useEffect(() => setForm(cartao), [cartao]);
 
@@ -655,6 +674,54 @@ function DetalheCartao({
             <textarea rows={3} value={form.descricao || ""} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className={`${campoCls} resize-none`} />
           </div>
         </div>
+
+        {/*
+          Mandar mensagem sem sair do sistema.
+
+          O botão "Abrir WhatsApp" continua embaixo, mas ele leva para fora: a
+          recepção perde o cartão de vista, procura a conversa de novo no
+          WhatsApp Web, e o que foi combinado ali não fica registrado em lugar
+          nenhum. Por aqui a mensagem entra na mesma fila do resto — com o
+          mesmo "digitando" — e a conversa fica amarrada a este cartão.
+        */}
+        {partnerId && zap.length >= 10 && (
+          <div className="border-t border-white/5 px-5 py-4">
+            <label className="mb-1 block text-xs text-white/50">
+              Mandar mensagem para {form.contato_nome || form.titulo}
+            </label>
+            <textarea
+              rows={3}
+              value={mensagem}
+              onChange={(e) => setMensagem(e.target.value)}
+              placeholder="Escreva aqui. Sai pelo WhatsApp da academia."
+              className={`${campoCls} resize-none`}
+            />
+            <button
+              type="button"
+              disabled={!mensagem.trim() || mandando}
+              onClick={() => {
+                setMandando(true);
+                void mandarMensagem({ data: {
+                  partnerId,
+                  telefone: form.contato_telefone || "",
+                  nome: form.contato_nome || form.titulo,
+                  cartaoId: cartao.id,
+                  texto: mensagem,
+                } })
+                  .then(() => {
+                    setMensagem("");
+                    toast.success("Na fila. O conector manda em segundos.");
+                  })
+                  .catch((e) => toast.error(e instanceof Error ? e.message : "Não deu para mandar."))
+                  .finally(() => setMandando(false));
+              }}
+              className="mt-2 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40"
+            >
+              {mandando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Mandar pelo sistema
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2 border-t border-white/5 px-5 py-4">
           <button onClick={() => void salvar()} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">

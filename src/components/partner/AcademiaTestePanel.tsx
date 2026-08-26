@@ -1675,7 +1675,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
 
       {vista === "funil" && (
         quadroDaAcademia
-          ? <CrmBoard quadroId={quadroDaAcademia} />
+          ? <CrmBoard quadroId={quadroDaAcademia} partnerId={partnerId} />
           : (
             <p className="py-8 text-center text-sm text-white/50">
               Esta unidade ainda não tem funil de CRM. Crie um na aba Automação

@@ -444,7 +444,7 @@ function PartnerPanel() {
         {abaAtiva === "reports" && <PartnerReports />}
         {abaAtiva === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {abaAtiva === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
-        {abaAtiva === "crm" && crmQuadroId && <CrmBoard quadroId={crmQuadroId} />}
+        {abaAtiva === "crm" && crmQuadroId && partner?.id && <CrmBoard quadroId={crmQuadroId} partnerId={partner.id} />}
             {abaAtiva === "robo" && partner?.id && <PartnerRoboPanel partnerId={partner.id} />}
         {abaAtiva === "members" && unidadeAtiva && <PartnerMembersPanel unidade={unidadeAtiva} />}
         {abaAtiva === "wa_group" && partner && <WhatsappGroupSettings ownerKind="partner" ownerId={partner.id} ownerName={partner.fantasy_name} />}

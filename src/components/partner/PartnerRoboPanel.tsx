@@ -655,6 +655,10 @@ function AbaConversas({ conexoes }: { conexoes: Conexao[] }) {
   const [mensagens, setMensagens] = useState<any[]>([]);
   const [resposta, setResposta] = useState("");
   const [carregando, setCarregando] = useState(true);
+  // Em que etapa do funil esta quem esta falando. Sem isto, responder e as
+  // cegas: a mesma frase serve para quem acabou de chegar e para quem ja
+  // desistiu duas vezes.
+  const [etapas, setEtapas] = useState<Record<string, string>>({});
 
   const ids = useMemo(() => conexoes.map((c) => c.id), [conexoes]);
 
@@ -667,6 +671,20 @@ function AbaConversas({ conexoes }: { conexoes: Conexao[] }) {
       .limit(50);
     setConversas(data || []);
     setCarregando(false);
+
+    const cartoes = (data || []).map((c: any) => c.cartao_id).filter(Boolean);
+    if (!cartoes.length) { setEtapas({}); return; }
+    const { data: cards } = await db.from("crm_cartoes").select("id, coluna_id").in("id", cartoes);
+    const colunaIds = [...new Set((cards || []).map((c: any) => c.coluna_id).filter(Boolean))];
+    if (!colunaIds.length) { setEtapas({}); return; }
+    const { data: cols } = await db.from("crm_colunas").select("id, nome").in("id", colunaIds);
+    const nomeDaColuna = new Map((cols || []).map((c: any) => [c.id, c.nome]));
+    const mapa: Record<string, string> = {};
+    for (const c of cards || []) {
+      const nome = nomeDaColuna.get((c as any).coluna_id);
+      if (nome) mapa[(c as any).id] = nome as string;
+    }
+    setEtapas(mapa);
   }, [ids]);
 
   useEffect(() => { void carregar(); }, [carregar]);
@@ -738,6 +756,11 @@ function AbaConversas({ conexoes }: { conexoes: Conexao[] }) {
               </span>
             </div>
             <p className="font-mono text-xs text-white/40">{c.telefone}</p>
+            {c.cartao_id && etapas[c.cartao_id] && (
+              <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                {etapas[c.cartao_id]}
+              </span>
+            )}
             {c.ultima_mensagem_em && (
               <p className="mt-0.5 text-xs text-white/25">{new Date(c.ultima_mensagem_em).toLocaleString("pt-BR")}</p>
             )}
@@ -806,6 +829,7 @@ function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: b
   const [nome, setNome] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [criando, setCriando] = useState(false);
+  const [intervalo, setIntervalo] = useState("20");
 
   const carregar = useCallback(async () => {
     const [d, q] = await Promise.all([
@@ -826,7 +850,7 @@ function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: b
     setCriando(true);
     const { data, error } = await db.from("bot_disparos").insert({
       escopo: "parceiro", owner_id: partnerId, nome: nome.trim(), mensagem: mensagem.trim(),
-      status: "rascunho", intervalo_segundos: 20,
+      status: "rascunho", intervalo_segundos: Math.max(5, Number(intervalo) || 20),
     }).select("*").single();
     setCriando(false);
     if (error) { toast.error("Não deu para criar"); return; }
@@ -864,6 +888,24 @@ function AbaDisparos({ partnerId, temNumero }: { partnerId: string; temNumero: b
             placeholder="Nome da campanha (ex.: Desafio de janeiro)" className={campo} />
           <textarea rows={3} value={mensagem} onChange={(e) => setMensagem(e.target.value)}
             placeholder="Oi {nome}! Abriram as inscrições do desafio…" className={`${campo} resize-none`} />
+          {/*
+            O intervalo era fixo em 20s no codigo. E a protecao mais importante
+            do chip e a academia nao podia nem ver, quanto mais ajustar: lista
+            grande pede mais folga, aviso urgente para poucos pede menos.
+          */}
+          <label className="flex flex-wrap items-center gap-2 text-xs text-white/50">
+            Uma mensagem a cada
+            <input
+              type="number" min={5} max={600}
+              value={intervalo}
+              onChange={(e) => setIntervalo(e.target.value)}
+              className="w-20 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-sm text-white focus:outline-none"
+            />
+            segundos
+            {Number(intervalo) < 15 && (
+              <span className="text-amber-300">— abaixo de 15s o WhatsApp costuma reclamar</span>
+            )}
+          </label>
           <button onClick={() => void criar()} disabled={criando}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
             {criando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
