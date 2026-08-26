@@ -24,7 +24,41 @@ export const COACH_COMMISSION_OPTIONS = [10, 20, 30, 40, 50] as const;
 export type CoachCommissionPct = (typeof COACH_COMMISSION_OPTIONS)[number];
 
 // % da comissão do coach destinados à rede (default)
-export const NETWORK_SPLIT = { l1: 3, l2: 2, l3: 1 } as const;
+export const NETWORK_SPLIT: { l1: number; l2: number; l3: number } = { l1: 3, l2: 2, l3: 1 };
+
+/**
+ * Alinha os padroes do front com a taxa vigente do banco.
+ *
+ * Estes numeros viviam cravados aqui E dentro de seis funcoes SQL. Enquanto
+ * fossem duas copias, mudar a taxa num lugar so fazia a tela mostrar um valor
+ * e a venda cobrar outro. Agora o SQL le taxas_vigentes e o front le daqui,
+ * alimentado por esta funcao.
+ *
+ * A mutacao e proposital: os consumidores leem as propriedades na hora do
+ * calculo, entao passam a ver o valor novo sem precisar de re-render.
+ */
+export function aplicarTaxasVigentes(t: Record<string, unknown> | null | undefined): void {
+  if (!t) return;
+  const num = (v: unknown): number | null => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const cartao = num(t.maquininha_cartao);
+  const pix = num(t.maquininha_pix);
+  const imposto = num(t.imposto_pct);
+  const sistema = num(t.sistema_pct);
+  const l1 = num(t.rede_l1_pct);
+  const l2 = num(t.rede_l2_pct);
+  const l3 = num(t.rede_l3_pct);
+  if (cartao !== null) DEFAULT_PARTNER_FEES.cardFeePct = cartao;
+  if (pix !== null) DEFAULT_PARTNER_FEES.pixFeePct = pix;
+  if (imposto !== null) DEFAULT_PARTNER_FEES.taxPct = imposto;
+  if (sistema !== null) DEFAULT_PARTNER_FEES.systemFeePct = sistema;
+  if (l1 !== null) NETWORK_SPLIT.l1 = l1;
+  if (l2 !== null) NETWORK_SPLIT.l2 = l2;
+  if (l3 !== null) NETWORK_SPLIT.l3 = l3;
+}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
