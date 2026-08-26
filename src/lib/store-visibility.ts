@@ -146,18 +146,26 @@ export function useVisibilidadeLoja(
       const prontinho = carregou && vis.loaded;
 
       return produtos.filter((p) => {
+        // Admin vê o catálogo inteiro. Não é conveniência: sem isso o admin
+        // cadastra um produto restrito, não o encontra na loja e conclui que
+        // o cadastro falhou.
+        const meuProduto = !!p.sellerId && meusVendedores.includes(p.sellerId);
+        if (souAdmin) return true;
+
         // --- 1. público-alvo ---
         const aud = p.visibilityAudiences;
         if (aud && aud.length > 0 && !aud.includes(audiencia)) return false;
 
         // --- 3. produto restrito a rede ---
-        if (p.restrictToNetworks) {
+        if (p.restrictToNetworks && !meuProduto) {
           if (!prontinho) return false;
           const permitidos = p.allowedCoachIds || [];
           const naRede = permitidos.some((id) => id === meuCoachId || cadeia.includes(id));
-          const souCriador = !!p.creatorCoachId && cadeia.includes(p.creatorCoachId);
+          const souCriador = !!p.creatorCoachId
+            && (cadeia.includes(p.creatorCoachId) || p.creatorCoachId === meuCoachId);
           if (!naRede && !souCriador) return false;
         }
+
 
         if (!prontinho) return true;
 
