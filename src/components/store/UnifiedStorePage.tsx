@@ -19,6 +19,7 @@ import { useVisibilidadeLoja } from "@/lib/store-visibility";
 import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
 import {
+  buscar,
   foldText,
   groupBySeller,
   loadUnifiedCatalog,
@@ -27,6 +28,7 @@ import {
   type UnifiedOrigin,
   type UnifiedProduct,
 } from "@/lib/unified-store";
+
 import {
   aplicarLocal,
   type CidadeComLoja,
