@@ -69,12 +69,16 @@ import { type CoachSaleRow, type SaleClient, useCoachContext } from "@/lib/store
 import { useIndicacao } from "@/lib/store-referral";
 import { StoreFilterButton, StoreFilterSheet } from "@/components/store/StoreFilters";
 import {
+  type AbaDaLoja,
+  aplicarAba,
   aplicarFiltros,
   contarFiltros,
   FILTROS_VAZIOS,
+  motivoDoVazio,
   ordenar,
   type FiltrosDaLoja,
 } from "@/lib/store-filters";
+
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 import { preflightDeAgendamento } from "@/lib/store-scheduling";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
