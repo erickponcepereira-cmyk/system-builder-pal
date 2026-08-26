@@ -144,3 +144,37 @@ export function opcoesUteis(produtos: UnifiedProduct[]) {
       })),
   };
 }
+
+/** As três abas da vitrine. Gratuito e pago não dividem grade. */
+export type AbaDaLoja = "tudo" | "comprar" | "gratuitos";
+
+export function aplicarAba(produtos: UnifiedProduct[], aba: AbaDaLoja): UnifiedProduct[] {
+  if (aba === "comprar") return produtos.filter((p) => !p.isFreebie);
+  if (aba === "gratuitos") return produtos.filter((p) => p.isFreebie);
+  return produtos;
+}
+
+/**
+ * Qual filtro está deixando a lista vazia.
+ *
+ * Estado vazio sem motivo é o pior resultado possível: a pessoa conclui que a
+ * loja não tem o produto quando na verdade ela mesma o excluiu. Devolve o
+ * rótulo do primeiro filtro que, sozinho, explica o vazio.
+ */
+export function motivoDoVazio(
+  antes: UnifiedProduct[],
+  f: FiltrosDaLoja,
+): string | null {
+  if (antes.length === 0) return null;
+  const testes: Array<{ rotulo: string; f: FiltrosDaLoja }> = [];
+  if (f.faixa !== null) testes.push({ rotulo: `faixa de preço "${FAIXAS[f.faixa].rotulo}"`, f: { ...f, faixa: null } });
+  if (f.origens.length > 0) testes.push({ rotulo: "filtro de origem", f: { ...f, origens: [] } });
+  if (f.soGratuitos) testes.push({ rotulo: "filtro de gratuitos", f: { ...f, soGratuitos: false } });
+  if (f.comCarteirinha) testes.push({ rotulo: "filtro de carteirinha", f: { ...f, comCarteirinha: false } });
+  if (f.comTickets) testes.push({ rotulo: "filtro de tickets", f: { ...f, comTickets: false } });
+  for (const t of testes) {
+    if (aplicarFiltros(antes, t.f).length > 0) return t.rotulo;
+  }
+  return testes.length > 0 ? "os filtros aplicados" : null;
+}
+
