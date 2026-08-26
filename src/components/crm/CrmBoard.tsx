@@ -284,7 +284,7 @@ export function CrmBoard({ quadroId, tipo = "funil" }: { quadroId: string; tipo?
         </span>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 lg:max-h-[calc(100vh-19rem)] lg:overflow-y-hidden">
         {colunas.map((coluna) => {
           const lista = daColuna(coluna.id);
           const cheia = coluna.limite_cartoes != null && lista.length >= coluna.limite_cartoes;
@@ -302,7 +302,7 @@ export function CrmBoard({ quadroId, tipo = "funil" }: { quadroId: string; tipo?
                 if (arrastando) void mover(arrastando, coluna.id);
                 setArrastando(null);
               }}
-              className={`w-72 shrink-0 rounded-2xl border p-3 transition-colors ${
+              className={`flex w-72 shrink-0 flex-col rounded-2xl border p-3 transition-colors ${
                 alvo === coluna.id ? "border-primary/40" : "border-white/5"
               }`}
               style={{ backgroundColor: "#151515" }}
@@ -362,7 +362,7 @@ export function CrmBoard({ quadroId, tipo = "funil" }: { quadroId: string; tipo?
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="min-h-0 flex-1 space-y-2 lg:overflow-y-auto">
                 {lista.map((cartao) => (
                   <div
                     key={cartao.id}

@@ -53,6 +53,7 @@ import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiBotFilaRouteImport } from './routes/api.bot.fila'
 import { Route as ApiBotEventosRouteImport } from './routes/api.bot.eventos'
+import { Route as ApiBotAtualizacaoRouteImport } from './routes/api.bot.atualizacao'
 import { Route as ApiBotConfirmarRouteImport } from './routes/api.bot.confirmar'
 import { Route as AuthenticatedUpgradeRoleRouteImport } from './routes/_authenticated/upgrade.$role'
 import { Route as AuthenticatedStudentWorkoutRouteImport } from './routes/_authenticated/student.workout'
@@ -391,6 +392,11 @@ const ApiBotFilaRoute = ApiBotFilaRouteImport.update({
 const ApiBotEventosRoute = ApiBotEventosRouteImport.update({
   id: '/api/bot/eventos',
   path: '/api/bot/eventos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotAtualizacaoRoute = ApiBotAtualizacaoRouteImport.update({
+  id: '/api/bot/atualizacao',
+  path: '/api/bot/atualizacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBotConfirmarRoute = ApiBotConfirmarRouteImport.update({
@@ -1207,6 +1213,7 @@ export interface FileRoutesByFullPath {
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/atualizacao': typeof ApiBotAtualizacaoRoute
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
@@ -1365,6 +1372,7 @@ export interface FileRoutesByTo {
   '/student/support': typeof AuthenticatedStudentSupportRoute
   '/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/atualizacao': typeof ApiBotAtualizacaoRoute
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
@@ -1527,6 +1535,7 @@ export interface FileRoutesById {
   '/_authenticated/student/support': typeof AuthenticatedStudentSupportRoute
   '/_authenticated/student/workout': typeof AuthenticatedStudentWorkoutRoute
   '/_authenticated/upgrade/$role': typeof AuthenticatedUpgradeRoleRoute
+  '/api/bot/atualizacao': typeof ApiBotAtualizacaoRoute
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
@@ -1689,6 +1698,7 @@ export interface FileRouteTypes {
     | '/student/support'
     | '/student/workout'
     | '/upgrade/$role'
+    | '/api/bot/atualizacao'
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
@@ -1847,6 +1857,7 @@ export interface FileRouteTypes {
     | '/student/support'
     | '/student/workout'
     | '/upgrade/$role'
+    | '/api/bot/atualizacao'
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
@@ -2008,6 +2019,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/support'
     | '/_authenticated/student/workout'
     | '/_authenticated/upgrade/$role'
+    | '/api/bot/atualizacao'
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
@@ -2067,6 +2079,7 @@ export interface RootRouteChildren {
   ResultadoTokenRoute: typeof ResultadoTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiBotAtualizacaoRoute: typeof ApiBotAtualizacaoRoute
   ApiBotConfirmarRoute: typeof ApiBotConfirmarRoute
   ApiBotEventosRoute: typeof ApiBotEventosRoute
   ApiBotFilaRoute: typeof ApiBotFilaRoute
@@ -2393,6 +2406,13 @@ declare module '@tanstack/react-router' {
       path: '/api/bot/eventos'
       fullPath: '/api/bot/eventos'
       preLoaderRoute: typeof ApiBotEventosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/atualizacao': {
+      id: '/api/bot/atualizacao'
+      path: '/api/bot/atualizacao'
+      fullPath: '/api/bot/atualizacao'
+      preLoaderRoute: typeof ApiBotAtualizacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bot/confirmar': {
@@ -3549,6 +3569,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultadoTokenRoute: ResultadoTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiBotAtualizacaoRoute: ApiBotAtualizacaoRoute,
   ApiBotConfirmarRoute: ApiBotConfirmarRoute,
   ApiBotEventosRoute: ApiBotEventosRoute,
   ApiBotFilaRoute: ApiBotFilaRoute,

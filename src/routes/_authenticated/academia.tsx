@@ -127,7 +127,14 @@ function PainelAcademia() {
         </div>
       )}
 
-      <main className="mx-auto max-w-3xl px-4 py-4">
+      {/*
+        O painel nasceu para celular e ficou preso em max-w-3xl: 768px no meio
+        de um monitor de recepcao, com o resto da tela vazio. Quem opera a
+        academia trabalha sentado num computador o dia inteiro.
+
+        Continua estreito no celular; abre conforme a tela cresce.
+      */}
+      <main className="mx-auto w-full max-w-3xl px-4 py-4 lg:max-w-6xl lg:px-6 xl:max-w-[1600px] xl:px-8">
         {academias.length === 0 ? (
           <div className="mt-12 flex flex-col items-center gap-3 text-center">
             <Dumbbell className="h-10 w-10 text-white/20" />

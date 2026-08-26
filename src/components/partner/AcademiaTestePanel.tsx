@@ -112,7 +112,9 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           </p>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto">
+        {/* Rola no celular, quebra em linhas no computador: com 12 abas,
+            rolar lateralmente para achar "Configurações" e trabalho a toa. */}
+        <div className="flex gap-2 overflow-x-auto lg:flex-wrap lg:overflow-visible">
           {([
             ["relatorio", "Relatório"],
             ["alunos", "Alunos da academia"],
