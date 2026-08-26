@@ -475,17 +475,39 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     });
   };
 
+  /**
+   * O catálogo FitMind mora numa tabela só, lida de dois jeitos.
+   *
+   * `products` é a mesma tabela nas duas consultas: a primeira traz o modelo
+   * antigo (preço variável, dias de carteirinha, tickets), a segunda traz o
+   * modelo novo (seção, categoria, público-alvo, estoque). Em 26/08/2026 as
+   * duas devolvem exatamente as mesmas 80 linhas — e a vitrine mostrava cada
+   * produto duas vezes, uma como `challenge-` e outra como `item-`.
+   *
+   * A correção é fundir por id, e a linha antiga é a canônica de propósito:
+   * é ela que vira `plan-` no carrinho, que é o formato que o
+   * `create_store_order` já entende (`kind = 'plan'`). Trocar isso mudaria o
+   * tipo gravado no pedido de plano para produto físico/digital.
+   */
+  const modeloPorId = new Map<string, Record<string, unknown>>();
+  for (const r of (modelRes.data as unknown as Array<Record<string, unknown>>) || []) {
+    modeloPorId.set(String(r.id), r);
+  }
+  const jaEntrou = new Set<string>();
 
-  // --- FitMind: catálogo legado ---
+  // --- FitMind: catálogo legado (fundido com o modelo novo) ---
   for (const r of (legacyRes.data as unknown as Array<Record<string, unknown>>) || []) {
+    const id = String(r.id);
+    const m = modeloPorId.get(id);
+    jaEntrou.add(id);
     push({
-      id: `challenge-${r.id}`,
-      sourceId: String(r.id),
+      id: `challenge-${id}`,
+      sourceId: id,
       origin: "fitmind",
       kind: "challenge",
       title: String(r.name || ""),
-      description: (r.subtitle as string) || (r.description as string) || null,
-      imageUrl: firstImage(r.image_url, r.image_urls),
+      description: (r.subtitle as string) || (r.description as string) || (m?.short_description as string) || null,
+      imageUrl: firstImage(r.image_url, r.image_urls) || firstImage(m?.image_url, m?.image_urls),
       imageUrls: galeria(r.image_url, r.image_urls),
       isPriceRange: r.is_price_range === true,
       minPrice: numOrNull(r.min_price),
@@ -497,16 +519,18 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       sellerCity: null,
       sellerId: null,
       isFeatured: false,
-      creatorCoachId: null,
-      visibilityAudiences: null,
+      // Seção, categoria e público-alvo só existem no modelo novo; sem
+      // aproveitá-los aqui o produto fundido sumiria das prateleiras.
+      creatorCoachId: (m?.creator_coach_id as string) || null,
+      visibilityAudiences: Array.isArray(m?.visibility_audiences) ? (m!.visibility_audiences as string[]) : null,
       restrictToNetworks: false,
       allowedCoachIds: [],
-      subcategoryId: null,
-      sectionId: null,
-      categoryId: null,
+      subcategoryId: (m?.subcategory_id as string) || null,
+      sectionId: (m?.section_id as string) || null,
+      categoryId: (m?.category_id as string) || null,
       cardDays: num(r.card_access_days),
       challengeTickets: r.has_challenge_access ? num(r.challenge_tokens_amount) : 0,
-      stock: null,
+      stock: m ? numOrNull(m.stock) : null,
       isSchedulable: false,
       isFreebie: false,
       durationMinutes: 30,
@@ -515,8 +539,9 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     });
   }
 
-  // --- FitMind: modelo novo (já nasce com seção/categoria) ---
+  // --- FitMind: modelo novo que ainda não apareceu acima ---
   for (const r of (modelRes.data as unknown as Array<Record<string, unknown>>) || []) {
+    if (jaEntrou.has(String(r.id))) continue;
     push({
       id: `item-${r.id}`,
       sourceId: String(r.id),
@@ -553,6 +578,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       comissao: comissaoDoProduto(r),
     });
   }
+
 
   // --- FitMind: cursos ---
   for (const r of (digitalRes.data as Array<Record<string, unknown>>) || []) {
