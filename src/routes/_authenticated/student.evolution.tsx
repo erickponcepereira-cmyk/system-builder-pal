@@ -12,6 +12,7 @@ import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
 import { useEnabledModules } from "@/lib/use-modules";
 import { RunningTab } from "@/components/student/running/RunningTab";
+import { AcademiaTab, carregarMinhaAcademia, type MinhaAcademia } from "@/components/student/AcademiaTab";
 
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
@@ -34,7 +35,22 @@ function StudentEvolution() {
   const { cropToBlob } = useImageCrop();
   const { isEnabled, profileId } = useEnabledModules();
   const runningEnabled = isEnabled("corrida");
-  const [tab, setTab] = useState<"evolucao" | "corrida">("evolucao");
+  const [tab, setTab] = useState<"evolucao" | "corrida" | "academia">("evolucao");
+  // A aba Academia so existe para quem esta vinculado a uma credencial de
+  // academia. Quem nao esta nem ve que ela existe.
+  const [minhaAcademia, setMinhaAcademia] = useState<MinhaAcademia | null>(null);
+
+  // Silencioso de propósito: quem não tem academia não precisa ver erro nenhum,
+  // e a aba simplesmente não nasce.
+  useEffect(() => {
+    carregarMinhaAcademia().then(setMinhaAcademia).catch(() => setMinhaAcademia(null));
+  }, []);
+
+  const abas = [
+    { key: "evolucao" as const, label: "Evolução", icon: Trophy },
+    ...(runningEnabled ? [{ key: "corrida" as const, label: "Corrida", icon: Footprints }] : []),
+    ...(minhaAcademia ? [{ key: "academia" as const, label: "Academia", icon: Camera }] : []),
+  ];
 
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -136,12 +152,9 @@ function StudentEvolution() {
         <h1 className="text-2xl font-bold text-foreground">Evolução</h1>
       </header>
 
-      {runningEnabled && (
-        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-1.5">
-          {([
-            { key: "evolucao" as const, label: "Evolução", icon: Trophy },
-            { key: "corrida" as const, label: "Corrida", icon: Footprints },
-          ]).map((t) => (
+      {abas.length > 1 && (
+        <div className={`grid gap-2 rounded-2xl bg-card p-1.5 ${abas.length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          {abas.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
