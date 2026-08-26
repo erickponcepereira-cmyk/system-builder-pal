@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
@@ -30,6 +30,7 @@ import {
   avaliarDayUse,
   buscarProdutosParaVincular,
   cancelarMensalidadeAcademia,
+  corrigirMensalidadeAcademia,
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
@@ -2240,6 +2241,12 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
 function ListaAlunos({ partnerId }: { partnerId: string }) {
   const listar = useServerFn(listarAlunosAcademia);
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
+  const corrigir = useServerFn(corrigirMensalidadeAcademia);
+  // Correcao de lancamento errado. Cancelar e lancar de novo tira o aluno da
+  // liberacao no meio do caminho -- com fila na porta isso nao serve.
+  const [corrigindoId, setCorrigindoId] = useState<string | null>(null);
+  const [corr, setCorr] = useState({ valor: 0, forma: "dinheiro", ate: "", motivo: "" });
+  const [salvandoCorr, setSalvandoCorr] = useState(false);
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
     id: string; student_id: string | null; credencial_id: string | null;
@@ -2270,6 +2277,28 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
     setAbertoId(null);
     setMotivo("");
     setTipoCancel("cancelada");
+  };
+
+  const confirmarCorrecao = async (mensalidadeId: string) => {
+    if (corr.motivo.trim().length < 3) {
+      toast.error("Descreva o que está sendo corrigido.");
+      return;
+    }
+    setSalvandoCorr(true);
+    try {
+      await corrigir({ data: {
+        partnerId, mensalidadeId,
+        valor: corr.valor, formaPagamento: corr.forma,
+        validoAte: corr.ate, motivo: corr.motivo.trim(),
+      } });
+      setCorrigindoId(null);
+      recarregar();
+      toast.success("Lançamento corrigido.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível corrigir.");
+    } finally {
+      setSalvandoCorr(false);
+    }
   };
 
   const confirmarCancelamento = async (mensalidadeId: string) => {
@@ -2467,7 +2496,19 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         )}
                         <button
                           type="button"
-                          onClick={() => { setAbertoId(l.id); setMotivo(""); setTipoCancel("cancelada"); }}
+                          onClick={() => {
+                            setCorrigindoId(l.id);
+                            setAbertoId(null);
+                            setRenovandoId(null);
+                            setCorr({ valor: l.valor ?? 0, forma: "dinheiro", ate: l.valido_ate, motivo: "" });
+                          }}
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                        >
+                          <Pencil className="h-3 w-3" /> Corrigir
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setAbertoId(l.id); setCorrigindoId(null); setMotivo(""); setTipoCancel("cancelada"); }}
                           className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
                         >
                           <Ban className="h-3 w-3" /> Cancelar
@@ -2488,6 +2529,62 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     aoConcluir={() => { setRenovandoId(null); recarregar(); }}
                     aoCancelar={() => setRenovandoId(null)}
                   />
+                )}
+
+                {corrigindoId === l.id && (
+                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                    <p className="text-[11px] text-white/60">
+                      Corrige o lançamento no lugar, sem tirar o aluno da liberação.
+                      O valor anterior fica registrado na observação.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <CurrencyInputBRL
+                        value={corr.valor}
+                        onChange={(v) => setCorr((c) => ({ ...c, valor: v }))}
+                        className="w-32 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                      />
+                      <select
+                        value={corr.forma}
+                        onChange={(ev) => setCorr((c) => ({ ...c, forma: ev.target.value }))}
+                        className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                      >
+                        {FORMAS_PAGAMENTO.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="date"
+                        value={corr.ate}
+                        onChange={(ev) => setCorr((c) => ({ ...c, ate: ev.target.value }))}
+                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <input
+                      value={corr.motivo}
+                      onChange={(ev) => setCorr((c) => ({ ...c, motivo: ev.target.value }))}
+                      placeholder="O que está sendo corrigido (obrigatório)"
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCorrigindoId(null)}
+                        disabled={salvandoCorr}
+                        className="rounded-xl px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void confirmarCorrecao(l.id)}
+                        disabled={salvandoCorr}
+                        className="flex items-center gap-1.5 rounded-xl bg-primary/20 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/30 disabled:opacity-50"
+                      >
+                        {salvandoCorr ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
+                        Salvar correção
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {abertoId === l.id && (

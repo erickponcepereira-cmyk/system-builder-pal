@@ -429,6 +429,85 @@ export const registrarMensalidadeAcademia = createServerFn({ method: "POST" })
  * Cancela um lançamento sem apagá-lo: a linha permanece para o histórico
  * financeiro e para a conciliação de taxas, apenas deixa de valer para acesso.
  */
+/**
+ * Corrige um lançamento já feito: valor, forma de pagamento e vencimento.
+ *
+ * Cancelar e lançar de novo parece equivalente e não é: o cancelamento some da
+ * lista de ativos, e quem estava liberado pela catraca perde o acesso no
+ * intervalo entre uma coisa e outra. Recepção com fila na porta não tem esse
+ * intervalo. Digitou 145 no lugar de 120 — corrige e pronto.
+ *
+ * A correção NÃO é silenciosa. O valor anterior e o motivo vão para a
+ * observação: um lançamento que muda de valor sem deixar rastro é exatamente o
+ * que ninguém consegue explicar no fechamento do mês.
+ */
+export const corrigirMensalidadeAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; mensalidadeId: string;
+    valor: number; formaPagamento: string; validoAte: string; motivo: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const motivo = (data.motivo || "").trim();
+    if (motivo.length < 3) throw new Error("Descreva o que está sendo corrigido.");
+
+    const valor = Number(data.valor);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error("Valor inválido.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.validoAte || "")) {
+      throw new Error("Data de validade inválida.");
+    }
+
+    // O partner_id no filtro impede corrigir lançamento de outra academia mesmo
+    // com um id válido em mãos.
+    const { data: alvo, error: erroBusca } = await admin
+      .from("academia_mensalidades")
+      .select("id, status, valor, valido_ate, forma_pagamento, taxa_percentual, observacao")
+      .eq("id", data.mensalidadeId)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+    if (erroBusca) throw new Error(erroBusca.message);
+    if (!alvo) throw new Error("Lançamento não encontrado nesta academia.");
+
+    const atual = alvo as {
+      status: string; valor: number; valido_ate: string; forma_pagamento: string;
+      taxa_percentual: number; observacao: string | null;
+    };
+    if (atual.status !== "ativa") {
+      throw new Error("Este lançamento não está ativo. Cancelado ou estornado não se corrige — lance de novo.");
+    }
+
+    // A taxa acompanha o valor. Deixar taxa_valor e valor_liquido com o número
+    // antigo faria o fluxo de caixa fechar errado sem ninguém perceber.
+    const pct = Number(atual.taxa_percentual ?? 0);
+    const taxaValor = Math.round(valor * (pct / 100) * 100) / 100;
+
+    const carimbo = new Date().toLocaleDateString("pt-BR");
+    const rastro = `[${carimbo}] corrigido de R$ ${Number(atual.valor).toFixed(2)} para R$ ${valor.toFixed(2)}`
+      + (atual.valido_ate !== data.validoAte ? `, vencimento de ${atual.valido_ate} para ${data.validoAte}` : "")
+      + `: ${motivo}`;
+
+    const { error } = await admin
+      .from("academia_mensalidades")
+      .update({
+        valor,
+        forma_pagamento: data.formaPagamento,
+        valido_ate: data.validoAte,
+        taxa_valor: taxaValor,
+        valor_liquido: Math.round((valor - taxaValor) * 100) / 100,
+        observacao: [atual.observacao?.trim(), rastro].filter(Boolean).join("\n"),
+        registrado_por: profileId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.mensalidadeId)
+      .eq("partner_id", data.partnerId)
+      .eq("status", "ativa");
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
 export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
