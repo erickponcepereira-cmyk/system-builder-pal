@@ -225,15 +225,35 @@ export function UnifiedStorePage({
   const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
 
   /** Antes dos filtros. É o conjunto que decide qual opção é útil. */
-  const antesDosFiltros = useMemo(
-    () => noLocal.filter((p) => (!sectionId || p.sectionId === sectionId) && matchesQuery(p, query)),
-    [noLocal, query, sectionId],
-  );
+  const antesDosFiltros = useMemo(() => {
+    const naSecao = noLocal.filter((p) => !sectionId || p.sectionId === sectionId);
+    const naAba = aplicarAba(naSecao, aba);
+    // `buscar` já devolve por relevância: título antes de descrição, começo de
+    // palavra antes de erro de digitação. Manter a ordem alfabética aqui seria
+    // jogar fora justamente o que faz a busca parecer certa.
+    return foldText(query) ? buscar(naAba, query) : naAba;
+  }, [noLocal, query, sectionId, aba]);
 
   const filtered = useMemo(
     () => aplicarFiltros(antesDosFiltros, filtros),
     [antesDosFiltros, filtros],
   );
+
+  /** Quando a lista zera por causa de filtro, o vazio explica o motivo. */
+  const motivoVazio = useMemo(
+    () => (filtered.length === 0 ? motivoDoVazio(antesDosFiltros, filtros) : null),
+    [filtered.length, antesDosFiltros, filtros],
+  );
+
+  /**
+   * Busca sem resultado na cidade escolhida, mas com resultado no catálogo
+   * inteiro. Vale dizer isso: a pessoa acha que o produto não existe quando na
+   * verdade é o recorte de cidade que está escondendo.
+   */
+  const achariaEmOutraCidade = useMemo(() => {
+    if (filtered.length > 0 || !foldText(query)) return 0;
+    return visiveis.filter((p) => matchesQuery(p, query)).length;
+  }, [filtered.length, query, visiveis]);
 
   /** Acabaram os vendedores locais: sobrou so o catalogo nacional. */
   const semLojaLocal =
@@ -246,11 +266,13 @@ export function UnifiedStorePage({
   const recommendations = useMemo(() => buildRecommendations(filtered, ctx), [filtered, ctx]);
   const network = useMemo(() => buildNetwork(filtered, ctx), [filtered, ctx]);
   // A ordem de recomendação (compra anterior, escassez, rede) é a que vale
-  // enquanto a pessoa não pedir outra. Só então ela é sobrescrita.
-  const showcase = useMemo(
-    () => ordenar(sortShowcase(filtered, ctx, stock), filtros.ordenacao),
-    [filtered, ctx, stock, filtros.ordenacao],
-  );
+  // enquanto a pessoa não pedir outra. Durante uma busca quem manda é a
+  // relevância — e por isso a vitrine não reordena nesse caso.
+  const showcase = useMemo(() => {
+    if (searching && filtros.ordenacao === "relevancia") return filtered;
+    return ordenar(sortShowcase(filtered, ctx, stock), filtros.ordenacao);
+  }, [filtered, ctx, stock, filtros.ordenacao, searching]);
+
 
   const byOrigin = useMemo(() => {
     return (["fitmind", "partner", "professional"] as UnifiedOrigin[])
