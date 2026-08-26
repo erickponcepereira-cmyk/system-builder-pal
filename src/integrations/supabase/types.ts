@@ -828,6 +828,7 @@ export type Database = {
           forma_pagamento: string
           id: string
           importado_de: string | null
+          limite_dias_semana: number | null
           motivo_cancelamento: string | null
           observacao: string | null
           origem: string
@@ -852,6 +853,7 @@ export type Database = {
           forma_pagamento: string
           id?: string
           importado_de?: string | null
+          limite_dias_semana?: number | null
           motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
@@ -876,6 +878,7 @@ export type Database = {
           forma_pagamento?: string
           id?: string
           importado_de?: string | null
+          limite_dias_semana?: number | null
           motivo_cancelamento?: string | null
           observacao?: string | null
           origem?: string
@@ -943,6 +946,7 @@ export type Database = {
           created_at: string
           dias: number
           id: string
+          limite_dias_semana: number | null
           nome: string
           partner_id: string
           posicao: number
@@ -954,6 +958,7 @@ export type Database = {
           created_at?: string
           dias?: number
           id?: string
+          limite_dias_semana?: number | null
           nome: string
           partner_id: string
           posicao?: number
@@ -965,6 +970,7 @@ export type Database = {
           created_at?: string
           dias?: number
           id?: string
+          limite_dias_semana?: number | null
           nome?: string
           partner_id?: string
           posicao?: number
@@ -13482,6 +13488,59 @@ export type Database = {
           },
         ]
       }
+      taxas_vigentes: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          id: string
+          imposto_pct: number
+          maquininha_cartao: number
+          maquininha_pix: number
+          motivo: string | null
+          rede_l1_pct: number
+          rede_l2_pct: number
+          rede_l3_pct: number
+          sistema_pct: number
+          vigente_desde: string
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          imposto_pct: number
+          maquininha_cartao: number
+          maquininha_pix: number
+          motivo?: string | null
+          rede_l1_pct: number
+          rede_l2_pct: number
+          rede_l3_pct: number
+          sistema_pct: number
+          vigente_desde: string
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          imposto_pct?: number
+          maquininha_cartao?: number
+          maquininha_pix?: number
+          motivo?: string | null
+          rede_l1_pct?: number
+          rede_l2_pct?: number
+          rede_l3_pct?: number
+          sistema_pct?: number
+          vigente_desde?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taxas_vigentes_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       terms_acceptances: {
         Row: {
           accepted_at: string
@@ -14966,7 +15025,11 @@ export type Database = {
         Args: { p_agente_id: string; p_segredo: string }
         Returns: {
           ate: string
+          dia: string
+          hoje: boolean
+          limite: number
           ref: string
+          usados: number
         }[]
       }
       academia_agente_sombra_registrar: {
@@ -16783,6 +16846,29 @@ export type Database = {
       sync_coach_evaluation_client_for_student: {
         Args: { _student_id: string }
         Returns: undefined
+      }
+      taxa_vigente: {
+        Args: { _data?: string }
+        Returns: {
+          criado_em: string
+          criado_por: string | null
+          id: string
+          imposto_pct: number
+          maquininha_cartao: number
+          maquininha_pix: number
+          motivo: string | null
+          rede_l1_pct: number
+          rede_l2_pct: number
+          rede_l3_pct: number
+          sistema_pct: number
+          vigente_desde: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "taxas_vigentes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       test_mode_cutoff: { Args: never; Returns: string }
       touch_my_activity: { Args: never; Returns: undefined }
