@@ -1666,3 +1666,35 @@ export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
 
     return { credencialId: (criada as { id: string }).id, referencia, nome, jaExistia: false };
   });
+
+export type CategoriaRelatorio =
+  | "liberados" | "a_vencer" | "em_carencia" | "bloqueados" | "vencem_em_7"
+  | "sem_mensalidade" | "entradas" | "manuais" | "barradas";
+
+/**
+ * Quem são as pessoas por trás de um número do relatório.
+ *
+ * "274 bloqueados" não dá para trabalhar: a recepção precisa da lista para
+ * ligar, cobrar ou renovar. Sai da mesma régua que produziu o número, então os
+ * dois nunca discordam.
+ */
+export const pessoasDoRelatorio = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; categoria: CategoriaRelatorio; de?: string; ate?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_relatorio_pessoas" as never, {
+      p_partner_id: data.partnerId,
+      p_categoria: data.categoria,
+      p_de: data.de ?? null,
+      p_ate: data.ate ?? null,
+    } as never);
+    if (error) throw new Error(error.message);
+    return {
+      pessoas: (r ?? []) as unknown as Array<{
+        nome: string; telefone: string | null; referencia: string | null;
+        student_id: string | null; credencial_id: string | null;
+        valido_ate: string | null; dias: number | null; detalhe: string | null;
+      }>,
+    };
+  });
