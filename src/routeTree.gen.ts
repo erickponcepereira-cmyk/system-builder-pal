@@ -53,8 +53,8 @@ import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiBotFilaRouteImport } from './routes/api.bot.fila'
 import { Route as ApiBotEventosRouteImport } from './routes/api.bot.eventos'
-import { Route as ApiBotAtualizacaoRouteImport } from './routes/api.bot.atualizacao'
 import { Route as ApiBotConfirmarRouteImport } from './routes/api.bot.confirmar'
+import { Route as ApiBotAtualizacaoRouteImport } from './routes/api.bot.atualizacao'
 import { Route as AuthenticatedUpgradeRoleRouteImport } from './routes/_authenticated/upgrade.$role'
 import { Route as AuthenticatedStudentWorkoutRouteImport } from './routes/_authenticated/student.workout'
 import { Route as AuthenticatedStudentSupportRouteImport } from './routes/_authenticated/student.support'
@@ -394,14 +394,14 @@ const ApiBotEventosRoute = ApiBotEventosRouteImport.update({
   path: '/api/bot/eventos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiBotAtualizacaoRoute = ApiBotAtualizacaoRouteImport.update({
-  id: '/api/bot/atualizacao',
-  path: '/api/bot/atualizacao',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiBotConfirmarRoute = ApiBotConfirmarRouteImport.update({
   id: '/api/bot/confirmar',
   path: '/api/bot/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotAtualizacaoRoute = ApiBotAtualizacaoRouteImport.update({
+  id: '/api/bot/atualizacao',
+  path: '/api/bot/atualizacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedUpgradeRoleRoute =
@@ -2408,18 +2408,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBotEventosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/bot/atualizacao': {
-      id: '/api/bot/atualizacao'
-      path: '/api/bot/atualizacao'
-      fullPath: '/api/bot/atualizacao'
-      preLoaderRoute: typeof ApiBotAtualizacaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/bot/confirmar': {
       id: '/api/bot/confirmar'
       path: '/api/bot/confirmar'
       fullPath: '/api/bot/confirmar'
       preLoaderRoute: typeof ApiBotConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/atualizacao': {
+      id: '/api/bot/atualizacao'
+      path: '/api/bot/atualizacao'
+      fullPath: '/api/bot/atualizacao'
+      preLoaderRoute: typeof ApiBotAtualizacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/upgrade/$role': {

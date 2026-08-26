@@ -10,12 +10,13 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
       academia_acessos_negados: {
         Row: {
+          detalhe: string | null
           id: string
           motivo: string
           origem: string
@@ -25,6 +26,7 @@ export type Database = {
           tentado_em: string
         }
         Insert: {
+          detalhe?: string | null
           id?: string
           motivo: string
           origem?: string
@@ -34,6 +36,7 @@ export type Database = {
           tentado_em?: string
         }
         Update: {
+          detalhe?: string | null
           id?: string
           motivo?: string
           origem?: string
@@ -1785,6 +1788,7 @@ export type Database = {
           status_detalhe: string | null
           updated_at: string
           uso: string
+          versao: string | null
           visto_em: string | null
           webhook_segredo: string
         }
@@ -1810,6 +1814,7 @@ export type Database = {
           status_detalhe?: string | null
           updated_at?: string
           uso?: string
+          versao?: string | null
           visto_em?: string | null
           webhook_segredo?: string
         }
@@ -1835,6 +1840,7 @@ export type Database = {
           status_detalhe?: string | null
           updated_at?: string
           uso?: string
+          versao?: string | null
           visto_em?: string | null
           webhook_segredo?: string
         }
@@ -2133,6 +2139,7 @@ export type Database = {
           created_at: string
           direcao: string
           disparo_id: string | null
+          entregue_em: string | null
           enviada_em: string | null
           enviada_por: string | null
           erro: string | null
@@ -2150,6 +2157,7 @@ export type Database = {
           created_at?: string
           direcao: string
           disparo_id?: string | null
+          entregue_em?: string | null
           enviada_em?: string | null
           enviada_por?: string | null
           erro?: string | null
@@ -2167,6 +2175,7 @@ export type Database = {
           created_at?: string
           direcao?: string
           disparo_id?: string | null
+          entregue_em?: string | null
           enviada_em?: string | null
           enviada_por?: string | null
           erro?: string | null
@@ -4948,6 +4957,30 @@ export type Database = {
           status?: string
           updated_at?: string
           year?: number
+        }
+        Relationships: []
+      }
+      conector_versoes: {
+        Row: {
+          arquivos: Json
+          created_at: string
+          id: string
+          notas: string | null
+          versao: string
+        }
+        Insert: {
+          arquivos: Json
+          created_at?: string
+          id?: string
+          notas?: string | null
+          versao: string
+        }
+        Update: {
+          arquivos?: Json
+          created_at?: string
+          id?: string
+          notas?: string | null
+          versao?: string
         }
         Relationships: []
       }
@@ -14867,6 +14900,13 @@ export type Database = {
           total: number
         }[]
       }
+      academia_agente_credenciais_pendentes: {
+        Args: { p_agente_id: string; p_segredo: string }
+        Returns: {
+          nome: string
+          referencia: string
+        }[]
+      }
       academia_agente_enviar: {
         Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
         Returns: number
@@ -14967,26 +15007,6 @@ export type Database = {
       academia_avisos_semear: {
         Args: { p_partner_id: string }
         Returns: number
-      }
-      academia_meu_rosto_enfileirar: {
-        Args: { p_foto_base64: string }
-        Returns: {
-          envio_id: string
-          referencia: string
-        }[]
-      }
-      academia_minha_credencial: {
-        Args: never
-        Returns: {
-          academia: string
-          decisao: string
-          dias_restantes: number
-          envio_pendente: boolean
-          motivo: string
-          referencia: string
-          tem_rosto: boolean
-          valido_ate: string
-        }[]
       }
       academia_buscar_aluno: {
         Args: { p_partner_id: string; p_termo: string }
@@ -15133,6 +15153,26 @@ export type Database = {
         Args: { p_partner_id: string }
         Returns: number
       }
+      academia_meu_rosto_enfileirar: {
+        Args: { p_foto_base64: string }
+        Returns: {
+          envio_id: string
+          referencia: string
+        }[]
+      }
+      academia_minha_credencial: {
+        Args: never
+        Returns: {
+          academia: string
+          decisao: string
+          dias_restantes: number
+          envio_pendente: boolean
+          motivo: string
+          referencia: string
+          tem_rosto: boolean
+          valido_ate: string
+        }[]
+      }
       academia_pagamento_confirmado: {
         Args: { p_transaction_id: string }
         Returns: boolean
@@ -15178,6 +15218,24 @@ export type Database = {
       academia_relatorio: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: Json
+      }
+      academia_relatorio_pessoas: {
+        Args: {
+          p_ate?: string
+          p_categoria: string
+          p_de?: string
+          p_partner_id: string
+        }
+        Returns: {
+          credencial_id: string
+          detalhe: string
+          dias: number
+          nome: string
+          referencia: string
+          student_id: string
+          telefone: string
+          valido_ate: string
+        }[]
       }
       academia_renovar:
         | {
