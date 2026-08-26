@@ -83,6 +83,10 @@ export function useVisibilidadeLoja(
   const [meuCoachId, setMeuCoachId] = useState<string | null>(null);
   const [cadeia, setCadeia] = useState<string[]>([]);
   const [carregou, setCarregou] = useState(false);
+  /** Admin enxerga o catálogo inteiro — inclusive produto restrito a rede. */
+  const [souAdmin, setSouAdmin] = useState(false);
+  /** Ids de vendedor que são meus: parceiro que eu opero, meu próprio coach. */
+  const [meusVendedores, setMeusVendedores] = useState<string[]>([]);
 
   useEffect(() => {
     let vivo = true;
@@ -92,13 +96,32 @@ export function useVisibilidadeLoja(
         if (!user) { if (vivo) setCarregou(true); return; }
 
         const { data: profile } = await supabase
-          .from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+          .from("profiles").select("id,role").eq("user_id", user.id).maybeSingle();
 
-        if (profile?.id) {
-          const { data: student } = await supabase
-            .from("students").select("coach_id").eq("profile_id", profile.id).maybeSingle();
-          if (vivo) setMeuCoachId((student as { coach_id?: string | null } | null)?.coach_id ?? null);
+        const perfil = profile as { id?: string; role?: string | null } | null;
+
+        if (perfil?.id) {
+          const [studentRes, coachRes, partnerRes, membroRes] = await Promise.all([
+            supabase.from("students").select("coach_id").eq("profile_id", perfil.id).maybeSingle(),
+            supabase.from("coaches").select("id").eq("profile_id", perfil.id).maybeSingle(),
+            supabase.from("partners").select("id").eq("profile_id", perfil.id),
+            supabase.from("partner_members").select("partner_id").eq("profile_id", perfil.id),
+          ]);
+          if (vivo) {
+            setMeuCoachId((studentRes.data as { coach_id?: string | null } | null)?.coach_id ?? null);
+            const meus = [
+              (coachRes.data as { id?: string } | null)?.id,
+              ...(((partnerRes.data as Array<{ id: string }> | null) || []).map((p) => p.id)),
+              ...(((membroRes.data as Array<{ partner_id: string }> | null) || []).map((p) => p.partner_id)),
+            ].filter(Boolean) as string[];
+            setMeusVendedores(meus);
+          }
         }
+
+        // O papel de admin vem da RPC, não do campo do perfil: é a mesma
+        // verdade que o backend usa para decidir acesso.
+        const { data: admin } = await supabase.rpc("is_admin" as never, { _user_id: user.id } as never);
+        if (vivo) setSouAdmin(admin === true || perfil?.role === "admin");
 
         // Mesma RPC que a loja de parceiros usa para decidir quem vê produto
         // restrito a rede.
@@ -113,6 +136,7 @@ export function useVisibilidadeLoja(
     })();
     return () => { vivo = false; };
   }, []);
+
 
   const filtrar = useCallback(
     (produtos: UnifiedProduct[]): UnifiedProduct[] => {
