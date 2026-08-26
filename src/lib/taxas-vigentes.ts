@@ -15,16 +15,17 @@ import { aplicarTaxasVigentes } from "@/lib/partnerFinance";
  * estao na tabela hoje. Uma tela que nao carrega a taxa e melhor do que uma
  * tela que nao carrega.
  */
-export async function carregarTaxasVigentes(): Promise<void> {
+export async function carregarTaxasVigentes(): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc("taxa_vigente" as never, {} as never);
     if (error) {
       console.warn("[taxas-vigentes] nao foi possivel ler a taxa vigente", error);
-      return;
+      return false;
     }
     const linha = Array.isArray(data) ? data[0] : data;
-    aplicarTaxasVigentes(linha as Record<string, unknown> | null);
+    return aplicarTaxasVigentes(linha as Record<string, unknown> | null);
   } catch (e) {
     console.warn("[taxas-vigentes] falha inesperada ao ler a taxa vigente", e);
+    return false;
   }
 }

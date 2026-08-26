@@ -3,7 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { calculateDistribution, type ValueSlot, type PaymentFeeConfig } from "@/lib/financialEngine";
-import { computeFromCharge, DEFAULT_PARTNER_FEES, type CoachCommissionPct } from "@/lib/partnerFinance";
+import { computeFromCharge, DEFAULT_PARTNER_FEES, NETWORK_SPLIT, type CoachCommissionPct } from "@/lib/partnerFinance";
+import { carregarTaxasVigentesServidor } from "@/lib/taxas-vigentes.server";
 import { z } from "zod";
 
 
@@ -95,16 +96,19 @@ function mapSlotRow(s: any): ValueSlot {
   };
 }
 
+/**
+ * Le da taxa vigente, nao mais de payment_fee_configs.
+ *
+ * payment_fee_configs era a terceira copia dos mesmos percentuais de
+ * maquininha. Enquanto o SQL da venda lia taxas_vigentes e esta tela lia a
+ * outra tabela, dava para as duas discordarem sem ninguem perceber.
+ */
 async function loadDefaultFeeConfig(): Promise<PaymentFeeConfig> {
-  const { data } = await supabaseAdmin
-    .from("payment_fee_configs")
-    .select("card_fee_percentage,card_fee_3x12_percentage,pix_fee_percentage")
-    .eq("is_default", true)
-    .maybeSingle();
+  await carregarTaxasVigentesServidor();
   return {
-    card_fee_percentage: Number(data?.card_fee_percentage ?? 4.98),
-    card_fee_3x12_percentage: Number(data?.card_fee_3x12_percentage ?? 4.98),
-    pix_fee_percentage: Number(data?.pix_fee_percentage ?? 0.99),
+    card_fee_percentage: DEFAULT_PARTNER_FEES.cardFeePct,
+    card_fee_3x12_percentage: DEFAULT_PARTNER_FEES.cardFeePct,
+    pix_fee_percentage: DEFAULT_PARTNER_FEES.pixFeePct,
   };
 }
 
@@ -300,9 +304,9 @@ export const listSimulatorProducts = createServerFn({ method: "GET" })
         credit_fee_percentage: feesOverride.cardFeePct,
         tax_percentage: feesOverride.taxPct,
         commission_coach: commPct,
-        commission_level1: 3,
-        commission_level2: 2,
-        commission_level3: 1,
+        commission_level1: NETWORK_SPLIT.l1,
+        commission_level2: NETWORK_SPLIT.l2,
+        commission_level3: NETWORK_SPLIT.l3,
         base_distributable: Math.max(0, price - pixBd.paymentFee - pixBd.tax),
       };
     };

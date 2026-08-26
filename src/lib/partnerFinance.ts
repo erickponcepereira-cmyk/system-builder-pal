@@ -36,9 +36,13 @@ export const NETWORK_SPLIT: { l1: number; l2: number; l3: number } = { l1: 3, l2
  *
  * A mutacao e proposital: os consumidores leem as propriedades na hora do
  * calculo, entao passam a ver o valor novo sem precisar de re-render.
+ *
+ * Devolve `true` se algum numero mudou. Quem chama usa isso para mandar a tela
+ * recalcular: mutar o objeto nao dispara re-render sozinho, entao uma tela que
+ * ja renderizou antes de a taxa chegar continuaria exibindo o numero velho.
  */
-export function aplicarTaxasVigentes(t: Record<string, unknown> | null | undefined): void {
-  if (!t) return;
+export function aplicarTaxasVigentes(t: Record<string, unknown> | null | undefined): boolean {
+  if (!t) return false;
   const num = (v: unknown): number | null => {
     if (v === null || v === undefined || v === "") return null;
     const n = Number(v);
@@ -51,13 +55,22 @@ export function aplicarTaxasVigentes(t: Record<string, unknown> | null | undefin
   const l1 = num(t.rede_l1_pct);
   const l2 = num(t.rede_l2_pct);
   const l3 = num(t.rede_l3_pct);
-  if (cartao !== null) DEFAULT_PARTNER_FEES.cardFeePct = cartao;
-  if (pix !== null) DEFAULT_PARTNER_FEES.pixFeePct = pix;
-  if (imposto !== null) DEFAULT_PARTNER_FEES.taxPct = imposto;
-  if (sistema !== null) DEFAULT_PARTNER_FEES.systemFeePct = sistema;
-  if (l1 !== null) NETWORK_SPLIT.l1 = l1;
-  if (l2 !== null) NETWORK_SPLIT.l2 = l2;
-  if (l3 !== null) NETWORK_SPLIT.l3 = l3;
+  let mudou = false;
+  const set = (alvo: Record<string, number>, chave: string, valor: number | null) => {
+    if (valor === null || alvo[chave] === valor) return;
+    alvo[chave] = valor;
+    mudou = true;
+  };
+  const fees = DEFAULT_PARTNER_FEES as unknown as Record<string, number>;
+  const rede = NETWORK_SPLIT as unknown as Record<string, number>;
+  set(fees, "cardFeePct", cartao);
+  set(fees, "pixFeePct", pix);
+  set(fees, "taxPct", imposto);
+  set(fees, "systemFeePct", sistema);
+  set(rede, "l1", l1);
+  set(rede, "l2", l2);
+  set(rede, "l3", l3);
+  return mudou;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;

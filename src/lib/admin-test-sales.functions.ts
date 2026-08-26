@@ -300,6 +300,10 @@ async function createStoreSimulation(input: SimulateInput) {
   // Aplica as mesmas taxas usadas no card do coach (DEFAULT_PARTNER_FEES)
   // para que base_distributable do RPC bata com o cálculo exibido na esteira.
   const { DEFAULT_PARTNER_FEES } = await import("@/lib/partnerFinance");
+  // Server function: roda em outro processo, onde ninguem chamou a leitura do
+  // navegador. Sem isto a venda de teste usaria a taxa antiga.
+  const { carregarTaxasVigentesServidor } = await import("@/lib/taxas-vigentes.server");
+  await carregarTaxasVigentesServidor();
   const isPix = (input.paymentMethod || "pix") === "pix";
   const feePct = isPix ? DEFAULT_PARTNER_FEES.pixFeePct : DEFAULT_PARTNER_FEES.cardFeePct;
   const round2 = (n: number) => Math.round(n * 100) / 100;

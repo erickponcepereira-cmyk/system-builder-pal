@@ -115,7 +115,11 @@ function RootComponent() {
     // Alinha os percentuais do front com a tabela taxas_vigentes do banco.
     // Sem isto, partnerFinance.ts fica com uma copia propria dos numeros e a
     // tela pode mostrar um valor enquanto a venda cobra outro.
-    void carregarTaxasVigentes();
+    void carregarTaxasVigentes().then((mudou) => {
+      // Mutar as constantes nao dispara re-render. Se a taxa chegou depois de a
+      // tela ja ter desenhado, ela continuaria exibindo o percentual velho.
+      if (mudou) void router.invalidate();
+    });
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
     // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
