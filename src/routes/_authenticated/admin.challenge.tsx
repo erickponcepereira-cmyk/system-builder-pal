@@ -1018,7 +1018,13 @@ function AdminChallengePage() {
             <h3 className="font-bold text-foreground">Inscrever Aluno</h3>
             <div>
               <label className="text-xs text-muted-foreground">Aluno</label>
-              <select value={enrollStudentId} onChange={e => setEnrollStudentId(e.target.value)}
+              <select value={enrollStudentId} onChange={async e => {
+                const id = e.target.value;
+                setEnrollStudentId(id);
+                setTicketInfo(null);
+                if (!id) return;
+                try { setTicketInfo(await runTicketInfo({ data: { studentId: id } })); } catch { /* silencioso */ }
+              }}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
                 <option value="">Selecione...</option>
                 {students.map(s => (
@@ -1028,6 +1034,36 @@ function AdminChallengePage() {
                 ))}
               </select>
             </div>
+            {enrollStudentId && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+                {ticketInfo ? (
+                  <>
+                    <p className="text-foreground">
+                      Tickets disponíveis: <b>{ticketInfo.balance}</b>{" "}
+                      <span className="text-muted-foreground">({ticketInfo.consumed} já usados de {ticketInfo.earned})</span>
+                    </p>
+                    {ticketInfo.balance <= 0 && (
+                      <p className="mt-1 text-amber-400">
+                        Sem ticket disponível. Conceda um ticket ou inscreva como cortesia.
+                      </p>
+                    )}
+                    <div className="mt-2 flex items-center gap-2">
+                      <button onClick={grantTicket} disabled={grantingTicket}
+                        className="rounded-lg bg-primary/15 px-3 py-1.5 font-bold text-primary disabled:opacity-60">
+                        {grantingTicket ? "Concedendo..." : "Conceder ticket"}
+                      </button>
+                      <label className="flex items-center gap-1.5 text-muted-foreground">
+                        <input type="checkbox" checked={enrollTicketMode === "courtesy"}
+                          onChange={e => setEnrollTicketMode(e.target.checked ? "courtesy" : "consume")} />
+                        Inscrever como cortesia (sem consumir ticket)
+                      </label>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Carregando tickets...</p>
+                )}
+              </div>
+            )}
             <div>
               <label className="text-xs text-muted-foreground">Gênero</label>
               <div className="mt-1 flex gap-3">
@@ -1039,6 +1075,7 @@ function AdminChallengePage() {
                 ))}
               </div>
             </div>
+
             <div className="flex gap-3">
               <button onClick={() => setEnrollModal(null)} className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
               <button onClick={enrollManually} disabled={enrolling || !enrollStudentId}
