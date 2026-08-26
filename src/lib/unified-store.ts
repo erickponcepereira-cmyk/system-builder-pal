@@ -108,7 +108,7 @@ export type UnifiedCatalog = {
 export function foldText(value: string): string {
   return String(value || "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
 }
@@ -140,12 +140,103 @@ function expand(text: string): string {
   return extra ? `${base} ${extra}` : base;
 }
 
-/** Um produto casa a busca se todos os termos digitados aparecerem no índice. */
-export function matchesQuery(product: UnifiedProduct, query: string): boolean {
-  const q = foldText(query);
-  if (!q) return true;
-  return q.split(/\s+/).every((term) => product.haystack.includes(term));
+/** Quebra em palavras já normalizadas, sem pontuação e sem vazio. */
+export function palavras(text: string): string[] {
+  return foldText(text)
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter(Boolean);
 }
+
+/**
+ * Distância de edição limitada a 1.
+ *
+ * Não é Levenshtein completo de propósito: só precisamos saber se "dunamys" é
+ * "dunamis" com uma letra trocada. Parar em 1 mantém a busca barata mesmo com
+ * mil e quinhentos produtos e evita o efeito colateral clássico da tolerância
+ * generosa — "top" casar com "loja".
+ */
+function ateUmErro(a: string, b: string): boolean {
+  if (a === b) return true;
+  const da = a.length - b.length;
+  if (da > 1 || da < -1) return false;
+  let i = 0;
+  let j = 0;
+  let erros = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++erros > 1) return false;
+    if (a.length > b.length) i++;
+    else if (a.length < b.length) j++;
+    else { i++; j++; }
+  }
+  return true;
+}
+
+/**
+ * Quanto um termo casa com uma lista de palavras.
+ *
+ * 3 = a palavra inteira, 2 = começo da palavra (é o que faz "dunam" achar
+ * "Dunamis" enquanto a pessoa ainda digita), 1 = uma letra errada. Zero é não
+ * casou, e um termo que não casa em lugar nenhum descarta o produto — busca
+ * de marketplace é E, não OU.
+ */
+function pontoDoTermo(term: string, words: string[]): number {
+  let melhor = 0;
+  for (const w of words) {
+    if (w === term) return 3;
+    if (w.startsWith(term)) { melhor = Math.max(melhor, 2); continue; }
+    if (term.length >= 5 && w.length >= 4 && ateUmErro(term, w)) melhor = Math.max(melhor, 1);
+  }
+  return melhor;
+}
+
+const PESO = { titulo: 6, vendedor: 3, resto: 1 } as const;
+
+/**
+ * Pontuação do produto para a busca. `-1` quer dizer "não casa".
+ *
+ * O peso por campo é o que separa uma busca útil de uma lista aleatória: quem
+ * digita "dunamis" quer o produto que se chama Dunamis antes de qualquer
+ * produto cuja descrição menciona Dunamis.
+ */
+export function scoreQuery(product: UnifiedProduct, query: string): number {
+  const termos = palavras(query);
+  if (termos.length === 0) return 0;
+  let total = 0;
+  for (const termo of termos) {
+    const noTitulo = pontoDoTermo(termo, product.titleWords);
+    const noVendedor = pontoDoTermo(termo, product.sellerWords);
+    const noResto = pontoDoTermo(termo, product.haystackWords);
+    const melhor =
+      noTitulo * PESO.titulo
+      + noVendedor * PESO.vendedor
+      + noResto * PESO.resto;
+    if (melhor === 0) return -1;
+    total += melhor;
+  }
+  // Título que começa com a busca inteira vai para a frente: é o caso do
+  // "Desafio Team Dunamis 30 dias" quando se digita "desafio team".
+  if (foldText(product.title).startsWith(foldText(query))) total += 20;
+  return total;
+}
+
+/** Um produto casa a busca se todos os termos digitados casarem em algum campo. */
+export function matchesQuery(product: UnifiedProduct, query: string): boolean {
+  if (!foldText(query)) return true;
+  return scoreQuery(product, query) >= 0;
+}
+
+/** Filtra e já devolve na ordem de relevância. Vazio devolve a ordem original. */
+export function buscar(produtos: UnifiedProduct[], query: string): UnifiedProduct[] {
+  if (!foldText(query)) return produtos;
+  return produtos
+    .map((p) => ({ p, s: scoreQuery(p, query) }))
+    .filter((x) => x.s >= 0)
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.p);
+}
+
 
 const num = (v: unknown): number => Number(v ?? 0) || 0;
 const numOrNull = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v) || 0);
