@@ -17,7 +17,7 @@ export function DuplicateAccountsPanel() {
   const fetchRows = async () => {
     setLoading(true);
     try {
-      setRows(await load({ data: {} }));
+      setRows(await load(undefined as never));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao carregar duplicados.");
     } finally {
