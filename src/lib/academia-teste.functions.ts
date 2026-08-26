@@ -474,15 +474,56 @@ export const cancelarMensalidadeAcademia = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const MARCOS = ["d3", "d2", "d1", "d0", "ultimo_dia"] as const;
-
+/**
+ * Nome dos oito marcos de fábrica.
+ *
+ * Só serve de rede para o histórico: `academia_avisos` guarda o marco que gerou
+ * cada aviso, e um registro antigo pode apontar para um marco que a academia já
+ * apagou ou renomeou. O nome de verdade vem do banco.
+ */
 export const ROTULO_MARCO: Record<string, string> = {
   d3: "Faltam 3 dias",
   d2: "Faltam 2 dias",
   d1: "Vence amanhã",
   d0: "Vence hoje",
   ultimo_dia: "Último dia de acesso",
+  retorno_7: "Sumiu há 1 semana",
+  retorno_30: "Sumiu há 1 mês",
+  retorno_90: "Sumiu há 3 meses",
 };
+
+/**
+ * De onde os dias do aviso são contados.
+ *
+ * `bloqueio` é o último dia em que a pessoa ainda entra — vencimento mais a
+ * carência da academia. Contar reativação a partir daí, e não do vencimento,
+ * é o que faz "faz uma semana que você não entra" ser verdade.
+ */
+export type ReferenciaAviso = "vencimento" | "bloqueio";
+
+export type ModeloAviso = {
+  marco: string;
+  nome: string;
+  texto: string;
+  ativo: boolean;
+  referencia: ReferenciaAviso;
+  quando: number;
+  posicao: number;
+};
+
+/** Distância máxima aceita, para os dois lados. */
+export const LIMITE_DIAS_AVISO = 365;
+
+/** "3 dias antes de vencer", "7 dias depois do bloqueio". */
+export function descreverMomento(referencia: ReferenciaAviso, quando: number): string {
+  if (quando === 0) {
+    return referencia === "vencimento" ? "No dia do vencimento" : "No último dia de entrada";
+  }
+  const n = Math.abs(quando);
+  const dias = n === 1 ? "1 dia" : `${n} dias`;
+  const ponto = referencia === "vencimento" ? "de vencer" : "do bloqueio";
+  return quando > 0 ? `${dias} antes ${ponto}` : `${dias} depois ${ponto}`;
+}
 
 type AvisoPendente = {
   student_id: string; nome: string; telefone: string | null;
@@ -509,8 +550,18 @@ export const previewAvisosAcademia = createServerFn({ method: "POST" })
       .is("arquivado_em", null)
       .maybeSingle();
 
+    // O nome do marco vem do banco: os personalizados nao existem em
+    // ROTULO_MARCO, e um marco renomeado tem que aparecer renomeado aqui.
+    const { data: nomes } = await admin.from("academia_avisos_modelos")
+      .select("marco, nome").eq("partner_id", data.partnerId);
+    const rotulos: Record<string, string> = {};
+    for (const m of (nomes ?? []) as Array<{ marco: string; nome: string | null }>) {
+      rotulos[m.marco] = m.nome || ROTULO_MARCO[m.marco] || m.marco;
+    }
+
     const lista = (pendentes ?? []) as AvisoPendente[];
     return {
+      rotulos,
       // Sem telefone não há como avisar; separar deixa isso visível em vez de
       // sumir silenciosamente da contagem.
       comTelefone: lista.filter((a) => (a.telefone ?? "").trim().length >= 8),
@@ -564,61 +615,108 @@ export const prepararAvisosAcademia = createServerFn({ method: "POST" })
     };
   });
 
-/** Textos de cada marco desta academia, já com o padrão preenchido. */
+/**
+ * Uma chave estável para o aviso.
+ *
+ * Sai do momento por legibilidade, mas NÃO é o momento: uma vez criada, a chave
+ * não muda mais, nem quando a academia move o aviso de dia. É ela que liga o
+ * histórico em `academia_avisos` ao modelo, e reescrever isso apagaria a
+ * memória de quem já foi avisado.
+ */
+async function chaveLivreDeAviso(
+  admin: Admin,
+  partnerId: string,
+  referencia: ReferenciaAviso,
+  quando: number,
+): Promise<string> {
+  const base = `m_${referencia}_${quando}`;
+  const { data } = await admin.from("academia_avisos_modelos")
+    .select("marco").eq("partner_id", partnerId).like("marco", `${base}%`);
+
+  const usadas = new Set(((data ?? []) as Array<{ marco: string }>).map((m) => m.marco));
+  if (!usadas.has(base)) return base;
+  for (let i = 2; i < 100; i++) if (!usadas.has(`${base}_${i}`)) return `${base}_${i}`;
+  throw new Error("Avisos demais nesse mesmo dia.");
+}
+
+/** Valida nome, texto e distância. Devolve já aparado. */
+function conferirAviso(d: { nome: string; texto: string; referencia: string; quando: number }) {
+  const nome = (d.nome || "").trim();
+  const texto = (d.texto || "").trim();
+  if (!nome) throw new Error("Dê um nome ao aviso.");
+  if (!texto) throw new Error(`Escreva o texto de "${nome}".`);
+  if (d.referencia !== "vencimento" && d.referencia !== "bloqueio") {
+    throw new Error("Escolha se a contagem é a partir do vencimento ou do bloqueio.");
+  }
+  const quando = Math.trunc(Number(d.quando));
+  if (!Number.isFinite(quando) || Math.abs(quando) > LIMITE_DIAS_AVISO) {
+    throw new Error(`Use no máximo ${LIMITE_DIAS_AVISO} dias de distância.`);
+  }
+  return { nome, texto, referencia: d.referencia as ReferenciaAviso, quando };
+}
+
+/** Os avisos desta academia, na ordem em que ela mandou. */
 export const obterModelosAviso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
 
-    const [{ data: modelos }, { data: cfg }] = await Promise.all([
+    // Academia nova nasce com os oito prontos. A semeadura mora no banco, junto
+    // dos textos padrão — uma segunda cópia deles aqui sairia de sincronia.
+    const { error: eSemear } = await admin.rpc("academia_avisos_semear", {
+      p_partner_id: data.partnerId,
+    });
+    if (eSemear) throw new Error(eSemear.message);
+
+    const [modelosRes, cfgRes] = await Promise.all([
       admin.from("academia_avisos_modelos")
-        .select("marco, texto, ativo").eq("partner_id", data.partnerId),
+        .select("marco, nome, texto, ativo, referencia, quando, posicao")
+        .eq("partner_id", data.partnerId)
+        .order("posicao"),
       admin.from("partner_acesso_config")
-        .select("avisos_automaticos").eq("partner_id", data.partnerId).maybeSingle(),
+        .select("avisos_automaticos, dias_carencia")
+        .eq("partner_id", data.partnerId).maybeSingle(),
     ]);
+    if (modelosRes.error) throw new Error(modelosRes.error.message);
 
-    const salvos = new Map(
-      ((modelos ?? []) as Array<{ marco: string; texto: string; ativo: boolean }>)
-        .map((m) => [m.marco, m]),
-    );
-
-    // O padrão vem do banco para não existir uma segunda cópia do texto aqui.
-    const padroes = await Promise.all(
-      MARCOS.map(async (marco) => {
-        const { data: t } = await admin.rpc("academia_aviso_texto_padrao", { p_marco: marco });
-        return [marco, String(t ?? "")] as const;
-      }),
-    );
-    const padrao = new Map(padroes);
-
+    const cfg = cfgRes.data as { avisos_automaticos?: boolean; dias_carencia?: number } | null;
     return {
-      automatico: Boolean((cfg as { avisos_automaticos?: boolean } | null)?.avisos_automaticos),
-      modelos: MARCOS.map((marco) => ({
-        marco,
-        texto: salvos.get(marco)?.texto ?? padrao.get(marco) ?? "",
-        ativo: salvos.get(marco)?.ativo ?? true,
-        personalizado: salvos.has(marco),
+      automatico: Boolean(cfg?.avisos_automaticos),
+      // A tela explica "último dia de entrada" em dias reais, e isso depende da
+      // carência desta academia.
+      carencia: Number(cfg?.dias_carencia ?? 3),
+      modelos: (modelosRes.data ?? []).map((m): ModeloAviso => ({
+        marco: m.marco,
+        nome: m.nome || ROTULO_MARCO[m.marco] || m.marco,
+        texto: m.texto,
+        ativo: m.ativo,
+        referencia: m.referencia === "bloqueio" ? "bloqueio" : "vencimento",
+        quando: m.quando,
+        posicao: m.posicao,
       })),
     };
   });
 
+/** Salva nome, texto e liga/desliga. O dia do disparo é mexido por moverMarcoAviso. */
 export const salvarModelosAviso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
     partnerId: string; automatico: boolean;
-    modelos: Array<{ marco: string; texto: string; ativo: boolean }>;
+    modelos: Array<{ marco: string; nome: string; texto: string; ativo: boolean }>;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
 
     for (const m of data.modelos) {
+      const nome = (m.nome || "").trim();
       const texto = (m.texto || "").trim();
-      if (!texto) throw new Error(`O texto de "${ROTULO_MARCO[m.marco] ?? m.marco}" não pode ficar vazio.`);
-      const { error } = await admin.from("academia_avisos_modelos").upsert(
-        { partner_id: data.partnerId, marco: m.marco, texto, ativo: m.ativo, updated_at: new Date().toISOString() },
-        { onConflict: "partner_id,marco" },
-      );
+      if (!nome) throw new Error("Todo aviso precisa de um nome.");
+      if (!texto) throw new Error(`O texto de "${nome}" não pode ficar vazio.`);
+
+      const { error } = await admin.from("academia_avisos_modelos")
+        .update({ nome, texto, ativo: m.ativo, updated_at: new Date().toISOString() })
+        .eq("partner_id", data.partnerId).eq("marco", m.marco);
       if (error) throw new Error(error.message);
     }
 
@@ -628,6 +726,107 @@ export const salvarModelosAviso = createServerFn({ method: "POST" })
     );
     if (e2) throw new Error(e2.message);
 
+    return { ok: true };
+  });
+
+/** Um aviso novo, no dia que a academia escolher. */
+export const criarMarcoAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; nome: string; texto: string;
+    referencia: string; quando: number;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { nome, texto, referencia, quando } = conferirAviso(data);
+
+    // O índice único do banco já barra a colisão, mas o erro dele é ilegível
+    // para quem está na recepção. Checar antes deixa a mensagem em português.
+    const { data: ocupado } = await admin.from("academia_avisos_modelos")
+      .select("nome").eq("partner_id", data.partnerId)
+      .eq("referencia", referencia).eq("quando", quando).maybeSingle();
+    if (ocupado) {
+      const dono = (ocupado as { nome: string | null }).nome ?? "outro aviso";
+      throw new Error(`Já existe um aviso nesse dia: "${dono}".`);
+    }
+
+    const { data: ultimo } = await admin.from("academia_avisos_modelos")
+      .select("posicao").eq("partner_id", data.partnerId)
+      .order("posicao", { ascending: false }).limit(1).maybeSingle();
+
+    const marco = await chaveLivreDeAviso(admin, data.partnerId, referencia, quando);
+    const { error } = await admin.from("academia_avisos_modelos").insert({
+      partner_id: data.partnerId, marco, nome, texto, ativo: true,
+      referencia, quando,
+      posicao: Number((ultimo as { posicao?: number } | null)?.posicao ?? 0) + 1,
+    });
+    if (error) throw new Error(error.message);
+
+    return { ok: true, marco };
+  });
+
+/** Muda o dia de um aviso que já existe, sem perder o texto nem o histórico. */
+export const moverMarcoAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; marco: string; referencia: string; quando: number;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    // Nome e texto não vêm nesta rota; o conferirAviso só valida o momento.
+    const { referencia, quando } = conferirAviso({ ...data, nome: "x", texto: "x" });
+
+    const { data: ocupado } = await admin.from("academia_avisos_modelos")
+      .select("marco, nome").eq("partner_id", data.partnerId)
+      .eq("referencia", referencia).eq("quando", quando).maybeSingle();
+    if (ocupado && (ocupado as { marco: string }).marco !== data.marco) {
+      const dono = (ocupado as { nome: string | null }).nome ?? "outro aviso";
+      throw new Error(`Já existe um aviso nesse dia: "${dono}".`);
+    }
+
+    // A chave NÃO muda junto. Ela é o que liga o histórico ao modelo.
+    const { error } = await admin.from("academia_avisos_modelos")
+      .update({ referencia, quando, updated_at: new Date().toISOString() })
+      .eq("partner_id", data.partnerId).eq("marco", data.marco);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+export const excluirMarcoAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; marco: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    // O histórico em `academia_avisos` fica onde está. Ele registra o que foi
+    // gerado, e apagar o modelo não pode reescrever o passado.
+    const { error } = await admin.from("academia_avisos_modelos").delete()
+      .eq("partner_id", data.partnerId).eq("marco", data.marco);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+/**
+ * A ordem da lista.
+ *
+ * Não é enfeite: é o desempate quando dois avisos caem no mesmo dia — e eles
+ * caem, porque mudar a carência move todos os marcos de bloqueio de uma vez.
+ * Ganha o de cima.
+ */
+export const reordenarMarcosAviso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; marcos: string[] }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    for (let i = 0; i < data.marcos.length; i++) {
+      const { error } = await admin.from("academia_avisos_modelos")
+        .update({ posicao: i + 1 })
+        .eq("partner_id", data.partnerId).eq("marco", data.marcos[i]);
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });
 

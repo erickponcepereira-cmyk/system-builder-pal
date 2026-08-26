@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
@@ -44,6 +44,12 @@ import {
   obterFilaDeFotos,
   obterFrequenciaAcademia,
   obterModelosAviso,
+  criarMarcoAviso,
+  moverMarcoAviso,
+  excluirMarcoAviso,
+  reordenarMarcosAviso,
+  descreverMomento,
+  LIMITE_DIAS_AVISO,
   obterProdutosMensalidade,
   obterTreinosAluno,
   prepararAvisosAcademia,
@@ -60,6 +66,8 @@ import {
   validarCredencialEvento,
   vincularCredencial,
   type FormaPagamento,
+  type ModeloAviso,
+  type ReferenciaAviso,
   type PessoaAcademia,
 } from "@/lib/academia-teste.functions";
 import { formatDateOnlyBR } from "@/lib/date-only";
@@ -1775,35 +1783,120 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
 function ModelosAviso({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterModelosAviso);
   const salvar = useServerFn(salvarModelosAviso);
+  const criar = useServerFn(criarMarcoAviso);
+  const mover = useServerFn(moverMarcoAviso);
+  const excluir = useServerFn(excluirMarcoAviso);
+  const reordenar = useServerFn(reordenarMarcosAviso);
+
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
   const [automatico, setAutomatico] = useState(false);
-  const [modelos, setModelos] = useState<Array<{ marco: string; texto: string; ativo: boolean }>>([]);
+  const [carencia, setCarencia] = useState(3);
+  const [modelos, setModelos] = useState<ModeloAviso[]>([]);
+  // Cópia do que veio do servidor, só para saber se o dia mudou de verdade
+  // antes de gastar uma ida ao banco a cada blur.
+  const [original, setOriginal] = useState<ModeloAviso[]>([]);
+  const [novo, setNovo] = useState({
+    aberto: false, nome: "", texto: "",
+    referencia: "vencimento" as ReferenciaAviso, quando: 5,
+  });
 
-  useEffect(() => {
+  const carregar = () => {
     setLoading(true);
     obter({ data: { partnerId } })
       .then((r) => {
         setAutomatico(r.automatico);
-        setModelos(r.modelos.map((m) => ({ marco: m.marco, texto: m.texto, ativo: m.ativo })));
+        setCarencia(r.carencia);
+        setModelos(r.modelos);
+        setOriginal(r.modelos);
       })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
-  }, [partnerId]);
+  };
 
-  const gravar = async () => {
+  useEffect(carregar, [partnerId]);
+
+  const gravar = async (silencioso = false) => {
     setSalvando(true);
     try {
-      await salvar({ data: { partnerId, automatico, modelos } });
-      toast.success("Mensagens salvas.");
+      await salvar({ data: {
+        partnerId, automatico,
+        modelos: modelos.map((m) => ({ marco: m.marco, nome: m.nome, texto: m.texto, ativo: m.ativo })),
+      } });
+      if (!silencioso) toast.success("Mensagens salvas.");
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+      return false;
     } finally {
       setSalvando(false);
     }
   };
 
+  /**
+   * Mexer na estrutura recarrega a lista, e o que estivesse digitado sem salvar
+   * se perderia. Grava antes, calado. No fim recarrega mesmo se deu erro: se o
+   * banco recusou a mudança, a tela não pode continuar mostrando ela aplicada.
+   */
+  const estrutural = async (acao: () => Promise<unknown>) => {
+    if (ocupado) return;
+    setOcupado(true);
+    if (!(await gravar(true))) { setOcupado(false); return; }
+    try {
+      await acao();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível concluir.");
+    }
+    setOcupado(false);
+    carregar();
+  };
+
+  const mexer = (i: number, mudanca: Partial<ModeloAviso>) =>
+    setModelos((a) => a.map((x, j) => (j === i ? { ...x, ...mudanca } : x)));
+
+  const comporQuando = (n: number, sentido: string) =>
+    sentido === "depois" ? -Math.abs(n) : Math.abs(n);
+
+  /** Só vai ao banco se o dia realmente mudou. */
+  const comitarMomento = (m: ModeloAviso) => {
+    const antes = original.find((o) => o.marco === m.marco);
+    if (antes && antes.referencia === m.referencia && antes.quando === m.quando) return;
+    void estrutural(() => mover({ data: {
+      partnerId, marco: m.marco, referencia: m.referencia, quando: m.quando,
+    } }));
+  };
+
+  const trocarOrdem = (i: number, delta: number) => {
+    const j = i + delta;
+    if (j < 0 || j >= modelos.length) return;
+    const nova = modelos.slice();
+    [nova[i], nova[j]] = [nova[j], nova[i]];
+    setModelos(nova);
+    void estrutural(() => reordenar({ data: { partnerId, marcos: nova.map((x) => x.marco) } }));
+  };
+
+  const apagar = (m: ModeloAviso) => {
+    const certeza = window.confirm(
+      `Apagar o aviso "${m.nome}"?\n\nAs mensagens que já foram geradas continuam no histórico — só para de disparar daqui pra frente.`,
+    );
+    if (!certeza) return;
+    void estrutural(() => excluir({ data: { partnerId, marco: m.marco } }));
+  };
+
+  const criarNovo = () =>
+    void estrutural(async () => {
+      await criar({ data: {
+        partnerId, nome: novo.nome, texto: novo.texto,
+        referencia: novo.referencia, quando: novo.quando,
+      } });
+      setNovo({ aberto: false, nome: "", texto: "", referencia: "vencimento", quando: 5 });
+      toast.success("Aviso criado.");
+    });
+
   if (loading) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-primary" />;
+
+  const campo = "rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white";
 
   return (
     <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -1825,37 +1918,196 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
       </label>
 
       {modelos.map((m, i) => (
-        <div key={m.marco} className="space-y-1.5 rounded-xl border border-white/10 bg-white/5 p-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold text-white">{ROTULO_MARCO[m.marco] ?? m.marco}</span>
-            <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+        <div key={m.marco} className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
+          <div className="flex items-start gap-2">
+            <div className="flex shrink-0 flex-col">
+              <button
+                type="button" title="Subir"
+                disabled={i === 0 || ocupado}
+                onClick={() => trocarOrdem(i, -1)}
+                className="rounded p-0.5 text-white/40 hover:text-white disabled:opacity-20"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button" title="Descer"
+                disabled={i === modelos.length - 1 || ocupado}
+                onClick={() => trocarOrdem(i, 1)}
+                className="rounded p-0.5 text-white/40 hover:text-white disabled:opacity-20"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <input
+              value={m.nome}
+              onChange={(e) => mexer(i, { nome: e.target.value })}
+              placeholder="Nome do aviso"
+              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[12px] font-bold text-white placeholder:text-white/30"
+            />
+
+            <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-white/60">
               <input
                 type="checkbox"
                 checked={m.ativo}
-                onChange={(e) => setModelos((a) => a.map((x, j) => j === i ? { ...x, ativo: e.target.checked } : x))}
+                onChange={(e) => mexer(i, { ativo: e.target.checked })}
                 className="h-3.5 w-3.5 accent-primary"
               />
               Ativo
             </label>
+
+            <button
+              type="button" title="Apagar"
+              disabled={ocupado}
+              onClick={() => apagar(m)}
+              className="shrink-0 rounded p-1 text-white/30 hover:text-red-400 disabled:opacity-20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pl-5">
+            <span className="text-[11px] text-white/40">Dispara</span>
+            <input
+              type="number" min={0} max={LIMITE_DIAS_AVISO}
+              value={Math.abs(m.quando)}
+              disabled={ocupado}
+              onChange={(e) => mexer(i, {
+                quando: comporQuando(Number(e.target.value), m.quando >= 0 ? "antes" : "depois"),
+              })}
+              onBlur={() => comitarMomento(modelos[i])}
+              className={`w-14 ${campo}`}
+            />
+            <span className="text-[11px] text-white/40">dia(s)</span>
+            <select
+              value={m.quando >= 0 ? "antes" : "depois"}
+              disabled={ocupado || m.quando === 0}
+              onChange={(e) => {
+                const q = comporQuando(Math.abs(m.quando), e.target.value);
+                mexer(i, { quando: q });
+                comitarMomento({ ...m, quando: q });
+              }}
+              className={campo}
+            >
+              <option value="antes">antes</option>
+              <option value="depois">depois</option>
+            </select>
+            <select
+              value={m.referencia}
+              disabled={ocupado}
+              onChange={(e) => {
+                const r = e.target.value as ReferenciaAviso;
+                mexer(i, { referencia: r });
+                comitarMomento({ ...m, referencia: r });
+              }}
+              className={campo}
+            >
+              <option value="vencimento">do vencimento</option>
+              <option value="bloqueio">do bloqueio</option>
+            </select>
+            <span className="text-[10px] text-white/35">
+              {descreverMomento(m.referencia, m.quando)}
+            </span>
+          </div>
+
           <textarea
             value={m.texto}
-            onChange={(e) => setModelos((a) => a.map((x, j) => j === i ? { ...x, texto: e.target.value } : x))}
+            onChange={(e) => mexer(i, { texto: e.target.value })}
             rows={2}
             className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/40"
           />
         </div>
       ))}
 
-      <p className="text-[11px] text-white/50">
+      {novo.aberto ? (
+        <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2.5">
+          <p className="text-[11px] font-bold text-white">Novo aviso</p>
+          <input
+            value={novo.nome}
+            onChange={(e) => setNovo((n) => ({ ...n, nome: e.target.value }))}
+            placeholder="Nome (ex.: Faltam 10 dias)"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[12px] text-white placeholder:text-white/30"
+          />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-white/40">Dispara</span>
+            <input
+              type="number" min={0} max={LIMITE_DIAS_AVISO}
+              value={Math.abs(novo.quando)}
+              onChange={(e) => setNovo((n) => ({
+                ...n, quando: comporQuando(Number(e.target.value), n.quando >= 0 ? "antes" : "depois"),
+              }))}
+              className={`w-14 ${campo}`}
+            />
+            <span className="text-[11px] text-white/40">dia(s)</span>
+            <select
+              value={novo.quando >= 0 ? "antes" : "depois"}
+              onChange={(e) => setNovo((n) => ({ ...n, quando: comporQuando(Math.abs(n.quando), e.target.value) }))}
+              className={campo}
+            >
+              <option value="antes">antes</option>
+              <option value="depois">depois</option>
+            </select>
+            <select
+              value={novo.referencia}
+              onChange={(e) => setNovo((n) => ({ ...n, referencia: e.target.value as ReferenciaAviso }))}
+              className={campo}
+            >
+              <option value="vencimento">do vencimento</option>
+              <option value="bloqueio">do bloqueio</option>
+            </select>
+          </div>
+          <textarea
+            value={novo.texto}
+            onChange={(e) => setNovo((n) => ({ ...n, texto: e.target.value }))}
+            rows={2}
+            placeholder="Oi {nome}! ..."
+            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/40"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={criarNovo}
+              disabled={ocupado}
+              className="flex-1 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+            >
+              Criar aviso
+            </button>
+            <button
+              type="button"
+              onClick={() => setNovo((n) => ({ ...n, aberto: false }))}
+              className="rounded-xl bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setNovo((n) => ({ ...n, aberto: true }))}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 px-4 py-2 text-[12px] font-bold text-white/70 hover:border-white/40 hover:text-white"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Novo aviso
+        </button>
+      )}
+
+      <p className="text-[11px] leading-relaxed text-white/50">
         <code className="rounded bg-white/10 px-1">{"{nome}"}</code> vira o primeiro nome de quem recebe.{" "}
         <code className="rounded bg-white/10 px-1">{"{data}"}</code> vira a data de vencimento.
+        <br />
+        <strong className="text-white/70">Bloqueio</strong> é o último dia em que a pessoa ainda
+        entra: {carencia} dia(s) depois do vencimento. Mudar a carência move todos os avisos
+        de bloqueio junto.
+        <br />
+        Se dois avisos caírem no mesmo dia, sai só o de cima — e ninguém recebe mais de uma
+        mensagem por dia.
       </p>
 
       <button
         type="button"
         onClick={() => void gravar()}
-        disabled={salvando}
+        disabled={salvando || ocupado}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
       >
         {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -1871,8 +2123,9 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
   const [loading, setLoading] = useState(true);
   const [preparando, setPreparando] = useState(false);
   const [dados, setDados] = useState<{
-    comTelefone: Array<{ student_id: string; nome: string; telefone: string | null; marco: string; valido_ate: string }>;
-    semTelefone: Array<{ student_id: string; nome: string; marco: string }>;
+    rotulos: Record<string, string>;
+    comTelefone: Array<{ student_id: string | null; credencial_id: string | null; nome: string; telefone: string | null; marco: string; valido_ate: string }>;
+    semTelefone: Array<{ student_id: string | null; credencial_id: string | null; nome: string; marco: string }>;
     conexao: { nome: string; status: string } | null;
   } | null>(null);
 
@@ -1938,13 +2191,13 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
       ) : (
         <div className="space-y-2">
           {dados.comTelefone.map((a) => (
-            <div key={`${a.student_id}-${a.marco}`} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div key={`${a.credencial_id ?? a.student_id}-${a.marco}`} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="min-w-0">
                 <p className="truncate font-semibold text-white">{a.nome}</p>
                 <p className="text-[11px] text-white/50">{a.telefone}</p>
               </div>
               <span className="shrink-0 rounded bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
-                {ROTULO_MARCO[a.marco] ?? a.marco}
+                {dados.rotulos[a.marco] ?? ROTULO_MARCO[a.marco] ?? a.marco}
               </span>
             </div>
           ))}

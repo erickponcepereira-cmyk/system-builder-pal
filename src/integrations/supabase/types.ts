@@ -182,7 +182,11 @@ export type Database = {
           ativo: boolean
           id: string
           marco: string
+          nome: string | null
           partner_id: string
+          posicao: number
+          quando: number
+          referencia: string
           texto: string
           updated_at: string
         }
@@ -190,7 +194,11 @@ export type Database = {
           ativo?: boolean
           id?: string
           marco: string
+          nome?: string | null
           partner_id: string
+          posicao?: number
+          quando?: number
+          referencia?: string
           texto: string
           updated_at?: string
         }
@@ -198,7 +206,11 @@ export type Database = {
           ativo?: boolean
           id?: string
           marco?: string
+          nome?: string | null
           partner_id?: string
+          posicao?: number
+          quando?: number
+          referencia?: string
           texto?: string
           updated_at?: string
         }
@@ -14952,6 +14964,30 @@ export type Database = {
         }[]
       }
       academia_avisos_preparar_automaticos: { Args: never; Returns: number }
+      academia_avisos_semear: {
+        Args: { p_partner_id: string }
+        Returns: number
+      }
+      academia_meu_rosto_enfileirar: {
+        Args: { p_foto_base64: string }
+        Returns: {
+          envio_id: string
+          referencia: string
+        }[]
+      }
+      academia_minha_credencial: {
+        Args: never
+        Returns: {
+          academia: string
+          decisao: string
+          dias_restantes: number
+          envio_pendente: boolean
+          motivo: string
+          referencia: string
+          tem_rosto: boolean
+          valido_ate: string
+        }[]
+      }
       academia_buscar_aluno: {
         Args: { p_partner_id: string; p_termo: string }
         Returns: {
