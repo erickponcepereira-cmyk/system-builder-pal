@@ -32,6 +32,10 @@ import {
   cancelarMensalidadeAcademia,
   corrigirMensalidadeAcademia,
   preverCancelamentoAcademia,
+  listarPlanosParaGerir,
+  salvarPlanoAcademia,
+  LIMITES_SEMANA,
+  DURACOES,
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
@@ -149,7 +153,12 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "robo" && <PartnerRoboPanel partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
-        {sub === "produtos" && <ProdutosMensalidade partnerId={partnerId} />}
+        {sub === "produtos" && (
+          <div className="space-y-4">
+            <PlanosAcademia partnerId={partnerId} />
+            <ProdutosMensalidade partnerId={partnerId} />
+          </div>
+        )}
         {sub === "eventos" && <Eventos partnerId={partnerId} />}
         {sub === "agente" && <AgenteAcademia partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
@@ -1415,6 +1424,213 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Cadastro dos planos que a recepção vende.
+ *
+ * Os quatro que existiam nasceram de uma migration — não havia jeito de criar o
+ * quinto pela tela. Uma academia que abre promoção, aula avulsa ou cortesia
+ * precisava de código para isso, e é o tipo de coisa que ela decide numa terça
+ * à tarde.
+ */
+function PlanosAcademia({ partnerId }: { partnerId: string }) {
+  const listar = useServerFn(listarPlanosParaGerir);
+  const salvar = useServerFn(salvarPlanoAcademia);
+
+  const vazio = { id: null as string | null, nome: "", valor: 0, dias: 30, limite: 0, ativo: true };
+  const [planos, setPlanos] = useState<Array<{
+    id: string; nome: string; valor_padrao: number; dias: number;
+    limite_dias_semana: number | null; ativo: boolean;
+  }>>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [form, setForm] = useState(vazio);
+  const [aberto, setAberto] = useState(false);
+  const [cortesia, setCortesia] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = () => {
+    setCarregando(true);
+    listar({ data: { partnerId } })
+      .then((r) => setPlanos(r.planos))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setCarregando(false));
+  };
+
+  useEffect(carregar, [partnerId]);
+
+  const gravar = async () => {
+    setSalvando(true);
+    try {
+      await salvar({ data: {
+        partnerId, id: form.id, nome: form.nome,
+        // Cortesia é valor zero com nome. Não é erro de digitação, e por isso
+        // não bloqueia nada: o lançamento entra com R$ 0,00 e o acesso vale igual.
+        valorPadrao: cortesia ? 0 : form.valor,
+        dias: form.dias,
+        limiteDiasSemana: form.limite,
+        ativo: form.ativo,
+      } });
+      setAberto(false);
+      setForm(vazio);
+      setCortesia(false);
+      carregar();
+      toast.success(form.id ? "Plano atualizado." : "Plano criado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const editar = (p: typeof planos[number]) => {
+    setForm({
+      id: p.id, nome: p.nome, valor: Number(p.valor_padrao ?? 0), dias: p.dias,
+      limite: p.limite_dias_semana ?? 0, ativo: p.ativo,
+    });
+    setCortesia(Number(p.valor_padrao ?? 0) === 0);
+    setAberto(true);
+  };
+
+  const campo = "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white";
+
+  if (carregando) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-primary" />;
+
+  return (
+    <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-white">Planos da academia</p>
+        {!aberto && (
+          <button
+            type="button"
+            onClick={() => { setForm(vazio); setCortesia(false); setAberto(true); }}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" /> Novo plano
+          </button>
+        )}
+      </div>
+
+      {aberto && (
+        <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2.5">
+          <input
+            value={form.nome}
+            onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+            placeholder="Nome do plano (ex.: Mensal - 3x semana)"
+            className={`w-full ${campo}`}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-[11px] text-white/70">
+              <input
+                type="checkbox"
+                checked={cortesia}
+                onChange={(e) => setCortesia(e.target.checked)}
+                className="h-3.5 w-3.5 accent-primary"
+              />
+              Cortesia (sem valor)
+            </label>
+            {!cortesia && (
+              <CurrencyInputBRL
+                value={form.valor}
+                onChange={(v) => setForm((f) => ({ ...f, valor: v }))}
+                className={`w-32 ${campo}`}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-white/50">Libera por</span>
+            <input
+              type="number" min={1} max={3650}
+              value={form.dias}
+              onChange={(e) => setForm((f) => ({ ...f, dias: Number(e.target.value) }))}
+              className={`w-20 ${campo}`}
+            />
+            <span className="text-[11px] text-white/50">dias</span>
+            {DURACOES.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, dias: d }))}
+                className={`rounded-lg px-2 py-1 text-[11px] ${form.dias === d ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/70"}`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-white/50">Entra na catraca</span>
+            <select
+              value={form.limite}
+              onChange={(e) => setForm((f) => ({ ...f, limite: Number(e.target.value) }))}
+              className={campo}
+            >
+              {LIMITES_SEMANA.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-1.5 text-[11px] text-white/70">
+            <input
+              type="checkbox"
+              checked={form.ativo}
+              onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
+              className="h-3.5 w-3.5 accent-primary"
+            />
+            Disponível para venda
+          </label>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void gravar()}
+              disabled={salvando || !form.nome.trim()}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+            >
+              {salvando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {form.id ? "Salvar" : "Criar plano"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAberto(false); setForm(vazio); }}
+              className="rounded-xl bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {planos.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => editar(p)}
+          className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 text-left hover:border-white/25"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[12px] font-bold text-white">
+              {p.nome}
+              {!p.ativo && <span className="ml-1.5 text-[10px] font-normal text-white/40">(desligado)</span>}
+            </p>
+            <p className="text-[11px] text-white/50">
+              {Number(p.valor_padrao) > 0 ? brl(Number(p.valor_padrao)) : "Cortesia"} · {p.dias} dias ·{" "}
+              {p.limite_dias_semana ? `${p.limite_dias_semana}x por semana` : "todo dia"}
+            </p>
+          </div>
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-white/30" />
+        </button>
+      ))}
+
+      <p className="text-[11px] text-white/40">
+        O plano vira opção na hora de lançar e renovar. O limite semanal viaja para
+        a venda: quem comprou 3x continua com 3x mesmo que o plano mude depois.
+      </p>
     </div>
   );
 }

@@ -1830,6 +1830,121 @@ export const salvarConfigAcademia = createServerFn({ method: "POST" })
  * ------------------------------------------------------------------ */
 
 /** Preços de tabela da academia. O valor é sugestão, editável na venda. */
+/** Quantos dias por semana o plano libera. Nulo = ilimitado. */
+export const LIMITES_SEMANA = [
+  { value: 0, label: "Ilimitado (todo dia)" },
+  { value: 1, label: "1x por semana" },
+  { value: 2, label: "2x por semana" },
+  { value: 3, label: "3x por semana" },
+  { value: 4, label: "4x por semana" },
+  { value: 5, label: "5x por semana" },
+  { value: 6, label: "6x por semana" },
+] as const;
+
+/** Durações prontas. O campo aceita qualquer número — isto é só atalho. */
+export const DURACOES = [30, 60, 90, 180, 365] as const;
+
+/** Todos os planos da academia, inclusive os desligados. */
+export const listarPlanosParaGerir = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: linhas, error } = await admin
+      .from("academia_planos" as never)
+      .select("id, nome, valor_padrao, dias, limite_dias_semana, ativo, posicao" as never)
+      .eq("partner_id" as never, data.partnerId)
+      .order("posicao" as never, { ascending: true });
+    if (error) throw new Error(error.message);
+    return {
+      planos: (linhas ?? []) as unknown as Array<{
+        id: string; nome: string; valor_padrao: number; dias: number;
+        limite_dias_semana: number | null; ativo: boolean; posicao: number;
+      }>,
+    };
+  });
+
+/**
+ * Cria ou edita um plano da academia.
+ *
+ * Os quatro planos que existiam nasceram de uma migration — não havia jeito de
+ * criar o quinto pela tela. Uma academia que lança promoção, aula avulsa ou
+ * cortesia precisava de código para isso, e é o tipo de coisa que ela faz numa
+ * terça à tarde.
+ *
+ * Valor ZERO é legítimo e tem nome: cortesia. Não é erro de digitação, e por
+ * isso não bloqueia nada — o lançamento entra com R$ 0,00 e o acesso vale igual.
+ */
+export const salvarPlanoAcademia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; id?: string | null; nome: string;
+    valorPadrao: number; dias: number;
+    limiteDiasSemana: number | null; ativo: boolean;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const nome = (data.nome || "").trim();
+    if (nome.length < 2) throw new Error("Dê um nome ao plano.");
+
+    const dias = Math.trunc(Number(data.dias));
+    if (!Number.isFinite(dias) || dias < 1 || dias > 3650) {
+      throw new Error("Quantos dias o plano libera? Use um número entre 1 e 3650.");
+    }
+
+    const valor = Number(data.valorPadrao);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error("Valor inválido.");
+
+    // 0 na tela quer dizer "sem limite". No banco isso é NULL, porque a régua
+    // de acesso testa `limite IS NOT NULL` para saber se precisa contar dias.
+    const limite = data.limiteDiasSemana && data.limiteDiasSemana > 0
+      ? Math.trunc(data.limiteDiasSemana)
+      : null;
+    if (limite !== null && (limite < 1 || limite > 7)) {
+      throw new Error("O limite semanal vai de 1 a 7 dias.");
+    }
+
+    const campos = {
+      partner_id: data.partnerId,
+      nome,
+      valor_padrao: valor,
+      dias,
+      limite_dias_semana: limite,
+      ativo: data.ativo,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.id) {
+      const { error } = await admin
+        .from("academia_planos" as never)
+        .update(campos as never)
+        .eq("id" as never, data.id)
+        .eq("partner_id" as never, data.partnerId);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id };
+    }
+
+    // Entra no fim da lista. A ordem é só de exibição na hora de vender.
+    const { data: ultimo } = await admin
+      .from("academia_planos" as never)
+      .select("posicao" as never)
+      .eq("partner_id" as never, data.partnerId)
+      .order("posicao" as never, { ascending: false })
+      .limit(1).maybeSingle();
+
+    const { data: novo, error } = await admin
+      .from("academia_planos" as never)
+      .insert({
+        ...campos,
+        posicao: Number((ultimo as { posicao?: number } | null)?.posicao ?? 0) + 1,
+      } as never)
+      .select("id" as never).single();
+    if (error) throw new Error(error.message);
+
+    return { ok: true, id: (novo as unknown as { id: string }).id };
+  });
+
 export const listarPlanosAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)
