@@ -434,10 +434,47 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     return bruta ? comAbsolutosReais(bruta, ganhoPorId.get(String(r.id))) : null;
   };
 
-  const products: UnifiedProduct[] = [];
-  const push = (p: Omit<UnifiedProduct, "haystack">) => {
-    products.push({ ...p, haystack: expand(`${p.title} ${p.sellerName} ${p.description || ""}`) });
+  // Nomes da taxonomia entram no índice de busca: quem digita "suplementos"
+  // procura a prateleira, não um produto que tenha essa palavra no nome.
+  const nomeSecao = new Map<string, string>();
+  for (const s of (sectionsRes.data as Array<Record<string, unknown>>) || []) {
+    nomeSecao.set(String(s.id), String(s.name || ""));
+  }
+  const nomeCategoria = new Map<string, string>();
+  for (const c of (categoriesRes.data as Array<Record<string, unknown>>) || []) {
+    nomeCategoria.set(String(c.id), String(c.name || ""));
+  }
+
+  const ROTULO_KIND: Record<UnifiedKind, string> = {
+    challenge: "desafio plano protocolo fitmind",
+    item: "produto fitmind",
+    digital: "curso aula digital online",
+    store: "produto loja suplemento",
+    partner: "profissional atendimento consulta servico",
+    partner_company: "parceiro academia estudio servico",
   };
+
+  type ProdutoCru = Omit<UnifiedProduct, "haystack" | "titleWords" | "sellerWords" | "haystackWords">;
+
+  const products: UnifiedProduct[] = [];
+  const push = (p: ProdutoCru) => {
+    const taxonomia = [
+      p.sectionId ? nomeSecao.get(p.sectionId) : "",
+      p.categoryId ? nomeCategoria.get(p.categoryId) : "",
+      p.sellerCity || "",
+      ROTULO_KIND[p.kind],
+      p.isFreebie ? "gratuito gratis brinde beneficio" : "",
+    ].filter(Boolean).join(" ");
+    const haystack = expand(`${p.title} ${p.sellerName} ${p.description || ""} ${taxonomia}`);
+    products.push({
+      ...p,
+      haystack,
+      titleWords: palavras(p.title),
+      sellerWords: palavras(p.sellerName),
+      haystackWords: palavras(haystack),
+    });
+  };
+
 
   // --- FitMind: catálogo legado ---
   for (const r of (legacyRes.data as unknown as Array<Record<string, unknown>>) || []) {
