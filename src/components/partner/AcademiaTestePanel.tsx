@@ -540,7 +540,18 @@ function Frequencia({ partnerId }: { partnerId: string }) {
     }
   };
 
-  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  /*
+   * Só a PRIMEIRA carga desmonta a aba.
+   *
+   * Era `if (loading || !dados)`. Como `carregar()` roda a cada mudança de
+   * `desde`, e ele liga `loading`, a aba inteira virava um spinner a cada
+   * tecla digitada no campo de data — o <input> era destruído e recriado, o
+   * foco ia embora e o buffer do ano zerava. Para quem estava usando, era
+   * indistinguível de a página recarregar sozinha.
+   *
+   * Agora o formulário fica de pé e o spinner vive só na área do resultado.
+   */
+  if (!dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
   const c = dados.config;
 
   return (
@@ -589,22 +600,43 @@ function Frequencia({ partnerId }: { partnerId: string }) {
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <select
-          value={turmaId}
-          onChange={(e) => setTurmaId(e.target.value)}
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
-        >
-          <option value="">Todas as turmas</option>
-          {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-        </select>
-        <input
-          type="date"
-          value={desde}
-          onChange={(e) => setDesde(e.target.value)}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
-        />
+      <div className="flex flex-wrap gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-wider text-white/40">Turma</span>
+          <select
+            value={turmaId}
+            onChange={(e) => setTurmaId(e.target.value)}
+            className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          >
+            <option value="">Todas as turmas</option>
+            {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </select>
+        </label>
+        {/* O campo não tinha rótulo nenhum, e ninguém sabia se era início, fim
+            ou data da aula. No servidor ele vira `entrada_em >= p_desde`: é o
+            começo da contagem, e não existe data final. */}
+        <label className="flex shrink-0 flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-wider text-white/40">Contar a partir de</span>
+          <input
+            type="date"
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+            className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          />
+        </label>
+        {desde && (
+          <button
+            type="button"
+            onClick={() => setDesde("")}
+            className="self-end rounded-xl px-2 py-2 text-[11px] font-bold text-primary hover:bg-white/10"
+          >
+            limpar
+          </button>
+        )}
       </div>
+      <p className="text-[11px] text-white/50">
+        Em branco, conta desde sempre. Com data, conta só as entradas daquele dia em diante.
+      </p>
 
       <div className="flex gap-2">
         <input
@@ -616,19 +648,53 @@ function Frequencia({ partnerId }: { partnerId: string }) {
         <button
           type="button"
           onClick={async () => {
+            /*
+             * A turma SEMPRE foi criada — o que faltava era dizer isso.
+             *
+             * O clique gravava, limpava o campo e recarregava. Sem toast e sem
+             * lista visível, o único efeito na tela era o texto sumir, o que se
+             * lê como "não criou nada". E como não há unique em (partner, nome),
+             * clicar de novo criava uma segunda turma igual.
+             */
+            const nome = novaTurma.trim();
+            setSalvando(true);
             try {
-              await criarTurma({ data: { partnerId, nome: novaTurma } });
-              setNovaTurma(""); carregar();
-            } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+              await criarTurma({ data: { partnerId, nome } });
+              setNovaTurma("");
+              toast.success(`Turma "${nome}" criada.`);
+              carregar();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Não foi possível criar a turma.");
+            } finally {
+              setSalvando(false);
+            }
           }}
-          disabled={novaTurma.trim().length < 2}
+          disabled={salvando || novaTurma.trim().length < 2}
           className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
         >
-          Criar
+          {salvando ? "Criando…" : "Criar"}
         </button>
       </div>
 
-      {dados.linhas.length === 0 ? (
+      {/* As turmas só existiam como <option> dentro do seletor acima, cujo
+          rótulo continua "Todas as turmas". Criar uma não mudava um pixel da
+          tela. Aqui elas ficam visíveis. */}
+      {dados.turmas.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {dados.turmas.map((t) => (
+            <span
+              key={t.id}
+              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70"
+            >
+              {t.nome}{t.modalidade ? ` · ${t.modalidade}` : ""}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-primary" />
+      ) : dados.linhas.length === 0 ? (
         <p className="py-8 text-center text-sm text-white/50">
           Nenhuma frequência registrada ainda. Ela aparece quando a catraca ou o
           QR começarem a registrar entrada.
