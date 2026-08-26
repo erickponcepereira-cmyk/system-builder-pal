@@ -91,7 +91,14 @@ export type UnifiedProduct = {
   comissao: ComissaoBruta | null;
   /** Texto já normalizado (sem acento, minúsculo) usado pela busca. */
   haystack: string;
+  /** Palavras do título — o campo de maior peso na busca. */
+  titleWords: string[];
+  /** Palavras do nome do vendedor. */
+  sellerWords: string[];
+  /** Palavras do índice inteiro: descrição, seção, categoria, cidade, tipo. */
+  haystackWords: string[];
 };
+
 
 export type UnifiedSection = { id: string; name: string; imageUrl: string | null };
 export type UnifiedCategory = { id: string; sectionId: string; name: string; imageUrl: string | null };
