@@ -201,14 +201,25 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
 
     // Nome e identificador de quem só existe no leitor. Sem isto a recepção vê
     // uma lista de "Sem nome" e não consegue achar ninguém.
-    const porCredencial = new Map<string, { nome: string; referencia: string }>();
+    const porCredencial = new Map<string, { nome: string; referencia: string; noLeitor: boolean }>();
     if (credIds.length > 0) {
       const { data: creds } = await admin
         .from("academia_credenciais")
-        .select("id, nome_no_equipamento, referencia")
+        .select("id, nome_no_equipamento, referencia, importado_em")
         .in("id", credIds);
-      for (const c of (creds ?? []) as Array<{ id: string; nome_no_equipamento: string | null; referencia: string }>) {
-        porCredencial.set(c.id, { nome: c.nome_no_equipamento?.trim() || "Sem nome no leitor", referencia: c.referencia });
+      for (const c of (creds ?? []) as unknown as Array<{
+        id: string; nome_no_equipamento: string | null; referencia: string; importado_em: string | null;
+      }>) {
+        porCredencial.set(c.id, {
+          nome: c.nome_no_equipamento?.trim() || "Sem nome no leitor",
+          referencia: c.referencia,
+          // `importado_em` só é preenchido quando a pessoa foi LIDA do leitor.
+          // Quem foi cadastrado na recepção e ainda não teve rosto capturado
+          // não existe no equipamento — e sem existir lá, o leitor nunca vai
+          // reportar o id dela, então a catraca nunca abre. A mensalidade pode
+          // estar em dia e a pessoa continuar parada na porta.
+          noLeitor: c.importado_em !== null,
+        });
       }
     }
 
@@ -242,6 +253,9 @@ export const listarAlunosAcademia = createServerFn({ method: "POST" })
           // e para cadastrar rosto. Sem ele na tela, a pessoa existe e ninguém
           // consegue agir sobre ela.
           referencia: cred?.referencia ?? null,
+          // Aluno da plataforma sem credencial não depende do leitor; quem tem
+          // credencial depende, e a tela precisa avisar quando falta o rosto.
+          sem_rosto_no_leitor: Boolean(r.credencial_id) && !(cred?.noLeitor ?? false),
           dias_restantes: aval?.dias_restantes ?? null,
           decisao: aval?.decisao ?? "negado",
           motivo: aval?.motivo ?? "sem_mensalidade",
@@ -1585,21 +1599,41 @@ export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
       return { credencialId: e.id, referencia: e.referencia, nome: e.nome_no_equipamento ?? nome, jaExistia: true };
     }
 
-    // Identificador numérico livre: é o que a recepção digita para liberar na
-    // mão e o que amarra o rosto depois.
+    /*
+     * Identificador na FAIXA RESERVADA da FitMind, nunca sorteado.
+     *
+     * A versão anterior sorteava um número de 6 dígitos entre 100000 e 999999 e
+     * conferia se estava livre apenas entre credenciais `tipo = 'pin'` — ou
+     * seja, não olhava as 408 credenciais faciais vindas do leitor. Dois
+     * estragos saíam dali:
+     *
+     * 1. O sorteio podia cair em 900000+, que é a faixa onde o Next Fit cria os
+     *    alunos dele. Duas pessoas com o mesmo id no equipamento significa uma
+     *    herdando a liberação da outra — num controle de acesso, é alguém
+     *    entrando no lugar de outra pessoa.
+     *
+     * 2. Podia colidir com uma credencial facial já existente, porque o filtro
+     *    de tipo excluía justamente elas da verificação.
+     *
+     * A faixa 700001+ é nossa desde a migration de 18/08: 1..421 e 900000+ são
+     * do sistema antigo. Aqui é max+1 dentro dela, conferindo contra TODAS as
+     * credenciais da unidade.
+     */
+    const INICIO_FAIXA = 700001;
     const { data: usados } = await admin
       .from("academia_credenciais")
       .select("referencia")
-      .eq("partner_id", data.partnerId)
-      .eq("tipo", "pin");
-    const ocupados = new Set(((usados ?? []) as Array<{ referencia: string }>).map((u) => u.referencia));
+      .eq("partner_id", data.partnerId);
 
-    let referencia = "";
-    for (let i = 0; i < 200 && !referencia; i++) {
-      const candidato = String(Math.floor(100000 + Math.random() * 900000));
-      if (!ocupados.has(candidato)) referencia = candidato;
-    }
-    if (!referencia) throw new Error("Não consegui gerar um identificador. Tente de novo.");
+    const todos = ((usados ?? []) as Array<{ referencia: string }>)
+      .map((u) => Number(u.referencia))
+      .filter((n) => Number.isFinite(n));
+    const ocupados = new Set(todos);
+    const nossos = todos.filter((n) => n >= INICIO_FAIXA);
+
+    let candidato = nossos.length ? Math.max(...nossos) + 1 : INICIO_FAIXA;
+    while (ocupados.has(candidato)) candidato += 1;
+    const referencia = String(candidato);
 
     const { data: criada, error } = await admin
       .from("academia_credenciais")

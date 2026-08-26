@@ -1874,7 +1874,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const [loading, setLoading] = useState(true);
   const [linhas, setLinhas] = useState<Array<{
     id: string; student_id: string | null; credencial_id: string | null;
-    referencia: string | null; nome: string;
+    referencia: string | null; nome: string; sem_rosto_no_leitor?: boolean;
     plano: string; valido_ate: string;
     dias_restantes: number | null; decisao: string; motivo: string; valor: number;
   }>>([]);
@@ -2058,6 +2058,15 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         <> · <span className="font-mono text-white/70">id {l.referencia}</span></>
                       )}
                     </p>
+                    {/* Mensalidade em dia não basta: sem rosto no equipamento o
+                        leitor nunca reconhece a pessoa, e a catraca nunca chega
+                        a ser acionada. Dizer isso aqui evita a recepção mandar
+                        alguém para a porta achando que está resolvido. */}
+                    {l.sem_rosto_no_leitor && (
+                      <p className="mt-1 inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                        <Camera className="h-3 w-3" /> Falta cadastrar o rosto — não passa na catraca
+                      </p>
+                    )}
                     <p className="text-[11px] text-white/50">
                       Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")}
                       {l.dias_restantes !== null && (
