@@ -36,14 +36,21 @@ export const Route = createFileRoute("/api/bot/fila")({
 
         const porId = new Map(lista.map((c) => [c.id, c.telefone]));
 
+        const agora = new Date();
+        // Duas travas de tempo, com propósitos diferentes:
+        //  - agendado_para: o disparo sai espaçado, sem precisar de agendador
+        //  - entregue_em: a mesma mensagem não sai de novo enquanto o conector
+        //    ainda está com ela na mão
+        const reentrega = new Date(agora.getTime() - 2 * 60_000).toISOString();
+
         const { data: pendentes, error } = await db
           .from("bot_mensagens")
           .select("id, conversa_id, corpo")
           .eq("direcao", "saida")
           .eq("status", "pendente")
           .in("conversa_id", lista.map((c) => c.id))
-          // só o que já venceu: é assim que o disparo sai espaçado sem agendador
-          .or(`agendado_para.is.null,agendado_para.lte.${new Date().toISOString()}`)
+          .or(`agendado_para.is.null,agendado_para.lte.${agora.toISOString()}`)
+          .or(`entregue_em.is.null,entregue_em.lt.${reentrega}`)
           .order("created_at", { ascending: true })
           .limit(limite);
 
@@ -56,6 +63,16 @@ export const Route = createFileRoute("/api/bot/fila")({
             corpo: m.corpo ?? "",
           }))
           .filter((m) => m.telefone && m.corpo);
+
+        // Marca ANTES de responder. Se o conector cair no meio, a marca expira
+        // em 2 minutos e a mensagem volta sozinha — melhor do que arriscar
+        // entregar duas vezes por causa de uma queda.
+        if (mensagens.length) {
+          await db
+            .from("bot_mensagens")
+            .update({ entregue_em: agora.toISOString() })
+            .in("id", mensagens.map((m) => m.id));
+        }
 
         return json({ mensagens });
       },
