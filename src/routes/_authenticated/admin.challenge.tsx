@@ -320,23 +320,36 @@ function AdminChallengePage() {
     if (!enrollModal || !enrollStudentId) return;
     setEnrolling(true);
     try {
-      const { data: studentData } = await supabase
-        .from("students" as never).select("coach_id").eq("id" as never, enrollStudentId as never).single();
-      await supabase.from("competition_enrollments" as never).insert({
-        competition_id: enrollModal.compId,
-        group_id: enrollModal.groupId,
-        student_id: enrollStudentId,
-        coach_id: (studentData as any).coach_id,
-        gender: enrollGender,
-        enrolled_by: "admin",
-      } as never);
-      toast.success("Aluno inscrito!");
-      setEnrollModal(null); setEnrollStudentId("");
+      const res = await runEnroll({
+        data: {
+          competitionId: enrollModal.compId,
+          groupId: enrollModal.groupId,
+          studentId: enrollStudentId,
+          gender: enrollGender,
+          ticketMode: enrollTicketMode,
+        },
+      });
+      toast.success(res.courtesy ? "Aluno inscrito como cortesia (sem ticket)." : "Aluno inscrito e ticket consumido!");
+      setEnrollModal(null); setEnrollStudentId(""); setTicketInfo(null);
       loadGroups(enrollModal.compId);
     } catch (e: any) {
       toast.error(e.message || "Erro ao inscrever");
     } finally { setEnrolling(false); }
   };
+
+  const grantTicket = async () => {
+    if (!enrollStudentId) return;
+    setGrantingTicket(true);
+    try {
+      await runGrantTickets({ data: { studentId: enrollStudentId, quantity: 1, reason: "Inscrição manual no desafio" } });
+      const info = await runTicketInfo({ data: { studentId: enrollStudentId } });
+      setTicketInfo(info);
+      toast.success("Ticket concedido ao aluno.");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao conceder ticket");
+    } finally { setGrantingTicket(false); }
+  };
+
 
   const openWeigh = (enroll: Enrollment, type: "initial" | "final") => {
     setWeighModal({
