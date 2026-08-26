@@ -723,6 +723,32 @@ export function UnifiedStorePage({
         <StoreFilterButton filtros={filtros} onAbrir={() => setFiltrosAbertos(true)} />
       </div>
 
+      {/* Pago e gratuito na mesma grade é o que fazia a loja parecer bagunçada:
+          quem entra para comprar não quer filtrar brinde, e quem entra para
+          resgatar não quer rolar preço. Duas abas resolvem sem esconder nada. */}
+      {contagemDaAba.gratuitos > 0 && (
+        <div className="flex gap-2">
+          {([
+            { id: "tudo", rotulo: "Tudo", n: contagemDaAba.tudo },
+            { id: "comprar", rotulo: "Para comprar", n: contagemDaAba.pagos },
+            { id: "gratuitos", rotulo: "Gratuitos", n: contagemDaAba.gratuitos },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setAba(t.id)}
+              aria-pressed={aba === t.id}
+              className={`flex-1 rounded-full px-3 py-2 text-xs font-bold transition ${
+                aba === t.id ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+              }`}
+            >
+              {t.rotulo} <span className="opacity-60">{t.n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+
       {/* Filtro ligado muda o que a lista significa. Dizer isso na tela evita
           a conclusão errada de que a loja não tem o produto. */}
       {contarFiltros(filtros) > 0 && (
