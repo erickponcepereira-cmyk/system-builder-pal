@@ -28,13 +28,13 @@ export const Route = createFileRoute("/api/bot/fila")({
         // conversas desta conexão
         const { data: conversas } = await db
           .from("bot_conversas")
-          .select("id, telefone")
+          .select("id, telefone, jid")
           .eq("conexao_id", conexao.id);
 
-        const lista = (conversas ?? []) as Array<{ id: string; telefone: string }>;
+        const lista = (conversas ?? []) as Array<{ id: string; telefone: string; jid: string | null }>;
         if (!lista.length) return json({ mensagens: [] });
 
-        const porId = new Map(lista.map((c) => [c.id, c.telefone]));
+        const porId = new Map(lista.map((c) => [c.id, c]));
 
         const agora = new Date();
         // Duas travas de tempo, com propósitos diferentes:
@@ -57,12 +57,18 @@ export const Route = createFileRoute("/api/bot/fila")({
         if (error) return json({ erro: error.message }, 500);
 
         const mensagens = ((pendentes ?? []) as Array<{ id: string; conversa_id: string; corpo: string | null }>)
-          .map((m) => ({
-            id: m.id,
-            telefone: porId.get(m.conversa_id) ?? "",
-            corpo: m.corpo ?? "",
-          }))
-          .filter((m) => m.telefone && m.corpo);
+          .map((m) => {
+            const c = porId.get(m.conversa_id);
+            return {
+              id: m.id,
+              telefone: c?.telefone ?? "",
+              // Quando existe, o conector responde direto para este endereço em
+              // vez de remontar um a partir dos dígitos.
+              jid: c?.jid ?? null,
+              corpo: m.corpo ?? "",
+            };
+          })
+          .filter((m) => (m.telefone || m.jid) && m.corpo);
 
         // Marca ANTES de responder. Se o conector cair no meio, a marca expira
         // em 2 minutos e a mensagem volta sozinha — melhor do que arriscar

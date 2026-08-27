@@ -158,6 +158,45 @@ async function executarAcao(db: Db, passo: any, conversaId: string) {
     case "transferir":
       await db.from("bot_conversas").update({ estado: "humano" }).eq("id", conversaId);
       break;
+
+    /*
+     * Avisa que está fora do expediente — e só nesse caso.
+     *
+     * A automação roda igual a qualquer hora: quem escreve às 23h merece a
+     * mesma resposta de quem escreve às 10h. O que muda é o fecho, para a
+     * pessoa não ficar esperando alguém que não vai responder agora.
+     *
+     * Os horários vêm em acao_params, não em código: academia muda horário e
+     * isso não pode virar migration.
+     */
+    case "fora_do_horario": {
+      const cfg = (passo.acao_params ?? {}) as Record<string, any>;
+      const texto = String(cfg.texto ?? "").trim();
+      if (!texto) break;
+
+      const partes = new Intl.DateTimeFormat("en-GB", {
+        timeZone: String(cfg.timezone ?? "America/Sao_Paulo"),
+        weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+      }).formatToParts(new Date());
+
+      const achar = (t: string) => partes.find((x) => x.type === t)?.value ?? "";
+      const DIAS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      const diaDaSemana = DIAS[achar("weekday")] ?? 0;
+      const agora = Number(achar("hour")) * 60 + Number(achar("minute"));
+
+      const emMinutos = (h: unknown) => {
+        const [a, b] = String(h ?? "").split(":").map(Number);
+        return (a || 0) * 60 + (b || 0);
+      };
+      const dias: number[] = Array.isArray(cfg.dias) ? cfg.dias : [1, 2, 3, 4, 5];
+      const dentro =
+        dias.includes(diaDaSemana) &&
+        agora >= emMinutos(cfg.inicio ?? "04:30") &&
+        agora < emMinutos(cfg.fim ?? "22:00");
+
+      if (!dentro) await enfileirar(db, conversaId, texto);
+      break;
+    }
     default:
       break;
   }
@@ -229,7 +268,7 @@ export async function processarMensagem(
   // 2. conversa com atendente humano: o robô não interfere
   const { data: conv } = await db
     .from("bot_conversas")
-    .select("id, estado, fluxo_id, passo_atual_id")
+    .select("id, estado, fluxo_id, passo_atual_id, tentativas_passo")
     .eq("id", conversaId)
     .maybeSingle();
   const conversa = conv as {
@@ -248,6 +287,26 @@ export async function processarMensagem(
     _direcao: "entrada",
   });
 
+  /*
+   * 3b. Pedir atendente funciona em QUALQUER ponto.
+   *
+   * Antes só existia como passo do fluxo: quem digitasse isso no meio de uma
+   * pergunta caía no "não entendi" e era devolvido ao menu — exatamente quando
+   * já tinha desistido do menu.
+   */
+  if (/\b(atendente|humano|pessoa de verdade|falar com alguem|falar com algu[ée]m)\b/i.test(limpo)) {
+    await db
+      .from("bot_conversas")
+      .update({ estado: "humano", passo_atual_id: null, tentativas_passo: 0 })
+      .eq("id", conversaId);
+    await enfileirar(
+      db,
+      conversaId,
+      "Certo! Já avisei a equipe. Assim que alguém estiver disponível, responde por aqui mesmo.",
+    );
+    return { acao: "pediu atendente" };
+  }
+
   // 4. já está no meio de um fluxo? tenta casar a resposta com uma opção
   if (conversa.passo_atual_id) {
     const passo = await lerPasso(db, conversa.passo_atual_id);
@@ -259,10 +318,34 @@ export async function processarMensagem(
         passo.opcoes.find((o: any) => resp.includes(o.rotulo.toLowerCase()));
 
       if (escolha) {
+        await db.from("bot_conversas").update({ tentativas_passo: 0 }).eq("id", conversaId);
         await caminhar(db, conversaId, escolha.proximo_passo_id);
         return { acao: "avancou no fluxo" };
       }
-      // não entendeu: repete as opções sem sair do lugar
+
+      /*
+       * Não entendeu. Repete UMA vez e depois solta a pessoa.
+       *
+       * Repetir para sempre é o que faz alguém fechar o WhatsApp achando que
+       * falou com uma parede — e a academia nunca fica sabendo que existiu essa
+       * conversa. Na segunda vez, oferece gente e encerra; o cartão no funil
+       * já foi criado lá em cima, então o lead não se perde.
+       */
+      const tentativas = Number((conversa as any).tentativas_passo ?? 0) + 1;
+      if (tentativas >= 2) {
+        await enfileirar(
+          db,
+          conversaId,
+          "Não consegui entender. Para falar com uma pessoa da equipe, é só digitar *falar com atendente*.",
+        );
+        await db
+          .from("bot_conversas")
+          .update({ estado: "encerrada", encerrada_em: new Date().toISOString(), passo_atual_id: null, tentativas_passo: 0 })
+          .eq("id", conversaId);
+        return { acao: "encerrou por nao entender" };
+      }
+
+      await db.from("bot_conversas").update({ tentativas_passo: tentativas }).eq("id", conversaId);
       await enfileirar(db, conversaId, `Não entendi. ${textoDoPasso(passo)}`);
       return { acao: "repetiu as opcoes" };
     }

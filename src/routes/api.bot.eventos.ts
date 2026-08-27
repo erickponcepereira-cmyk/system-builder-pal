@@ -86,13 +86,25 @@ export const Route = createFileRoute("/api/bot/eventos")({
           const telefone = String(corpo.telefone ?? "").replace(/\D/g, "");
           if (!telefone) return json({ erro: "telefone ausente" }, 400);
 
-          // acha ou cria a conversa deste número nesta conexão
-          const { data: existente } = await db
+          /*
+           * O endereço de onde a mensagem veio, inteiro.
+           *
+           * É por ele que a resposta volta. Os dígitos sozinhos deixaram de
+           * bastar quando o WhatsApp passou a endereçar conversas por LID
+           * (`103843987759126@lid`): aqueles números não são telefone de
+           * ninguém, e responder para eles não chega em lugar nenhum.
+           */
+          const jid = corpo.jid ? String(corpo.jid).slice(0, 120) : null;
+
+          // Casa pelo JID quando existe — é o identificador estável. O telefone
+          // continua servindo para a conversa que NÓS abrimos, que nasce sem JID.
+          const busca = db
             .from("bot_conversas")
             .select("id, estado")
-            .eq("conexao_id", conexao.id)
-            .eq("telefone", telefone)
-            .maybeSingle();
+            .eq("conexao_id", conexao.id);
+          const { data: existente } = await (jid
+            ? busca.eq("jid", jid)
+            : busca.eq("telefone", telefone)).maybeSingle();
 
           let conversaId = (existente as { id: string } | null)?.id;
           if (!conversaId) {
@@ -101,6 +113,7 @@ export const Route = createFileRoute("/api/bot/eventos")({
               .insert({
                 conexao_id: conexao.id,
                 telefone,
+                jid,
                 nome: corpo.nome ? String(corpo.nome).slice(0, 120) : null,
                 estado: "bot",
               })
@@ -108,8 +121,16 @@ export const Route = createFileRoute("/api/bot/eventos")({
               .single();
             if (error) return json({ erro: error.message }, 500);
             conversaId = (nova as { id: string }).id;
-          } else if (corpo.nome) {
-            await db.from("bot_conversas").update({ nome: String(corpo.nome).slice(0, 120) }).eq("id", conversaId);
+          } else {
+            // Conversa que já existia: grava o JID se ainda não tinha. É assim
+            // que a conversa aberta pelo nosso lado ganha endereço de volta
+            // quando a pessoa responde.
+            const remendo: Record<string, unknown> = {};
+            if (corpo.nome) remendo.nome = String(corpo.nome).slice(0, 120);
+            if (jid) remendo.jid = jid;
+            if (Object.keys(remendo).length) {
+              await db.from("bot_conversas").update(remendo).eq("id", conversaId);
+            }
           }
 
           const tiposMidia = ["texto", "imagem", "audio", "video", "documento"];
