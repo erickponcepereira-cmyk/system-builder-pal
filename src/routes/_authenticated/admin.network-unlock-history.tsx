@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, RefreshCw, Download } from "lucide-react";
+import { backendUrl } from "@/lib/mobile-backend";
 
 type HistoryRow = {
   id: string;
@@ -58,7 +59,7 @@ function RouteComponent() {
   const runSnapshot = async (yy: number, mm: number) => {
     setRunning(true);
     try {
-      const res = await fetch("/api/public/hooks/network-unlock-snapshot", {
+      const res = await fetch(backendUrl("/api/public/hooks/network-unlock-snapshot"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ year: yy, month: mm }),

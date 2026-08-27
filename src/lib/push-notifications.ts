@@ -63,6 +63,19 @@ export async function initPushNotifications(
       return false;
     }
 
+    if (Capacitor.getPlatform() === "android") {
+      await PushNotifications.createChannel({
+        id: "fitmind_default",
+        name: "FitMind Club",
+        description: "Lembretes e atualizações da FitMind Club",
+        importance: 5,
+        visibility: 0,
+        vibration: true,
+        lights: true,
+        lightColor: "#FF4A3D",
+      });
+    }
+
     // Listeners ANTES do register() para não perder eventos
     await PushNotifications.addListener("registration", async (token: Token) => {
       try {
@@ -101,11 +114,24 @@ export async function initPushNotifications(
   }
 }
 
-/** Remove todos os listeners de push notifications. */
+/**
+ * Cancela o token nativo e remove os listeners.
+ *
+ * O unregister e importante no logout: sem ele, o mesmo aparelho poderia
+ * continuar recebendo mensagens privadas da conta anterior ate o token ser
+ * associado novamente. O backend ja remove tokens que o FCM reporta como
+ * invalidos.
+ */
 export async function removePushListeners(): Promise<void> {
   if (!isNativePlatform()) return;
-  await PushNotifications.removeAllListeners();
-  initialized = false;
+  try {
+    await PushNotifications.unregister();
+  } catch (err) {
+    console.error("[Push] Nao foi possivel cancelar o token nativo:", err);
+  } finally {
+    await PushNotifications.removeAllListeners();
+    initialized = false;
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ import { persistReferralForOAuth } from "@/lib/referral-signup";
 import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
 import { signInWithGooglePopup } from "@/lib/google-popup-auth";
+import { Capacitor } from "@capacitor/core";
 
 
 
@@ -60,6 +61,16 @@ export function GoogleSignInButton({
       // há mais querystring para consultar.
       await enriquecerAtribuicao();
       persistReferralForOAuth();
+
+      // Google bloqueia OAuth em WebView incorporado. No aplicativo usamos um
+      // Custom Tab e o Android App Link devolve a sessão ao mesmo app.
+      if (Capacitor.isNativePlatform()) {
+        const { startNativeGoogleAuth } = await import("@/lib/native-google-auth");
+        const nativeResult = await startNativeGoogleAuth();
+        if (!nativeResult.ok) toast.error(nativeResult.error);
+        setLoading(false);
+        return;
+      }
 
       const redirectUri = urlDeRetornoComIndicacao(getAuthRedirectUrl("/auth/callback"));
 

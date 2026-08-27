@@ -10,8 +10,23 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 // PWA temporariamente desabilitado para diagnosticar flash no APK Android.
 // Um kill-switch worker em public/sw.js evicta registros antigos em WebViews
 // que já tinham o Service Worker instalado.
+const capacitorStaticBuild = process.env.CAPACITOR_STATIC_BUILD === "true";
+
 export default defineConfig({
+  ...(capacitorStaticBuild
+    ? {
+        nitro: false,
+        tanstackStart: {
+          spa: {
+            enabled: true,
+            prerender: { outputPath: "/index" },
+          },
+        },
+      }
+    : {}),
   vite: {
-    plugins: [mcpPlugin()],
+    // As rotas MCP já são versionadas. A geração do plugin 0.24 usa paths
+    // incompatíveis no Windows, então é pulada apenas nesse sistema.
+    plugins: process.platform === "win32" ? [] : [mcpPlugin()],
   },
 });

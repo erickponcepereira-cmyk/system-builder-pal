@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
+import { backendUrl } from "@/lib/mobile-backend";
 
 export const Route = createFileRoute("/pay/$orderNumber")({
   head: () => ({ meta: [
@@ -43,7 +44,7 @@ function PayPage() {
   const [purchased, setPurchased] = useState(false);
 
   const reload = () => {
-    fetch(`/api/public/pay/${orderNumber}`)
+    fetch(backendUrl(`/api/public/pay/${orderNumber}`))
       .then((r) => r.json())
       .then((d) => { if (d.error) setError("Pedido não encontrado"); else setData(d); })
       .catch(() => setError("Erro ao carregar pedido"))

@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getShareOrigin } from "@/lib/auth-redirects";
+import { backendUrl } from "@/lib/mobile-backend";
 
 function toLocalInput(iso: string) {
   const d = new Date(iso);
@@ -52,7 +53,7 @@ export function UpcomingAppointments() {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) { toast.error("Faça login novamente."); return; }
-    window.location.href = `/api/oauth/google/start?access_token=${encodeURIComponent(token)}`;
+    window.location.href = backendUrl(`/api/oauth/google/start?access_token=${encodeURIComponent(token)}`);
   };
 
   const sync = async () => {

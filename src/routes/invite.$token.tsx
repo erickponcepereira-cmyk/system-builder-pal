@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Calendar, MapPin, User as UserIcon, Check, ExternalLink } from "lucide-react";
+import { backendUrl } from "@/lib/mobile-backend";
 
 type Invite = {
   id: string;
@@ -52,7 +53,7 @@ function InvitePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/public/invite/${token}`)
+    fetch(backendUrl(`/api/public/invite/${token}`))
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error || "Erro");
         return r.json();
@@ -65,7 +66,7 @@ function InvitePage() {
   const confirm = async () => {
     setBusy(true);
     try {
-      const r = await fetch(`/api/public/invite/${token}`, { method: "POST" });
+      const r = await fetch(backendUrl(`/api/public/invite/${token}`), { method: "POST" });
       if (!r.ok) throw new Error("Falha ao confirmar");
       setInv((prev) => (prev ? { ...prev, attendee_confirmed: true } : prev));
     } catch (e: any) {

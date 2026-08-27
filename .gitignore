@@ -15,6 +15,17 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+.env
+.env.*
+!.env.example
+
+# Mobile signing / provider configuration (never commit secrets)
+*.jks
+*.keystore
+key.properties
+keystore.properties
+google-services.json
+GoogleService-Info.plist
 
 # Wrangler / Cloudflare
 .wrangler/

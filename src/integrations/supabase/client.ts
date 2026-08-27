@@ -20,6 +20,8 @@ function createSupabaseClient() {
       storage: brokeredPreviewStorage(),
       persistSession: true,
       autoRefreshToken: true,
+      // Necessário para callbacks nativos seguros e compatível com o fluxo web.
+      flowType: 'pkce',
     }
   });
 }

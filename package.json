@@ -1,17 +1,29 @@
 {
   "name": "tanstack_start_ts",
+  "version": "0.1.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build",
-    "build:dev": "NODE_OPTIONS=--max-old-space-size=8192 vite build --mode development",
+    "build": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
+    "build:dev": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --mode development",
+    "build:mobile": "node scripts/build-mobile.mjs",
+    "cap:sync:android:preview": "node scripts/sync-android-preview.mjs",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@capacitor-community/background-geolocation": "^1.2.26",
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/ios": "^8.4.1",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@cloudflare/vite-plugin": "^1.25.5",
@@ -82,6 +94,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.13.1",
     "@types/node": "^22.16.5",

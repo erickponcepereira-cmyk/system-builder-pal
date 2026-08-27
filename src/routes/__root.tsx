@@ -11,6 +11,8 @@ import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { completeNativeGoogleAuth, isNativeGoogleCallback } from "@/lib/native-google-auth";
 
 
 function NotFoundComponent() {
@@ -111,7 +113,6 @@ function RootComponent() {
   useEffect(() => {
     // Modo manutenção: não dispara nenhuma chamada ao backend.
     if (maintenance) return;
-
     // Alinha os percentuais do front com a tabela taxas_vigentes do banco.
     // Sem isto, partnerFinance.ts fica com uma copia propria dos numeros e a
     // tela pode mostrar um valor enquanto a venda cobra outro.
@@ -120,6 +121,44 @@ function RootComponent() {
       // tela ja ter desenhado, ela continuaria exibindo o percentual velho.
       if (mudou) void router.invalidate();
     });
+
+    let appUrlListener: PluginListenerHandle | undefined;
+    let handlingNativeCallback = false;
+
+    const handleNativeCallback = async (url: string) => {
+      if (!isNativeGoogleCallback(url) || handlingNativeCallback) return;
+      handlingNativeCallback = true;
+      try {
+        const result = await completeNativeGoogleAuth(url);
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.close();
+        if (!result.ok) {
+          const { toast } = await import("sonner");
+          toast.error(result.error);
+          await router.navigate({ to: "/login", replace: true });
+          return;
+        }
+        await router.navigate({ to: "/auth/callback", replace: true });
+      } finally {
+        handlingNativeCallback = false;
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          appUrlListener = await App.addListener("appUrlOpen", ({ url }) => {
+            void handleNativeCallback(url);
+          });
+          const launchUrl = await App.getLaunchUrl();
+          if (launchUrl?.url) void handleNativeCallback(launchUrl.url);
+        } catch (error) {
+          console.error("[OAuth] Listener nativo indisponível:", error);
+        }
+      })();
+    }
+
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
     // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
@@ -180,11 +219,47 @@ function RootComponent() {
       }
     })();
 
-    // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
-    import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
-      initPushNotifications({ onToken: saveTokenToSupabase }).catch((err) => {
+    // Push Notifications: registra somente depois de existir uma sessão. Antes,
+    // o token podia chegar durante a tela de login, não ser salvo e nunca mais
+    // ser reenviado porque o módulo já se considerava inicializado.
+    let pushUserId: string | null = null;
+    let pushInitPromise: Promise<void> | null = null;
+    const initPushForUser = async (userId: string) => {
+      if (!Capacitor.isNativePlatform() || pushUserId === userId) return;
+      if (pushInitPromise) {
+        await pushInitPromise;
+        if (pushUserId === userId) return;
+      }
+
+      pushInitPromise = (async () => {
+        const {
+          initPushNotifications,
+          removePushListeners,
+          saveTokenToSupabase,
+        } = await import("@/lib/push-notifications");
+        if (pushUserId && pushUserId !== userId) await removePushListeners();
+        const initialized = await initPushNotifications({ onToken: saveTokenToSupabase });
+        if (initialized) pushUserId = userId;
+      })();
+
+      try {
+        await pushInitPromise;
+      } catch (err) {
         console.error("[Push] init falhou:", err);
-      });
+      } finally {
+        pushInitPromise = null;
+      }
+    };
+
+    const stopPush = async () => {
+      if (!pushUserId) return;
+      const { removePushListeners } = await import("@/lib/push-notifications");
+      await removePushListeners();
+      pushUserId = null;
+    };
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user.id) void initPushForUser(data.session.user.id);
     });
 
     // Auto-reload quando o navegador tenta carregar um chunk JS antigo (após deploy)
@@ -229,15 +304,21 @@ function RootComponent() {
     // que envolve o <Outlet />. Isso evita o flash da tela de login antes
     // da navegação para /portal-selector quando já existe sessão válida.
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // TOKEN_REFRESHED acontece a cada ~1h e em todo foco de aba: não registra acesso.
       if (event === "SIGNED_IN") {
-        done = false; ping();
+        done = false;
+        ping();
+        if (session?.user.id) void initPushForUser(session.user.id);
+      } else if (event === "SIGNED_OUT") {
+        void stopPush();
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      void appUrlListener?.remove();
+      void stopPush();
       window.removeEventListener("vite:preloadError", onPreloadError);
       window.removeEventListener("error", onChunkError);
     };

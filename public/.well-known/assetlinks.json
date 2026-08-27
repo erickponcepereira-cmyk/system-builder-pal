@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.com.fitmindclub.app",
+      "sha256_cert_fingerprints": [
+        "BF:9A:61:32:7E:C7:B5:65:51:6A:89:2D:CF:5D:81:0B:92:D5:20:9A:06:78:20:2B:A4:DE:AE:A8:BD:A5:EF:DB"
+      ]
+    }
+  }
+]
