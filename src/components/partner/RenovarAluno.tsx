@@ -122,6 +122,10 @@ export function RenovarAluno({
         data: {
           partnerId, credencialId, studentId,
           plano: plano.nome, dias: plano.dias, pagamentos,
+          // O servidor tem a MESMA trava, e por bom motivo: a tela pode ser
+          // contornada. Sem mandar a bandeira, o lançamento de graça era
+          // recusado lá mesmo com a caixa marcada aqui.
+          cortesia,
           // A observação guarda que foi de graça. Sem isso, um lançamento de
           // R$ 0,00 no fechamento do mês não se distingue de um erro de
           // digitação, e alguém vai gastar a tarde tentando descobrir.

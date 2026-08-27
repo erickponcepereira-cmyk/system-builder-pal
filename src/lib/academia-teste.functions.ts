@@ -1981,6 +1981,15 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
     plano: string; dias: number; pagamentos: PagamentoDividido[]; observacao?: string;
     /** Validade escolhida na mão; quando ausente, o banco soma os dias do plano. */
     validoAte?: string | null;
+    /**
+     * Lançamento sem cobrança, de propósito.
+     *
+     * Precisa ser dito em voz alta. A trava de "informe o valor" existe para
+     * pegar quem esqueceu de digitar — sem ela, um lançamento de R$ 0,00 por
+     * engano vira receita perdida que ninguém reconcilia no fim do mês. Com a
+     * bandeira, zero deixa de ser acidente e passa a ser decisão.
+     */
+    cortesia?: boolean;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin, profileId } = await autorizar(context.userId, data.partnerId);
@@ -1988,7 +1997,9 @@ export const renovarMensalidadeAcademia = createServerFn({ method: "POST" })
     const pagamentos = (data.pagamentos ?? [])
       .map((p) => ({ forma: p.forma, valor: Math.round((Number(p.valor) || 0) * 100) / 100 }))
       .filter((p) => p.valor > 0);
-    if (pagamentos.length === 0) throw new Error("Informe ao menos uma forma de pagamento com valor.");
+    if (pagamentos.length === 0 && !data.cortesia) {
+      throw new Error("Informe ao menos uma forma de pagamento com valor — ou marque como cortesia.");
+    }
     if (!data.credencialId && !data.studentId) throw new Error("Informe a pessoa.");
 
     const total = pagamentos.reduce((s, p) => s + p.valor, 0);
