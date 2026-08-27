@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { relatorioAcademia, relatorioAcademiaExtra, FORMAS_PAGAMENTO, type CategoriaRelatorio } from "@/lib/academia-teste.functions";
+import { relatorioAcademia, relatorioAcademiaExtra, relatorioTurmasEEventos, FORMAS_PAGAMENTO, type CategoriaRelatorio } from "@/lib/academia-teste.functions";
 import { PessoasDoRelatorio } from "@/components/partner/PessoasDoRelatorio";
 
 const brl = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -10,6 +10,10 @@ const rotuloForma = (v: string) => FORMAS_PAGAMENTO.find((f) => f.value === v)?.
 
 type Dados = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademia>>>>;
 type Extra = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademiaExtra>>>>;
+type Grade = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioTurmasEEventos>>>>;
+
+/** EXTRACT(DOW) do Postgres: 0 = domingo. */
+const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 const iso = (d: Date) => {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -59,12 +63,14 @@ function Cartao({ rot, valor, nota, tom, aoClicar }: { rot: string; valor: strin
 export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(relatorioAcademia);
   const obterExtra = useServerFn(relatorioAcademiaExtra);
+  const obterGrade = useServerFn(relatorioTurmasEEventos);
   const inicial = mesCorrente();
   const [de, setDe] = useState(inicial.de);
   const [ate, setAte] = useState(inicial.ate);
   const [projecaoAte, setProjecaoAte] = useState(daquiTrintaDias());
   const [dados, setDados] = useState<Dados | null>(null);
   const [extra, setExtra] = useState<Extra | null>(null);
+  const [grade, setGrade] = useState<Grade | null>(null);
   const [carregando, setCarregando] = useState(true);
   // Qual numero esta aberto na lista de pessoas.
   const [aberto, setAberto] = useState<{ cat: CategoriaRelatorio; titulo: string } | null>(null);
@@ -81,6 +87,9 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
     obterExtra({ data: { partnerId, de: d, ate: a, projecaoAte: p } })
       .then((r) => setExtra(r))
       .catch(() => setExtra(null));
+    obterGrade({ data: { partnerId, de: d, ate: a } })
+      .then((r) => setGrade(r))
+      .catch(() => setGrade(null));
   };
 
   useEffect(() => { carregar(de, ate, projecaoAte); }, [partnerId]);
@@ -256,6 +265,73 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           {s.total_com_mensalidade} pessoa(s) com mensalidade lançada.
         </p>
       </div>
+
+      {/* Quantas pessoas vieram em cada aula. A janela de horario da turma e o
+          que classifica a passagem — nada novo e pedido a catraca, e o que ja
+          foi coletado se organiza sozinho assim que a grade e cadastrada. */}
+      {grade && grade.turmas.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Cliente por aula</h3>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-xs">
+              <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/40">
+                <tr><th className="p-2 text-left">Aula</th><th className="p-2 text-left">Horário</th>
+                    <th className="p-2 text-right">Entradas</th><th className="p-2 text-right">Pessoas</th></tr>
+              </thead>
+              <tbody>
+                {grade.turmas.map((t) => (
+                  <tr key={t.turma_id ?? "fora"} className="border-t border-white/5">
+                    <td className="p-2">
+                      {t.turma_id ? t.turma : <span className="text-white/50">Fora de aula</span>}
+                      {t.modalidade && <span className="ml-1 text-white/40">· {t.modalidade}</span>}
+                    </td>
+                    <td className="p-2 text-white/60">
+                      {t.dia_semana != null && <span className="mr-1">{DIAS[t.dia_semana]}</span>}
+                      {t.janela}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">{t.entradas}</td>
+                    <td className="p-2 text-right tabular-nums text-white/60">{t.pessoas}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {grade.turmas.some((t) => !t.turma_id) && (
+            <p className="mt-2 text-[11px] text-white/50">
+              "Fora de aula" é quem passou num horário que não pertence a nenhuma turma cadastrada.
+              Se esse for o maior número da tabela, a grade não descreve o que acontece na academia.
+            </p>
+          )}
+        </div>
+      )}
+
+      {grade && grade.eventos.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Eventos no período</h3>
+          <div className="overflow-x-auto rounded-xl border border-white/10">
+            <table className="w-full text-xs">
+              <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/40">
+                <tr><th className="p-2 text-left">Evento</th><th className="p-2 text-left">Data</th>
+                    <th className="p-2 text-right">Inscritos</th><th className="p-2 text-right">Foram</th>
+                    <th className="p-2 text-right">Recebido</th><th className="p-2 text-right">Líquido</th></tr>
+              </thead>
+              <tbody>
+                {grade.eventos.map((e) => (
+                  <tr key={e.evento_id} className="border-t border-white/5">
+                    <td className="p-2">{e.nome}</td>
+                    <td className="p-2 text-white/60">{diaMes(e.data_evento)}{e.hora_inicio ? ` · ${e.hora_inicio.slice(0, 5)}` : ""}</td>
+                    <td className="p-2 text-right tabular-nums">{e.inscritos}</td>
+                    {/* Inscrito menos compareceu e o unico numero que diz se o evento deu certo. */}
+                    <td className="p-2 text-right tabular-nums text-white/60">{e.compareceram}</td>
+                    <td className="p-2 text-right tabular-nums">{brl(e.bruto)}</td>
+                    <td className="p-2 text-right tabular-nums text-emerald-400">{brl(e.liquido)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Movimento da catraca</h3>

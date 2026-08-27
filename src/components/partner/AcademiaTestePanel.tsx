@@ -532,6 +532,10 @@ function Frequencia({ partnerId }: { partnerId: string }) {
   const [turmaId, setTurmaId] = useState("");
   const [desde, setDesde] = useState("");
   const [novaTurma, setNovaTurma] = useState("");
+  // "" = todo dia. Os números seguem EXTRACT(DOW) do Postgres: 0 = domingo.
+  const [diaTurma, setDiaTurma] = useState("");
+  const [inicioTurma, setInicioTurma] = useState("");
+  const [fimTurma, setFimTurma] = useState("");
 
   const carregar = () => {
     setLoading(true);
@@ -663,13 +667,32 @@ function Frequencia({ partnerId }: { partnerId: string }) {
         Em branco, conta desde sempre. Com data, conta só as entradas daquele dia em diante.
       </p>
 
-      <div className="flex gap-2">
+      {/* Dia e horário deixaram de ser opcionais na prática.
+          É a janela de horário que faz o relatório "Cliente por aula" existir:
+          a catraca não sabe qual aula está rolando, então a passagem é
+          classificada pelo relógio. Turma sem horário não aparece lá — some do
+          relatório sem dizer por quê. */}
+      <div className="flex flex-wrap gap-2">
         <input
           value={novaTurma}
           onChange={(e) => setNovaTurma(e.target.value)}
           placeholder="Nova turma (ex.: Bike Indoor 19h)"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className="min-w-[180px] flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
         />
+        <select
+          value={diaTurma}
+          onChange={(e) => setDiaTurma(e.target.value)}
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        >
+          <option value="">Todo dia</option>
+          {["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"].map((d, i) => (
+            <option key={d} value={String(i)}>{d}</option>
+          ))}
+        </select>
+        <input type="time" value={inicioTurma} onChange={(e) => setInicioTurma(e.target.value)}
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white" />
+        <input type="time" value={fimTurma} onChange={(e) => setFimTurma(e.target.value)}
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white" />
         <button
           type="button"
           onClick={async () => {
@@ -682,11 +705,31 @@ function Frequencia({ partnerId }: { partnerId: string }) {
              * clicar de novo criava uma segunda turma igual.
              */
             const nome = novaTurma.trim();
+            // Janela pela metade não classifica nada: a consulta exige as duas
+            // pontas. Melhor barrar aqui do que criar uma turma que nunca vai
+            // aparecer no relatório de aulas.
+            if ((inicioTurma && !fimTurma) || (!inicioTurma && fimTurma)) {
+              toast.error("Informe o horário de início E de fim, ou deixe os dois em branco.");
+              return;
+            }
+            if (inicioTurma && fimTurma && fimTurma <= inicioTurma) {
+              toast.error("O fim precisa ser depois do início.");
+              return;
+            }
             setSalvando(true);
             try {
-              await criarTurma({ data: { partnerId, nome } });
-              setNovaTurma("");
-              toast.success(`Turma "${nome}" criada.`);
+              await criarTurma({ data: {
+                partnerId, nome,
+                diaSemana: diaTurma === "" ? null : Number(diaTurma),
+                horaInicio: inicioTurma || null,
+                horaFim: fimTurma || null,
+              } });
+              setNovaTurma(""); setDiaTurma(""); setInicioTurma(""); setFimTurma("");
+              toast.success(
+                inicioTurma
+                  ? `Turma "${nome}" criada. Ela já aparece em "Cliente por aula" no relatório.`
+                  : `Turma "${nome}" criada — sem horário, ela não entra em "Cliente por aula".`,
+              );
               carregar();
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Não foi possível criar a turma.");

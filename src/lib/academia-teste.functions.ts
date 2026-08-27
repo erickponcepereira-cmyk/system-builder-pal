@@ -2103,6 +2103,42 @@ export const relatorioAcademiaExtra = createServerFn({ method: "POST" })
   });
 
 /**
+ * Quantas pessoas vieram em cada aula, e como foi cada evento.
+ *
+ * A aula sai do relógio, não da catraca. `academia_frequencias.turma_id` existe
+ * e está sempre nula: o agente não sabe qual aula está acontecendo, e ensinar
+ * isso a ele significaria publicar versão nova a cada mudança de horário. A
+ * passagem cai na turma cuja janela a contém — o que classifica retroativamente
+ * tudo que já foi coletado e continua certo se a grade mudar.
+ *
+ * "Fora de aula" não é sobra: é o número que diz se a grade cadastrada descreve
+ * o que realmente acontece na academia.
+ */
+export const relatorioTurmasEEventos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; de?: string; ate?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const args = { p_partner_id: data.partnerId, p_de: data.de ?? null, p_ate: data.ate ?? null };
+    const [turmas, eventos] = await Promise.all([
+      admin.rpc("academia_relatorio_turmas" as never, args as never),
+      admin.rpc("academia_relatorio_eventos" as never, args as never),
+    ]);
+    if (turmas.error) throw new Error(turmas.error.message);
+    if (eventos.error) throw new Error(eventos.error.message);
+    return {
+      turmas: (turmas.data ?? []) as unknown as Array<{
+        turma_id: string | null; turma: string; modalidade: string | null;
+        dia_semana: number | null; janela: string; entradas: number; pessoas: number;
+      }>,
+      eventos: (eventos.data ?? []) as unknown as Array<{
+        evento_id: string; nome: string; data_evento: string; hora_inicio: string | null;
+        valor: number; inscritos: number; compareceram: number; bruto: number; liquido: number;
+      }>,
+    };
+  });
+
+/**
  * Cadastro local de quem não é da FitMind.
  *
  * A recepção precisa lançar mensalidade para gente que nunca vai criar conta.
