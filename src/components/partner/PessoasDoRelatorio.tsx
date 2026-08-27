@@ -26,13 +26,15 @@ const linkWhatsapp = (tel: string) => {
  * o telefone com link direto: da contagem à conversa em dois cliques.
  */
 export function PessoasDoRelatorio({
-  partnerId, categoria, titulo, de, ate, aoFechar,
+  partnerId, categoria, titulo, de, ate, projecaoAte, aoFechar,
 }: {
   partnerId: string;
   categoria: CategoriaRelatorio;
   titulo: string;
   de: string;
   ate: string;
+  /** So usado pelas categorias novas; a original ignora. */
+  projecaoAte?: string;
   aoFechar: () => void;
 }) {
   const obter = useServerFn(pessoasDoRelatorio);
@@ -43,12 +45,12 @@ export function PessoasDoRelatorio({
   useEffect(() => {
     let vivo = true;
     setCarregando(true);
-    obter({ data: { partnerId, categoria, de, ate } })
+    obter({ data: { partnerId, categoria, de, ate, projecaoAte } })
       .then((r) => { if (vivo) setPessoas(r.pessoas); })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Não consegui carregar a lista."))
       .finally(() => { if (vivo) setCarregando(false); });
     return () => { vivo = false; };
-  }, [partnerId, categoria, de, ate]);
+  }, [partnerId, categoria, de, ate, projecaoAte]);
 
   const visiveis = useMemo(() => {
     const t = busca.trim().toLowerCase();

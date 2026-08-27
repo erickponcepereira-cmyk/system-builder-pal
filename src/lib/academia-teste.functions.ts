@@ -2059,6 +2059,50 @@ export const relatorioAcademia = createServerFn({ method: "POST" })
   });
 
 /**
+ * O que o relatório de caixa não responde: quanto vem, quem renovou, quem
+ * entrou e quem está pagando sem aparecer.
+ *
+ * Função separada de propósito. `academia_relatorio` alimenta a tela que a
+ * recepção abre todo dia; se este bloco quebrar, ele quebra sozinho.
+ *
+ * A projeção não sai do histórico — 410 das 413 mensalidades vieram do Next Fit
+ * com valor zero, e somar isso mostraria uma academia que não fatura. Ela sai
+ * do preço de tabela do plano, e `projecaoSemPreco` conta quem ficou de fora
+ * para o número não mentir por omissão.
+ */
+export const relatorioAcademiaExtra = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; de?: string; ate?: string; projecaoAte?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_relatorio_extra" as never, {
+      p_partner_id: data.partnerId,
+      p_de: data.de ?? null,
+      p_ate: data.ate ?? null,
+      p_projecao_ate: data.projecaoAte ?? null,
+    } as never);
+    if (error) throw new Error(error.message);
+
+    const l = (Array.isArray(r) ? r[0] : r) as unknown as {
+      projecao_valor: number; projecao_pessoas: number; projecao_sem_preco: number;
+      renovacoes_qtd: number; renovacoes_valor: number; novos_qtd: number;
+      sem_frequencia_qtd: number; dayuse_qtd: number; dayuse_valor: number;
+    } | null;
+
+    return {
+      projecaoValor: Number(l?.projecao_valor ?? 0),
+      projecaoPessoas: Number(l?.projecao_pessoas ?? 0),
+      projecaoSemPreco: Number(l?.projecao_sem_preco ?? 0),
+      renovacoesQtd: Number(l?.renovacoes_qtd ?? 0),
+      renovacoesValor: Number(l?.renovacoes_valor ?? 0),
+      novosQtd: Number(l?.novos_qtd ?? 0),
+      semFrequenciaQtd: Number(l?.sem_frequencia_qtd ?? 0),
+      dayuseQtd: Number(l?.dayuse_qtd ?? 0),
+      dayuseValor: Number(l?.dayuse_valor ?? 0),
+    };
+  });
+
+/**
  * Cadastro local de quem não é da FitMind.
  *
  * A recepção precisa lançar mensalidade para gente que nunca vai criar conta.
@@ -2168,7 +2212,14 @@ export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
 
 export type CategoriaRelatorio =
   | "liberados" | "a_vencer" | "em_carencia" | "bloqueados" | "vencem_em_7"
-  | "sem_mensalidade" | "entradas" | "manuais" | "barradas";
+  | "sem_mensalidade" | "entradas" | "manuais" | "barradas"
+  // As de baixo vêm de `academia_relatorio_pessoas_extra`, não da original.
+  | "projecao" | "renovacoes" | "novos" | "sem_frequencia" | "dayuse";
+
+/** Quais categorias moram na função nova. */
+const CATEGORIAS_EXTRA = new Set<CategoriaRelatorio>([
+  "projecao", "renovacoes", "novos", "sem_frequencia", "dayuse",
+]);
 
 /**
  * Quem são as pessoas por trás de um número do relatório.
@@ -2179,15 +2230,22 @@ export type CategoriaRelatorio =
  */
 export const pessoasDoRelatorio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { partnerId: string; categoria: CategoriaRelatorio; de?: string; ate?: string }) => d)
+  .inputValidator((d: { partnerId: string; categoria: CategoriaRelatorio; de?: string; ate?: string; projecaoAte?: string }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
-    const { data: r, error } = await admin.rpc("academia_relatorio_pessoas" as never, {
-      p_partner_id: data.partnerId,
-      p_categoria: data.categoria,
-      p_de: data.de ?? null,
-      p_ate: data.ate ?? null,
-    } as never);
+    // Duas funções, uma porta. A tela chama sempre a mesma coisa; quem sabe
+    // onde cada categoria mora é aqui.
+    const extra = CATEGORIAS_EXTRA.has(data.categoria);
+    const { data: r, error } = await admin.rpc(
+      (extra ? "academia_relatorio_pessoas_extra" : "academia_relatorio_pessoas") as never,
+      {
+        p_partner_id: data.partnerId,
+        p_categoria: data.categoria,
+        p_de: data.de ?? null,
+        p_ate: data.ate ?? null,
+        ...(extra ? { p_projecao_ate: data.projecaoAte ?? null } : {}),
+      } as never,
+    );
     if (error) throw new Error(error.message);
     return {
       pessoas: (r ?? []) as unknown as Array<{

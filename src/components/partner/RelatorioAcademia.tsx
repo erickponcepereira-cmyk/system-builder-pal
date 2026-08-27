@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { relatorioAcademia, FORMAS_PAGAMENTO, type CategoriaRelatorio } from "@/lib/academia-teste.functions";
+import { relatorioAcademia, relatorioAcademiaExtra, FORMAS_PAGAMENTO, type CategoriaRelatorio } from "@/lib/academia-teste.functions";
 import { PessoasDoRelatorio } from "@/components/partner/PessoasDoRelatorio";
 
 const brl = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const rotuloForma = (v: string) => FORMAS_PAGAMENTO.find((f) => f.value === v)?.label ?? v;
 
 type Dados = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademia>>>>;
+type Extra = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademiaExtra>>>>;
+
+const iso = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 
 /** Primeiro e último dia do mês corrente, em ISO. */
 function mesCorrente() {
@@ -16,9 +22,21 @@ function mesCorrente() {
   const p = (n: number) => String(n).padStart(2, "0");
   return {
     de: `${h.getFullYear()}-${p(h.getMonth() + 1)}-01`,
-    ate: `${h.getFullYear()}-${p(h.getMonth() + 1)}-${p(h.getDate())}`,
+    ate: iso(h),
   };
 }
+
+/** Daqui a 30 dias — a janela padrão da projeção. */
+function daquiTrintaDias() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return iso(d);
+}
+
+const diaMes = (s: string) => {
+  const [, m, d] = s.split("-");
+  return `${d}/${m}`;
+};
 
 function Cartao({ rot, valor, nota, tom, aoClicar }: { rot: string; valor: string; nota?: string; tom?: "ok" | "alerta"; aoClicar?: () => void }) {
   const cor = tom === "ok" ? "text-emerald-400" : tom === "alerta" ? "text-amber-300" : "text-white";
@@ -40,24 +58,32 @@ function Cartao({ rot, valor, nota, tom, aoClicar }: { rot: string; valor: strin
 
 export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(relatorioAcademia);
+  const obterExtra = useServerFn(relatorioAcademiaExtra);
   const inicial = mesCorrente();
   const [de, setDe] = useState(inicial.de);
   const [ate, setAte] = useState(inicial.ate);
+  const [projecaoAte, setProjecaoAte] = useState(daquiTrintaDias());
   const [dados, setDados] = useState<Dados | null>(null);
+  const [extra, setExtra] = useState<Extra | null>(null);
   const [carregando, setCarregando] = useState(true);
   // Qual numero esta aberto na lista de pessoas.
   const [aberto, setAberto] = useState<{ cat: CategoriaRelatorio; titulo: string } | null>(null);
   const abrir = (cat: CategoriaRelatorio, titulo: string) => () => setAberto({ cat, titulo });
 
-  const carregar = (d: string, a: string) => {
+  const carregar = (d: string, a: string, p: string) => {
     setCarregando(true);
     obter({ data: { partnerId, de: d, ate: a } })
       .then((r) => setDados(r))
       .catch((e) => toast.error(e instanceof Error ? e.message : "Não consegui carregar o relatório."))
       .finally(() => setCarregando(false));
+    // Separado de propósito: se o bloco novo falhar, o relatório que a recepção
+    // usa todo dia continua na tela.
+    obterExtra({ data: { partnerId, de: d, ate: a, projecaoAte: p } })
+      .then((r) => setExtra(r))
+      .catch(() => setExtra(null));
   };
 
-  useEffect(() => { carregar(de, ate); }, [partnerId]);
+  useEffect(() => { carregar(de, ate, projecaoAte); }, [partnerId]);
 
   if (carregando && !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
   if (!dados) return null;
@@ -78,7 +104,7 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           <input type="date" value={ate} onChange={(e) => setAte(e.target.value)}
             className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white" />
         </label>
-        <button type="button" onClick={() => carregar(de, ate)} disabled={carregando}
+        <button type="button" onClick={() => carregar(de, ate, projecaoAte)} disabled={carregando}
           className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50">
           {carregando ? "Carregando…" : "Ver"}
         </button>
@@ -100,6 +126,69 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           </p>
         )}
       </div>
+
+      {/* O caixa acima olha para trás. Este bloco olha para frente: quanto a
+          academia recebe se todo mundo que vence renovar o mesmo plano. O valor
+          vem do PREÇO DE TABELA, não do histórico — as mensalidades importadas
+          entraram com valor zero e somá-las mostraria uma academia que não
+          fatura. */}
+      {extra && (
+        <div>
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/50">O que ainda vem</h3>
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-white/40">projetar até</span>
+              <input
+                type="date"
+                value={projecaoAte}
+                onChange={(e) => { setProjecaoAte(e.target.value); carregar(de, ate, e.target.value); }}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Cartao
+              rot={`Projeção até ${diaMes(projecaoAte)}`}
+              valor={brl(extra.projecaoValor)}
+              tom="ok"
+              nota={`${extra.projecaoPessoas} renovação(ões) prevista(s)`}
+              aoClicar={abrir("projecao", `Vencem até ${diaMes(projecaoAte)}`)}
+            />
+            <Cartao rot="Renovações no período" valor={String(extra.renovacoesQtd)}
+              nota={brl(extra.renovacoesValor) + " lançado"}
+              aoClicar={abrir("renovacoes", "Renovações no período")} />
+            <Cartao rot="Alunos novos" valor={String(extra.novosQtd)} nota="entraram no período"
+              aoClicar={abrir("novos", "Alunos novos no período")} />
+            <Cartao rot="Day-use" valor={String(extra.dayuseQtd)} nota={brl(extra.dayuseValor)}
+              aoClicar={extra.dayuseQtd > 0 ? abrir("dayuse", "Day-use no período") : undefined} />
+          </div>
+          {extra.projecaoSemPreco > 0 && (
+            <p className="mt-2 text-[11px] text-amber-300">
+              {extra.projecaoSemPreco} pessoa(s) estão num plano que não existe no cadastro, então entraram
+              na projeção valendo zero. Cadastre o plano — ou adicione o nome antigo como apelido dele —
+              para o número ficar certo.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Contrato pago e ninguém viu a pessoa. É quem cancela mês que vem se
+          ninguém ligar antes — o único número aqui que serve para evitar uma
+          perda em vez de contar uma que já aconteceu. */}
+      {extra && extra.semFrequenciaQtd > 0 && (
+        <div>
+          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Atenção</h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Cartao
+              rot="Pagando e sumido"
+              valor={String(extra.semFrequenciaQtd)}
+              tom="alerta"
+              nota="ativo, sem entrar no período"
+              aoClicar={abrir("sem_frequencia", "Pagando e sem aparecer")}
+            />
+          </div>
+        </div>
+      )}
 
       {dados.por_forma.length > 0 && (
         <div>
@@ -185,6 +274,7 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           titulo={aberto.titulo}
           de={de}
           ate={ate}
+          projecaoAte={projecaoAte}
           aoFechar={() => setAberto(null)}
         />
       )}
