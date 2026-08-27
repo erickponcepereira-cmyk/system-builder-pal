@@ -327,15 +327,21 @@ export const resumoDisparo = createServerFn({ method: "POST" })
  *   - reaproveita a conversa se a pessoa já falou com a academia antes
  *   - não deixa disparar duas vezes a mesma campanha
  */
-export const dispararCampanha = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ disparoId: z.string().uuid() }).parse(d))
-  .handler(async ({ context, data }) => {
-    const { db, disparo } = await contexto(context.userId, data.disparoId);
+type Disparo = {
+  id: string; escopo: string; owner_id: string | null; nome: string;
+  mensagem: string; uso: string; status: string; intervalo_segundos: number;
+};
 
-    if (disparo.status !== "rascunho") {
-      throw new Error("Esta campanha já foi disparada");
-    }
+/**
+ * O disparo em si, sem nada sobre quem mandou disparar.
+ *
+ * Separado do `createServerFn` porque agora existem DOIS chamadores: a pessoa
+ * apertando o botão e o gancho horário que solta os avisos sozinho. Se cada um
+ * tivesse a sua cópia, uma proteção corrigida num lado continuaria faltando no
+ * outro — e o lado sem a proteção é justamente o que roda sem ninguém olhando.
+ */
+export async function executarDisparo(db: Db, disparo: Disparo) {
+  {
 
     // 1. qual número está de plantão
     const { data: conexaoId } = await db.rpc("bot_escolher_conexao", {
@@ -356,8 +362,18 @@ export const dispararCampanha = createServerFn({ method: "POST" })
       id: string; limite_diario: number | null; enviadas_hoje: number; contador_dia: string | null;
     };
 
-    // 2. quanto ainda cabe hoje neste chip
-    const hoje = new Date().toISOString().slice(0, 10);
+    /*
+     * 2. quanto ainda cabe hoje neste chip
+     *
+     * "Hoje" sai do banco, pelo fuso da academia — nunca de `new Date()` aqui.
+     * Com a data em UTC, às 21h de Cuiabá esta conta já estaria no dia seguinte
+     * enquanto `contador_dia` ainda marcava o dia de hoje: os envios da noite
+     * pareceriam zero e a campanha soltaria o limite inteiro de novo, no mesmo
+     * dia, no horário em que o WhatsApp mais repara. Quem conta o envio e quem
+     * decide se cabe precisam concordar sobre que dia é.
+     */
+    const { data: hojeDaAcademia } = await db.rpc("bot_dia_da_conexao", { _conexao_id: conexao.id });
+    const hoje = String(hojeDaAcademia ?? "").slice(0, 10);
     const usadasHoje = conexao.contador_dia === hoje ? conexao.enviadas_hoje : 0;
     const cabeHoje = conexao.limite_diario == null
       ? Number.POSITIVE_INFINITY
@@ -454,6 +470,16 @@ export const dispararCampanha = createServerFn({ method: "POST" })
 
     const minutos = Math.ceil((enfileirados * intervalo) / 60000);
     return { enfileirados, falhas, ficamParaDepois, minutosEstimados: minutos, conexaoId: conexao.id };
+  }
+}
+
+export const dispararCampanha = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ disparoId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { db, disparo } = await contexto(context.userId, data.disparoId);
+    if (disparo.status !== "rascunho") throw new Error("Esta campanha já foi disparada");
+    return executarDisparo(db, disparo as Disparo);
   });
 
 /** Cancela uma campanha e tira da fila o que ainda não saiu. */

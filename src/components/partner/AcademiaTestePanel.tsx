@@ -60,6 +60,8 @@ import {
   obterProdutosMensalidade,
   obterTreinosAluno,
   prepararAvisosAcademia,
+  obterAutomacaoAvisos,
+  salvarAutomacaoAvisos,
   previewAvisosAcademia,
   registrarDayUse,
   reprocessarMensalidadesPendentes,
@@ -2420,6 +2422,10 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
 function AvisosVencimento({ partnerId }: { partnerId: string }) {
   const preview = useServerFn(previewAvisosAcademia);
   const preparar = useServerFn(prepararAvisosAcademia);
+  const obterAuto = useServerFn(obterAutomacaoAvisos);
+  const salvarAuto = useServerFn(salvarAutomacaoAvisos);
+  const [auto, setAuto] = useState<{ automatico: boolean; hora: number; dias: number[] } | null>(null);
+  const [salvandoAuto, setSalvandoAuto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [preparando, setPreparando] = useState(false);
   const [dados, setDados] = useState<{
@@ -2438,6 +2444,30 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
   };
 
   useEffect(carregar, [partnerId]);
+  useEffect(() => {
+    obterAuto({ data: { partnerId } })
+      .then((r) => setAuto({ automatico: r.automatico, hora: r.hora, dias: r.dias }))
+      .catch(() => setAuto(null));
+  }, [partnerId]);
+
+  const gravarAuto = async (patch: Partial<{ automatico: boolean; hora: number; dias: number[] }>) => {
+    if (!auto) return;
+    const novo = { ...auto, ...patch };
+    setSalvandoAuto(true);
+    try {
+      await salvarAuto({ data: { partnerId, ...novo } });
+      setAuto(novo);
+      toast.success(
+        novo.automatico
+          ? `Envio automático ligado: ${rotuloDias(novo.dias)} às ${String(novo.hora).padStart(2, "0")}h.`
+          : "Envio automático desligado. As campanhas continuam sendo montadas para você disparar.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setSalvandoAuto(false);
+    }
+  };
 
   const confirmar = async () => {
     setPreparando(true);
@@ -2462,6 +2492,72 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
 
   return (
     <div className="space-y-3">
+      {/* Nasce DESLIGADO. Isto não é um ajuste de preferência: é a academia
+          autorizando o sistema a falar com os clientes dela sem ninguém ler
+          antes. Mensagem automática errada não se conserta depois — o que se
+          perde é o chip. */}
+      {auto && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <label className="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={auto.automatico}
+              disabled={salvandoAuto}
+              onChange={(e) => void gravarAuto({ automatico: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+            />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold text-white">Enviar sozinho, sem eu apertar nada</span>
+              <span className="block text-[11px] text-white/50">
+                As campanhas do dia já são montadas de manhã. Ligando isto, elas saem no horário
+                marcado. Só as campanhas montadas pelo sistema — rascunho que você escreveu nunca
+                sai sozinho.
+              </span>
+            </span>
+          </label>
+
+          {auto.automatico && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+              <span className="text-[10px] uppercase tracking-wider text-white/40">às</span>
+              <select
+                value={auto.hora}
+                disabled={salvandoAuto}
+                onChange={(e) => void gravarAuto({ hora: Number(e.target.value) })}
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                ))}
+              </select>
+              <span className="text-[10px] uppercase tracking-wider text-white/40">em</span>
+              <div className="flex gap-1">
+                {DIAS_CURTOS.map((d, i) => {
+                  const on = auto.dias.includes(i);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      disabled={salvandoAuto}
+                      onClick={() =>
+                        void gravarAuto({
+                          dias: on ? auto.dias.filter((x) => x !== i) : [...auto.dias, i].sort(),
+                        })
+                      }
+                      className={`w-9 rounded-lg py-1.5 text-[11px] font-bold transition ${on ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="w-full text-[11px] text-white/50">
+                Horário da academia. Nada sai fora dessa janela, e nada sai duas vezes.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
         <p className="text-[11px] text-white/60">
           Usa a mesma régua que libera a catraca. Cada pessoa entra uma única vez

@@ -1775,6 +1775,65 @@ export const desvincularCredencial = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * O envio automático dos avisos: se pode, a que horas e em que dias.
+ *
+ * Fica separado da configuração geral de propósito. Isto não é um ajuste: é a
+ * academia autorizando o sistema a falar com os clientes dela sem ninguém ler
+ * antes. Nasce DESLIGADO e a tela mostra o que vai sair antes de ligar.
+ */
+export const obterAutomacaoAvisos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: cfg } = await admin
+      .from("partner_acesso_config")
+      .select("avisos_automaticos, avisos_hora, avisos_dias, timezone" as never)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+    const c = cfg as null | {
+      avisos_automaticos: boolean; avisos_hora: number;
+      avisos_dias: number[] | null; timezone: string | null;
+    };
+    return {
+      automatico: c?.avisos_automaticos ?? false,
+      hora: c?.avisos_hora ?? 9,
+      dias: c?.avisos_dias ?? [1, 2, 3, 4, 5],
+      timezone: c?.timezone ?? "America/Sao_Paulo",
+    };
+  });
+
+export const salvarAutomacaoAvisos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; automatico: boolean; hora: number; dias: number[] }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const hora = Math.min(23, Math.max(0, Math.trunc(Number(data.hora) || 0)));
+    const dias = Array.from(
+      new Set((data.dias ?? []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)),
+    ).sort((a, b) => a - b);
+
+    // Ligar sem escolher nenhum dia seria ligar e não enviar nunca — sem erro,
+    // sem aviso, e a academia achando que está avisando os clientes.
+    if (data.automatico && !dias.length) {
+      throw new Error("Escolha ao menos um dia da semana para o envio automático.");
+    }
+
+    const { error } = await admin.from("partner_acesso_config").upsert(
+      {
+        partner_id: data.partnerId,
+        avisos_automaticos: !!data.automatico,
+        avisos_hora: hora,
+        avisos_dias: dias,
+      } as never,
+      { onConflict: "partner_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true, automatico: !!data.automatico, hora, dias };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

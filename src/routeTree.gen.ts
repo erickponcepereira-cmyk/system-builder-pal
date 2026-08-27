@@ -158,6 +158,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
+import { Route as ApiPublicHooksAvisosAutomaticosRouteImport } from './routes/api/public/hooks/avisos-automaticos'
 import { Route as ApiPublicHooksRecurringChargeRouteImport } from './routes/api/public/hooks/recurring-charge'
 import { Route as ApiPublicHooksNetworkUnlockSnapshotRouteImport } from './routes/api/public/hooks/network-unlock-snapshot'
 import { Route as ApiPublicHooksMpSweepRouteImport } from './routes/api/public/hooks/mp-sweep'
@@ -1012,6 +1013,12 @@ const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   path: '/api/public/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksAvisosAutomaticosRoute =
+  ApiPublicHooksAvisosAutomaticosRouteImport.update({
+    id: '/api/public/hooks/avisos-automaticos',
+    path: '/api/public/hooks/avisos-automaticos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksRecurringChargeRoute =
   ApiPublicHooksRecurringChargeRouteImport.update({
     id: '/api/public/hooks/recurring-charge',
@@ -1229,6 +1236,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1388,6 +1396,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1551,6 +1560,7 @@ export interface FileRoutesById {
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1714,6 +1724,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -1873,6 +1884,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -2035,6 +2047,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -2089,6 +2102,7 @@ export interface RootRouteChildren {
   ApiPublicHooksChallengeFinalWeighinRoute: typeof ApiPublicHooksChallengeFinalWeighinRoute
   ApiPublicHooksMpSweepRoute: typeof ApiPublicHooksMpSweepRoute
   ApiPublicHooksNetworkUnlockSnapshotRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  ApiPublicHooksAvisosAutomaticosRoute: typeof ApiPublicHooksAvisosAutomaticosRoute
   ApiPublicHooksRecurringChargeRoute: typeof ApiPublicHooksRecurringChargeRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
   ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
@@ -3143,6 +3157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/avisos-automaticos': {
+      id: '/api/public/hooks/avisos-automaticos'
+      path: '/api/public/hooks/avisos-automaticos'
+      fullPath: '/api/public/hooks/avisos-automaticos'
+      preLoaderRoute: typeof ApiPublicHooksAvisosAutomaticosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/recurring-charge': {
       id: '/api/public/hooks/recurring-charge'
       path: '/api/public/hooks/recurring-charge'
@@ -3581,6 +3602,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMpSweepRoute: ApiPublicHooksMpSweepRoute,
   ApiPublicHooksNetworkUnlockSnapshotRoute:
     ApiPublicHooksNetworkUnlockSnapshotRoute,
+  ApiPublicHooksAvisosAutomaticosRoute: ApiPublicHooksAvisosAutomaticosRoute,
   ApiPublicHooksRecurringChargeRoute: ApiPublicHooksRecurringChargeRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
   ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
