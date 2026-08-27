@@ -55,6 +55,7 @@ export function RenovarAluno({
   ]);
   const [obs, setObs] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [cortesiaManual, setCortesiaManual] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -75,6 +76,21 @@ export function RenovarAluno({
 
   const plano = planos.find((p) => p.id === planoId) ?? null;
   const total = partes.reduce((s, p) => s + numero(p.valor), 0);
+
+  /*
+   * Cortesia é lançamento de valor ZERO, e é legítimo.
+   *
+   * A trava de "informe o valor" existe para pegar quem esqueceu de digitar —
+   * lançamento sem valor por engano vira receita perdida que ninguém reconcilia
+   * depois. Mas ela também barrava o plano gratuito, que é justamente um plano
+   * cujo valor é zero de propósito.
+   *
+   * Então a trava continua, e ganha uma saída explícita: plano de tabela zero
+   * já entra como cortesia, e qualquer plano pode virar cortesia com um clique.
+   * O que não dá é salvar zero sem dizer que é de graça.
+   */
+  const planoEhGratuito = Boolean(plano) && Number(plano?.valor_padrao ?? 0) === 0;
+  const cortesia = cortesiaManual || planoEhGratuito;
   const tabela = Number(plano?.valor_padrao ?? 0);
   const difere = Boolean(plano) && Math.abs(total - tabela) > 0.005;
 
@@ -95,7 +111,10 @@ export function RenovarAluno({
     const pagamentos = partes
       .map((p) => ({ forma: p.forma, valor: numero(p.valor) }))
       .filter((p) => p.valor > 0);
-    if (pagamentos.length === 0) { toast.error("Informe o valor recebido."); return; }
+    if (pagamentos.length === 0 && !cortesia) {
+      toast.error("Informe o valor recebido — ou marque como cortesia.");
+      return;
+    }
 
     setSalvando(true);
     try {
@@ -103,7 +122,11 @@ export function RenovarAluno({
         data: {
           partnerId, credencialId, studentId,
           plano: plano.nome, dias: plano.dias, pagamentos,
-          observacao: obs.trim() || undefined,
+          // A observação guarda que foi de graça. Sem isso, um lançamento de
+          // R$ 0,00 no fechamento do mês não se distingue de um erro de
+          // digitação, e alguém vai gastar a tarde tentando descobrir.
+          observacao: [obs.trim(), cortesia && pagamentos.length === 0 ? "Cortesia: sem cobrança." : ""]
+            .filter(Boolean).join(" ") || undefined,
           validoAte: validoAte || null,
         },
       });
@@ -225,11 +248,27 @@ export function RenovarAluno({
         className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/40"
       />
 
+      <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2">
+        <input
+          type="checkbox"
+          checked={cortesia}
+          disabled={planoEhGratuito}
+          onChange={(e) => setCortesiaManual(e.target.checked)}
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-primary"
+        />
+        <span className="text-[11px] text-white/70">
+          <strong className="text-white">Cortesia — sem cobrança</strong>
+          {planoEhGratuito
+            ? " · este plano é gratuito, então já entra assim"
+            : " · lança com R$ 0,00 e libera o acesso igual"}
+        </span>
+      </label>
+
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => void confirmar()}
-          disabled={salvando || total <= 0}
+          disabled={salvando || (total <= 0 && !cortesia)}
           className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
         >
           {salvando ? "Registrando…" : "Confirmar renovação"}
