@@ -1242,7 +1242,7 @@ export const obterFrequenciaAcademia = createServerFn({ method: "POST" })
         p_turma_id: data.turmaId ?? undefined,
       }),
       admin.from("academia_turmas")
-        .select("id, nome, modalidade, dia_semana, hora_inicio, hora_fim")
+        .select("id, nome, modalidade, dias_semana, hora_inicio, hora_fim" as never)
         .eq("partner_id", data.partnerId).eq("ativo", true).order("nome"),
       admin.from("partner_acesso_config")
         .select("validacao_frequencia, frequencia_conta, frequencia_periodo, frequencia_meta")
@@ -1255,7 +1255,12 @@ export const obterFrequenciaAcademia = createServerFn({ method: "POST" })
         student_id: string; nome: string; visitas: number; dias: number;
         minutos_medios: number; ultima: string | null; repetiu_hoje: boolean;
       }>,
-      turmas: (turmas ?? []) as Array<{ id: string; nome: string; modalidade: string | null }>,
+      // Dia e janela vão junto: com a grade cadastrada como "05:00", "06:00"…
+      // o nome sozinho não deixa ninguém conferir se está certo.
+      turmas: (turmas ?? []) as unknown as Array<{
+        id: string; nome: string; modalidade: string | null;
+        dias_semana: number[] | null; hora_inicio: string | null; hora_fim: string | null;
+      }>,
       config: (cfg as null | {
         validacao_frequencia: string; frequencia_conta: string;
         frequencia_periodo: string; frequencia_meta: number | null;
@@ -1291,21 +1296,37 @@ export const salvarTurma = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
     partnerId: string; nome: string; modalidade?: string;
-    diaSemana?: number | null; horaInicio?: string | null; horaFim?: string | null;
+    diasSemana?: number[]; horaInicio?: string | null; horaFim?: string | null;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
     const nome = (data.nome || "").trim();
     if (nome.length < 2) throw new Error("Informe o nome da turma.");
 
+    // Uma aula de segunda a sexta é UMA aula. O modelo antigo guardava um dia
+    // só, o que transformaria a grade da academia em 30 turmas — e a tabela do
+    // relatório em algo que ninguém lê.
+    const dias = Array.from(
+      new Set((data.diasSemana ?? []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)),
+    ).sort((a, b) => a - b);
+
+    // Janela pela metade não classifica passagem nenhuma: a consulta exige as
+    // duas pontas. Barrar aqui evita criar uma turma que some do relatório.
+    const ini = data.horaInicio || null;
+    const fim = data.horaFim || null;
+    if ((ini && !fim) || (!ini && fim)) throw new Error("Informe o horário de início e o de fim.");
+    if (ini && fim && fim <= ini) throw new Error("O fim precisa ser depois do início.");
+
+    // `as never` porque os tipos gerados do Supabase ainda não conhecem
+    // `dias_semana` — a coluna nasceu na migration de hoje.
     const { error } = await admin.from("academia_turmas").insert({
       partner_id: data.partnerId,
       nome,
       modalidade: data.modalidade?.trim() || null,
-      dia_semana: data.diaSemana ?? null,
-      hora_inicio: data.horaInicio || null,
-      hora_fim: data.horaFim || null,
-    });
+      dias_semana: dias,
+      hora_inicio: ini,
+      hora_fim: fim,
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -2129,7 +2150,7 @@ export const relatorioTurmasEEventos = createServerFn({ method: "POST" })
     return {
       turmas: (turmas.data ?? []) as unknown as Array<{
         turma_id: string | null; turma: string; modalidade: string | null;
-        dia_semana: number | null; janela: string; entradas: number; pessoas: number;
+        dias: string | null; janela: string; entradas: number; pessoas: number;
       }>,
       eventos: (eventos.data ?? []) as unknown as Array<{
         evento_id: string; nome: string; data_evento: string; hora_inicio: string | null;

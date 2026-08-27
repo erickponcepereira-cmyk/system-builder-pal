@@ -12,8 +12,6 @@ type Dados = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAc
 type Extra = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademiaExtra>>>>;
 type Grade = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioTurmasEEventos>>>>;
 
-/** EXTRACT(DOW) do Postgres: 0 = domingo. */
-const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 const iso = (d: Date) => {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -286,7 +284,7 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
                       {t.modalidade && <span className="ml-1 text-white/40">· {t.modalidade}</span>}
                     </td>
                     <td className="p-2 text-white/60">
-                      {t.dia_semana != null && <span className="mr-1">{DIAS[t.dia_semana]}</span>}
+                      {t.dias && <span className="mr-1">{t.dias}</span>}
                       {t.janela}
                     </td>
                     <td className="p-2 text-right tabular-nums">{t.entradas}</td>

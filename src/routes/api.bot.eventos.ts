@@ -96,15 +96,26 @@ export const Route = createFileRoute("/api/bot/eventos")({
            */
           const jid = corpo.jid ? String(corpo.jid).slice(0, 120) : null;
 
-          // Casa pelo JID quando existe — é o identificador estável. O telefone
-          // continua servindo para a conversa que NÓS abrimos, que nasce sem JID.
-          const busca = db
-            .from("bot_conversas")
-            .select("id, estado")
-            .eq("conexao_id", conexao.id);
-          const { data: existente } = await (jid
-            ? busca.eq("jid", jid)
-            : busca.eq("telefone", telefone)).maybeSingle();
+          /*
+           * Acha a conversa por JID e, se não achar, pelo telefone.
+           *
+           * A segunda tentativa não é zelo: sem ela o robô morre. A coluna `jid`
+           * nasceu em 27/08 sem preencher o que já existia, então 93 das 96
+           * conversas do banco têm `jid` NULO. Procurando só por JID, nenhuma
+           * delas é encontrada — e o INSERT que vem em seguida bate na
+           * constraint `bot_conversas_unica (conexao_id, telefone)`, a rota
+           * devolve 500, e a mensagem NUNCA chega a ser gravada. Foi assim que
+           * uma academia inteira ficou sem atendimento automático enquanto o
+           * painel dizia "conectado".
+           */
+          const achar = (coluna: "jid" | "telefone", valor: string) =>
+            db.from("bot_conversas").select("id, estado")
+              .eq("conexao_id", conexao.id).eq(coluna, valor).maybeSingle();
+
+          let { data: existente } = jid
+            ? await achar("jid", jid)
+            : await achar("telefone", telefone);
+          if (!existente && jid) ({ data: existente } = await achar("telefone", telefone));
 
           let conversaId = (existente as { id: string } | null)?.id;
           if (!conversaId) {
@@ -119,8 +130,22 @@ export const Route = createFileRoute("/api/bot/eventos")({
               })
               .select("id")
               .single();
-            if (error) return json({ erro: error.message }, 500);
-            conversaId = (nova as { id: string }).id;
+            if (error) {
+              /*
+               * 23505 = alguém criou essa conversa entre a busca e o insert.
+               * Pega a que existe e segue. Devolver 500 aqui seria pior que
+               * inútil: o conector guarda o evento em disco e repete para
+               * sempre, e o evento envenenado trava a fila local dele atrás.
+               * Erro que a repetição não resolve nunca deve virar 500.
+               */
+              if (error.code !== "23505") return json({ erro: error.message }, 500);
+              const { data: achada } = await achar("telefone", telefone);
+              conversaId = (achada as { id: string } | null)?.id;
+              if (!conversaId) return json({ erro: error.message }, 500);
+              if (jid) await db.from("bot_conversas").update({ jid }).eq("id", conversaId);
+            } else {
+              conversaId = (nova as { id: string }).id;
+            }
           } else {
             // Conversa que já existia: grava o JID se ainda não tinha. É assim
             // que a conversa aberta pelo nosso lado ganha endereço de volta

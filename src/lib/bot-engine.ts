@@ -277,6 +277,36 @@ export async function processarMensagem(
     passo_atual_id: string | null;
   } | null;
   if (!conversa) return { acao: "conversa nao encontrada" };
+
+  /*
+   * Conversa encerrada volta a ser atendida quando a pessoa escreve de novo.
+   *
+   * "Encerrada" era terminal: o robô atendia cada pessoa UMA vez na vida. Quem
+   * perguntou o preço na terça e voltou na quinta para marcar a aula
+   * experimental falava com o vazio — e a academia nem ficava sabendo. Pior: o
+   * próprio robô encerra dizendo "digite *falar com atendente*", uma instrução
+   * que ficava impossível de obedecer no instante seguinte.
+   *
+   * Recomeça limpo (sem fluxo, sem passo, sem tentativas) porque é uma conversa
+   * nova, não a continuação de uma que já acabou. "Humano" continua intocado:
+   * ali tem gente atendendo, e o robô por cima seria pior que o silêncio.
+   */
+  if (conversa.estado === "encerrada") {
+    await db
+      .from("bot_conversas")
+      .update({
+        estado: "bot",
+        encerrada_em: null,
+        fluxo_id: null,
+        passo_atual_id: null,
+        tentativas_passo: 0,
+      })
+      .eq("id", conversaId);
+    conversa.estado = "bot";
+    conversa.fluxo_id = null;
+    conversa.passo_atual_id = null;
+  }
+
   if (conversa.estado !== "bot") return { acao: `ignorado (estado ${conversa.estado})` };
 
   // 3. vira lead no funil, sozinho

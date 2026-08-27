@@ -320,6 +320,22 @@ function DayUse({ partnerId }: { partnerId: string }) {
 }
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+/** Rotulo curto para os botoes de dia da turma. EXTRACT(DOW): 0 = domingo. */
+const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+/**
+ * "seg–sex" em vez de "1, 2, 3, 4, 5". Mesma regra do `dias_semana_rotulo` do
+ * banco: sequencia corrida vira intervalo, salteada fica em lista.
+ */
+function rotuloDias(dias: number[] | null | undefined) {
+  const d = Array.from(new Set(dias ?? [])).sort((a, b) => a - b);
+  if (!d.length || d.length === 7) return "todo dia";
+  if (d.length === 1) return DIAS_CURTOS[d[0]];
+  const corrido = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
+  return corrido
+    ? `${DIAS_CURTOS[d[0]]}–${DIAS_CURTOS[d[d.length - 1]]}`
+    : d.map((n) => DIAS_CURTOS[n]).join(", ");
+}
 
 function Eventos({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterEventosAcademia);
@@ -533,7 +549,8 @@ function Frequencia({ partnerId }: { partnerId: string }) {
   const [desde, setDesde] = useState("");
   const [novaTurma, setNovaTurma] = useState("");
   // "" = todo dia. Os números seguem EXTRACT(DOW) do Postgres: 0 = domingo.
-  const [diaTurma, setDiaTurma] = useState("");
+  // Vazio = todo dia, igual ao banco (cardinality 0).
+  const [diasTurma, setDiasTurma] = useState<number[]>([]);
   const [inicioTurma, setInicioTurma] = useState("");
   const [fimTurma, setFimTurma] = useState("");
 
@@ -679,16 +696,24 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           placeholder="Nova turma (ex.: Bike Indoor 19h)"
           className="min-w-[180px] flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
         />
-        <select
-          value={diaTurma}
-          onChange={(e) => setDiaTurma(e.target.value)}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
-        >
-          <option value="">Todo dia</option>
-          {["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"].map((d, i) => (
-            <option key={d} value={String(i)}>{d}</option>
-          ))}
-        </select>
+        {/* Dias como botões, não como <select> de um item só: a mesma aula
+            acontece de segunda a sexta, e no modelo antigo isso viraria cinco
+            turmas iguais. Nenhum marcado = todo dia. */}
+        <div className="flex shrink-0 gap-1">
+          {DIAS_CURTOS.map((d, i) => {
+            const on = diasTurma.includes(i);
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDiasTurma((v) => (on ? v.filter((x) => x !== i) : [...v, i].sort()))}
+                className={`w-9 rounded-lg py-2 text-[11px] font-bold capitalize transition ${on ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
         <input type="time" value={inicioTurma} onChange={(e) => setInicioTurma(e.target.value)}
           className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white" />
         <input type="time" value={fimTurma} onChange={(e) => setFimTurma(e.target.value)}
@@ -720,11 +745,11 @@ function Frequencia({ partnerId }: { partnerId: string }) {
             try {
               await criarTurma({ data: {
                 partnerId, nome,
-                diaSemana: diaTurma === "" ? null : Number(diaTurma),
+                diasSemana: diasTurma,
                 horaInicio: inicioTurma || null,
                 horaFim: fimTurma || null,
               } });
-              setNovaTurma(""); setDiaTurma(""); setInicioTurma(""); setFimTurma("");
+              setNovaTurma(""); setDiasTurma([]); setInicioTurma(""); setFimTurma("");
               toast.success(
                 inicioTurma
                   ? `Turma "${nome}" criada. Ela já aparece em "Cliente por aula" no relatório.`
@@ -754,7 +779,16 @@ function Frequencia({ partnerId }: { partnerId: string }) {
               key={t.id}
               className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70"
             >
-              {t.nome}{t.modalidade ? ` · ${t.modalidade}` : ""}
+              {t.nome}
+              {t.hora_inicio && (
+                <span className="ml-1 text-white/45">
+                  {rotuloDias(t.dias_semana)} {t.hora_inicio.slice(0, 5)}–{(t.hora_fim ?? "").slice(0, 5)}
+                </span>
+              )}
+              {/* Sem horário a turma não entra em "Cliente por aula". Dizer
+                  isso aqui é mais barato que a academia descobrir olhando um
+                  relatório vazio. */}
+              {!t.hora_inicio && <span className="ml-1 text-amber-300/70">sem horário</span>}
             </span>
           ))}
         </div>
