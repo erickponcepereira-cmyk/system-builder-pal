@@ -118,6 +118,86 @@ async function escolherFluxo(db: Db, conexao: Conexao, texto: string) {
   return porPalavra ?? fluxos.find((f) => f.gatilho_tipo === "primeira_mensagem") ?? null;
 }
 
+/*
+ * Como o robô entende a resposta.
+ *
+ * Era `resposta.includes(gatilho)` com gatilhos de UM dígito. Duas falhas, e as
+ * duas apareceram em conversa real:
+ *
+ *   1. Não entendia frase. Uma cliente perguntou "Qual valor para 3 dias da
+ *      semana?" — a pergunta mais comum de uma academia, com a resposta pronta
+ *      no menu — e levou "Não entendi".
+ *   2. Casava por acidente. "o plano de 145 reais" contém "1", "4" e "5":
+ *      escolheria a opção 1 e mandaria a pessoa para o lugar errado, o que é
+ *      pior que não entender, porque ninguém percebe.
+ */
+
+/** Minúsculas, sem acento, sem pontuação, espaços colapsados. */
+const normalizar = (s: string) =>
+  (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+const escaparRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A frase aparece inteira no texto, com borda de palavra dos dois lados. */
+const contemFrase = (texto: string, frase: string) =>
+  !!frase && new RegExp(`(^| )${escaparRe(frase)}( |$)`).test(texto);
+
+/** Só dígitos (e espaços entre eles) depois de normalizado: "2", "17 30". */
+const soNumeros = (s: string) => /^\d+( \d+)*$/.test(s);
+
+type OpcaoCasavel = { rotulo: string; gatilho: string; sinonimos?: string[] | null };
+
+export function casarOpcao<T extends OpcaoCasavel>(opcoes: T[], resposta: string): T | null {
+  const t = normalizar(resposta);
+  if (!t) return null;
+  const palavras = t.split(" ").length;
+
+  // 1. A resposta É o gatilho. Cobre "2", "2)", " 2. " — tudo vira "2".
+  const exata = opcoes.find((o) => normalizar(o.gatilho) === t);
+  if (exata) return exata;
+
+  /*
+   * 2. Sinônimo: como a academia sabe que o cliente pergunta.
+   *
+   * Sinônimo de PALAVRA casa em qualquer tamanho — "qual valor para 3 dias da
+   * semana" tem seis palavras e é exatamente o que "valor" existe para pegar.
+   * Sinônimo que é só NÚMERO segue a regra dos números: "Posso treinar até às
+   * 06:40" contém "06", mas quem escreve isso não está escolhendo a aula das 6.
+   */
+  const porSinonimo = opcoes.find((o) =>
+    (o.sinonimos ?? []).some((s) => {
+      const n = normalizar(s);
+      if (soNumeros(n) && palavras > 3) return false;
+      return contemFrase(t, n);
+    }),
+  );
+  if (porSinonimo) return porSinonimo;
+
+  // 3. O rótulo inteiro dentro da resposta ("quero agendar aula experimental").
+  const porRotulo = opcoes.find((o) => contemFrase(t, normalizar(o.rotulo)));
+  if (porRotulo) return porRotulo;
+
+  /*
+   * 4. Gatilho solto dentro da frase — só em resposta CURTA.
+   *
+   * "quero 2" é escolha de menu; "qual valor para 3 dias da semana" não é. O
+   * corte por tamanho é grosseiro de propósito: quem responde menu responde
+   * curto, e quem escreve uma frase quer ser lido pelo sentido, não pelo dígito
+   * que por acaso apareceu nela.
+   */
+  if (palavras <= 3) {
+    const porGatilho = opcoes.find((o) => contemFrase(t, normalizar(o.gatilho)));
+    if (porGatilho) return porGatilho;
+  }
+
+  return null;
+}
+
 /** Lê um passo com as opções dele. */
 async function lerPasso(db: Db, passoId: string) {
   const { data: passo } = await db
@@ -129,7 +209,7 @@ async function lerPasso(db: Db, passoId: string) {
 
   const { data: opcoes } = await db
     .from("bot_opcoes")
-    .select("id, rotulo, gatilho, proximo_passo_id, posicao")
+    .select("id, rotulo, gatilho, sinonimos, proximo_passo_id, posicao")
     .eq("passo_id", passoId)
     .order("posicao");
 
@@ -341,11 +421,7 @@ export async function processarMensagem(
   if (conversa.passo_atual_id) {
     const passo = await lerPasso(db, conversa.passo_atual_id);
     if (passo?.opcoes?.length) {
-      const resp = limpo.toLowerCase();
-      const escolha =
-        passo.opcoes.find((o: any) => resp === o.gatilho.toLowerCase()) ??
-        passo.opcoes.find((o: any) => resp.includes(o.gatilho.toLowerCase())) ??
-        passo.opcoes.find((o: any) => resp.includes(o.rotulo.toLowerCase()));
+      const escolha = casarOpcao(passo.opcoes as any[], limpo);
 
       if (escolha) {
         await db.from("bot_conversas").update({ tentativas_passo: 0 }).eq("id", conversaId);
@@ -363,16 +439,25 @@ export async function processarMensagem(
        */
       const tentativas = Number((conversa as any).tentativas_passo ?? 0) + 1;
       if (tentativas >= 2) {
+        /*
+         * Na segunda vez, chama gente — não pede uma senha.
+         *
+         * Antes o robô encerrava dizendo "digite *falar com atendente*". Duas
+         * coisas erradas: pedia mais esforço justamente de quem já mostrou que
+         * não está conseguindo, e encerrava a conversa no mesmo instante, o que
+         * tornava a instrução impossível de obedecer. Quem chegou aqui é um lead
+         * que fez duas perguntas — vale um humano, não um menu.
+         */
         await enfileirar(
           db,
           conversaId,
-          "Não consegui entender. Para falar com uma pessoa da equipe, é só digitar *falar com atendente*.",
+          "Essa eu não sei responder sozinho — já chamei alguém da equipe. Respondem por aqui mesmo, é só aguardar 🙂",
         );
         await db
           .from("bot_conversas")
-          .update({ estado: "encerrada", encerrada_em: new Date().toISOString(), passo_atual_id: null, tentativas_passo: 0 })
+          .update({ estado: "humano", passo_atual_id: null, tentativas_passo: 0 })
           .eq("id", conversaId);
-        return { acao: "encerrou por nao entender" };
+        return { acao: "passou para atendente por nao entender" };
       }
 
       await db.from("bot_conversas").update({ tentativas_passo: tentativas }).eq("id", conversaId);
