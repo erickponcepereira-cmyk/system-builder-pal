@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, MessageCircle, Search, X } from "lucide-react";
 import { pessoasDoRelatorio, type CategoriaRelatorio } from "@/lib/academia-teste.functions";
+import { enviarMensagemDireta } from "@/lib/bot-disparos.functions";
 
 type Pessoa = {
   nome: string; telefone: string | null; referencia: string | null;
@@ -12,18 +13,96 @@ type Pessoa = {
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
-/** Número no formato que o WhatsApp aceita, com o 55 na frente. */
-const linkWhatsapp = (tel: string) => {
-  const d = soDigitos(tel);
-  return `https://wa.me/${d.startsWith("55") ? d : `55${d}`}`;
-};
+/**
+ * Caixa de mensagem da lista do relatório.
+ *
+ * Aqui havia um link `wa.me`. Ele tirava a recepção do sistema: abria o
+ * WhatsApp Web, obrigava a achar a conversa de novo, e o que fosse dito ali não
+ * ficava registrado em lugar nenhum — o relatório dizia "ligue para estes 91" e
+ * ninguém sabia depois para quem já tinham ligado. Agora a mensagem entra na
+ * mesma fila do resto, com o mesmo espaçamento, e fica gravada na conversa.
+ */
+function CaixaDeMensagem({
+  partnerId, pessoa, aoFechar,
+}: {
+  partnerId: string;
+  pessoa: Pessoa;
+  aoFechar: () => void;
+}) {
+  const enviar = useServerFn(enviarMensagemDireta);
+  const primeiro = (pessoa.nome || "").trim().split(/\s+/)[0] ?? "";
+  const [texto, setTexto] = useState(`Oi ${primeiro}! `);
+  const [enviando, setEnviando] = useState(false);
+
+  const mandar = async () => {
+    const t = texto.trim();
+    if (!t) return;
+    setEnviando(true);
+    try {
+      await enviar({
+        data: { partnerId, telefone: soDigitos(pessoa.telefone ?? ""), nome: pessoa.nome, texto: t },
+      });
+      toast.success(`Mensagem para ${primeiro} entrou na fila.`);
+      aoFechar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui enviar.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    // A caixa mora DENTRO do painel da lista, que fecha ao clique de fundo.
+    // Sem parar a propagação aqui, digitar a mensagem fecharia a lista inteira
+    // no primeiro clique dentro do campo de texto.
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+      onClick={(e) => { e.stopPropagation(); aoFechar(); }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0B0B0B] p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-white">{pessoa.nome}</p>
+            <p className="truncate text-[11px] text-white/50">{pessoa.telefone}</p>
+          </div>
+          <button type="button" onClick={aoFechar} className="shrink-0 rounded-lg p-1 text-white/50 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          rows={4}
+          autoFocus
+          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          placeholder="Escreva a mensagem…"
+        />
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-[10px] text-white/40">Sai pelo número da academia, com o mesmo espaçamento.</span>
+          <button
+            type="button"
+            onClick={() => void mandar()}
+            disabled={enviando || !texto.trim()}
+            className="shrink-0 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {enviando ? "Enviando…" : "Enviar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * A lista por trás de um número do relatório.
  *
  * Cada cartão do painel é um recorte de gente real — "274 bloqueados" só vira
- * trabalho quando dá para ver quem são e falar com eles. Por isso a linha traz
- * o telefone com link direto: da contagem à conversa em dois cliques.
+ * trabalho quando dá para ver quem são e falar com eles. A mensagem sai por
+ * dentro do sistema, sem abrir o WhatsApp Web: da contagem à conversa em dois
+ * cliques, e o que foi dito fica registrado.
  */
 export function PessoasDoRelatorio({
   partnerId, categoria, titulo, de, ate, projecaoAte, aoFechar,
@@ -41,6 +120,8 @@ export function PessoasDoRelatorio({
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
+  // Para quem a recepcao esta escrevendo agora.
+  const [escrevendoPara, setEscrevendoPara] = useState<Pessoa | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -125,15 +206,14 @@ export function PessoasDoRelatorio({
                     </p>
                   </div>
                   {p.telefone ? (
-                    <a
-                      href={linkWhatsapp(p.telefone)}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Falar com ${p.nome} no WhatsApp`}
+                    <button
+                      type="button"
+                      onClick={() => setEscrevendoPara(p)}
+                      aria-label={`Mandar mensagem para ${p.nome}`}
                       className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/25"
                     >
-                      <MessageCircle className="h-3 w-3" /> WhatsApp
-                    </a>
+                      <MessageCircle className="h-3 w-3" /> Mensagem
+                    </button>
                   ) : (
                     <span className="shrink-0 text-[10px] text-white/30">sem telefone</span>
                   )}
@@ -143,6 +223,14 @@ export function PessoasDoRelatorio({
           )}
         </div>
       </div>
+
+      {escrevendoPara && (
+        <CaixaDeMensagem
+          partnerId={partnerId}
+          pessoa={escrevendoPara}
+          aoFechar={() => setEscrevendoPara(null)}
+        />
+      )}
     </div>
   );
 }
