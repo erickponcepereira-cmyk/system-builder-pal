@@ -1554,6 +1554,90 @@ export const reprocessarMensalidadesPendentes = createServerFn({ method: "POST" 
     return { geradas: Number(n ?? 0) };
   });
 
+/** Produtos da loja que geram inscrição em evento nesta academia. */
+export const obterProdutosEvento = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    const [{ data: vinculos }, { data: eventos }] = await Promise.all([
+      admin
+        .from("academia_produtos_evento" as never)
+        .select("id, product_id, evento_id, ativo" as never)
+        .eq("partner_id", data.partnerId),
+      admin
+        .from("academia_eventos")
+        .select("id, nome, data_evento")
+        .eq("partner_id", data.partnerId)
+        .eq("ativo", true)
+        .order("data_evento", { ascending: false })
+        .limit(30),
+    ]);
+
+    const linhas = (vinculos ?? []) as unknown as Array<{
+      id: string; product_id: string; evento_id: string; ativo: boolean;
+    }>;
+    const ids = linhas.map((v) => v.product_id);
+    const { data: nomes } = ids.length
+      ? await admin.from("products").select("id, name").in("id", ids)
+      : { data: [] };
+
+    return {
+      vinculos: linhas,
+      eventos: (eventos ?? []) as Array<{ id: string; nome: string; data_evento: string }>,
+      nomes: Object.fromEntries(
+        ((nomes ?? []) as Array<{ id: string; name: string }>).map((p) => [p.id, p.name]),
+      ),
+    };
+  });
+
+export const salvarProdutoEvento = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; productId: string; eventoId: string; ativo: boolean;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    // O cliente `admin` é service_role e ignora RLS: sem esta conferência dava
+    // para apontar um produto para o evento de outra academia.
+    const { data: evento } = await admin
+      .from("academia_eventos")
+      .select("id")
+      .eq("id", data.eventoId)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+    if (!evento) throw new Error("Evento não encontrado nesta academia.");
+
+    const { error } = await admin.from("academia_produtos_evento" as never).upsert(
+      {
+        partner_id: data.partnerId,
+        product_id: data.productId,
+        evento_id: data.eventoId,
+        ativo: data.ativo,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "product_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const removerProdutoEvento = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { error } = await admin
+      .from("academia_produtos_evento" as never)
+      .delete()
+      .eq("id", data.id)
+      .eq("partner_id", data.partnerId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const obterAgenteAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

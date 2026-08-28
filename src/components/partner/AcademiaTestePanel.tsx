@@ -57,6 +57,7 @@ import {
   reordenarMarcosAviso,
   descreverMomento,
   LIMITE_DIAS_AVISO,
+  obterProdutosEvento,
   obterProdutosMensalidade,
   obterTreinosAluno,
   prepararAvisosAcademia,
@@ -68,6 +69,8 @@ import {
   previewAvisosAcademia,
   registrarDayUse,
   reprocessarMensalidadesPendentes,
+  removerProdutoEvento,
+  salvarProdutoEvento,
   salvarProdutoMensalidade,
   salvarConfigAcademia,
   salvarConfigFrequencia,
@@ -162,6 +165,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           <div className="space-y-4">
             <PlanosAcademia partnerId={partnerId} />
             <ProdutosMensalidade partnerId={partnerId} />
+            <ProdutosEvento partnerId={partnerId} />
           </div>
         )}
         {sub === "eventos" && <Eventos partnerId={partnerId} />}
@@ -1873,6 +1877,161 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
       >
         Procurar compras pagas sem mensalidade
       </button>
+    </div>
+  );
+}
+
+function ProdutosEvento({ partnerId }: { partnerId: string }) {
+  const obter = useServerFn(obterProdutosEvento);
+  const buscar = useServerFn(buscarProdutosParaVincular);
+  const salvar = useServerFn(salvarProdutoEvento);
+  const remover = useServerFn(removerProdutoEvento);
+  const [loading, setLoading] = useState(true);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<Array<{ id: string; name: string }>>([]);
+  const [novo, setNovo] = useState<{ id: string; name: string } | null>(null);
+  const [eventoId, setEventoId] = useState("");
+
+  const carregar = () => {
+    setLoading(true);
+    obter({ data: { partnerId } })
+      .then((r) => setDados(r as never))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  };
+  useEffect(carregar, [partnerId]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setAchados([]); return; }
+    const t = setTimeout(() => {
+      buscar({ data: { partnerId, termo } })
+        .then((r) => setAchados(r.produtos))
+        .catch(() => setAchados([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [termo, partnerId]);
+
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+
+  const rotuloEvento = (id: string) => {
+    const e = dados.eventos.find((ev) => ev.id === id);
+    return e ? `${e.nome} · ${formatDateOnlyBR(e.data_evento)}` : "Evento desligado ou apagado";
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] text-white/60">
+          Aqui é o mesmo gancho, para <strong className="text-white/80">eventos</strong>: quando a
+          compra é confirmada, o participante já nasce inscrito e com a credencial de entrada.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-[11px] font-bold text-white">Vincular um produto a um evento</p>
+        {dados.eventos.length === 0 ? (
+          <p className="text-[11px] text-white/50">
+            Nenhum evento ativo. Cadastre o evento na aba Eventos antes de vincular um produto.
+          </p>
+        ) : novo ? (
+          <>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+              <span className="truncate text-sm text-white">{novo.name}</span>
+              <button type="button" onClick={() => setNovo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
+            </div>
+            <select
+              value={eventoId} onChange={(e) => setEventoId(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            >
+              <option value="">Escolha o evento</option>
+              {dados.eventos.map((e) => (
+                <option key={e.id} value={e.id}>{e.nome} · {formatDateOnlyBR(e.data_evento)}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!eventoId}
+              onClick={async () => {
+                try {
+                  await salvar({ data: { partnerId, productId: novo.id, eventoId, ativo: true } });
+                  setNovo(null); setTermo(""); setEventoId(""); carregar();
+                  toast.success("Produto vinculado ao evento.");
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+              }}
+              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
+            >
+              Vincular
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              value={termo} onChange={(e) => setTermo(e.target.value)}
+              placeholder="Buscar produto pelo nome"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            {achados.map((p) => (
+              <button
+                key={p.id} type="button" onClick={() => setNovo(p)}
+                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+              >
+                {p.name}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+
+      {dados.vinculos.length > 0 && (
+        <div className="space-y-2">
+          {dados.vinculos.map((v) => (
+            <div key={v.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-white">
+                    {dados.nomes[v.product_id] ?? "Produto removido da loja"}
+                  </p>
+                  <p className="truncate text-[11px] text-white/50">{rotuloEvento(v.evento_id)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+                    <input
+                      type="checkbox" checked={v.ativo}
+                      onChange={async (e) => {
+                        try {
+                          await salvar({
+                            data: {
+                              partnerId, productId: v.product_id,
+                              eventoId: v.evento_id, ativo: e.target.checked,
+                            },
+                          });
+                          carregar();
+                        } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                      }}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    Ativo
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await remover({ data: { partnerId, id: v.id } });
+                        carregar();
+                        toast.success("Vínculo removido.");
+                      } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                    }}
+                    className="text-white/40 hover:text-red-400"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
