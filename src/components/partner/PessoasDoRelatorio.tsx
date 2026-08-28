@@ -22,11 +22,13 @@ const soDigitos = (s: string) => s.replace(/\D/g, "");
  * ninguém sabia depois para quem já tinham ligado. Agora a mensagem entra na
  * mesma fila do resto, com o mesmo espaçamento, e fica gravada na conversa.
  */
-function CaixaDeMensagem({
+export function CaixaDeMensagem({
   partnerId, pessoa, aoFechar,
 }: {
   partnerId: string;
-  pessoa: Pessoa;
+  // Só nome e telefone, e não `Pessoa`: a lista do funil de campanhas precisa
+  // da mesma caixa, e amarrá-la ao formato do relatório obrigaria a copiá-la.
+  pessoa: { nome: string; telefone: string | null };
   aoFechar: () => void;
 }) {
   const enviar = useServerFn(enviarMensagemDireta);

@@ -7,6 +7,7 @@ import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAca
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
 import { CrmBoard } from "@/components/crm/CrmBoard";
 import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
+import { FunilComCampanhas } from "@/components/partner/FunilComCampanhas";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { CapturaRosto } from "@/components/partner/CapturaRosto";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
@@ -88,7 +89,7 @@ import {
 import { formatDateOnlyBR } from "@/lib/date-only";
 
 
-type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "dayuse" | "eventos" | "agente" | "config";
+type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -137,6 +138,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["avisos", "Avisos de vencimento"],
             ["crm", "CRM"],
             ["robo", "Robô"],
+            ["funis", "Funis de envio"],
             ["produtos", "Produtos que liberam"],
             ["dayuse", "Day-use"],
             ["eventos", "Eventos"],
@@ -160,6 +162,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "frequencia" && <Frequencia partnerId={partnerId} />}
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "robo" && <PartnerRoboPanel partnerId={partnerId} />}
+        {sub === "funis" && <FunilComCampanhas partnerId={partnerId} />}
         {sub === "dayuse" && <DayUse partnerId={partnerId} />}
         {sub === "produtos" && (
           <div className="space-y-4">

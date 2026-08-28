@@ -1162,6 +1162,142 @@ export const sincronizarCrmAcademia = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Funil e campanha na mesma leitura.
+ *
+ * Responde, sem trocar de aba, o que hoje exige abrir CRM e Robô lado a lado:
+ * quantos estão em cada etapa, quantos desses já receberam alguma mensagem, e
+ * quantos nunca receberam nada. O cruzamento mora em `academia_funil_campanhas`
+ * — no banco, porque é lá que estão as duas pontas.
+ */
+export type RecorteFunil = "todos" | "alcancados" | "so_automatico" | "nunca" | "sem_telefone";
+
+export type ColunaComCampanhas = {
+  coluna_id: string;
+  coluna: string;
+  posicao: number;
+  tipo: string;
+  pessoas: number;
+  sem_telefone: number;
+  alcancados: number;
+  /** Recebeu, mas só o que a máquina montou: ninguém escreveu para essa pessoa. */
+  so_automatico: number;
+  nunca: number;
+  ultima_campanha: string | null;
+  ultima_campanha_em: string | null;
+  ultima_automatica: boolean | null;
+};
+
+export type PessoaDoFunil = {
+  cartao_id: string;
+  nome: string;
+  telefone: string | null;
+  campanhas: number;
+  ultima_campanha: string | null;
+  ultima_campanha_em: string | null;
+  ultima_automatica: boolean | null;
+};
+
+export const obterFunilComCampanhas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; quadroId?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+
+    // Só quadro do tipo 'funil': é o mesmo filtro da lista de origens da aba
+    // Robô. Oferecer aqui um quadro que lá não aparece como fonte prometeria um
+    // caminho que a campanha não tem.
+    const { data: quadros } = await admin
+      .from("crm_quadros")
+      .select("id, nome")
+      .eq("escopo", "parceiro")
+      .eq("owner_id", data.partnerId)
+      .eq("tipo", "funil")
+      .is("arquivado_em", null)
+      .order("created_at");
+
+    const lista = (quadros ?? []) as Array<{ id: string; nome: string }>;
+    const escolhido = lista.some((q) => q.id === data.quadroId)
+      ? (data.quadroId as string)
+      : lista[0]?.id ?? null;
+    if (!escolhido) return { quadros: lista, quadroId: null, colunas: [] as ColunaComCampanhas[] };
+
+    // `as never` porque os tipos gerados do Supabase ainda não conhecem esta
+    // função — ela nasceu na migration de hoje.
+    const { data: colunas, error } = await admin.rpc("academia_funil_campanhas" as never, {
+      p_partner_id: data.partnerId,
+      p_quadro_id: escolhido,
+    } as never);
+    if (error) throw new Error(error.message);
+
+    return {
+      quadros: lista,
+      quadroId: escolhido,
+      colunas: (colunas ?? []) as ColunaComCampanhas[],
+    };
+  });
+
+/** Quem está por trás de um número da tela. */
+export const pessoasDoFunil = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; colunaId: string; recorte: RecorteFunil }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: pessoas, error } = await admin.rpc("academia_funil_campanhas_pessoas" as never, {
+      p_partner_id: data.partnerId,
+      p_coluna_id: data.colunaId,
+      p_recorte: data.recorte,
+    } as never);
+    if (error) throw new Error(error.message);
+    return { pessoas: (pessoas ?? []) as PessoaDoFunil[] };
+  });
+
+/**
+ * Abre uma campanha em rascunho para uma coluna do funil.
+ *
+ * Só isso. Quem monta a lista de contatos é `alvosDoFunil`, que a tela chama em
+ * seguida com a mesma coluna, e quem envia é `dispararCampanha`, na aba Robô —
+ * é lá que moram o limite diário do chip, o espaçamento entre mensagens e a
+ * deduplicação de conversa. Uma cópia de qualquer um dos dois aqui viraria uma
+ * segunda versão da regra que protege o número da academia.
+ */
+export const criarCampanhaDaColuna = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; nome: string; mensagem: string; intervaloSegundos?: number;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin, profileId } = await autorizar(context.userId, data.partnerId);
+
+    const nome = (data.nome ?? "").trim();
+    const mensagem = (data.mensagem ?? "").trim();
+    if (!nome) throw new Error("Dê um nome à campanha.");
+    if (!mensagem) throw new Error("Escreva a mensagem.");
+
+    const { data: criada, error } = await admin
+      .from("bot_disparos")
+      .insert({
+        escopo: "parceiro",
+        owner_id: data.partnerId,
+        nome,
+        mensagem,
+        status: "rascunho",
+        intervalo_segundos: Math.min(600, Math.max(5, Math.round(data.intervaloSegundos ?? 20))),
+        criado_por: profileId,
+        // Explícito porque o gancho horário dispara sozinho o que estiver
+        // marcado como automático. Esta foi escrita por gente e só sai quando
+        // alguém apertar o botão.
+        automatico: false,
+        // `as never`: os tipos gerados ainda não têm `automatico`, que entrou
+        // em bot_disparos na migration de 27/08.
+      } as never)
+      .select("id, nome")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return criada as { id: string; nome: string };
+  });
+
 /** Treinos do aluno + modelos disponíveis + de quem é o aluno. */
 export const obterTreinosAluno = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
