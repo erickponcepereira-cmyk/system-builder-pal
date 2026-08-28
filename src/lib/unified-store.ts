@@ -775,7 +775,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       maxPrice: numOrNull(r.max_price),
       price,
       originalPrice: numOrNull(r.original_price),
-      sellerName: coach?.profile?.name || "Profissional",
+      sellerName: coach?.nome || "Profissional",
       sellerCoachId: (r.coach_id as string) || null,
       sellerId: (r.coach_id as string) || null,
       isFeatured: false,
