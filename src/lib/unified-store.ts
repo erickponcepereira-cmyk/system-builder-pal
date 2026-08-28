@@ -405,7 +405,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .limit(5000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
