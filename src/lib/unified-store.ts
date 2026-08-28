@@ -395,7 +395,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     supabase
       .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,partners(fantasy_name,city,upline_coach_id)" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids" as never)
       .eq("status" as never, "approved" as never)
       .in("kind" as never, ["paid", "free"] as never)
       .eq("is_active_by_partner" as never, true as never)
