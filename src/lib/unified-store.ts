@@ -460,25 +460,21 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .select("id,section_id,name,image_url")
       .eq("is_active", true)
       .order("sort_order"),
-    supabase
-      .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids" as never)
-      .eq("status" as never, "approved" as never)
-      .in("kind" as never, ["paid", "free"] as never)
-      .eq("is_active_by_partner" as never, true as never)
-      .eq("is_ready_for_sale" as never, true as never)
-      .is("deleted_at" as never, null as never)
-      .order("sort_order" as never)
-      .limit(5000),
-    supabase
-      .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override" as never)
-      .eq("status" as never, "approved" as never)
-      .eq("is_active_by_professional" as never, true as never)
-      .eq("is_ready_for_sale" as never, true as never)
-      .order("sort_order" as never)
-      .order("sort_order" as never)
-      .limit(5000),
+    lerPaginado(
+      "partner_products",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids",
+      (q) => (q as unknown as {
+        eq: (c: string, v: unknown) => Record<string, unknown>;
+        in: (c: string, v: unknown[]) => Record<string, unknown>;
+        is: (c: string, v: unknown) => Record<string, unknown>;
+      }) as never,
+    ),
+    lerPaginado(
+      "professional_products",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override",
+      (q) => q,
+    ),
+
   ]);
 
   note("catálogo FitMind", legacyRes.error);
