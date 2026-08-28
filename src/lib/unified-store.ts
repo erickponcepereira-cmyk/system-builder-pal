@@ -395,7 +395,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     supabase
       .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,partners(fantasy_name,city,upline_coach_id)" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids" as never)
       .eq("status" as never, "approved" as never)
       .in("kind" as never, ["paid", "free"] as never)
       .eq("is_active_by_partner" as never, true as never)
@@ -405,7 +405,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .limit(5000),
     supabase
       .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never)
+      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override" as never)
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
       .eq("is_ready_for_sale" as never, true as never)
@@ -422,6 +422,62 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   note("categorias", categoriesRes.error);
   note("produtos de parceiros", partnerRes.error);
   note("produtos de profissionais", professionalRes.error);
+
+  /**
+   * Dados de quem vende vêm por RPC, NUNCA por join embutido.
+   *
+   * `partners`, `coaches` e `profiles` estão fechadas para leitura direta
+   * desde a correção de segurança. Pedir `partners(...)` junto do produto faz
+   * o PostgREST recusar a consulta INTEIRA — foi assim que todo o catálogo de
+   * parceiros e profissionais sumiu da loja de uma vez.
+   *
+   * Aqui a falha é aberta: se a RPC falhar, o produto continua na vitrine sem
+   * o nome do vendedor. Perder o nome é aceitável; perder o produto não.
+   */
+  const partnerIds = Array.from(new Set(
+    ((partnerRes.data as unknown as Array<Record<string, unknown>>) || [])
+      .map((r) => (r.partner_id as string) || "")
+      .filter(Boolean),
+  ));
+  const coachIds = Array.from(new Set(
+    ((professionalRes.data as unknown as Array<Record<string, unknown>>) || [])
+      .map((r) => (r.coach_id as string) || "")
+      .filter(Boolean),
+  ));
+
+  type VendedorParceiro = { fantasy_name: string | null; city: string | null; upline_coach_id: string | null };
+  type VendedorProfissional = { nome: string | null; cidade: string | null };
+  const parceiroPorId = new Map<string, VendedorParceiro>();
+  const profissionalPorCoach = new Map<string, VendedorProfissional>();
+
+  const [parceirosRes, profissionaisRes] = await Promise.all([
+    partnerIds.length
+      ? supabase.rpc("parceiros_publicos_loja" as never, { _ids: partnerIds } as never)
+      : Promise.resolve({ data: [], error: null }),
+    coachIds.length
+      ? supabase.rpc("profissionais_publicos" as never, { _ids: coachIds } as never)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (parceirosRes.error) console.error("[unified-store] vendedores parceiros", parceirosRes.error);
+  if (profissionaisRes.error) console.error("[unified-store] vendedores profissionais", profissionaisRes.error);
+
+  for (const r of ((parceirosRes.data as unknown as Array<Record<string, unknown>>) || [])) {
+    if (!r?.id) continue;
+    parceiroPorId.set(String(r.id), {
+      fantasy_name: (r.fantasy_name as string) ?? null,
+      city: (r.city as string) ?? null,
+      upline_coach_id: (r.upline_coach_id as string) ?? null,
+    });
+  }
+  for (const r of ((profissionaisRes.data as unknown as Array<Record<string, unknown>>) || [])) {
+    if (!r?.coach_id) continue;
+    profissionalPorCoach.set(String(r.coach_id), {
+      nome: (r.nome as string) ?? null,
+      cidade: (r.cidade as string) ?? null,
+    });
+  }
+
 
   const ganhoPorId = new Map<string, GanhoReal>();
   for (const g of ((await ganhosPromise) as GanhoReal[] | null) || []) {
@@ -662,7 +718,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   for (const r of (partnerRes.data as unknown as Array<Record<string, unknown>>) || []) {
     const price = num(r.price);
     const base = computePartnerProductBenefits(price);
-    const partner = r.partners as { fantasy_name?: string | null; city?: string | null; upline_coach_id?: string | null } | null;
+    const partner = parceiroPorId.get(String(r.partner_id || "")) ?? null;
     push({
       id: `partner_company-${r.id}`,
       sourceId: String(r.id),
@@ -704,7 +760,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   for (const r of (professionalRes.data as unknown as Array<Record<string, unknown>>) || []) {
     const price = num(r.price);
     const base = computePartnerProductBenefits(price);
-    const coach = r.coaches as { profile?: { name?: string | null } | null } | null;
+    const coach = profissionalPorCoach.get(String(r.coach_id || "")) ?? null;
     push({
       id: `partner-${r.id}`,
       sourceId: String(r.id),
@@ -719,7 +775,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       maxPrice: numOrNull(r.max_price),
       price,
       originalPrice: numOrNull(r.original_price),
-      sellerName: coach?.profile?.name || "Profissional",
+      sellerName: coach?.nome || "Profissional",
       sellerCoachId: (r.coach_id as string) || null,
       sellerId: (r.coach_id as string) || null,
       isFeatured: false,
@@ -728,7 +784,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       restrictToNetworks: r.restrict_to_networks === true,
       allowedCoachIds: Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [],
       subcategoryId: null,
-      sellerCity: null,
+      sellerCity: coach?.cidade ?? null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,

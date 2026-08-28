@@ -16538,6 +16538,15 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      parceiros_publicos_loja: {
+        Args: { _ids: string[] }
+        Returns: {
+          city: string
+          fantasy_name: string
+          id: string
+          upline_coach_id: string
+        }[]
+      }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
       partner_feriado_de_hoje: {
         Args: { p_partner_id: string }
@@ -16744,6 +16753,14 @@ export type Database = {
       profile_shares_group_with_current_user: {
         Args: { _profile_id: string }
         Returns: boolean
+      }
+      profissionais_publicos: {
+        Args: { _ids: string[] }
+        Returns: {
+          cidade: string
+          coach_id: string
+          nome: string
+        }[]
       }
       prova_para_responder: {
         Args: { _exam_id: string }
