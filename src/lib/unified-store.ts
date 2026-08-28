@@ -345,6 +345,73 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     }
   };
 
+  /**
+   * Leitura paginada.
+   *
+   * O servidor de dados devolve no máximo 1000 linhas por consulta e IGNORA
+   * `.limit(5000)`. Com 1579 produtos de profissionais aprovados, 579 deles
+   * nunca chegavam à loja — foi assim que o "Desafio Carol Aventureira"
+   * (posições 1566 e 1579) sumiu da vitrine, da busca e de toda cidade.
+   *
+   * A ordenação precisa de desempate por `id`: quase todos têm o mesmo
+   * `sort_order`, e sem ordem estável a mesma linha pode voltar em duas
+   * páginas enquanto outra some — o mesmo sumiço, agora aleatório.
+   */
+  const PAGINA = 1000;
+  type Pagina = { data: unknown; error: unknown; count: number | null };
+  type Filtrador = (q: Record<string, unknown>) => Record<string, unknown>;
+
+  const lerPaginado = async (
+    tabela: string,
+    colunas: string,
+    filtrar: Filtrador,
+  ): Promise<{ data: Array<Record<string, unknown>>; error: unknown }> => {
+    const monta = (de: number, ate: number): Promise<Pagina> => {
+      const base = (supabase.from(tabela as never) as unknown as {
+        select: (c: string, o: Record<string, unknown>) => Record<string, unknown>;
+      }).select(colunas, { count: "exact" });
+      const filtrada = filtrar(base) as unknown as {
+        order: (c: string) => {
+          order: (c: string) => { range: (a: number, b: number) => Promise<Pagina> };
+        };
+      };
+      return filtrada.order("sort_order").order("id").range(de, ate);
+    };
+
+    const primeira = await monta(0, PAGINA - 1);
+    if (primeira.error) return { data: [], error: primeira.error };
+
+    const linhas = ((primeira.data as Array<Record<string, unknown>>) || []).slice();
+    const total = primeira.count ?? linhas.length;
+
+    if (total > linhas.length) {
+      const faltam: Array<Promise<Pagina>> = [];
+      for (let de = PAGINA; de < total; de += PAGINA) faltam.push(monta(de, de + PAGINA - 1));
+      const restos = await Promise.all(faltam);
+      for (const r of restos) {
+        if (r.error) return { data: linhas, error: r.error };
+        linhas.push(...(((r.data as Array<Record<string, unknown>>) || [])));
+      }
+    }
+
+
+    // Deduplica por id: se o banco repetir uma linha entre páginas, a vitrine
+    // não pode mostrar o mesmo produto duas vezes.
+    const vistos = new Set<string>();
+    const unicas = linhas.filter((r) => {
+      const id = String(r.id ?? "");
+      if (!id || vistos.has(id)) return false;
+      vistos.add(id);
+      return true;
+    });
+
+    if (total > unicas.length) {
+      console.error(`[unified-store] ${tabela}: recebidos ${unicas.length} de ${total}`);
+      return { data: unicas, error: new Error(`catálogo incompleto em ${tabela}`) };
+    }
+    return { data: unicas, error: null };
+  };
+
   // Dispara junto com o catálogo, não depois: são independentes.
   const ganhosPromise: Promise<unknown> = paraCoach && opts.ganhosReais
     ? Promise.resolve()
@@ -393,25 +460,26 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .select("id,section_id,name,image_url")
       .eq("is_active", true)
       .order("sort_order"),
-    supabase
-      .from("partner_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids" as never)
-      .eq("status" as never, "approved" as never)
-      .in("kind" as never, ["paid", "free"] as never)
-      .eq("is_active_by_partner" as never, true as never)
-      .eq("is_ready_for_sale" as never, true as never)
-      .is("deleted_at" as never, null as never)
-      .order("sort_order" as never)
-      .limit(5000),
-    supabase
-      .from("professional_products" as never)
-      .select("id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override" as never)
-      .eq("status" as never, "approved" as never)
-      .eq("is_active_by_professional" as never, true as never)
-      .eq("is_ready_for_sale" as never, true as never)
-      .order("sort_order" as never)
-      .order("sort_order" as never)
-      .limit(5000),
+    lerPaginado(
+      "partner_products",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids",
+      (q) => q
+        .eq("status", "approved")
+        .in("kind", ["paid", "free"])
+        .eq("is_active_by_partner", true)
+        .eq("is_ready_for_sale", true)
+        .is("deleted_at", null),
+    ),
+    lerPaginado(
+      "professional_products",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override",
+      (q) => q
+        .eq("status", "approved")
+        .eq("is_active_by_professional", true)
+        .eq("is_ready_for_sale", true),
+    ),
+
+
   ]);
 
   note("catálogo FitMind", legacyRes.error);
