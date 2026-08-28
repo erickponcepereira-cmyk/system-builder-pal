@@ -423,6 +423,62 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   note("produtos de parceiros", partnerRes.error);
   note("produtos de profissionais", professionalRes.error);
 
+  /**
+   * Dados de quem vende vêm por RPC, NUNCA por join embutido.
+   *
+   * `partners`, `coaches` e `profiles` estão fechadas para leitura direta
+   * desde a correção de segurança. Pedir `partners(...)` junto do produto faz
+   * o PostgREST recusar a consulta INTEIRA — foi assim que todo o catálogo de
+   * parceiros e profissionais sumiu da loja de uma vez.
+   *
+   * Aqui a falha é aberta: se a RPC falhar, o produto continua na vitrine sem
+   * o nome do vendedor. Perder o nome é aceitável; perder o produto não.
+   */
+  const partnerIds = Array.from(new Set(
+    ((partnerRes.data as unknown as Array<Record<string, unknown>>) || [])
+      .map((r) => (r.partner_id as string) || "")
+      .filter(Boolean),
+  ));
+  const coachIds = Array.from(new Set(
+    ((professionalRes.data as unknown as Array<Record<string, unknown>>) || [])
+      .map((r) => (r.coach_id as string) || "")
+      .filter(Boolean),
+  ));
+
+  type VendedorParceiro = { fantasy_name: string | null; city: string | null; upline_coach_id: string | null };
+  type VendedorProfissional = { nome: string | null; cidade: string | null };
+  const parceiroPorId = new Map<string, VendedorParceiro>();
+  const profissionalPorCoach = new Map<string, VendedorProfissional>();
+
+  const [parceirosRes, profissionaisRes] = await Promise.all([
+    partnerIds.length
+      ? supabase.rpc("parceiros_publicos_loja" as never, { _ids: partnerIds } as never)
+      : Promise.resolve({ data: [], error: null }),
+    coachIds.length
+      ? supabase.rpc("profissionais_publicos" as never, { _ids: coachIds } as never)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (parceirosRes.error) console.error("[unified-store] vendedores parceiros", parceirosRes.error);
+  if (profissionaisRes.error) console.error("[unified-store] vendedores profissionais", profissionaisRes.error);
+
+  for (const r of ((parceirosRes.data as unknown as Array<Record<string, unknown>>) || [])) {
+    if (!r?.id) continue;
+    parceiroPorId.set(String(r.id), {
+      fantasy_name: (r.fantasy_name as string) ?? null,
+      city: (r.city as string) ?? null,
+      upline_coach_id: (r.upline_coach_id as string) ?? null,
+    });
+  }
+  for (const r of ((profissionaisRes.data as unknown as Array<Record<string, unknown>>) || [])) {
+    if (!r?.coach_id) continue;
+    profissionalPorCoach.set(String(r.coach_id), {
+      nome: (r.nome as string) ?? null,
+      cidade: (r.cidade as string) ?? null,
+    });
+  }
+
+
   const ganhoPorId = new Map<string, GanhoReal>();
   for (const g of ((await ganhosPromise) as GanhoReal[] | null) || []) {
     if (g && g.id) ganhoPorId.set(String(g.id), g);
