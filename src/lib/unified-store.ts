@@ -784,7 +784,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       restrictToNetworks: r.restrict_to_networks === true,
       allowedCoachIds: Array.isArray(r.allowed_coach_ids) ? (r.allowed_coach_ids as string[]) : [],
       subcategoryId: null,
-      sellerCity: null,
+      sellerCity: coach?.cidade ?? null,
       sectionId: (r.section_id as string) || null,
       categoryId: (r.category_id as string) || null,
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,
