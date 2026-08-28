@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -119,6 +119,7 @@ export type Database = {
         Row: {
           credencial_id: string | null
           disparo_id: string | null
+          enviado_em: string | null
           gerado_em: string
           id: string
           marco: string
@@ -130,6 +131,7 @@ export type Database = {
         Insert: {
           credencial_id?: string | null
           disparo_id?: string | null
+          enviado_em?: string | null
           gerado_em?: string
           id?: string
           marco: string
@@ -141,6 +143,7 @@ export type Database = {
         Update: {
           credencial_id?: string | null
           disparo_id?: string | null
+          enviado_em?: string | null
           gerado_em?: string
           id?: string
           marco?: string
@@ -488,6 +491,7 @@ export type Database = {
           taxa_percentual: number
           taxa_valor: number
           telefone: string | null
+          transaction_id: string | null
           usado_em: string | null
           valor: number
           valor_liquido: number
@@ -509,6 +513,7 @@ export type Database = {
           taxa_percentual?: number
           taxa_valor?: number
           telefone?: string | null
+          transaction_id?: string | null
           usado_em?: string | null
           valor?: number
           valor_liquido?: number
@@ -530,6 +535,7 @@ export type Database = {
           taxa_percentual?: number
           taxa_valor?: number
           telefone?: string | null
+          transaction_id?: string | null
           usado_em?: string | null
           valor?: number
           valor_liquido?: number
@@ -554,6 +560,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_evento_inscricoes_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -742,6 +755,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      academia_grupos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       academia_import_tokens: {
         Row: {
@@ -942,6 +973,7 @@ export type Database = {
       }
       academia_planos: {
         Row: {
+          apelidos: string[]
           ativo: boolean
           created_at: string
           dias: number
@@ -954,6 +986,7 @@ export type Database = {
           valor_padrao: number
         }
         Insert: {
+          apelidos?: string[]
           ativo?: boolean
           created_at?: string
           dias?: number
@@ -966,6 +999,7 @@ export type Database = {
           valor_padrao?: number
         }
         Update: {
+          apelidos?: string[]
           ativo?: boolean
           created_at?: string
           dias?: number
@@ -983,6 +1017,62 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academia_produtos_evento: {
+        Row: {
+          ativo: boolean
+          evento_id: string
+          id: string
+          partner_id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          evento_id: string
+          id?: string
+          partner_id: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          evento_id?: string
+          id?: string
+          partner_id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_produtos_evento_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "academia_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_evento_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_evento_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_evento_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -1110,6 +1200,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           dia_semana: number | null
+          dias_semana: number[]
           hora_fim: string | null
           hora_inicio: string | null
           id: string
@@ -1121,6 +1212,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           dia_semana?: number | null
+          dias_semana?: number[]
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
@@ -1132,6 +1224,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           dia_semana?: number | null
+          dias_semana?: number[]
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
@@ -1869,10 +1962,12 @@ export type Database = {
           estado: string
           fluxo_id: string | null
           id: string
+          jid: string | null
           nome: string | null
           passo_atual_id: string | null
           profile_id: string | null
           telefone: string
+          tentativas_passo: number
           ultima_mensagem_em: string | null
           updated_at: string
         }
@@ -1884,10 +1979,12 @@ export type Database = {
           estado?: string
           fluxo_id?: string | null
           id?: string
+          jid?: string | null
           nome?: string | null
           passo_atual_id?: string | null
           profile_id?: string | null
           telefone: string
+          tentativas_passo?: number
           ultima_mensagem_em?: string | null
           updated_at?: string
         }
@@ -1899,10 +1996,12 @@ export type Database = {
           estado?: string
           fluxo_id?: string | null
           id?: string
+          jid?: string | null
           nome?: string | null
           passo_atual_id?: string | null
           profile_id?: string | null
           telefone?: string
+          tentativas_passo?: number
           ultima_mensagem_em?: string | null
           updated_at?: string
         }
@@ -2005,6 +2104,7 @@ export type Database = {
       bot_disparos: {
         Row: {
           agendado_para: string | null
+          automatico: boolean
           concluido_em: string | null
           created_at: string
           criado_por: string | null
@@ -2021,6 +2121,7 @@ export type Database = {
         }
         Insert: {
           agendado_para?: string | null
+          automatico?: boolean
           concluido_em?: string | null
           created_at?: string
           criado_por?: string | null
@@ -2037,6 +2138,7 @@ export type Database = {
         }
         Update: {
           agendado_para?: string | null
+          automatico?: boolean
           concluido_em?: string | null
           created_at?: string
           criado_por?: string | null
@@ -2225,6 +2327,7 @@ export type Database = {
           posicao: number
           proximo_passo_id: string | null
           rotulo: string
+          sinonimos: string[]
         }
         Insert: {
           created_at?: string
@@ -2234,6 +2337,7 @@ export type Database = {
           posicao?: number
           proximo_passo_id?: string | null
           rotulo: string
+          sinonimos?: string[]
         }
         Update: {
           created_at?: string
@@ -2243,6 +2347,7 @@ export type Database = {
           posicao?: number
           proximo_passo_id?: string | null
           rotulo?: string
+          sinonimos?: string[]
         }
         Relationships: [
           {
@@ -8024,12 +8129,16 @@ export type Database = {
       partner_acesso_config: {
         Row: {
           avisos_automaticos: boolean
+          avisos_dias: number[]
+          avisos_envio_automatico: boolean
+          avisos_hora: number
           created_at: string
           dias_carencia: number
           exige_senha_liberacao: boolean
           frequencia_conta: string
           frequencia_meta: number | null
           frequencia_periodo: string
+          grupo_id: string | null
           id: string
           modelo_catraca: string | null
           partner_id: string
@@ -8040,12 +8149,16 @@ export type Database = {
         }
         Insert: {
           avisos_automaticos?: boolean
+          avisos_dias?: number[]
+          avisos_envio_automatico?: boolean
+          avisos_hora?: number
           created_at?: string
           dias_carencia?: number
           exige_senha_liberacao?: boolean
           frequencia_conta?: string
           frequencia_meta?: number | null
           frequencia_periodo?: string
+          grupo_id?: string | null
           id?: string
           modelo_catraca?: string | null
           partner_id: string
@@ -8056,12 +8169,16 @@ export type Database = {
         }
         Update: {
           avisos_automaticos?: boolean
+          avisos_dias?: number[]
+          avisos_envio_automatico?: boolean
+          avisos_hora?: number
           created_at?: string
           dias_carencia?: number
           exige_senha_liberacao?: boolean
           frequencia_conta?: string
           frequencia_meta?: number | null
           frequencia_periodo?: string
+          grupo_id?: string | null
           id?: string
           modelo_catraca?: string | null
           partner_id?: string
@@ -8071,6 +8188,13 @@ export type Database = {
           validacao_frequencia?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_acesso_config_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "academia_grupos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_acesso_config_partner_id_fkey"
             columns: ["partner_id"]
@@ -8243,6 +8367,41 @@ export type Database = {
           },
           {
             foreignKeyName: "partner_created_courses_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_feriados: {
+        Row: {
+          created_at: string
+          data: string
+          fechado: boolean
+          id: string
+          nome: string
+          partner_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          fechado?: boolean
+          id?: string
+          nome: string
+          partner_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          fechado?: boolean
+          id?: string
+          nome?: string
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_feriados_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
@@ -15030,6 +15189,7 @@ export type Database = {
           limite: number
           ref: string
           usados: number
+          vence: string
         }[]
       }
       academia_agente_sombra_registrar: {
@@ -15045,6 +15205,25 @@ export type Database = {
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
+      }
+      academia_avisos_a_disparar: {
+        Args: never
+        Returns: {
+          alvos: number
+          disparo_id: string
+          nome: string
+          partner_id: string
+        }[]
+      }
+      academia_avisos_devidos: {
+        Args: { p_disparo_id: string }
+        Returns: {
+          telefone: string
+        }[]
+      }
+      academia_avisos_marcar_enviados: {
+        Args: { p_disparo_id: string; p_telefones: string[] }
+        Returns: number
       }
       academia_avisos_pendentes: {
         Args: { p_partner_id: string }
@@ -15134,6 +15313,14 @@ export type Database = {
         }
         Returns: string
       }
+      academia_evento_inscricao_gerar: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
+      academia_evento_inscricoes_pendentes_reprocessar: {
+        Args: { p_partner_id: string }
+        Returns: number
+      }
       academia_evento_validar: {
         Args: { p_credencial: string; p_partner_id: string }
         Returns: {
@@ -15199,6 +15386,35 @@ export type Database = {
           visitas: number
         }[]
       }
+      academia_funil_campanhas: {
+        Args: { p_partner_id: string; p_quadro_id: string }
+        Returns: {
+          alcancados: number
+          coluna: string
+          coluna_id: string
+          nunca: number
+          pessoas: number
+          posicao: number
+          sem_telefone: number
+          so_automatico: number
+          tipo: string
+          ultima_automatica: boolean
+          ultima_campanha: string
+          ultima_campanha_em: string
+        }[]
+      }
+      academia_funil_campanhas_pessoas: {
+        Args: { p_coluna_id: string; p_partner_id: string; p_recorte?: string }
+        Returns: {
+          campanhas: number
+          cartao_id: string
+          nome: string
+          telefone: string
+          ultima_automatica: boolean
+          ultima_campanha: string
+          ultima_campanha_em: string
+        }[]
+      }
       academia_importar_contratos: {
         Args: { p_linhas: Json; p_partner_id: string; p_token: string }
         Returns: {
@@ -15239,6 +15455,34 @@ export type Database = {
       academia_pagamento_confirmado: {
         Args: { p_transaction_id: string }
         Returns: boolean
+      }
+      academia_parceiros_do_grupo: {
+        Args: { p_partner_id: string }
+        Returns: {
+          partner_id: string
+        }[]
+      }
+      academia_plano_do_texto: {
+        Args: { p_partner_id: string; p_texto: string }
+        Returns: {
+          apelidos: string[]
+          ativo: boolean
+          created_at: string
+          dias: number
+          id: string
+          limite_dias_semana: number | null
+          nome: string
+          partner_id: string
+          posicao: number
+          updated_at: string
+          valor_padrao: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academia_planos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       academia_pode_ver: { Args: { p_partner_id: string }; Returns: boolean }
       academia_publico: {
@@ -15282,6 +15526,39 @@ export type Database = {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: Json
       }
+      academia_relatorio_eventos: {
+        Args: { p_ate?: string; p_de?: string; p_partner_id: string }
+        Returns: {
+          bruto: number
+          compareceram: number
+          data_evento: string
+          evento_id: string
+          hora_inicio: string
+          inscritos: number
+          liquido: number
+          nome: string
+          valor: number
+        }[]
+      }
+      academia_relatorio_extra: {
+        Args: {
+          p_ate?: string
+          p_de?: string
+          p_partner_id: string
+          p_projecao_ate?: string
+        }
+        Returns: {
+          dayuse_qtd: number
+          dayuse_valor: number
+          novos_qtd: number
+          projecao_pessoas: number
+          projecao_sem_preco: number
+          projecao_valor: number
+          renovacoes_qtd: number
+          renovacoes_valor: number
+          sem_frequencia_qtd: number
+        }[]
+      }
       academia_relatorio_pessoas: {
         Args: {
           p_ate?: string
@@ -15300,48 +15577,58 @@ export type Database = {
           valido_ate: string
         }[]
       }
-      academia_renovar:
-        | {
-            Args: {
-              p_credencial_id: string
-              p_dias: number
-              p_observacao?: string
-              p_pagamentos: Json
-              p_partner_id: string
-              p_plano: string
-              p_registrado_por?: string
-              p_student_id: string
-              p_valor: number
-            }
-            Returns: {
-              bruto: number
-              liquido: number
-              mensalidade_id: string
-              taxas: number
-              valido_ate: string
-            }[]
-          }
-        | {
-            Args: {
-              p_credencial_id: string
-              p_dias: number
-              p_observacao?: string
-              p_pagamentos: Json
-              p_partner_id: string
-              p_plano: string
-              p_registrado_por?: string
-              p_student_id: string
-              p_valido_ate?: string
-              p_valor: number
-            }
-            Returns: {
-              bruto: number
-              liquido: number
-              mensalidade_id: string
-              taxas: number
-              valido_ate: string
-            }[]
-          }
+      academia_relatorio_pessoas_extra: {
+        Args: {
+          p_ate?: string
+          p_categoria: string
+          p_de?: string
+          p_partner_id: string
+          p_projecao_ate?: string
+        }
+        Returns: {
+          credencial_id: string
+          detalhe: string
+          dias: number
+          nome: string
+          referencia: string
+          student_id: string
+          telefone: string
+          valido_ate: string
+        }[]
+      }
+      academia_relatorio_turmas: {
+        Args: { p_ate?: string; p_de?: string; p_partner_id: string }
+        Returns: {
+          dias: string
+          entradas: number
+          janela: string
+          modalidade: string
+          pessoas: number
+          turma: string
+          turma_id: string
+        }[]
+      }
+      academia_renovar: {
+        Args: {
+          p_credencial_id: string
+          p_dias: number
+          p_observacao?: string
+          p_pagamentos: Json
+          p_partner_id: string
+          p_plano: string
+          p_registrado_por?: string
+          p_student_id: string
+          p_valido_ate?: string
+          p_valor: number
+        }
+        Returns: {
+          bruto: number
+          liquido: number
+          mensalidade_id: string
+          taxas: number
+          valido_ate: string
+        }[]
+      }
       academia_sombra_placar: {
         Args: { p_partner_id: string }
         Returns: {
@@ -15545,6 +15832,7 @@ export type Database = {
         }[]
       }
       bot_contar_envio: { Args: { _conexao_id: string }; Returns: undefined }
+      bot_dia_da_conexao: { Args: { _conexao_id: string }; Returns: string }
       bot_escolher_conexao: {
         Args: { _escopo: string; _owner_id: string; _uso?: string }
         Returns: string
@@ -15849,6 +16137,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      dias_semana_rotulo: { Args: { p_dias: number[] }; Returns: string }
       email_queue_dispatch: { Args: never; Returns: undefined }
       emitir_certificado: {
         Args: { _digital_product_id: string }
@@ -16162,6 +16451,7 @@ export type Database = {
           tem_academia: boolean
         }[]
       }
+      moeda_br: { Args: { v: number }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -16249,6 +16539,10 @@ export type Database = {
         }[]
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_feriado_de_hoje: {
+        Args: { p_partner_id: string }
+        Returns: string
+      }
       partner_freebie_do_dia: {
         Args: { p_dia?: string; p_partner_id: string }
         Returns: {

@@ -159,11 +159,11 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
-import { Route as ApiPublicHooksAvisosAutomaticosRouteImport } from './routes/api/public/hooks/avisos-automaticos'
 import { Route as ApiPublicHooksRecurringChargeRouteImport } from './routes/api/public/hooks/recurring-charge'
 import { Route as ApiPublicHooksNetworkUnlockSnapshotRouteImport } from './routes/api/public/hooks/network-unlock-snapshot'
 import { Route as ApiPublicHooksMpSweepRouteImport } from './routes/api/public/hooks/mp-sweep'
 import { Route as ApiPublicHooksChallengeFinalWeighinRouteImport } from './routes/api/public/hooks/challenge-final-weighin'
+import { Route as ApiPublicHooksAvisosAutomaticosRouteImport } from './routes/api/public/hooks/avisos-automaticos'
 import { Route as ApiPublicCareerResetExpiredRouteImport } from './routes/api/public/career.reset-expired'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
@@ -1019,12 +1019,6 @@ const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   path: '/api/public/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksAvisosAutomaticosRoute =
-  ApiPublicHooksAvisosAutomaticosRouteImport.update({
-    id: '/api/public/hooks/avisos-automaticos',
-    path: '/api/public/hooks/avisos-automaticos',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicHooksRecurringChargeRoute =
   ApiPublicHooksRecurringChargeRouteImport.update({
     id: '/api/public/hooks/recurring-charge',
@@ -1046,6 +1040,12 @@ const ApiPublicHooksChallengeFinalWeighinRoute =
   ApiPublicHooksChallengeFinalWeighinRouteImport.update({
     id: '/api/public/hooks/challenge-final-weighin',
     path: '/api/public/hooks/challenge-final-weighin',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksAvisosAutomaticosRoute =
+  ApiPublicHooksAvisosAutomaticosRouteImport.update({
+    id: '/api/public/hooks/avisos-automaticos',
+    path: '/api/public/hooks/avisos-automaticos',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCareerResetExpiredRoute =
@@ -1240,10 +1240,10 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
-  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1401,10 +1401,10 @@ export interface FileRoutesByTo {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
-  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1566,10 +1566,10 @@ export interface FileRoutesById {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/challenge-final-weighin': typeof ApiPublicHooksChallengeFinalWeighinRoute
   '/api/public/hooks/mp-sweep': typeof ApiPublicHooksMpSweepRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
-  '/api/public/hooks/avisos-automaticos': typeof ApiPublicHooksAvisosAutomaticosRoute
   '/api/public/hooks/recurring-charge': typeof ApiPublicHooksRecurringChargeRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
@@ -1731,10 +1731,10 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
-    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -1892,10 +1892,10 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
-    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -2056,10 +2056,10 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/challenge-final-weighin'
     | '/api/public/hooks/mp-sweep'
     | '/api/public/hooks/network-unlock-snapshot'
-    | '/api/public/hooks/avisos-automaticos'
     | '/api/public/hooks/recurring-charge'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
@@ -2112,10 +2112,10 @@ export interface RootRouteChildren {
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
+  ApiPublicHooksAvisosAutomaticosRoute: typeof ApiPublicHooksAvisosAutomaticosRoute
   ApiPublicHooksChallengeFinalWeighinRoute: typeof ApiPublicHooksChallengeFinalWeighinRoute
   ApiPublicHooksMpSweepRoute: typeof ApiPublicHooksMpSweepRoute
   ApiPublicHooksNetworkUnlockSnapshotRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRoute
-  ApiPublicHooksAvisosAutomaticosRoute: typeof ApiPublicHooksAvisosAutomaticosRoute
   ApiPublicHooksRecurringChargeRoute: typeof ApiPublicHooksRecurringChargeRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
   ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
@@ -3177,13 +3177,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/avisos-automaticos': {
-      id: '/api/public/hooks/avisos-automaticos'
-      path: '/api/public/hooks/avisos-automaticos'
-      fullPath: '/api/public/hooks/avisos-automaticos'
-      preLoaderRoute: typeof ApiPublicHooksAvisosAutomaticosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/recurring-charge': {
       id: '/api/public/hooks/recurring-charge'
       path: '/api/public/hooks/recurring-charge'
@@ -3210,6 +3203,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/challenge-final-weighin'
       fullPath: '/api/public/hooks/challenge-final-weighin'
       preLoaderRoute: typeof ApiPublicHooksChallengeFinalWeighinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/avisos-automaticos': {
+      id: '/api/public/hooks/avisos-automaticos'
+      path: '/api/public/hooks/avisos-automaticos'
+      fullPath: '/api/public/hooks/avisos-automaticos'
+      preLoaderRoute: typeof ApiPublicHooksAvisosAutomaticosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/career/reset-expired': {
@@ -3618,12 +3618,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
+  ApiPublicHooksAvisosAutomaticosRoute: ApiPublicHooksAvisosAutomaticosRoute,
   ApiPublicHooksChallengeFinalWeighinRoute:
     ApiPublicHooksChallengeFinalWeighinRoute,
   ApiPublicHooksMpSweepRoute: ApiPublicHooksMpSweepRoute,
   ApiPublicHooksNetworkUnlockSnapshotRoute:
     ApiPublicHooksNetworkUnlockSnapshotRoute,
-  ApiPublicHooksAvisosAutomaticosRoute: ApiPublicHooksAvisosAutomaticosRoute,
   ApiPublicHooksRecurringChargeRoute: ApiPublicHooksRecurringChargeRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
   ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
