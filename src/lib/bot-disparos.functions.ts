@@ -406,9 +406,13 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
       );
       const jaPagaram = alvos.filter((a) => !devidos.has(a.telefone));
       if (jaPagaram.length) {
-        await db.from("bot_disparo_alvos")
-          .update({ status: "dispensado", erro: "renovou antes do envio" })
+        // 'ignorado' e nao um status novo: bot_disparo_alvos_status_check so
+        // aceita pendente/enfileirado/enviado/erro/ignorado. O motivo fica no
+        // campo `erro`, que e onde a tela ja procura.
+        const { error } = await db.from("bot_disparo_alvos")
+          .update({ status: "ignorado", erro: "renovou antes do envio" })
           .in("id", jaPagaram.map((a) => a.id));
+        if (error) throw new Error(`nao consegui dispensar quem ja pagou: ${error.message}`);
         alvos = alvos.filter((a) => devidos.has(a.telefone));
       }
       if (!alvos.length) {
