@@ -358,26 +358,25 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
    * páginas enquanto outra some — o mesmo sumiço, agora aleatório.
    */
   const PAGINA = 1000;
+  type Pagina = { data: unknown; error: unknown; count: number | null };
+  type Filtrador = (q: Record<string, unknown>) => Record<string, unknown>;
+
   const lerPaginado = async (
     tabela: string,
     colunas: string,
-    filtros: (q: never) => never,
+    filtrar: Filtrador,
   ): Promise<{ data: Array<Record<string, unknown>>; error: unknown }> => {
-    const monta = (de: number, ate: number) =>
-      (filtros(
-        supabase.from(tabela as never).select(colunas as never, { count: "exact" } as never) as never,
-      ) as never as {
-        order: (c: string, o?: Record<string, unknown>) => never;
-      }).order as unknown as never
-        ? ((filtros(
-            supabase.from(tabela as never).select(colunas as never, { count: "exact" } as never) as never,
-          ) as unknown as {
-            order: (c: string) => { order: (c: string) => { range: (a: number, b: number) => Promise<{ data: unknown; error: unknown; count: number | null }> } };
-          })
-            .order("sort_order")
-            .order("id")
-            .range(de, ate))
-        : (null as never);
+    const monta = (de: number, ate: number): Promise<Pagina> => {
+      const base = (supabase.from(tabela as never) as unknown as {
+        select: (c: string, o: Record<string, unknown>) => Record<string, unknown>;
+      }).select(colunas, { count: "exact" });
+      const filtrada = filtrar(base) as unknown as {
+        order: (c: string) => {
+          order: (c: string) => { range: (a: number, b: number) => Promise<Pagina> };
+        };
+      };
+      return filtrada.order("sort_order").order("id").range(de, ate);
+    };
 
     const primeira = await monta(0, PAGINA - 1);
     if (primeira.error) return { data: [], error: primeira.error };
@@ -386,7 +385,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     const total = primeira.count ?? linhas.length;
 
     if (total > linhas.length) {
-      const faltam: Array<Promise<{ data: unknown; error: unknown; count: number | null }>> = [];
+      const faltam: Array<Promise<Pagina>> = [];
       for (let de = PAGINA; de < total; de += PAGINA) faltam.push(monta(de, de + PAGINA - 1));
       const restos = await Promise.all(faltam);
       for (const r of restos) {
@@ -394,6 +393,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
         linhas.push(...(((r.data as Array<Record<string, unknown>>) || [])));
       }
     }
+
 
     // Deduplica por id: se o banco repetir uma linha entre páginas, a vitrine
     // não pode mostrar o mesmo produto duas vezes.
