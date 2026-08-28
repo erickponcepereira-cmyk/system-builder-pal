@@ -1551,7 +1551,15 @@ export const reprocessarMensalidadesPendentes = createServerFn({ method: "POST" 
       p_partner_id: data.partnerId,
     });
     if (error) throw new Error(error.message);
-    return { geradas: Number(n ?? 0) };
+
+    // Evento vai no mesmo botão. Para quem está na recepção existe uma coisa
+    // só — "alguma compra ficou sem liberar?" — e ela não deveria precisar
+    // saber que por dentro são dois caminhos diferentes.
+    const { data: nEvento } = await admin.rpc(
+      "academia_evento_inscricoes_pendentes_reprocessar" as never,
+      { p_partner_id: data.partnerId } as never,
+    );
+    return { geradas: Number(n ?? 0), inscricoes: Number(nEvento ?? 0) };
   });
 
 /** Produtos da loja que geram inscrição em evento nesta academia. */

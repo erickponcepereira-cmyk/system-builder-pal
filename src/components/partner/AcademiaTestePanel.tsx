@@ -1868,14 +1868,18 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
         onClick={async () => {
           try {
             const r = await reprocessar({ data: { partnerId } });
-            toast.success(r.geradas > 0
-              ? `${r.geradas} mensalidade(s) gerada(s) de compras que ficaram para trás.`
+            const partes = [
+              r.geradas > 0 ? `${r.geradas} mensalidade(s)` : "",
+              r.inscricoes > 0 ? `${r.inscricoes} inscrição(ões) em evento` : "",
+            ].filter(Boolean);
+            toast.success(partes.length
+              ? `${partes.join(" e ")} de compras que ficaram para trás.`
               : "Nenhuma compra pendente — está tudo liberado.");
           } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
         }}
         className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15"
       >
-        Procurar compras pagas sem mensalidade
+        Procurar compras pagas que não liberaram nada
       </button>
     </div>
   );
