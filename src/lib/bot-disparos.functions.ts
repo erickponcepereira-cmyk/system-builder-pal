@@ -330,6 +330,8 @@ export const resumoDisparo = createServerFn({ method: "POST" })
 type Disparo = {
   id: string; escopo: string; owner_id: string | null; nome: string;
   mensagem: string; uso: string; status: string; intervalo_segundos: number;
+  /** A maquina montou esta campanha. So essas conferem pagamento e marcam aviso. */
+  automatico?: boolean;
 };
 
 /**
@@ -384,8 +386,41 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
     const { data: alvosData } = await db
       .from("bot_disparo_alvos").select("id, telefone, nome")
       .eq("disparo_id", disparo.id).eq("status", "pendente");
-    const alvos = (alvosData ?? []) as Array<{ id: string; telefone: string; nome: string | null }>;
+    let alvos = (alvosData ?? []) as Array<{ id: string; telefone: string; nome: string | null }>;
     if (!alvos.length) throw new Error("Nenhum contato na campanha. Adicione antes de disparar.");
+
+    /*
+     * Aviso de vencimento: quem pagou entre a montagem e agora sai da lista.
+     *
+     * A campanha é montada às 8h e sai às 9h. Nessa hora cabe uma renovação no
+     * balcão — e "seu plano expira hoje" chegando para quem acabou de pagar não
+     * é um detalhe de texto: é o cliente deixando de acreditar no que o sistema
+     * diz. Quem já pagou é dispensado, não some: fica registrado por quê.
+     */
+    if (disparo.automatico) {
+      const { data: devidosData } = await db.rpc("academia_avisos_devidos", {
+        p_disparo_id: disparo.id,
+      });
+      const devidos = new Set(
+        ((devidosData ?? []) as Array<{ telefone: string }>).map((d) => d.telefone),
+      );
+      const jaPagaram = alvos.filter((a) => !devidos.has(a.telefone));
+      if (jaPagaram.length) {
+        await db.from("bot_disparo_alvos")
+          .update({ status: "dispensado", erro: "renovou antes do envio" })
+          .in("id", jaPagaram.map((a) => a.id));
+        alvos = alvos.filter((a) => devidos.has(a.telefone));
+      }
+      if (!alvos.length) {
+        await db.from("bot_disparos")
+          .update({ status: "concluido", concluido_em: new Date().toISOString() })
+          .eq("id", disparo.id);
+        return {
+          enfileirados: 0, falhas: 0, ficamParaDepois: 0,
+          minutosEstimados: 0, conexaoId: conexao.id, dispensados: jaPagaram.length,
+        };
+      }
+    }
 
     const vaoAgora = alvos.slice(0, cabeHoje === Number.POSITIVE_INFINITY ? alvos.length : cabeHoje);
     const ficamParaDepois = alvos.length - vaoAgora.length;
@@ -432,6 +467,8 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
       fimDaFila ? new Date(fimDaFila).getTime() + intervalo : 0,
     );
     let enfileirados = 0;
+    // Quem realmente entrou na fila — e so esses viram "avisado" no fim.
+    const enviados: string[] = [];
     let falhas = 0;
 
     for (let i = 0; i < vaoAgora.length; i++) {
@@ -472,6 +509,7 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
           .update({ status: "enfileirado", mensagem_id: (msg as { id: string }).id, erro: null })
           .eq("id", alvo.id);
         enfileirados++;
+        enviados.push(alvo.telefone);
 
         /*
          * Conta ESTE envio agora, não todos no fim.
@@ -489,6 +527,21 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
           .update({ status: "erro", erro: e instanceof Error ? e.message.slice(0, 300) : "falhou" })
           .eq("id", alvo.id);
       }
+    }
+
+    /*
+     * Marca como avisado só agora, e só quem entrou na fila.
+     *
+     * A marcação ficava na MONTAGEM da campanha. Campanha que não disparava
+     * deixava as pessoas registradas como avisadas sem terem recebido nada — e
+     * elas só voltavam a entrar se ainda casassem com um marco ativo no dia
+     * seguinte, o que com d1 e d2 desligados quase nunca acontecia.
+     */
+    if (disparo.automatico && enviados.length) {
+      await db.rpc("academia_avisos_marcar_enviados", {
+        p_disparo_id: disparo.id,
+        p_telefones: enviados,
+      });
     }
 
     await db.from("bot_disparos")
