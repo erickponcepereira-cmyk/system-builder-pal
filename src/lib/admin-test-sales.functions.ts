@@ -681,13 +681,13 @@ export const listAdminTestSales = createServerFn({ method: "GET" })
     const [storeOrders, partnerOrders] = await Promise.all([
       supabaseAdmin
         .from("store_orders")
-        .select("id,order_number,status,total_amount,created_at,metadata,students:student_id(profiles:profile_id(name)),store_order_items(title)")
+        .select("id,order_number,public_payment_token,status,total_amount,created_at,metadata,students:student_id(profiles:profile_id(name)),store_order_items(title)")
         .contains("metadata", TEST_META as never)
         .order("created_at", { ascending: false })
         .limit(100),
       supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,order_number,status,gross_amount,created_at,metadata,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name)),professional_product:professional_product_id(name),partner_product:partner_product_id(name)" as never)
+        .select("id,order_number,public_payment_token,status,gross_amount,created_at,metadata,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name)),professional_product:professional_product_id(name),partner_product:partner_product_id(name)" as never)
         .contains("metadata" as never, TEST_META as never)
         .order("created_at" as never, { ascending: false })
         .limit(100),
@@ -704,7 +704,7 @@ export const listAdminTestSales = createServerFn({ method: "GET" })
         createdAt: o.created_at,
         buyerName: o.students?.profiles?.name || null,
         productName: (o.store_order_items || []).map((i: any) => i.title).join(", ") || null,
-        payUrl: `/pay/${o.order_number}`,
+        payUrl: `/pay/${o.public_payment_token}`,
         flow: await listFlowForOrder("store_order", o.id),
       });
     }
@@ -718,7 +718,7 @@ export const listAdminTestSales = createServerFn({ method: "GET" })
         createdAt: o.created_at,
         buyerName: o.student?.profile?.name || null,
         productName: o.professional_product?.name || o.partner_product?.name || null,
-        payUrl: `/pay/${o.order_number}`,
+        payUrl: `/pay/${o.public_payment_token}`,
         flow: await listFlowForOrder("partner_product_order", o.id),
       });
     }

@@ -229,7 +229,7 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
     const { data: appts } = await supabase
       .from("professional_appointments" as never)
       .select(
-        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(profiles!coaches_profile_id_fkey(name)),order:partner_product_orders(order_number,status)" as never,
+        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(profiles!coaches_profile_id_fkey(name)),order:partner_product_orders(public_payment_token,status)" as never,
       )
       .eq("student_id" as never, (student as any).id)
       .neq("status" as never, "cancelled" as never)
@@ -239,7 +239,7 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
     const paidStatuses = new Set(["paid", "approved", "completed"]);
     return ((appts as any[]) || []).map((a) => {
       const orderStatus: string | null = a.order?.status || null;
-      const orderNumber: string | null = a.order?.order_number || null;
+      const publicPaymentToken: string | null = a.order?.public_payment_token || null;
       const pending = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
       const profName = a.professional?.profiles?.name || "profissional";
       const prodName = a.professional_products?.name || "Consulta";
@@ -267,7 +267,7 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
         google_calendar_title: prodName,
         google_calendar_description: `Consulta com ${profName}`,
         google_calendar_location: null,
-        appointment_pay_url: pending && orderNumber ? `/pay/${orderNumber}` : null,
+        appointment_pay_url: pending && publicPaymentToken ? `/pay/${publicPaymentToken}` : null,
         appointment_pending: pending,
       } satisfies FitmindEvent;
     });

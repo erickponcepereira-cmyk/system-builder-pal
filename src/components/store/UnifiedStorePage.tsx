@@ -2278,14 +2278,14 @@ function PaySheet({
           onApproved={() => { toast.success("Pagamento aprovado!"); onPaid(); }}
         />
 
-        {cliente && !order.number && (
+        {cliente && !order.publicPaymentToken && (
           <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
-            Número do pedido indisponível no momento. Recarregue a tela para gerar o link de
+            Link seguro indisponível no momento. Recarregue a tela para gerar o link de
             pagamento do cliente.
           </p>
         )}
 
-        {cliente && !!order.number && <LinkDePagamento order={order} cliente={cliente} />}
+        {cliente && !!order.publicPaymentToken && <LinkDePagamento order={order} cliente={cliente} />}
       </div>
     </div>
   );
@@ -2300,7 +2300,8 @@ function PaySheet({
  * sempre.
  */
 function LinkDePagamento({ order, cliente }: { order: PayOrder; cliente: SaleClient }) {
-  const link = `${getShareOrigin()}/pay/${order.number}`;
+  if (!order.publicPaymentToken) return null;
+  const link = `${getShareOrigin()}/pay/${order.publicPaymentToken}`;
   const telefone = cliente.phone?.replace(/\D/g, "") || "";
   const mensagem = encodeURIComponent(
     `Olá ${cliente.name || ""}! Segue o link para finalizar seu pagamento:\n\n${link}`,

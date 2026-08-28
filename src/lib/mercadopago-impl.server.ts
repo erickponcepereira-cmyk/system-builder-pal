@@ -779,7 +779,13 @@ export async function handleGetStatus(paymentRowId: string) {
             console.error("[mp poll] applyApproval failed:", e);
           }
         }
-        return { ...row, status: newStatus, status_detail: mp.status_detail || null, paid_at: paidAt };
+        return {
+          paymentRowId: row.id,
+          status: newStatus,
+          status_detail: mp.status_detail || null,
+          paid_at: paidAt,
+          amount: Number(row.amount),
+        };
       }
     } catch (e) {
       console.error("[mp poll] getPayment failed:", e);
@@ -792,5 +798,11 @@ export async function handleGetStatus(paymentRowId: string) {
       console.error("[mp poll] approved store order reapply failed:", e);
     }
   }
-  return row;
+  return {
+    paymentRowId: row.id,
+    status: row.status,
+    status_detail: row.status_detail,
+    paid_at: row.paid_at,
+    amount: Number(row.amount),
+  };
 }

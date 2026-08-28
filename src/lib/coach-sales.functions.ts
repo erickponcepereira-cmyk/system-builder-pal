@@ -199,7 +199,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
         notes: data.notes || null,
         metadata: orderMetadata,
       } as never)
-      .select("id, order_number, total_amount")
+      .select("id, order_number, total_amount, public_payment_token")
       .single();
     if (orderErr || !order) throw new Error(orderErr?.message || "Falha ao criar pedido");
 
@@ -270,7 +270,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
       orderId: order.id,
       orderNumber: order.order_number,
       total: Number(order.total_amount),
-      payUrl: `/pay/${order.order_number}`,
+      payUrl: `/pay/${order.public_payment_token}`,
     };
   });
 

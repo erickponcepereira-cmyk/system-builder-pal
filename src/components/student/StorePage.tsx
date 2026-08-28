@@ -18,7 +18,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { getShareOrigin } from "@/lib/auth-redirects";
-import { ensureOrderNumber } from "@/lib/order-number";
+import { ensureOrderPaymentReference } from "@/lib/order-number";
 import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
@@ -165,7 +165,7 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
   const [shippingAcceptCorrect, setShippingAcceptCorrect] = useState(false);
   const attachShippingFn = useServerFn(attachShippingToOrder);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; publicPaymentToken: string | null; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
   /** Pop-up "compra aprovada" com benefícios e WhatsApp do dono do produto. */
   const [purchased, setPurchased] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
   /** Converte itens do carrinho pagos no formato do pop-up de compra aprovada. */
@@ -751,16 +751,20 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
         if (!ppId) throw new Error("Pedido não retornado");
         const { data: orderData } = await supabase
           .from("partner_product_orders" as never)
-          .select("id,order_number,gross_amount" as never)
+          .select("id,order_number,gross_amount,public_payment_token" as never)
           .eq("id" as never, ppId as never)
           .maybeSingle();
-        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
+        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number; public_payment_token: string | null } | null;
+        const reference = await ensureOrderPaymentReference("partner_product_order", String(ppId), {
+          number: od?.order_number,
+          publicPaymentToken: od?.public_payment_token,
+        });
         setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
-          number: ppNumber || "",
+          number: reference.number || "",
+          publicPaymentToken: reference.publicPaymentToken,
           email: userData.user?.email || "",
           name: userData.user?.user_metadata?.name || "",
           sourceKind: "partner_product_order",
@@ -785,10 +789,10 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
       if (!orderId) throw new Error("Pedido não retornado");
       const { data: orderData } = await supabase
         .from("store_orders" as never)
-        .select("id,order_number,total_amount" as never)
+        .select("id,order_number,total_amount,public_payment_token" as never)
         .eq("id" as never, orderId as never)
         .maybeSingle();
-      const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
+      const od = orderData as unknown as { id: string; order_number: string; total_amount: number; public_payment_token: string | null } | null;
       if (needsShipping && od?.id) {
         try {
           // Determinar prazo médio máximo dos produtos físicos no carrinho
@@ -814,10 +818,14 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
           });
         } catch (e) { console.warn("attach fitmind shipping", e); }
       }
-      const storeNumber = await ensureOrderNumber("store_order", String(orderId), od?.order_number);
+      const reference = await ensureOrderPaymentReference("store_order", String(orderId), {
+        number: od?.order_number,
+        publicPaymentToken: od?.public_payment_token,
+      });
       setCartOpen(false);
       setPayOrder({
-        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: storeNumber || "",
+        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: reference.number || "",
+        publicPaymentToken: reference.publicPaymentToken,
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
         sourceKind: "store_order",
@@ -876,16 +884,20 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
         if (!ppId) throw new Error("Pedido não retornado");
         const { data: orderData } = await supabase
           .from("partner_product_orders" as never)
-          .select("id,order_number,gross_amount" as never)
+          .select("id,order_number,gross_amount,public_payment_token" as never)
           .eq("id" as never, ppId as never)
           .maybeSingle();
-        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
+        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number; public_payment_token: string | null } | null;
+        const reference = await ensureOrderPaymentReference("partner_product_order", String(ppId), {
+          number: od?.order_number,
+          publicPaymentToken: od?.public_payment_token,
+        });
         setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
-          number: ppNumber || "",
+          number: reference.number || "",
+          publicPaymentToken: reference.publicPaymentToken,
           email: selectedClient.email || "",
           name: selectedClient.name,
           sourceKind: "partner_product_order",
@@ -914,10 +926,13 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
       const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
       const orderId = row?.order_id || row?.orderId;
       if (!orderId) throw new Error("Pedido não retornado pelo servidor");
-      const orderNumber = (await ensureOrderNumber("store_order", String(orderId), row?.order_number || row?.orderNumber)) || "";
+      const reference = await ensureOrderPaymentReference("store_order", String(orderId), {
+        number: row?.order_number || row?.orderNumber,
+      });
       setCartOpen(false);
       setPayOrder({
-        id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
+        id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: reference.number || "",
+        publicPaymentToken: reference.publicPaymentToken,
         email: selectedClient.email || "", name: selectedClient.name,
         sourceKind: "store_order",
         paidItemIds: fitmindItems.map((i) => i.id),
@@ -1199,13 +1214,13 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
                 onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
-              {coachMode && !payOrder.number && (
+              {coachMode && !payOrder.publicPaymentToken && (
                 <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
-                  Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+                  Link seguro indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
                 </p>
               )}
-              {coachMode && !!payOrder.number && (() => {
-                const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
+              {coachMode && !!payOrder.publicPaymentToken && (() => {
+                const payLink = `${getShareOrigin()}/pay/${payOrder.publicPaymentToken}`;
                 const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
                 const waMsg = encodeURIComponent(
                   `Olá ${selectedClient?.name || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
@@ -1718,13 +1733,13 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
               onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
-            {coachMode && !payOrder.number && (
+            {coachMode && !payOrder.publicPaymentToken && (
               <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
-                Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+                Link seguro indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
               </p>
             )}
-            {coachMode && !!payOrder.number && (() => {
-              const payLink = `${getShareOrigin()}/pay/${payOrder.number}`;
+            {coachMode && !!payOrder.publicPaymentToken && (() => {
+              const payLink = `${getShareOrigin()}/pay/${payOrder.publicPaymentToken}`;
               const clientPhone = selectedClient?.phone?.replace(/\D/g, "") || "";
               const waMsg = encodeURIComponent(
                 `Olá ${selectedClient?.name || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`

@@ -4,14 +4,14 @@ import { toast } from "sonner";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@/lib/mercadopago";
 import { createPixCheckout, createCardCheckout, getPaymentStatus, getSourceRecurrence } from "@/lib/mercadopago.functions";
+import type { CheckoutSource } from "@/lib/mercadopago-checkout";
 import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 
-type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
 type Payer = { email: string; name?: string; doc?: string };
 
 interface Props {
-  source: Source;
+  source: CheckoutSource;
   amount: number;
   description: string;
   defaultPayer?: Payer;
@@ -76,7 +76,8 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
   const cardBrickRef = useRef<any>(null);
   const saveCardRef = useRef(false);
   const subscribeRef = useRef(false);
-  const cardContainerId = `mp-card-form-container-${source.kind}-${source.id}-${cardAttempt}`;
+  const sourceKey = "id" in source ? source.id : source.publicPaymentToken;
+  const cardContainerId = `mp-card-form-container-${source.kind}-${sourceKey}-${cardAttempt}`;
 
   const pixFn = useServerFn(createPixCheckout);
   const cardFn = useServerFn(createCardCheckout);
@@ -135,7 +136,7 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source.kind, source.id]);
+  }, [source.kind, sourceKey]);
 
   // Fingerprint antifraude: precisa estar carregado antes de qualquer pagamento.
   useEffect(() => { loadDeviceFingerprint("checkout"); }, []);
@@ -159,7 +160,7 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
     document.body.removeChild(form);
 
     const interval = setInterval(async () => {
-      const r = await statusFn({ data: { paymentRowId: threeDs.rowId } });
+      const r = await statusFn({ data: { paymentRowId: threeDs.rowId, source } });
       if (r?.status === "approved") {
         clearInterval(interval);
         setThreeDs(null);
@@ -179,7 +180,7 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
 
   useEffect(() => {
     setTab(initialMethod);
-  }, [initialMethod, source.id]);
+  }, [initialMethod, sourceKey]);
 
   useEffect(() => {
     setPayer(defaultPayer || { email: "", name: "", doc: "" });
@@ -187,7 +188,7 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
     setPixData(null);
     setPixApproved(false);
     setPaymentError(null);
-  }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
+  }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, sourceKey]);
 
 
   // Polling do PIX — pausa enquanto o usuário está na aba de cartão para não
@@ -195,7 +196,7 @@ function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, ini
   useEffect(() => {
     if (!pixData || pixApproved || tab === "card") return;
     const interval = setInterval(async () => {
-      const r = await statusFn({ data: { paymentRowId: pixData.rowId } });
+      const r = await statusFn({ data: { paymentRowId: pixData.rowId, source } });
       if (r?.status === "approved") {
         setPixApproved(true);
         toast.success("Pagamento PIX aprovado!");

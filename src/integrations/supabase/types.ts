@@ -9134,6 +9134,7 @@ export type Database = {
           partner_product_id: string | null
           payment_fee: number
           payment_method: string
+          public_payment_token: string
           professional_coach_id: string | null
           professional_product_id: string | null
           referral_fitcoin_amount: number
@@ -9190,6 +9191,7 @@ export type Database = {
           partner_product_id?: string | null
           payment_fee?: number
           payment_method?: string
+          public_payment_token?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
           referral_fitcoin_amount?: number
@@ -9246,6 +9248,7 @@ export type Database = {
           partner_product_id?: string | null
           payment_fee?: number
           payment_method?: string
+          public_payment_token?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
           referral_fitcoin_amount?: number
@@ -13014,6 +13017,7 @@ export type Database = {
           paid_at: string | null
           payment_fee: number
           payment_method: Database["public"]["Enums"]["payment_method"]
+          public_payment_token: string
           referrer_student_id: string | null
           release_base_at: string | null
           release_base_event: string | null
@@ -13052,6 +13056,7 @@ export type Database = {
           paid_at?: string | null
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          public_payment_token?: string
           referrer_student_id?: string | null
           release_base_at?: string | null
           release_base_event?: string | null
@@ -13090,6 +13095,7 @@ export type Database = {
           paid_at?: string | null
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          public_payment_token?: string
           referrer_student_id?: string | null
           release_base_at?: string | null
           release_base_event?: string | null

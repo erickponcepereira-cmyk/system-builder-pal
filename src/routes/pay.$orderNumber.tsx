@@ -15,21 +15,20 @@ export const Route = createFileRoute("/pay/$orderNumber")({
     { property: "og:description", content: "Finalize com segurança o pagamento do seu pedido FitMind Club." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex,nofollow,noarchive" },
+    { name: "referrer", content: "no-referrer" },
   ] }),
   component: PayPageRoute,
 });
 
 type OrderData = {
   order: {
-    id: string;
-    sourceKind?: "store_order" | "partner_product_order";
+    sourceKind: "store_order" | "partner_product_order";
     number: string;
     status: string;
     paymentMethod: string;
     total: number;
     createdAt: string;
-    clientName: string;
-    clientEmail: string | null;
   };
   items: Array<{ title: string; quantity: number; unitPrice: number; totalPrice: number }>;
   products?: Array<{ productId: string; kind: "partner" | "professional"; productName: string; price: number; sellerName: string | null; whatsapp: string | null }>;
@@ -52,7 +51,10 @@ function PayPage() {
   const [purchased, setPurchased] = useState(false);
 
   const reload = () => {
-    fetch(backendUrl(`/api/public/pay/${orderNumber}`))
+    fetch(backendUrl(`/api/public/pay/${encodeURIComponent(orderNumber)}`), {
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+    })
       .then((r) => r.json())
       .then((d) => { if (d.error) setError("Pedido não encontrado"); else setData(d); })
       .catch(() => setError("Erro ao carregar pedido"))
@@ -85,7 +87,6 @@ function PayPage() {
             {isPaid ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
             <span className="text-xs font-bold">{isPaid ? "Pagamento confirmado" : "Aguardando pagamento"}</span>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">Cliente: <span className="text-foreground">{data.order.clientName}</span></p>
           <div className="space-y-1 mb-3">
             {data.items.map((it, i) => (
               <div key={i} className="flex justify-between text-sm">
@@ -102,10 +103,9 @@ function PayPage() {
 
         {!isPaid && (
           <MercadoPagoCheckout
-            source={{ kind: data.order.sourceKind || "store_order", id: data.order.id }}
+            source={{ kind: data.order.sourceKind, publicPaymentToken: orderNumber }}
             amount={data.order.total}
             description={`Pedido #${data.order.number}`}
-            defaultPayer={{ email: data.order.clientEmail || "", name: data.order.clientName }}
             onApproved={() => { setPurchased(true); reload(); }}
           />
         )}
@@ -119,7 +119,7 @@ function PayPage() {
               : data.items.map((it) => ({ productId: null, productName: it.title, price: it.totalPrice, kind: "fitmind" as const }))) as PurchasedItem[]
           }
           contacts={(data.products || []).map((p) => ({ productId: p.productId, sellerName: p.sellerName, whatsapp: p.whatsapp }))}
-          buyerName={data.order.clientName}
+          buyerName={null}
           onClose={() => setPurchased(false)}
         />
       )}

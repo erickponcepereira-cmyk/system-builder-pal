@@ -123,7 +123,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [myCoachId, setMyCoachId] = useState<string | null>(null);
   const [myCoachChain, setMyCoachChain] = useState<string[]>([]);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; publicPaymentToken: string | null; email: string; name: string; productId: string; productName: string; productPrice: number; productKind: CardKind } | null>(null);
   const [purchased, setPurchased] = useState<{ productId: string; productName: string; price: number; kind: CardKind; buyerName?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
   const [shippingValid, setShippingValid] = useState(false);
@@ -451,10 +451,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       }
       const { data: od } = await supabase
         .from("partner_product_orders" as never)
-        .select("id,order_number,gross_amount")
+        .select("id,order_number,gross_amount,public_payment_token")
         .eq("id" as never, ppId as never)
         .maybeSingle();
-      const o = od as unknown as { id: string; order_number: string; gross_amount: number } | null;
+      const o = od as unknown as { id: string; order_number: string; gross_amount: number; public_payment_token: string | null } | null;
       const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), createdOrderNumber || o?.order_number);
       if (!ppNumber || !/^PP-[A-Z0-9]+$/.test(ppNumber)) {
         throw new Error("O número real do pedido não foi retornado. Tente novamente antes de compartilhar o pagamento.");
@@ -463,6 +463,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         id: o?.id || String(ppId),
         total: Number(o?.gross_amount || selected.price),
         number: ppNumber,
+        publicPaymentToken: o?.public_payment_token || null,
         email: userData.user?.email || "",
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
         productId: selected.id,
@@ -861,7 +862,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 setPayOrder(null);
               }}
             />
-            <PayLinkShare orderNumber={payOrder.number} clientName={resellerStudent?.name} />
+            <PayLinkShare paymentToken={payOrder.publicPaymentToken} clientName={resellerStudent?.name} />
           </div>
         </div>
       )}
@@ -880,16 +881,16 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   );
 }
 
-function PayLinkShare({ orderNumber, clientName }: { orderNumber: string; clientName?: string | null }) {
+function PayLinkShare({ paymentToken, clientName }: { paymentToken: string | null; clientName?: string | null }) {
   if (typeof window === "undefined") return null;
-  if (!orderNumber) {
+  if (!paymentToken) {
     return (
       <p className="mt-4 rounded-xl bg-white/5 p-3 text-[11px] text-white/60">
-        Número do pedido indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
+        Link seguro indisponível no momento. Recarregue a tela para gerar o link de pagamento do cliente.
       </p>
     );
   }
-  const payLink = `${getShareOrigin()}/pay/${orderNumber}`;
+  const payLink = `${getShareOrigin()}/pay/${paymentToken}`;
   const waMsg = encodeURIComponent(
     `Olá ${clientName || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
   );

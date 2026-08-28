@@ -1,15 +1,37 @@
 import { z } from "zod";
 
 export const PayerSchema = z.object({
-  email: z.string().email(),
-  name: z.string().optional(),
-  doc: z.string().optional(),
+  email: z.string().trim().email().max(254),
+  name: z.string().trim().max(120).optional(),
+  doc: z.string().trim().max(30).optional(),
 });
 
-export const SourceSchema = z.object({
-  kind: z.enum(["store_order", "transaction", "partner_product_order", "subscription_invoice"]),
+export const PaymentSourceKindSchema = z.enum([
+  "store_order",
+  "transaction",
+  "partner_product_order",
+  "subscription_invoice",
+]);
+
+export type PaymentSourceKind = z.infer<typeof PaymentSourceKindSchema>;
+
+const AuthenticatedSourceSchema = z.object({
+  kind: PaymentSourceKindSchema,
   id: z.string().uuid(),
-});
+}).strict();
+
+const PublicSourceSchema = z.object({
+  kind: z.enum(["store_order", "partner_product_order"]),
+  publicPaymentToken: z.string().uuid(),
+}).strict();
+
+/**
+ * Internal checkout uses an authenticated source UUID. Public links never
+ * receive that UUID: the unguessable token is resolved and authorized only on
+ * the server.
+ */
+export const SourceSchema = z.union([AuthenticatedSourceSchema, PublicSourceSchema]);
+export type CheckoutSource = z.infer<typeof SourceSchema>;
 
 // O device fingerprint do Mercado Pago (security.js) pode ser bem longo.
 // Nunca deve derrubar o pagamento: se vier inválido/gigante, seguimos sem ele.

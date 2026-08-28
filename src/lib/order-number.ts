@@ -17,3 +17,23 @@ export async function ensureOrderNumber(
     return null;
   }
 }
+
+/** Resolve, com autorização, os dados necessários para montar um link público. */
+export async function ensureOrderPaymentReference(
+  kind: "store_order" | "partner_product_order",
+  id: string,
+  known?: { number?: string | null; publicPaymentToken?: string | null },
+): Promise<{ number: string | null; publicPaymentToken: string | null }> {
+  if (known?.number && known.publicPaymentToken) {
+    return { number: known.number, publicPaymentToken: known.publicPaymentToken };
+  }
+  try {
+    const res = await resolveOrderNumber({ data: { kind, id } });
+    return {
+      number: known?.number || res?.number || null,
+      publicPaymentToken: known?.publicPaymentToken || res?.publicPaymentToken || null,
+    };
+  } catch {
+    return { number: known?.number || null, publicPaymentToken: known?.publicPaymentToken || null };
+  }
+}

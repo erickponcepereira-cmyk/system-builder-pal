@@ -14,7 +14,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { ensureOrderNumber } from "@/lib/order-number";
+import { ensureOrderPaymentReference } from "@/lib/order-number";
 import { ehDeVendedor, type CartItem } from "@/lib/store-cart";
 import type { SaleClient } from "@/lib/store-coach";
 
@@ -44,6 +44,8 @@ export type PayOrder = {
   email: string;
   name: string;
   sourceKind: "store_order" | "partner_product_order";
+  /** Segredo aleatório usado apenas ao compartilhar /pay/<token>. */
+  publicPaymentToken: string | null;
   /** Ids de carrinho que este pedido cobre — some do carrinho quando pagar. */
   paidItemIds: string[];
 };
@@ -200,18 +202,23 @@ async function criarPedidoDeVendedor(
 
   const { data: linha } = await supabase
     .from("partner_product_orders" as never)
-    .select("id,order_number,gross_amount" as never)
+    .select("id,order_number,gross_amount,public_payment_token" as never)
     .eq("id" as never, pedidoId as never)
     .maybeSingle();
-  const pedido = linha as unknown as { id: string; order_number: string; gross_amount: number } | null;
+  const pedido = linha as unknown as { id: string; order_number: string; gross_amount: number; public_payment_token: string | null } | null;
+  const reference = await ensureOrderPaymentReference("partner_product_order", String(pedidoId), {
+    number: pedido?.order_number,
+    publicPaymentToken: pedido?.public_payment_token,
+  });
 
   return {
     id: pedido?.id || String(pedidoId),
     total: Number(pedido?.gross_amount || item.price),
-    number: (await ensureOrderNumber("partner_product_order", String(pedidoId), pedido?.order_number)) || "",
+    number: reference.number || "",
     email: ctx.email,
     name: ctx.nome,
     sourceKind: "partner_product_order",
+    publicPaymentToken: reference.publicPaymentToken,
     paidItemIds: [item.id],
   };
 }
@@ -240,10 +247,14 @@ async function criarPedidoFitMind(
 
   const { data: linha } = await supabase
     .from("store_orders" as never)
-    .select("id,order_number,total_amount" as never)
+    .select("id,order_number,total_amount,public_payment_token" as never)
     .eq("id" as never, pedidoId as never)
     .maybeSingle();
-  const pedido = linha as unknown as { id: string; order_number: string; total_amount: number } | null;
+  const pedido = linha as unknown as { id: string; order_number: string; total_amount: number; public_payment_token: string | null } | null;
+  const reference = await ensureOrderPaymentReference("store_order", String(pedidoId), {
+    number: pedido?.order_number,
+    publicPaymentToken: pedido?.public_payment_token,
+  });
 
   const precisaEntrega = itens.some((item) =>
     item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
@@ -262,10 +273,11 @@ async function criarPedidoFitMind(
   return {
     id: pedido?.id || String(pedidoId),
     total: Number(pedido?.total_amount || itens.reduce((soma, item) => soma + item.price * item.quantity, 0)),
-    number: (await ensureOrderNumber("store_order", String(pedidoId), pedido?.order_number)) || "",
+    number: reference.number || "",
     email: ctx.email,
     name: ctx.nome,
     sourceKind: "store_order",
+    publicPaymentToken: reference.publicPaymentToken,
     paidItemIds: itens.map((item) => item.id),
   };
 }
@@ -395,18 +407,23 @@ async function criarPedidoDeVendedorPeloCoach(
 
   const { data: linha } = await supabase
     .from("partner_product_orders" as never)
-    .select("id,order_number,gross_amount" as never)
+    .select("id,order_number,gross_amount,public_payment_token" as never)
     .eq("id" as never, pedidoId as never)
     .maybeSingle();
-  const pedido = linha as unknown as { id: string; order_number: string; gross_amount: number } | null;
+  const pedido = linha as unknown as { id: string; order_number: string; gross_amount: number; public_payment_token: string | null } | null;
+  const reference = await ensureOrderPaymentReference("partner_product_order", String(pedidoId), {
+    number: pedido?.order_number,
+    publicPaymentToken: pedido?.public_payment_token,
+  });
 
   return {
     id: pedido?.id || String(pedidoId),
     total: Number(pedido?.gross_amount || item.price),
-    number: (await ensureOrderNumber("partner_product_order", String(pedidoId), pedido?.order_number)) || "",
+    number: reference.number || "",
     email: client.email || "",
     name: client.name,
     sourceKind: "partner_product_order",
+    publicPaymentToken: reference.publicPaymentToken,
     paidItemIds: [item.id],
   };
 }
@@ -448,14 +465,18 @@ async function criarVendaFitMind(
 
   const pedidoId = row?.order_id || row?.orderId;
   if (!pedidoId) throw new Error("Pedido não retornado pelo servidor");
+  const reference = await ensureOrderPaymentReference("store_order", String(pedidoId), {
+    number: row?.order_number || row?.orderNumber,
+  });
 
   return {
     id: String(pedidoId),
     total: Number(row?.total ?? row?.total_amount ?? itens.reduce((soma, i) => soma + i.price * i.quantity, 0)),
-    number: (await ensureOrderNumber("store_order", String(pedidoId), row?.order_number || row?.orderNumber)) || "",
+    number: reference.number || "",
     email: client.email || "",
     name: client.name,
     sourceKind: "store_order",
+    publicPaymentToken: reference.publicPaymentToken,
     paidItemIds: itens.map((item) => item.id),
   };
 }
