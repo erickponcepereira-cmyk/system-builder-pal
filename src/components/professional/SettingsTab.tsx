@@ -337,6 +337,14 @@ export function SettingsTab({ coachId, profileId }: Props) {
         </div>
       )}
 
+      <div className="mt-6 rounded-2xl border border-red-500/20 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <h2 className="text-sm font-bold text-white">Conta e dados</h2>
+        <p className="mt-1 text-xs text-white/45">A exclusão remove permanentemente seu login e os dados vinculados à conta.</p>
+        <a href="/exclusao-de-conta" className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-red-300 hover:underline">
+          <Trash2 className="h-4 w-4" /> Excluir minha conta e meus dados
+        </a>
+      </div>
+
       <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
       <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={uploadCover} />
     </>

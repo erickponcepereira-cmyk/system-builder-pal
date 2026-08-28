@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift, Heart, Star, Sparkles } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift, Heart, Star, Sparkles, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -10,7 +10,6 @@ import { StudentReferralModal } from "@/components/student/StudentReferralModal"
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 import { getClientCutoffIso } from "@/lib/test-mode";
-import { wipeTestSelf, getIsTestUser } from "@/lib/test-accounts.functions";
 import { cancelMyWithdrawalRequest, requestStudentWithdrawal } from "@/lib/withdrawals.functions";
 
 export const Route = createFileRoute("/_authenticated/student/profile")({
@@ -242,16 +241,6 @@ function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    // Conta de teste: apaga tudo antes de sair
-    try {
-      const { isTest } = await getIsTestUser();
-      if (isTest) {
-        await wipeTestSelf();
-        toast.success("Conta de teste apagada. Dados prontos para reutilizar.");
-      }
-    } catch (err) {
-      console.warn("[test] limpeza de conta de teste falhou:", err);
-    }
     await supabase.auth.signOut();
     toast.success("Sessão encerrada");
     navigate({ to: "/login" });
@@ -512,6 +501,14 @@ function ProfilePage() {
         <LogOut className="h-4 w-4" />
         Sair da conta
       </button>
+
+      <a
+        href="/exclusao-de-conta"
+        className="flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 py-3 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+      >
+        <Trash2 className="h-4 w-4" />
+        Excluir minha conta e meus dados
+      </a>
 
       <p className="text-center text-[10px] text-foreground/20 mt-2">FitMind Club v1.0.0</p>
 

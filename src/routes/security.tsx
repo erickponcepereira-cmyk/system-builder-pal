@@ -57,7 +57,8 @@ function SecurityPage() {
         <Section icon={<Mail />} title="Privacidade e dados pessoais">
           <ul className="list-disc pl-5 space-y-1 text-sm">
             <li>Coletamos apenas os dados necessários para operar a conta, processar pagamentos e ofertar treinos/produtos.</li>
-            <li>Você pode solicitar acesso, correção ou exclusão dos seus dados pelo suporte.</li>
+            <li>Você pode solicitar acesso e correção dos seus dados pelo suporte.</li>
+            <li><Link to="/exclusao-de-conta" className="text-primary hover:underline">Exclua sua conta e os dados vinculados</Link> diretamente pela página oficial.</li>
             <li>Compartilhamentos com terceiros se restringem a provedores de pagamento e infraestrutura.</li>
           </ul>
         </Section>

@@ -89,6 +89,7 @@ import { clearPublicCart, readPublicCart } from "@/lib/public-store";
 import { preflightDeAgendamento } from "@/lib/store-scheduling";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { cartIdDoProduto } from "@/lib/store-cart";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -119,6 +120,7 @@ export function UnifiedStorePage({
   /** `?checkout=1` — veio da loja pública com o carrinho montado. */
   openCheckout?: boolean;
 }) {
+  const purchasesDisabled = isNativeAndroid();
   const [catalog, setCatalog] = useState<UnifiedCatalog | null>(null);
   const [ctx, setCtx] = useState<StoreContext>(EMPTY_CONTEXT);
   const [stock, setStock] = useState<StockMap>({});
@@ -382,6 +384,10 @@ export function UnifiedStorePage({
    * carrinho fica fechado.
    */
   const adicionarAoCarrinho = async (product: UnifiedProduct, horario?: string | null) => {
+    if (purchasesDisabled) {
+      toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
+      return;
+    }
     // Atendimento com hora marcada: antes de reservar outro, resolve o que
     // ficou pendente. Sem isso o aluno acumula duas reservas e o profissional
     // vê dois horários bloqueados, um deles para um pedido que nunca será pago.
@@ -441,6 +447,11 @@ export function UnifiedStorePage({
     if (publicoImportado.current || loading || audience === "coach") return;
     publicoImportado.current = true;
 
+    if (purchasesDisabled) {
+      clearPublicCart();
+      return;
+    }
+
     const linhas = readPublicCart();
     if (!linhas.length) return;
 
@@ -461,7 +472,7 @@ export function UnifiedStorePage({
     // importação a cada mudança do carrinho, e o guard de `useRef` já garante
     // uma vez só.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, products, audience, openCheckout]);
+  }, [loading, products, audience, openCheckout, purchasesDisabled]);
 
   /**
    * Liga/desliga uma ocultação da rede do coach.
@@ -515,6 +526,10 @@ export function UnifiedStorePage({
    */
   const finalizar = async () => {
     if (carrinho.cart.length === 0 || criandoPedido) return;
+    if (purchasesDisabled) {
+      toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
+      return;
+    }
 
     // Coach sem aluno escolhido: abre o seletor em vez de recusar. Recusar
     // seria dizer "faltou algo" sem levar até onde se resolve.
@@ -660,7 +675,7 @@ export function UnifiedStorePage({
             </button>
           )}
 
-          <button
+          {!purchasesDisabled && <button
             type="button"
             onClick={() => setCarrinhoAberto(true)}
             aria-label={`Carrinho com ${carrinho.quantidade} ${carrinho.quantidade === 1 ? "item" : "itens"}`}
@@ -672,11 +687,18 @@ export function UnifiedStorePage({
                 {carrinho.quantidade}
               </span>
             )}
-          </button>
+          </button>}
         </div>
       </header>
 
       {modoCoach && <MasterCoachCommissionSelector />}
+
+      {purchasesDisabled && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <p className="text-xs font-bold text-amber-300">Versão Android somente para consumo</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>
+        </div>
+      )}
 
       {/* Aluno da venda. Fica no topo porque muda o significado de tudo que
           vem abaixo: o preço que o coach vê é o que aquele aluno vai pagar. */}
@@ -1175,6 +1197,7 @@ export function UnifiedStorePage({
           )}
           carteirinhaAtiva={ctx.cardActive}
           onVerGratuitos={() => navigate({ to: "/student/freebies" })}
+          purchasesDisabled={purchasesDisabled}
         />
       )}
 
@@ -1550,6 +1573,7 @@ function DetailSheet({
   onCurar,
   carteirinhaAtiva,
   onVerGratuitos,
+  purchasesDisabled,
 }: {
   product: UnifiedProduct;
   onClose: () => void;
@@ -1571,6 +1595,7 @@ function DetailSheet({
   onCurar: () => void;
   carteirinhaAtiva: boolean;
   onVerGratuitos: () => void;
+  purchasesDisabled: boolean;
 }) {
   useFecharComEscape(onClose);
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
@@ -1670,7 +1695,7 @@ function DetailSheet({
           </p>
         )}
 
-        <div className="mb-3 flex flex-wrap items-baseline gap-2">
+        {!purchasesDisabled && <div className="mb-3 flex flex-wrap items-baseline gap-2">
           {/* Preço variável mostra a faixa, não um número só: dizer "R$ 80"
               num serviço que vai de 80 a 300 é a origem da reclamação de
               "cobraram mais do que estava na loja". */}
@@ -1687,7 +1712,7 @@ function DetailSheet({
               {fmt(product.originalPrice)}
             </span>
           )}
-        </div>
+        </div>}
 
         {ganhos && <BlocoDeComissao ganhos={ganhos} hasUpline={hasUpline} />}
 
@@ -1730,7 +1755,7 @@ function DetailSheet({
           </div>
         )}
 
-        {!product.isFreebie && product.isSchedulable && product.sellerCoachId && (
+        {!purchasesDisabled && !product.isFreebie && product.isSchedulable && product.sellerCoachId && (
           <div className="mb-3">
             <AvailabilityPicker
               professionalCoachId={product.sellerCoachId}
@@ -1741,7 +1766,11 @@ function DetailSheet({
           </div>
         )}
 
-        {product.isFreebie ? null : product.isSchedulable && !product.sellerCoachId ? (
+        {product.isFreebie ? null : purchasesDisabled ? (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-300">
+            {NATIVE_ANDROID_PURCHASE_MESSAGE}
+          </p>
+        ) : product.isSchedulable && !product.sellerCoachId ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-500">
             Este atendimento não tem profissional vinculado, então não há agenda para consultar.
           </p>

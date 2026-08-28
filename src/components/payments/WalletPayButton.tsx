@@ -3,6 +3,7 @@ import { Loader2, Wallet } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyWalletTotals, payStoreOrderWithWallet, payPartnerOrderWithWallet } from "@/lib/wallet-checkout.functions";
 import { toast } from "sonner";
+import { isNativeAndroid } from "@/lib/native-platform";
 
 type Props = {
   orderId: string;
@@ -13,7 +14,12 @@ type Props = {
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
+export function WalletPayButton(props: Props) {
+  if (isNativeAndroid()) return null;
+  return <WalletPayButtonWeb {...props} />;
+}
+
+function WalletPayButtonWeb({ orderId, amount, kind, onPaid }: Props) {
   const fetchTotals = useServerFn(getMyWalletTotals);
   const payStore = useServerFn(payStoreOrderWithWallet);
   const payPartner = useServerFn(payPartnerOrderWithWallet);

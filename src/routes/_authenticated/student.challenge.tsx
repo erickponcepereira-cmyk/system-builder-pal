@@ -19,6 +19,7 @@ import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTick
 import { RunChallengesSection } from "@/components/challenge/running/RunChallengesSection";
 
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 const TRADITIONAL_TICKET_PRODUCT_ID = "1a5b055d-5842-4b7a-b856-7f0babd1c04f";
 type TicketProduct = { id: string; name: string; price: number; image_url: string | null };
@@ -221,6 +222,7 @@ function StudentChallengePage() {
   };
 
   const handleBuyTicket = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     if (!ticketProduct) return;
     setBuyingTicket(true);
     try {
@@ -493,7 +495,11 @@ function StudentChallengePage() {
                 </p>
               </div>
 
-              {ticketProduct && (
+              {ticketProduct && isNativeAndroid() ? (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">
+                  {NATIVE_ANDROID_PURCHASE_MESSAGE}
+                </div>
+              ) : ticketProduct ? (
                 <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
                   <p className="text-sm text-foreground text-center">
                     Adquira o ticket do desafio para participar dessa edição:
@@ -569,7 +575,7 @@ function StudentChallengePage() {
                     </div>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>)
 
           ) : !enrollment ? (

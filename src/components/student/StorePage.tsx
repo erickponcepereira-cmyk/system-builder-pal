@@ -21,6 +21,7 @@ import { getShareOrigin } from "@/lib/auth-redirects";
 import { ensureOrderNumber } from "@/lib/order-number";
 import { clearPendingProduct, getPendingProduct } from "@/lib/pending-product";
 import { clearPublicCart, readPublicCart } from "@/lib/public-store";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
@@ -118,7 +119,19 @@ interface StorePageProps {
   openCheckout?: boolean;
 }
 
-export function StorePage({ coachMode = false, hasUpline = false, audience, requestedProductId, openCheckout = false }: StorePageProps = {}) {
+export function StorePage(props: StorePageProps = {}) {
+  if (isNativeAndroid()) {
+    return (
+      <div className="m-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+        <p className="text-sm font-bold text-amber-300">Loja indisponível no aplicativo</p>
+        <p className="mt-1 text-xs text-muted-foreground">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>
+      </div>
+    );
+  }
+  return <StorePageWeb {...props} />;
+}
+
+function StorePageWeb({ coachMode = false, hasUpline = false, audience, requestedProductId, openCheckout = false }: StorePageProps = {}) {
   const navigate = useNavigate();
 
 

@@ -14,6 +14,7 @@ import {
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
 import { ATTRIBUTION_CHANGED_EVENT, enriquecerAtribuicao, lerAtribuicao, resolverCodigo, type Atribuicao } from "@/lib/atribuicao";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 
 
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/loja")({
    */
   validateSearch: (search: Record<string, unknown>): { produto?: string } =>
     typeof search.produto === "string" ? { produto: search.produto } : {},
-  component: PublicStorePage,
+  component: PublicStoreRoute,
 });
 
 const fmt = (n: number) =>
@@ -64,6 +65,13 @@ const TABS: { id: StoreTab; label: string }[] = [
 ];
 
 const TAXONOMIA_VAZIA: PublicTaxonomy = { sections: [], categories: [], subcategories: [] };
+
+function PublicStoreRoute() {
+  if (isNativeAndroid()) {
+    return <div className="m-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</div>;
+  }
+  return <PublicStorePage />;
+}
 
 function PublicStorePage() {
   const { produto: produtoDoLink } = Route.useSearch();

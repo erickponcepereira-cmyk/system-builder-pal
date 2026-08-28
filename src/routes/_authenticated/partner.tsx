@@ -1981,6 +1981,13 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
         <Field label="UF"><input className="field-input" value={form.state || ""} onChange={e => setForm({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })} /></Field>
       </div>
       <button onClick={save} disabled={saving} className="w-full rounded bg-primary py-2 text-sm font-bold text-primary-foreground">{saving ? <Loader2 className="h-4 w-4 animate-spin inline" /> : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}</button>
+      <div className="rounded-lg border border-red-500/20 p-3">
+        <p className="text-xs font-bold text-white">Conta e dados</p>
+        <p className="mt-1 text-[11px] text-white/45">Exclua permanentemente o login e os dados vinculados à conta.</p>
+        <a href="/exclusao-de-conta" className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-red-300 hover:underline">
+          <Trash2 className="h-3.5 w-3.5" /> Excluir minha conta e meus dados
+        </a>
+      </div>
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
       <ImageCropperDialog file={pendingPhoto} aspect={1} shape="circle" title="Ajustar logo / foto" onCancel={() => setPendingPhoto(null)} onConfirm={(b) => upload(b, "photo_url")} />
       <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={(b) => upload(b, "cover_url")} />

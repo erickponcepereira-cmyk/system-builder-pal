@@ -10,6 +10,7 @@ import { getMySubscription } from "@/lib/subscriptions.functions";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
 import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
   head: () => ({
@@ -158,9 +159,9 @@ function AssinaturaPage() {
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase text-white/50">{annual.product.name}</p>
-                      <h2 className="text-2xl font-bold">{fmt(annual.product.price)}</h2>
+                      {!isNativeAndroid() && <h2 className="text-2xl font-bold">{fmt(annual.product.price)}</h2>}
                       <p className="mt-1 text-xs text-white/60">
-                        Renovação anual única — vale para todas as plataformas.
+                        {isNativeAndroid() ? "Consulte aqui o status da sua ativação anual." : "Renovação anual única — vale para todas as plataformas."}
                       </p>
                     </div>
                     {annual.active ? (
@@ -212,7 +213,7 @@ function AssinaturaPage() {
                   )}
                 </div>
 
-                {isTest && !annual.active && (
+                {!isNativeAndroid() && isTest && !annual.active && (
                   <button
                     disabled={busyTest}
                     onClick={async () => {
@@ -274,6 +275,7 @@ function AnnualPaymentBlock({
   }, []);
 
   const startCheckout = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     setCreating(true);
     try {
       const { data: orderIdRpc, error } = await supabase.rpc(
@@ -300,6 +302,10 @@ function AnnualPaymentBlock({
       setCreating(false);
     }
   };
+
+  if (!orderId && isNativeAndroid()) {
+    return <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>;
+  }
 
   if (!orderId) {
     return (

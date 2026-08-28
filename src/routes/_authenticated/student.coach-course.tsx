@@ -32,6 +32,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { toast } from "sonner";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 export const Route = createFileRoute("/_authenticated/student/coach-course")({ component: CoachCoursePage });
 
@@ -149,6 +150,7 @@ function CoachCoursePage() {
   useEffect(() => { loadAll(); }, []);
 
   const startCheckout = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     if (!profileId) return toast.error("Perfil não encontrado");
     setCreatingOrder(true);
     try {
@@ -251,7 +253,11 @@ function CoachCoursePage() {
 
 
           {/* PITCH + COMPRA / CADASTRO COACH */}
-          {!hasPurchased ? (
+          {!hasPurchased && isNativeAndroid() ? (
+            <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">
+              {NATIVE_ANDROID_PURCHASE_MESSAGE}
+            </section>
+          ) : !hasPurchased ? (
             <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-5">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
                 <TrendingUp className="h-3 w-3" /> Comece agora

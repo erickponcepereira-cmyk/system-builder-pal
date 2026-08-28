@@ -1,32 +1,44 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 
-// Cliente checagem: e-mail é slot de teste (`.test` domain OU whitelist).
-export function isTestEmailClient(email: string): boolean {
-  const e = (email || "").trim().toLowerCase();
-  if (!e) return false;
-  return /@fitmind\.test$/.test(e) || /\.test$/.test(e);
+function testAccountFeaturesEnabled(): boolean {
+  return process.env.ENABLE_TEST_ACCOUNT_FEATURES === "true";
 }
 
 /**
- * PUBLIC (sem auth). Cria/reset de conta de teste:
- * - Valida que o e-mail é slot de teste (segurança).
+ * Provisionamento administrativo de conta de teste.
+ * - Exige master admin autenticado e flag explícita no servidor.
+ * - Aceita apenas slots cadastrados na whitelist do banco.
  * - Se já existe user com esse e-mail → apaga cascata (admin_purge_user_dependents + auth.admin.deleteUser).
  * - Cria novo user com email_confirm=true (nada de e-mail).
- * - Retorna userId + tokens de sessão para o cliente já entrar.
+ * - Marca os registros criados como teste e retorna apenas userId + e-mail.
  */
 export const bootstrapTestSignup = createServerFn({ method: "POST" })
   .inputValidator((d: { email: string; password: string; name: string }) =>
     z.object({
       email: z.string().email(),
-      password: z.string().min(6),
+      password: z.string().min(12),
       name: z.string().min(1),
     }).parse(d)
   )
-  .handler(async ({ data }) => {
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    if (process.env.ENABLE_TEST_ACCOUNT_BOOTSTRAP !== "true") {
+      throw new Error("Provisionamento de contas de teste desativado neste ambiente.");
+    }
     const email = data.email.trim().toLowerCase();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: actor } = await supabaseAdmin
+      .from("profiles")
+      .select("role,is_master_admin")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (actor?.role !== "admin" || !(actor as { is_master_admin?: boolean }).is_master_admin) {
+      throw new Error("Acesso negado.");
+    }
 
     // Whitelist server-side (canonical)
     const { data: isTest, error: errCheck } = await supabaseAdmin.rpc("is_test_email", { _email: email });
@@ -50,39 +62,33 @@ export const bootstrapTestSignup = createServerFn({ method: "POST" })
     });
     if (error || !created?.user) throw new Error(error?.message || "Falha ao criar conta de teste.");
 
-    // Marca profile como is_test (o profile é criado por trigger em outras rotas; garantimos após finalize)
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .update({ is_test: true })
+      .eq("user_id", created.user.id)
+      .select("id")
+      .maybeSingle();
+    if (profile?.id) {
+      await Promise.all([
+        supabaseAdmin.from("students").update({ is_test: true }).eq("profile_id", profile.id),
+        supabaseAdmin.from("coaches").update({ is_test: true }).eq("profile_id", profile.id),
+      ]);
+    }
+
     return { userId: created.user.id, email };
   });
 
 /**
- * Marca perfil/students/coaches do usuário como is_test=true.
- * Deve ser chamado logo após finalizeRegistrationFn no fluxo de teste.
- * Só permitido se o e-mail do próprio usuário for slot de teste.
- */
-export const markSelfAsTest = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: profile } = await supabase.from("profiles").select("id, email").eq("user_id", userId).maybeSingle();
-    if (!profile) throw new Error("Perfil não encontrado.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: isTest } = await supabaseAdmin.rpc("is_test_email", { _email: profile.email });
-    if (!isTest) throw new Error("Usuário não é conta de teste.");
-
-    await supabaseAdmin.from("profiles").update({ is_test: true }).eq("id", profile.id);
-    await supabaseAdmin.from("students").update({ is_test: true }).eq("profile_id", profile.id);
-    await supabaseAdmin.from("coaches").update({ is_test: true }).eq("profile_id", profile.id);
-    return { ok: true };
-  });
-
-/**
  * Marca fatura de mensalidade como paga sem passar por Mercado Pago.
- * Só funciona para usuários is_test.
+ * Só funciona para usuários is_test e em ambiente explicitamente habilitado.
  */
 export const simulateTestPayInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { invoice_id: string }) => z.object({ invoice_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    if (!testAccountFeaturesEnabled()) {
+      throw new Error("Recursos de conta de teste estão desativados.");
+    }
     const { supabase, userId } = context;
     const { data: profile } = await supabase.from("profiles").select("id, is_test").eq("user_id", userId).maybeSingle();
     if (!profile?.is_test) throw new Error("Apenas contas de teste podem simular pagamento.");
@@ -107,6 +113,9 @@ export const simulateTestPayInvoice = createServerFn({ method: "POST" })
 export const simulateTestPayAnnual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!testAccountFeaturesEnabled()) {
+      throw new Error("Recursos de conta de teste estão desativados.");
+    }
     const { supabase, userId } = context;
     const { data: profile } = await supabase.from("profiles").select("id, is_test").eq("user_id", userId).maybeSingle();
     if (!profile?.is_test) throw new Error("Apenas contas de teste podem simular pagamento.");
@@ -120,26 +129,12 @@ export const simulateTestPayAnnual = createServerFn({ method: "POST" })
   });
 
 /**
- * Deleta o próprio usuário se for is_test. Cascata + auth.users.
- */
-export const wipeTestSelf = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: profile } = await supabase.from("profiles").select("id, is_test, email").eq("user_id", userId).maybeSingle();
-    if (!profile?.is_test) throw new Error("Apenas contas de teste podem ser removidas.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    try { await supabaseAdmin.rpc("admin_purge_user_dependents", { _user_id: userId }); } catch { /* best effort */ }
-    await supabaseAdmin.auth.admin.deleteUser(userId);
-    return { ok: true };
-  });
-
-/**
  * Retorna se o usuário logado é conta de teste (para o frontend ramificar UI).
  */
 export const getIsTestUser = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!testAccountFeaturesEnabled()) return { isTest: false };
     const { data } = await context.supabase.from("profiles").select("is_test").eq("user_id", context.userId).maybeSingle();
     return { isTest: Boolean(data?.is_test) };
   });

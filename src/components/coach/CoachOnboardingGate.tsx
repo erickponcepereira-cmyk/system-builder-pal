@@ -15,6 +15,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 type Stage = "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release" | "released";
 
@@ -197,6 +198,7 @@ function PaymentStep({
   const createActivationOrder = useServerFn(getOrCreateActivationOrder);
 
   const startCheckout = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     if (!profileId) return;
     setCreating(true);
     try {
@@ -210,6 +212,10 @@ function PaymentStep({
       setCreating(false);
     }
   };
+
+  if (!orderId && isNativeAndroid()) {
+    return <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>;
+  }
 
   return (
     <div className="space-y-4">

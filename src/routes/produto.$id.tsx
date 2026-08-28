@@ -7,6 +7,7 @@ import { PublicCartDrawer } from "@/components/store/public/PublicCartDrawer";
 import { useRedirectLoggedStore } from "@/lib/useRedirectLoggedStore";
 import { setCheckoutIntent, setStoreIntent } from "@/lib/post-auth-intent";
 import { ATTRIBUTION_CHANGED_EVENT, enriquecerAtribuicao, lerAtribuicao, resolverCodigo, type Atribuicao } from "@/lib/atribuicao";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 import {
   fetchPublicProduct,
@@ -88,11 +89,18 @@ export const Route = createFileRoute("/produto/$id")({
   },
   errorComponent: ProdutoPublicoError,
   notFoundComponent: ProdutoPublicoNotFound,
-  component: ProdutoPublico,
+  component: ProdutoPublicoRoute,
 });
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function ProdutoPublicoRoute() {
+  if (isNativeAndroid()) {
+    return <div className="m-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</div>;
+  }
+  return <ProdutoPublico />;
+}
 
 function ProdutoPublicoNotFound() {
   return <ProdutoPublicoIndisponivel />;

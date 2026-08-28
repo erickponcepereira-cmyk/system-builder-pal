@@ -10,6 +10,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 interface Props {
   children: ReactNode;
@@ -148,6 +149,7 @@ function ActivationStep({ info, onPaid }: { info: Info; onPaid: () => void }) {
   const createActivationOrder = useServerFn(getOrCreateActivationOrder);
 
   const startCheckout = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     setCreating(true);
     try {
       const order = await createActivationOrder({ data: { notes: "Ativação Profissional (onboarding)" } });
@@ -159,6 +161,10 @@ function ActivationStep({ info, onPaid }: { info: Info; onPaid: () => void }) {
       setCreating(false);
     }
   };
+
+  if (!orderId && isNativeAndroid()) {
+    return <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>;
+  }
 
   return (
     <div className="space-y-4">

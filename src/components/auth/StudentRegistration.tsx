@@ -21,7 +21,6 @@ import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { ConfirmarConta } from "@/components/auth/ConfirmarConta";
 import { useBranding } from "@/components/theme-provider";
 import { resolveBrandTheme } from "@/lib/branding";
-import { isTestEmailClient, markSelfAsTest } from "@/lib/test-accounts.functions";
 import { GoogleSignupTop } from "@/components/auth/GoogleSignupTop";
 import { readReferralSignup, clearReferralSignup } from "@/lib/referral-signup";
 
@@ -165,22 +164,6 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
 
       clearReferralSignup();
       sessionStorage.removeItem("fitmind_selected_area");
-
-      if (isTestEmailClient(email)) {
-        // Conta de teste: já está logada (bootstrapTestSignup fez signIn). Marca is_test e vai direto pro app.
-        try { await markSelfAsTest(); } catch (err) { console.warn("[test] markSelfAsTest falhou:", err); }
-        toast.success("Conta de teste criada. Bem-vindo(a)!");
-        const destino = peekPostAuthIntent();
-        if (destino) {
-          sessionStorage.setItem("fitmind_selected_area", "student");
-          clearPostAuthIntent();
-          window.location.replace(destino);
-          return;
-        }
-        navigate({ to: "/student" });
-        return;
-      }
-
 
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());

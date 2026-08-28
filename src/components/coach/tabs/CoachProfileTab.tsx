@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   User, Save, Mail, Phone, MapPin, Trophy, Award, UserRound,
   History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2, Package,
-  Medal, Shield, Sparkles,
+  Medal, Shield, Sparkles, Trash2,
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/_authenticated/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
@@ -273,6 +273,14 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             );
           })}
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-red-500/20 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <h2 className="text-sm font-bold text-white">Conta e dados</h2>
+        <p className="mt-1 text-xs text-white/45">Gerencie a exclusão permanente do seu login e dos dados vinculados.</p>
+        <a href="/exclusao-de-conta" className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-red-300 hover:underline">
+          <Trash2 className="h-4 w-4" /> Excluir minha conta e meus dados
+        </a>
       </div>
 
       <Dialog open={!!modal} onOpenChange={(open) => { if (!open) setModal(null); }}>

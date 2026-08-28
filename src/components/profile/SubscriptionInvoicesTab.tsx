@@ -11,6 +11,7 @@ import { AutoDebitCard } from "@/components/profile/AutoDebitCard";
 
 import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
 import { openInvoiceReceipt } from "@/lib/invoice-receipt";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
@@ -138,7 +139,9 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
             {current.status === "blocked" && <AlertTriangle className="h-8 w-8 text-red-400" />}
           </div>
           <div className="flex flex-wrap gap-2">
-            {isTest ? (
+            {isNativeAndroid() ? (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>
+            ) : isTest ? (
               <button
                 disabled={busy}
                 onClick={async () => {
@@ -213,7 +216,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         </div>
       </div>
 
-      <AutoDebitCard />
+      {!isNativeAndroid() && <AutoDebitCard />}
 
 
       <div className="rounded-2xl border border-white/10 p-5">

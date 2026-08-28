@@ -7,11 +7,13 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
 import { getOrCreateActivationOrder } from "@/lib/activation-order.functions";
 import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
 
 export function AnnualActivationCard() {
+  const nativeAndroid = isNativeAndroid();
   const fnAnnual = useServerFn(getMyAnnualActivation);
   const fnIsTest = useServerFn(getIsTestUser);
   const fnPayAnnual = useServerFn(simulateTestPayAnnual);
@@ -63,9 +65,9 @@ export function AnnualActivationCard() {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase text-white/50">{annual.product.name}</p>
-            <h2 className="text-2xl font-bold text-white">{fmt(annual.product.price)}</h2>
+            {!nativeAndroid && <h2 className="text-2xl font-bold text-white">{fmt(annual.product.price)}</h2>}
             <p className="mt-1 text-xs text-white/60">
-              Renovação anual única — vale para todas as plataformas.
+              {nativeAndroid ? "Consulte aqui o status da sua ativação anual." : "Renovação anual única — vale para todas as plataformas."}
             </p>
           </div>
           {annual.active ? (
@@ -107,7 +109,7 @@ export function AnnualActivationCard() {
         )}
       </div>
 
-      {isTest && !annual.active && (
+      {!nativeAndroid && isTest && !annual.active && (
         <button
           disabled={busyTest}
           onClick={async () => {
@@ -172,6 +174,7 @@ function AnnualPaymentBlock({
   }, []);
 
   const startCheckout = async () => {
+    if (isNativeAndroid()) return toast.info(NATIVE_ANDROID_PURCHASE_MESSAGE);
     setCreating(true);
     try {
       const order = await createActivationOrder({ data: { notes: "Ativação Anual (assinatura)" } });
@@ -183,6 +186,10 @@ function AnnualPaymentBlock({
       setCreating(false);
     }
   };
+
+  if (!orderId && isNativeAndroid()) {
+    return <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>;
+  }
 
   if (!orderId) {
     return (

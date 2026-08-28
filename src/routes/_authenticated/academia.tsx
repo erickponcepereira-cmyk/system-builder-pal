@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Dumbbell, Loader2, LogOut } from "lucide-react";
+import { Dumbbell, Loader2, LogOut, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -147,6 +147,9 @@ function PainelAcademia() {
         ) : ativa ? (
           <AcademiaTestePanel partnerId={ativa.partnerId} />
         ) : null}
+        <a href="/exclusao-de-conta" className="mx-auto mt-8 flex w-fit items-center gap-1.5 text-[11px] font-semibold text-red-300/80 hover:text-red-300 hover:underline">
+          <Trash2 className="h-3.5 w-3.5" /> Excluir minha conta e meus dados
+        </a>
       </main>
     </div>
   );

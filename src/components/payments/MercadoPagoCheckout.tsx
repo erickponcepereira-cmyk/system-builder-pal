@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@/lib/mercadopago";
 import { createPixCheckout, createCardCheckout, getPaymentStatus, getSourceRecurrence } from "@/lib/mercadopago.functions";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 
 type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
@@ -37,7 +38,19 @@ const friendlyPaymentMessage = (status?: string | null, detail?: string | null) 
   return `Pagamento ${status === "rejected" ? "recusado" : status || "não aprovado"}${detail ? `: ${detail}` : ""}`;
 };
 
-export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
+export function MercadoPagoCheckout(props: Props) {
+  if (isNativeAndroid()) {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+        <p className="text-sm font-bold text-amber-300">Pagamento indisponível no aplicativo</p>
+        <p className="mt-1 text-xs text-muted-foreground">{NATIVE_ANDROID_PURCHASE_MESSAGE}</p>
+      </div>
+    );
+  }
+  return <MercadoPagoCheckoutWeb {...props} />;
+}
+
+function MercadoPagoCheckoutWeb({ source, amount, description, defaultPayer, initialMethod = "pix", allowSaveCard = false, onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   // Titular do cartão vem dos campos oficiais do Brick (podem ser de outra pessoa).

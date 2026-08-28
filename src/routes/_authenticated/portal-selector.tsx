@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Briefcase, Dumbbell, Loader2, LogOut, Shield, Stethoscope, User } from "lucide-react";
+import { Briefcase, Dumbbell, Loader2, LogOut, Shield, Stethoscope, Trash2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/theme-provider";
@@ -265,6 +265,12 @@ function PortalSelectorPage() {
               >
                 <LogOut className="h-3.5 w-3.5" /> Sair
               </button>
+              <a
+                href="/exclusao-de-conta"
+                className="flex w-full items-center justify-center gap-2 px-4 py-2 text-xs text-red-300/80 hover:text-red-300 hover:underline"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir minha conta e meus dados
+              </a>
             </div>
           )}
         </div>

@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
 import { backendUrl } from "@/lib/mobile-backend";
+import { isNativeAndroid, NATIVE_ANDROID_PURCHASE_MESSAGE } from "@/lib/native-platform";
 
 export const Route = createFileRoute("/pay/$orderNumber")({
   head: () => ({ meta: [
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/pay/$orderNumber")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  component: PayPage,
+  component: PayPageRoute,
 });
 
 type OrderData = {
@@ -35,6 +36,13 @@ type OrderData = {
 };
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function PayPageRoute() {
+  if (isNativeAndroid()) {
+    return <div className="m-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">{NATIVE_ANDROID_PURCHASE_MESSAGE}</div>;
+  }
+  return <PayPage />;
+}
 
 function PayPage() {
   const { orderNumber } = Route.useParams();
