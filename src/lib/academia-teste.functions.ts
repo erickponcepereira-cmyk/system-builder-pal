@@ -1834,6 +1834,62 @@ export const salvarAutomacaoAvisos = createServerFn({ method: "POST" })
     return { ok: true, automatico: !!data.automatico, hora, dias };
   });
 
+/**
+ * Os dias em que a academia não abre.
+ *
+ * A lista é da academia, não do Brasil: feriado nacional não fecha toda
+ * academia, e o que fecha de verdade costuma ser local ou particular
+ * (dedetização, reforma, férias coletiva). Quem sabe é a recepção.
+ */
+export const listarFeriados = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: linhas } = await admin
+      .from("partner_feriados" as never)
+      .select("id, data, nome, fechado" as never)
+      .eq("partner_id", data.partnerId)
+      .gte("data", new Date().toISOString().slice(0, 10))
+      .order("data");
+    return {
+      feriados: (linhas ?? []) as unknown as Array<{
+        id: string; data: string; nome: string; fechado: boolean;
+      }>,
+    };
+  });
+
+export const salvarFeriado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; data: string; nome: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const nome = (data.nome || "").trim();
+    if (nome.length < 2) throw new Error("Dê um nome ao feriado.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.data)) throw new Error("Data inválida.");
+
+    const { error } = await admin.from("partner_feriados" as never).upsert(
+      { partner_id: data.partnerId, data: data.data, nome, fechado: true } as never,
+      { onConflict: "partner_id,data" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const excluirFeriado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { error } = await admin
+      .from("partner_feriados" as never)
+      .delete()
+      .eq("id", data.id)
+      .eq("partner_id", data.partnerId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const obterConfigAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) => d)

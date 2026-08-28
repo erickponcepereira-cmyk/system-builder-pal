@@ -62,6 +62,9 @@ import {
   prepararAvisosAcademia,
   obterAutomacaoAvisos,
   salvarAutomacaoAvisos,
+  listarFeriados,
+  salvarFeriado,
+  excluirFeriado,
   previewAvisosAcademia,
   registrarDayUse,
   reprocessarMensalidadesPendentes,
@@ -3221,6 +3224,102 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
 }
 
 
+/**
+ * Os dias em que a academia não abre.
+ *
+ * Sem esta lista, no 7 de setembro o robô diria "estamos abertos" e marcaria
+ * aula experimental para uma porta fechada — e quem aparecesse não voltaria.
+ */
+function FeriadosDaAcademia({ partnerId }: { partnerId: string }) {
+  const listar = useServerFn(listarFeriados);
+  const salvar = useServerFn(salvarFeriado);
+  const excluir = useServerFn(excluirFeriado);
+  const [lista, setLista] = useState<Array<{ id: string; data: string; nome: string }>>([]);
+  const [dia, setDia] = useState("");
+  const [nome, setNome] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = () => {
+    listar({ data: { partnerId } })
+      .then((r) => setLista(r.feriados))
+      .catch(() => setLista([]));
+  };
+  useEffect(carregar, [partnerId]);
+
+  const adicionar = async () => {
+    setSalvando(true);
+    try {
+      await salvar({ data: { partnerId, data: dia, nome } });
+      setDia(""); setNome("");
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui salvar.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const remover = async (id: string) => {
+    try {
+      await excluir({ data: { partnerId, id } });
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui remover.");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <p className="mb-1 text-[11px] uppercase tracking-wider text-white/40">Dias em que não abrimos</p>
+      <p className="mb-2 text-[11px] text-white/50">
+        O robô para de marcar aula experimental nesses dias e avisa qual é o feriado.
+        Feriado nacional não fecha toda academia — cadastre só os seus.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="date"
+          value={dia}
+          onChange={(e) => setDia(e.target.value)}
+          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+        />
+        <input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="ex.: 7 de Setembro, reforma, férias"
+          className="min-w-[160px] flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        />
+        <button
+          type="button"
+          onClick={() => void adicionar()}
+          disabled={salvando || !dia || nome.trim().length < 2}
+          className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+        >
+          Adicionar
+        </button>
+      </div>
+
+      {lista.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {lista.map((f) => (
+            <span key={f.id} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+              {f.data.slice(8, 10)}/{f.data.slice(5, 7)} · {f.nome}
+              <button
+                type="button"
+                onClick={() => void remover(f.id)}
+                aria-label={`Remover ${f.nome}`}
+                className="text-white/40 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConfigAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterConfigAcademia);
   const salvarFn = useServerFn(salvarConfigAcademia);
@@ -3297,6 +3396,8 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
       <Campo label="Fuso horário">
         <input value={tz} onChange={(e) => setTz(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
       </Campo>
+
+      <FeriadosDaAcademia partnerId={partnerId} />
 
       <Campo label="Modelo de catraca (opcional)">
         <input value={catraca} onChange={(e) => setCatraca(e.target.value)} placeholder="ex.: controlid_idblock" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40" />
