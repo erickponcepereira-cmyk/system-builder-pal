@@ -345,6 +345,73 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     }
   };
 
+  /**
+   * Leitura paginada.
+   *
+   * O servidor de dados devolve no máximo 1000 linhas por consulta e IGNORA
+   * `.limit(5000)`. Com 1579 produtos de profissionais aprovados, 579 deles
+   * nunca chegavam à loja — foi assim que o "Desafio Carol Aventureira"
+   * (posições 1566 e 1579) sumiu da vitrine, da busca e de toda cidade.
+   *
+   * A ordenação precisa de desempate por `id`: quase todos têm o mesmo
+   * `sort_order`, e sem ordem estável a mesma linha pode voltar em duas
+   * páginas enquanto outra some — o mesmo sumiço, agora aleatório.
+   */
+  const PAGINA = 1000;
+  const lerPaginado = async (
+    tabela: string,
+    colunas: string,
+    filtros: (q: never) => never,
+  ): Promise<{ data: Array<Record<string, unknown>>; error: unknown }> => {
+    const monta = (de: number, ate: number) =>
+      (filtros(
+        supabase.from(tabela as never).select(colunas as never, { count: "exact" } as never) as never,
+      ) as never as {
+        order: (c: string, o?: Record<string, unknown>) => never;
+      }).order as unknown as never
+        ? ((filtros(
+            supabase.from(tabela as never).select(colunas as never, { count: "exact" } as never) as never,
+          ) as unknown as {
+            order: (c: string) => { order: (c: string) => { range: (a: number, b: number) => Promise<{ data: unknown; error: unknown; count: number | null }> } };
+          })
+            .order("sort_order")
+            .order("id")
+            .range(de, ate))
+        : (null as never);
+
+    const primeira = await monta(0, PAGINA - 1);
+    if (primeira.error) return { data: [], error: primeira.error };
+
+    const linhas = ((primeira.data as Array<Record<string, unknown>>) || []).slice();
+    const total = primeira.count ?? linhas.length;
+
+    if (total > linhas.length) {
+      const faltam: Array<Promise<{ data: unknown; error: unknown; count: number | null }>> = [];
+      for (let de = PAGINA; de < total; de += PAGINA) faltam.push(monta(de, de + PAGINA - 1));
+      const restos = await Promise.all(faltam);
+      for (const r of restos) {
+        if (r.error) return { data: linhas, error: r.error };
+        linhas.push(...(((r.data as Array<Record<string, unknown>>) || [])));
+      }
+    }
+
+    // Deduplica por id: se o banco repetir uma linha entre páginas, a vitrine
+    // não pode mostrar o mesmo produto duas vezes.
+    const vistos = new Set<string>();
+    const unicas = linhas.filter((r) => {
+      const id = String(r.id ?? "");
+      if (!id || vistos.has(id)) return false;
+      vistos.add(id);
+      return true;
+    });
+
+    if (total > unicas.length) {
+      console.error(`[unified-store] ${tabela}: recebidos ${unicas.length} de ${total}`);
+      return { data: unicas, error: new Error(`catálogo incompleto em ${tabela}`) };
+    }
+    return { data: unicas, error: null };
+  };
+
   // Dispara junto com o catálogo, não depois: são independentes.
   const ganhosPromise: Promise<unknown> = paraCoach && opts.ganhosReais
     ? Promise.resolve()
