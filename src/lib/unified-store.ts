@@ -463,17 +463,22 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     lerPaginado(
       "partner_products",
       "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids",
-      (q) => (q as unknown as {
-        eq: (c: string, v: unknown) => Record<string, unknown>;
-        in: (c: string, v: unknown[]) => Record<string, unknown>;
-        is: (c: string, v: unknown) => Record<string, unknown>;
-      }) as never,
+      (q) => q
+        .eq("status", "approved")
+        .in("kind", ["paid", "free"])
+        .eq("is_active_by_partner", true)
+        .eq("is_ready_for_sale", true)
+        .is("deleted_at", null),
     ),
     lerPaginado(
       "professional_products",
       "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override",
-      (q) => q,
+      (q) => q
+        .eq("status", "approved")
+        .eq("is_active_by_professional", true)
+        .eq("is_ready_for_sale", true),
     ),
+
 
   ]);
 
