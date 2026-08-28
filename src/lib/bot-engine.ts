@@ -254,6 +254,31 @@ async function executarAcao(db: Db, passo: any, conversaId: string) {
       const texto = String(cfg.texto ?? "").trim();
       if (!texto) break;
 
+      /*
+       * Feriado vem antes de dia e hora.
+       *
+       * Sem isto, no 7 de setembro o robô diria "estamos abertos" e marcaria
+       * aula experimental para uma academia de porta fechada. Quem aparecesse
+       * na porta não voltaria — e a academia nunca saberia por quê.
+       *
+       * Diz QUAL é o feriado porque "estamos fechados" sozinho, num dia de
+       * semana às 10 da manhã, parece defeito do sistema.
+       */
+      if (cfg.partnerId) {
+        const { data: feriado } = await db.rpc("partner_feriado_de_hoje", {
+          p_partner_id: String(cfg.partnerId),
+        });
+        const nome = typeof feriado === "string" ? feriado.trim() : "";
+        if (nome) {
+          await enfileirar(
+            db,
+            conversaId,
+            `Hoje é ${nome} e a academia não abre. ${texto}`,
+          );
+          break;
+        }
+      }
+
       const partes = new Intl.DateTimeFormat("en-GB", {
         timeZone: String(cfg.timezone ?? "America/Sao_Paulo"),
         weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,

@@ -1789,15 +1789,15 @@ export const obterAutomacaoAvisos = createServerFn({ method: "POST" })
     const { admin } = await autorizar(context.userId, data.partnerId);
     const { data: cfg } = await admin
       .from("partner_acesso_config")
-      .select("avisos_automaticos, avisos_hora, avisos_dias, timezone" as never)
+      .select("avisos_envio_automatico, avisos_hora, avisos_dias, timezone" as never)
       .eq("partner_id", data.partnerId)
       .maybeSingle();
     const c = cfg as null | {
-      avisos_automaticos: boolean; avisos_hora: number;
+      avisos_envio_automatico: boolean; avisos_hora: number;
       avisos_dias: number[] | null; timezone: string | null;
     };
     return {
-      automatico: c?.avisos_automaticos ?? false,
+      automatico: c?.avisos_envio_automatico ?? false,
       hora: c?.avisos_hora ?? 9,
       dias: c?.avisos_dias ?? [1, 2, 3, 4, 5],
       timezone: c?.timezone ?? "America/Sao_Paulo",
@@ -1824,7 +1824,7 @@ export const salvarAutomacaoAvisos = createServerFn({ method: "POST" })
     const { error } = await admin.from("partner_acesso_config").upsert(
       {
         partner_id: data.partnerId,
-        avisos_automaticos: !!data.automatico,
+        avisos_envio_automatico: !!data.automatico,
         avisos_hora: hora,
         avisos_dias: dias,
       } as never,

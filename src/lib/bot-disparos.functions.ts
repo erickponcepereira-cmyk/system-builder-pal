@@ -341,9 +341,7 @@ type Disparo = {
  * outro — e o lado sem a proteção é justamente o que roda sem ninguém olhando.
  */
 export async function executarDisparo(db: Db, disparo: Disparo) {
-  {
-
-    // 1. qual número está de plantão
+  // 1. qual número está de plantão
     const { data: conexaoId } = await db.rpc("bot_escolher_conexao", {
       _escopo: disparo.escopo,
       _owner_id: disparo.owner_id,
@@ -406,7 +404,33 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
     );
 
     const intervalo = Math.max(5, disparo.intervalo_segundos) * 1000;
-    const inicio = Date.now() + 5000; // 5s de folga para o conector buscar
+
+    /*
+     * Começa depois do que JÁ está agendado neste número, não "daqui a 5s".
+     *
+     * O espaçamento de 20s protege o chip dentro de uma campanha, mas não
+     * dizia nada entre campanhas. Duas disparadas no mesmo minuto — o gancho
+     * automático solta "Vence hoje" e "Faltam 3 dias" em sequência, ou duas
+     * pessoas apertam o botão juntas — agendavam a primeira mensagem de cada
+     * uma no MESMO instante. Para o WhatsApp isso é rajada, que é exatamente o
+     * que o intervalo existe para evitar.
+     *
+     * Olhando a fila do número, a segunda campanha entra na fila da primeira.
+     */
+    const { data: ultima } = await db
+      .from("bot_mensagens")
+      .select("agendado_para, conversa_id, bot_conversas!inner(conexao_id)")
+      .eq("bot_conversas.conexao_id", conexao.id)
+      .eq("status", "pendente")
+      .order("agendado_para", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const fimDaFila = (ultima as { agendado_para: string | null } | null)?.agendado_para;
+    const inicio = Math.max(
+      Date.now() + 5000, // 5s de folga para o conector buscar
+      fimDaFila ? new Date(fimDaFila).getTime() + intervalo : 0,
+    );
     let enfileirados = 0;
     let falhas = 0;
 
@@ -448,17 +472,23 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
           .update({ status: "enfileirado", mensagem_id: (msg as { id: string }).id, erro: null })
           .eq("id", alvo.id);
         enfileirados++;
+
+        /*
+         * Conta ESTE envio agora, não todos no fim.
+         *
+         * A contagem ficava depois do laço inteiro. Uma queda no meio deixava
+         * cinquenta mensagens na fila e o contador do chip em zero — e a
+         * próxima campanha achava que o dia estava inteiro disponível. O limite
+         * diário existe justamente para o WhatsApp não bloquear o número, e ele
+         * não seria respeitado exatamente no dia em que algo deu errado.
+         */
+        await db.rpc("bot_contar_envio", { _conexao_id: conexao.id });
       } catch (e) {
         falhas++;
         await db.from("bot_disparo_alvos")
           .update({ status: "erro", erro: e instanceof Error ? e.message.slice(0, 300) : "falhou" })
           .eq("id", alvo.id);
       }
-    }
-
-    // conta os envios no chip, para o limite diário valer
-    for (let i = 0; i < enfileirados; i++) {
-      await db.rpc("bot_contar_envio", { _conexao_id: conexao.id });
     }
 
     await db.from("bot_disparos")
@@ -469,8 +499,7 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
       .eq("id", disparo.id);
 
     const minutos = Math.ceil((enfileirados * intervalo) / 60000);
-    return { enfileirados, falhas, ficamParaDepois, minutosEstimados: minutos, conexaoId: conexao.id };
-  }
+  return { enfileirados, falhas, ficamParaDepois, minutosEstimados: minutos, conexaoId: conexao.id };
 }
 
 export const dispararCampanha = createServerFn({ method: "POST" })

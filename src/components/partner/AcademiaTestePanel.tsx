@@ -2214,8 +2214,9 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
         <span className="text-[11px] text-white/70">
           <strong className="text-white">Montar campanhas automaticamente todo dia</strong>
           <br />
-          Mesmo ligado, nada é enviado sozinho: as campanhas aparecem prontas na
-          aba Robô e alguém precisa disparar.
+          Só MONTA. Nada é enviado por causa desta caixa: as campanhas aparecem
+          prontas na aba Robô e alguém precisa disparar. Quem envia sozinho é a
+          outra opção, em <strong className="text-white">Avisos de vencimento</strong>.
         </span>
       </label>
 
@@ -2510,8 +2511,8 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
               <span className="block text-[11px] font-bold text-white">Enviar sozinho, sem eu apertar nada</span>
               <span className="block text-[11px] text-white/50">
                 As campanhas do dia já são montadas de manhã. Ligando isto, elas saem no horário
-                marcado. Só as campanhas montadas pelo sistema — rascunho que você escreveu nunca
-                sai sozinho.
+                marcado. <strong className="text-white/80">Só as que o sistema montou</strong> —
+                campanha que você escreveu na aba Robô nunca sai sozinha, mesmo com isto ligado.
               </span>
             </span>
           </label>
