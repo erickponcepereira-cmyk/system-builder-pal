@@ -28,32 +28,16 @@ type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["su
 
 async function autorizar(userId: string, partnerId: string): Promise<{ admin: Admin; profileId: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("id, is_master_admin")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!profile) throw new Error("Sem acesso.");
-  const profileId = (profile as { id: string }).id;
-
-  const [{ data: membro }, { data: dono }] = await Promise.all([
-    supabaseAdmin.from("partner_members").select("id").eq("partner_id", partnerId).eq("profile_id", profileId).maybeSingle(),
-    supabaseAdmin.from("partners").select("id").eq("id", partnerId).eq("profile_id", profileId).maybeSingle(),
-  ]);
+  const { perfilComAcessoAcademia } = await import("./academia-acesso.server");
 
   /*
-   * Quem pode agir na academia: dono da unidade, membro da equipe, ou master
-   * admin para suporte.
-   *
-   * Até aqui exigia `is_master_admin` ANTES de olhar o vínculo — era o gate da
-   * fase de teste. Mantê-lo agora entregaria o pior sintoma que este projeto já
-   * teve: a pessoa enxerga a academia na tela e leva "Sem acesso." em cada
-   * clique, porque quem lista aprendeu sobre membro e quem age não.
+   * A régua (dono, membro ou master admin) mora em academia-acesso.server
+   * porque a rota de download da instalação precisa da mesma, e ela não passa
+   * por este middleware de sessão. Duas cópias da regra é como um lado aprende
+   * sobre membro e o outro não.
    */
-  const master = Boolean((profile as { is_master_admin?: boolean }).is_master_admin);
-  if (!membro && !dono && !master) throw new Error("Sem acesso a esta academia.");
+  const profileId = await perfilComAcessoAcademia(userId, partnerId);
+  if (!profileId) throw new Error("Sem acesso a esta academia.");
 
   return { admin: supabaseAdmin as Admin, profileId };
 }
@@ -1849,6 +1833,31 @@ export const gerarCodigoAgente = createServerFn({ method: "POST" })
     const linha = ((r ?? []) as Array<{ agente_id: string; codigo: string; expira_em: string }>)[0];
     if (!linha) throw new Error("Não foi possível gerar o código.");
     return linha;
+  });
+
+/**
+ * O que existe publicado hoje dos dois programas do PC da academia.
+ *
+ * Devolve só nome de arquivo e versão — nunca o conteúdo. O conteúdo sai um
+ * arquivo por vez em /api/instalacao/arquivo, senão a tela carregaria dezenas
+ * de KB de código a cada abertura para exibir uma lista.
+ */
+export const obterPacotesInstalacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }) => {
+    await autorizar(context.userId, data.partnerId);
+    const { obterUltimaVersao } = await import("./instalacao.server");
+
+    const [agente, conector] = await Promise.all([
+      obterUltimaVersao("agente"),
+      obterUltimaVersao("conector"),
+    ]);
+
+    const resumir = (v: Awaited<ReturnType<typeof obterUltimaVersao>>) =>
+      v ? { versao: v.versao, notas: v.notas, arquivos: Object.keys(v.arquivos).sort() } : null;
+
+    return { agente: resumir(agente), conector: resumir(conector) };
   });
 
 /** Credenciais lidas do leitor que ainda não têm aluno, com sugestões por nome. */

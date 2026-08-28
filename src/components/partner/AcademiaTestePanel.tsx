@@ -5,6 +5,7 @@ import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSqu
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
+import { InstalacaoAcademia } from "@/components/partner/InstalacaoAcademia";
 import { CrmBoard } from "@/components/crm/CrmBoard";
 import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
 import { FunilComCampanhas } from "@/components/partner/FunilComCampanhas";
@@ -89,7 +90,7 @@ import {
 import { formatDateOnlyBR } from "@/lib/date-only";
 
 
-type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "config";
+type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "instalacao" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -127,7 +128,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           </p>
         </div>
 
-        {/* Rola no celular, quebra em linhas no computador: com 12 abas,
+        {/* Rola no celular, quebra em linhas no computador: com 13 abas,
             rolar lateralmente para achar "Configurações" e trabalho a toa. */}
         <div className="flex gap-2 overflow-x-auto lg:flex-wrap lg:overflow-visible">
           {([
@@ -143,6 +144,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["dayuse", "Day-use"],
             ["eventos", "Eventos"],
             ["agente", "Agente da catraca"],
+            ["instalacao", "Instalação"],
             ["config", "Configurações"],
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
@@ -173,6 +175,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         )}
         {sub === "eventos" && <Eventos partnerId={partnerId} />}
         {sub === "agente" && <AgenteAcademia partnerId={partnerId} />}
+        {sub === "instalacao" && <InstalacaoAcademia partnerId={partnerId} />}
         {sub === "config" && <ConfigAcademia partnerId={partnerId} />}
       </div>
     </>

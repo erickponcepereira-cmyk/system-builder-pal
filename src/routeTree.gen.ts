@@ -51,6 +51,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as ApiInstalacaoArquivoRouteImport } from './routes/api.instalacao.arquivo'
 import { Route as ApiBotFilaRouteImport } from './routes/api.bot.fila'
 import { Route as ApiBotEventosRouteImport } from './routes/api.bot.eventos'
 import { Route as ApiBotConfirmarRouteImport } from './routes/api.bot.confirmar'
@@ -384,6 +385,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const ApiInstalacaoArquivoRoute = ApiInstalacaoArquivoRouteImport.update({
+  id: '/api/instalacao/arquivo',
+  path: '/api/instalacao/arquivo',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBotFilaRoute = ApiBotFilaRouteImport.update({
   id: '/api/bot/fila',
@@ -1224,6 +1230,7 @@ export interface FileRoutesByFullPath {
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
+  '/api/instalacao/arquivo': typeof ApiInstalacaoArquivoRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/student/': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1384,6 +1391,7 @@ export interface FileRoutesByTo {
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
+  '/api/instalacao/arquivo': typeof ApiInstalacaoArquivoRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/student': typeof AuthenticatedStudentIndexRoute
   '/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1548,6 +1556,7 @@ export interface FileRoutesById {
   '/api/bot/confirmar': typeof ApiBotConfirmarRoute
   '/api/bot/eventos': typeof ApiBotEventosRoute
   '/api/bot/fila': typeof ApiBotFilaRoute
+  '/api/instalacao/arquivo': typeof ApiInstalacaoArquivoRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/student/': typeof AuthenticatedStudentIndexRoute
   '/_authenticated/admin/coaches/inactivity': typeof AuthenticatedAdminCoachesInactivityRoute
@@ -1712,6 +1721,7 @@ export interface FileRouteTypes {
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
+    | '/api/instalacao/arquivo'
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
@@ -1872,6 +1882,7 @@ export interface FileRouteTypes {
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
+    | '/api/instalacao/arquivo'
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
@@ -2035,6 +2046,7 @@ export interface FileRouteTypes {
     | '/api/bot/confirmar'
     | '/api/bot/eventos'
     | '/api/bot/fila'
+    | '/api/instalacao/arquivo'
     | '/_authenticated/admin/'
     | '/_authenticated/student/'
     | '/_authenticated/admin/coaches/inactivity'
@@ -2096,6 +2108,7 @@ export interface RootRouteChildren {
   ApiBotConfirmarRoute: typeof ApiBotConfirmarRoute
   ApiBotEventosRoute: typeof ApiBotEventosRoute
   ApiBotFilaRoute: typeof ApiBotFilaRoute
+  ApiInstalacaoArquivoRoute: typeof ApiInstalacaoArquivoRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
@@ -2407,6 +2420,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/instalacao/arquivo': {
+      id: '/api/instalacao/arquivo'
+      path: '/api/instalacao/arquivo'
+      fullPath: '/api/instalacao/arquivo'
+      preLoaderRoute: typeof ApiInstalacaoArquivoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/bot/fila': {
       id: '/api/bot/fila'
@@ -3594,6 +3614,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBotConfirmarRoute: ApiBotConfirmarRoute,
   ApiBotEventosRoute: ApiBotEventosRoute,
   ApiBotFilaRoute: ApiBotFilaRoute,
+  ApiInstalacaoArquivoRoute: ApiInstalacaoArquivoRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
