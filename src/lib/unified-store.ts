@@ -718,7 +718,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   for (const r of (partnerRes.data as unknown as Array<Record<string, unknown>>) || []) {
     const price = num(r.price);
     const base = computePartnerProductBenefits(price);
-    const partner = r.partners as { fantasy_name?: string | null; city?: string | null; upline_coach_id?: string | null } | null;
+    const partner = parceiroPorId.get(String(r.partner_id || "")) ?? null;
     push({
       id: `partner_company-${r.id}`,
       sourceId: String(r.id),
