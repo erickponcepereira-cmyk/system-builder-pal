@@ -8134,6 +8134,7 @@ export type Database = {
           avisos_hora: number
           created_at: string
           dias_carencia: number
+          dias_sumido: number
           exige_senha_liberacao: boolean
           frequencia_conta: string
           frequencia_meta: number | null
@@ -8154,6 +8155,7 @@ export type Database = {
           avisos_hora?: number
           created_at?: string
           dias_carencia?: number
+          dias_sumido?: number
           exige_senha_liberacao?: boolean
           frequencia_conta?: string
           frequencia_meta?: number | null
@@ -8174,6 +8176,7 @@ export type Database = {
           avisos_hora?: number
           created_at?: string
           dias_carencia?: number
+          dias_sumido?: number
           exige_senha_liberacao?: boolean
           frequencia_conta?: string
           frequencia_meta?: number | null
@@ -15582,6 +15585,7 @@ export type Database = {
           p_ate?: string
           p_categoria: string
           p_de?: string
+          p_filtro?: string
           p_partner_id: string
           p_projecao_ate?: string
         }
@@ -15636,6 +15640,14 @@ export type Database = {
           divergencias: number
           primeira: string
           ultima: string
+        }[]
+      }
+      academia_sumidos: {
+        Args: { p_dias?: number; p_partner_id: string }
+        Returns: {
+          credencial_id: string
+          student_id: string
+          visto_em: string
         }[]
       }
       academia_treino_do_modelo: {
