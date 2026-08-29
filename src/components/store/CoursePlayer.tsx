@@ -101,7 +101,18 @@ export function CoursePlayer({ productId }: { productId: string }) {
 
     const c = await loadCourse(productId, sid);
     if (!c) {
-      setErro("Curso não encontrado, ou você ainda não tem acesso a ele.");
+      // Distingue os três casos: o aviso genérico de "não encontrado" assustava
+      // quem só estava aguardando liberação ou conteúdo em preparação.
+      const { data: existe } = await supabase
+        .from("digital_products")
+        .select("id,title")
+        .eq("id", productId)
+        .maybeSingle();
+      if (!existe) {
+        setErro("Este conteúdo não está mais disponível.");
+      } else {
+        setErro("Seu acesso a este curso ainda não foi liberado. Assim que o pagamento for confirmado, ele aparece aqui automaticamente.");
+      }
       setLoading(false);
       return;
     }
