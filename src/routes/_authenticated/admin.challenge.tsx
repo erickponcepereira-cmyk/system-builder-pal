@@ -1158,7 +1158,9 @@ function AdminChallengePage() {
         const renderList = (list: Enrollment[], gender: "M" | "F", selected: string, setSelected: (id: string) => void) => (
           <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
             {list.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Nenhum participante com resultado positivo.</p>
+              <p className="text-xs text-muted-foreground text-center py-4">
+                {gender === "F" ? "Sem campeã feminina para esta edição." : "Sem campeão masculino para esta edição."}
+              </p>
             ) : list.map((e, i) => (
               <label key={e.id}
                 className={`flex items-center gap-2 rounded-lg border p-2 cursor-pointer ${selected === e.id ? "border-yellow-400 bg-yellow-500/10" : "border-border bg-muted/20 hover:bg-muted/40"}`}>
