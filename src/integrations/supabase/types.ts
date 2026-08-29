@@ -10604,6 +10604,7 @@ export type Database = {
           free_for_council: boolean
           free_for_nutritionist: boolean
           gallery: Json
+          grants_digital_product_id: string | null
           has_challenge_access: boolean
           highlights: Json | null
           id: string
@@ -10698,6 +10699,7 @@ export type Database = {
           free_for_council?: boolean
           free_for_nutritionist?: boolean
           gallery?: Json
+          grants_digital_product_id?: string | null
           has_challenge_access?: boolean
           highlights?: Json | null
           id?: string
@@ -10792,6 +10794,7 @@ export type Database = {
           free_for_council?: boolean
           free_for_nutritionist?: boolean
           gallery?: Json
+          grants_digital_product_id?: string | null
           has_challenge_access?: boolean
           highlights?: Json | null
           id?: string
@@ -10855,6 +10858,13 @@ export type Database = {
             columns: ["creator_coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_grants_digital_product_id_fkey"
+            columns: ["grants_digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
             referencedColumns: ["id"]
           },
           {
