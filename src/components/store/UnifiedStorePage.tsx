@@ -15,6 +15,7 @@ import { maskCPFSensitive } from "@/lib/masks";
 import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
+import { ProductReviews } from "@/components/store/ProductReviews";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
 import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
@@ -1543,6 +1544,12 @@ function DetailSheet({
         </div>
 
         {ganhos && <BlocoDeComissao ganhos={ganhos} hasUpline={hasUpline} />}
+
+        {/* O que quem comprou achou. Fica depois do preco e antes do botao:
+            e a ultima informacao que pesa antes de decidir. */}
+        {!modoCoach && (
+          <ProductReviews origin={product.origin} kind={product.kind} sourceId={product.sourceId} />
+        )}
 
         {modoCoach && product.pointsPerSale > 0 && (
           <div className="mb-3 rounded-xl bg-muted p-3">

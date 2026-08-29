@@ -4,7 +4,10 @@ import { Loader2, ShoppingBag, Store, Stethoscope, Handshake, CreditCard, Ticket
 import { getStudentPurchaseHistory, type StudentPurchaseRow } from "@/lib/student-purchases.functions";
 import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 import { RefundRequestSheet, type CompraParaEstorno } from "@/components/store/RefundRequestSheet";
-import { meusEstornos, ROTULO_STATUS, type PedidoDeEstorno } from "@/lib/store-returns";
+import { meusEstornos, ROTULO_STATUS, tipoDoPedido, type PedidoDeEstorno } from "@/lib/store-returns";
+import { ReviewSheet } from "@/components/store/ReviewSheet";
+import { StarRating } from "@/components/store/StarRating";
+import { minhasAvaliacoes, type Avaliacao, type OrigemDoProduto } from "@/lib/store-reviews";
 
 const fmt = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -16,6 +19,13 @@ const normalize = (s: string): StatusFilter => {
   if (v === "paid" || v === "pago" || v === "approved" || v === "completed") return "paid";
   if (v === "cancelled" || v === "canceled" || v === "cancelado" || v === "refused" || v === "failed" || v === "rejected") return "cancelled";
   return "pending";
+};
+
+/** A origem da compra, no vocabulário de `product_reviews`. */
+const origemDaCompra = (s: StudentPurchaseRow["source"]): OrigemDoProduto => {
+  if (s === "partner") return "partner";
+  if (s === "professional") return "professional";
+  return "fitmind";
 };
 
 const sourceIcon = (s: StudentPurchaseRow["source"]) => {
@@ -46,6 +56,22 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
   }, []);
 
   useEffect(() => { recarregarEstornos(); }, [recarregarEstornos]);
+
+  /**
+   * O convite para avaliar mora aqui, e não na vitrine.
+   *
+   * É a mesma regra que o banco impõe — um gatilho recusa avaliação cujo
+   * pedido não é de quem escreve. Convidar na vitrine seria oferecer o que vai
+   * ser recusado.
+   */
+  const [avaliacoes, setAvaliacoes] = useState<Map<string, Avaliacao>>(new Map());
+  const [avaliando, setAvaliando] = useState<StudentPurchaseRow | null>(null);
+
+  const recarregarAvaliacoes = useCallback(() => {
+    void minhasAvaliacoes().then(setAvaliacoes);
+  }, []);
+
+  useEffect(() => { recarregarAvaliacoes(); }, [recarregarAvaliacoes]);
 
   useEffect(() => {
     let cancel = false;
@@ -152,30 +178,61 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
                     não tem o que devolver. */}
                 {st === "paid" && (() => {
                   const pedido = estornos.get(r.id) ?? null;
+                  const nota = avaliacoes.get(r.id) ?? null;
                   return (
-                    <button
-                      type="button"
-                      onClick={() => setPedindoPara({
-                        id: r.id,
-                        source: r.source,
-                        produto: r.product_name,
-                        valor: r.amount,
-                        quando: r.paid_at || r.created_at,
-                      })}
-                      className={`mt-2 w-full rounded-lg border px-3 py-2 text-[11px] font-bold ${
-                        pedido
-                          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                          : "border-white/15 bg-white/5 text-white/70"
-                      }`}
-                    >
-                      {pedido ? `Estorno: ${ROTULO_STATUS[pedido.status]}` : "Pedir estorno"}
-                    </button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {/* Avaliar só faz sentido com o produto identificado: sem
+                          product_id não há o que pontuar. */}
+                      {r.product_id && (
+                        <button
+                          type="button"
+                          onClick={() => setAvaliando(r)}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-bold text-white/70"
+                        >
+                          {nota ? (
+                            <>
+                              <StarRating nota={nota.rating} /> <span>Sua avaliação</span>
+                            </>
+                          ) : "Avaliar"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPedindoPara({
+                          id: r.id,
+                          source: r.source,
+                          produto: r.product_name,
+                          valor: r.amount,
+                          quando: r.paid_at || r.created_at,
+                        })}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-[11px] font-bold ${
+                          pedido
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                            : "border-white/15 bg-white/5 text-white/70"
+                        }`}
+                      >
+                        {pedido ? `Estorno: ${ROTULO_STATUS[pedido.status]}` : "Pedir estorno"}
+                      </button>
+                    </div>
                   );
                 })()}
               </div>
             );
           })}
         </div>
+      )}
+
+      {avaliando?.product_id && (
+        <ReviewSheet
+          produto={avaliando.product_name}
+          origem={origemDaCompra(avaliando.source)}
+          produtoId={avaliando.product_id}
+          orderId={avaliando.id}
+          orderType={tipoDoPedido(avaliando.source)}
+          existente={avaliacoes.get(avaliando.id) ?? null}
+          onFechar={() => setAvaliando(null)}
+          onMudou={recarregarAvaliacoes}
+        />
       )}
 
       {pedindoPara && (
