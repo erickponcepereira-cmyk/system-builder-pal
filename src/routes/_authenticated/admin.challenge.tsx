@@ -1184,8 +1184,13 @@ function AdminChallengePage() {
                   Finalizar {MONTHS[finalizeModal.comp.month]} {finalizeModal.comp.year}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Selecione obrigatoriamente os vencedores Masc. e Fem. O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
+                  Selecione o vencedor de cada gênero que tenha participantes com resultado positivo; gêneros sem resultado ficam registrados como "sem campeão(ã)". O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
                 </p>
+                <button type="button" onClick={() => setShowRules(true)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Dúvidas? Leia as regras da competição
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
