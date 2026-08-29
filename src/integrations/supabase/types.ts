@@ -8145,6 +8145,7 @@ export type Database = {
           partner_id: string
           regra_dayuse: string
           timezone: string
+          tolerancia_aula_min: number
           updated_at: string
           validacao_frequencia: string
         }
@@ -8166,6 +8167,7 @@ export type Database = {
           partner_id: string
           regra_dayuse?: string
           timezone?: string
+          tolerancia_aula_min?: number
           updated_at?: string
           validacao_frequencia?: string
         }
@@ -8187,6 +8189,7 @@ export type Database = {
           partner_id?: string
           regra_dayuse?: string
           timezone?: string
+          tolerancia_aula_min?: number
           updated_at?: string
           validacao_frequencia?: string
         }
@@ -15604,6 +15607,7 @@ export type Database = {
       academia_relatorio_turmas: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: {
+          comeca: string
           dias: string
           entradas: number
           janela: string
