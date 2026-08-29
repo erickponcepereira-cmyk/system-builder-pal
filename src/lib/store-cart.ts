@@ -42,6 +42,7 @@ export type CartItem = {
   tag: string;
   category: string;
   stock: number | null;
+  isPhysical: boolean;
   isSchedulable: boolean;
   scheduledSlot: string | null;
   creatorCoachId: string | null;
@@ -82,6 +83,7 @@ export function itemDoProduto(product: UnifiedProduct, slot?: string | null): Ca
     tag: product.sellerName,
     category: product.sellerName,
     stock: product.stock,
+    isPhysical: product.isPhysical,
     isSchedulable: product.isSchedulable,
     scheduledSlot: slot ?? null,
     creatorCoachId: product.creatorCoachId,
@@ -133,12 +135,19 @@ export const subtotalDo = (cart: CartItem[]): number =>
 
 /**
  * Carrinho tem produto físico? Então o pedido precisa de endereço.
- * Espelha `requiresShipping` da loja atual: produto FitMind com estoque
- * controlado é coisa que se entrega.
+ *
+ * Pergunta ao produto, não ao estoque. A versão anterior deduzia "é físico"
+ * de `kind === "item" && stock != null`, e isso dava falso para o catálogo
+ * FitMind inteiro: um produto que existe nas duas leituras da tabela
+ * `products` entra no catálogo como `kind: "challenge"`, nunca como
+ * `"item"`. Entre 10/06 e 21/08 saíram 18 pedidos pagos de produto marcado
+ * `kind = 'physical'` sem uma linha de endereço — a loja nunca perguntou.
+ *
+ * `kind === "store"` continua valendo como rede de segurança: a loja física
+ * é entregável por definição, mesmo que a coluna venha nula.
  */
 export const exigeEntrega = (cart: CartItem[]): boolean =>
-  cart.some((item) => item.kind === "store"
-    || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
+  cart.some((item) => item.isPhysical || item.kind === "store");
 
 export type OrderStep = { key: string; label: string; items: CartItem[] };
 

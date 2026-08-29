@@ -512,18 +512,22 @@ export function UnifiedStorePage({
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
       <header className="flex items-start justify-between gap-3 pt-1">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs uppercase tracking-wider text-muted-foreground">
             Loja {audience === "coach" ? "· modo coach" : ""}
           </p>
-          <h1 className="text-2xl font-bold text-foreground">FitMind Club</h1>
+          <h1 className="truncate text-2xl font-bold text-foreground">FitMind Club</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             {visiveis.length} produtos de {groupBySeller(visiveis).length} vendedores, numa vitrine só.
           </p>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          {modoCoach && <MasterCoachCommissionSelector />}
+        {/* Só os dois controles compactos ficam ao lado do título. O seletor de
+            comissão pede ~360px e, encostado aqui, espremia o título até ele
+            quebrar uma palavra por linha e empurrava o carrinho para fora da
+            tela — em três das quatro superfícies o botão ficava inalcançável.
+            Ele ganhou a própria faixa, logo abaixo. */}
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {modoCoach && (
             <button
               type="button"
@@ -550,6 +554,8 @@ export function UnifiedStorePage({
           </button>
         </div>
       </header>
+
+      {modoCoach && <MasterCoachCommissionSelector />}
 
       {/* Aluno da venda. Fica no topo porque muda o significado de tudo que
           vem abaixo: o preço que o coach vê é o que aquele aluno vai pagar. */}

@@ -72,6 +72,19 @@ export type UnifiedProduct = {
   cardDays: number;
   challengeTickets: number;
   stock: number | null;
+  /**
+   * Produto que precisa ser ENTREGUE num endereço.
+   *
+   * Vem da verdade de cada origem — `products.kind = 'physical'`,
+   * `store_products.is_physical`, `partner_products.is_physical`,
+   * `professional_products.is_physical` — e não de um palpite sobre estoque.
+   * O palpite antigo ("tem estoque controlado, então é coisa que se entrega")
+   * dava falso para o catálogo FitMind inteiro, porque um produto que existe
+   * nas duas leituras da tabela `products` entra como `kind: "challenge"` e
+   * nunca chegava a ser `"item"`. Resultado: 18 pedidos de produto físico
+   * foram pagos entre 10/06 e 21/08 sem uma linha de endereço.
+   */
+  isPhysical: boolean;
   isSchedulable: boolean;
   /**
    * Benefício gratuito do parceiro. Aparece na vitrine para TODO MUNDO — o que
@@ -450,7 +463,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     supabase
       .from("store_products")
-      .select("id,name,description,price,original_price,category,stock,image_url")
+      .select("id,name,description,price,original_price,category,stock,image_url,is_physical")
       .eq("status", "active")
       .order("sort_order"),
     supabase
@@ -465,7 +478,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     lerPaginado(
       "partner_products",
-      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,is_physical",
       (q) => q
         .eq("status", "approved")
         .in("kind", ["paid", "free"])
@@ -475,7 +488,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     ),
     lerPaginado(
       "professional_products",
-      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,is_physical",
       (q) => q
         .eq("status", "approved")
         .eq("is_active_by_professional", true)
@@ -658,6 +671,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: num(r.card_access_days),
       challengeTickets: r.has_challenge_access ? num(r.challenge_tokens_amount) : 0,
       stock: m ? numOrNull(m.stock) : null,
+      isPhysical: String(m?.kind ?? r.kind ?? "") === "physical",
       isSchedulable: false,
       isFreebie: false,
       durationMinutes: 30,
@@ -698,6 +712,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: num(r.card_access_days),
       challengeTickets: num(r.challenge_tokens_amount),
       stock: numOrNull(r.stock),
+      isPhysical: String(r.kind ?? "") === "physical",
       isSchedulable: false,
       isFreebie: false,
       durationMinutes: 30,
@@ -738,6 +753,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: 0,
       challengeTickets: 0,
       stock: null,
+      isPhysical: false,
       isSchedulable: false,
       isFreebie: false,
       durationMinutes: 30,
@@ -777,6 +793,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: 0,
       challengeTickets: 0,
       stock: numOrNull(r.stock),
+      isPhysical: r.is_physical === true,
       isSchedulable: false,
       isFreebie: false,
       durationMinutes: 30,
@@ -819,6 +836,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
+      isPhysical: r.is_physical === true,
       isSchedulable: false,
       isFreebie: r.kind === "free",
       durationMinutes: 30,
@@ -861,6 +879,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       cardDays: r.perk_card_days_override != null ? num(r.perk_card_days_override) : base.cardDays,
       challengeTickets: r.perk_challenge_tickets_override != null ? num(r.perk_challenge_tickets_override) : base.challengeTickets,
       stock: null,
+      isPhysical: r.is_physical === true,
       isSchedulable: !!r.is_schedulable,
       isFreebie: r.kind === "free",
       durationMinutes: num(r.default_duration_minutes) || 30,
