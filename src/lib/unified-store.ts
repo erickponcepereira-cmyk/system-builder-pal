@@ -359,7 +359,14 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
    */
   const PAGINA = 1000;
   type Pagina = { data: unknown; error: unknown; count: number | null };
-  type Filtrador = (q: Record<string, unknown>) => Record<string, unknown>;
+  interface ConsultaEncadeada {
+    eq: (c: string, v: unknown) => ConsultaEncadeada;
+    in: (c: string, v: unknown[]) => ConsultaEncadeada;
+    is: (c: string, v: unknown) => ConsultaEncadeada;
+    order: (c: string) => ConsultaEncadeada;
+    range: (a: number, b: number) => Promise<Pagina>;
+  }
+  type Filtrador = (q: ConsultaEncadeada) => ConsultaEncadeada;
 
   const lerPaginado = async (
     tabela: string,
@@ -368,13 +375,9 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   ): Promise<{ data: Array<Record<string, unknown>>; error: unknown }> => {
     const monta = (de: number, ate: number): Promise<Pagina> => {
       const base = (supabase.from(tabela as never) as unknown as {
-        select: (c: string, o: Record<string, unknown>) => Record<string, unknown>;
+        select: (c: string, o: Record<string, unknown>) => ConsultaEncadeada;
       }).select(colunas, { count: "exact" });
-      const filtrada = filtrar(base) as unknown as {
-        order: (c: string) => {
-          order: (c: string) => { range: (a: number, b: number) => Promise<Pagina> };
-        };
-      };
+      const filtrada = filtrar(base);
       return filtrada.order("sort_order").order("id").range(de, ate);
     };
 

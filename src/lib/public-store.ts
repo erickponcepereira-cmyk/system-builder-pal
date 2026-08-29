@@ -328,6 +328,55 @@ export async function fetchPublicTaxonomy(): Promise<PublicTaxonomy> {
  * pede colunas explícitas — nunca `select("*")` — e cada uma degrada em
  * silêncio para a loja nunca ficar em branco por causa de uma fonte só.
  */
+/**
+ * Lê uma tabela da vitrine em lotes de 1000.
+ *
+ * O PostgREST impõe teto de 1000 linhas por resposta e ignora `.limit()`
+ * maior que isso: sem paginação, tudo que ordena depois da milésima linha
+ * simplesmente não chega à loja (foi assim que produtos aprovados sumiram
+ * da vitrine). Ordenação com desempate por `id` garante que a mesma linha
+ * não volte em duas páginas enquanto outra some.
+ */
+async function lerVitrinePaginada(
+  tabela: "partner_products" | "professional_products",
+  filtrar: (q: ConsultaVitrine) => ConsultaVitrine,
+): Promise<{ data: Linha[]; error: unknown }> {
+  const PAGINA = 1000;
+  const todas: Linha[] = [];
+  for (let de = 0; ; de += PAGINA) {
+    const base = supabase
+      .from(tabela)
+      .select(COLUNAS_VITRINE_TERCEIROS) as unknown as ConsultaVitrine;
+    const { data, error } = await filtrar(base)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true })
+      .range(de, de + PAGINA - 1);
+    if (error) return { data: todas, error };
+    const lote = ((data ?? []) as unknown as Linha[]);
+    todas.push(...lote);
+    if (lote.length < PAGINA) break;
+    if (de > 50000) break; // trava de segurança
+  }
+  // Deduplica por id: paginação sobre dados que mudam durante a leitura
+  // pode repetir linha entre páginas, e a vitrine não pode mostrar duplicado.
+  const vistos = new Set<string>();
+  return {
+    data: todas.filter((r) => {
+      const id = String(r.id ?? "");
+      if (!id || vistos.has(id)) return false;
+      vistos.add(id);
+      return true;
+    }),
+    error: null,
+  };
+}
+
+interface ConsultaVitrine {
+  eq: (c: string, v: unknown) => ConsultaVitrine;
+  order: (c: string, o: { ascending: boolean }) => ConsultaVitrine;
+  range: (a: number, b: number) => Promise<{ data: unknown; error: unknown }>;
+}
+
 export async function fetchPublicCatalog(
   referralCode: string | null,
   coachId?: string | null,
@@ -341,17 +390,9 @@ export async function fetchPublicCatalog(
     // SECURITY DEFINER, que devolve apenas colunas de vitrine e ja filtra
     // por ativo. As tabelas de parceiro e profissional seguem legiveis.
     supabase.rpc("catalogo_publico"),
-    supabase
-      .from("partner_products")
-      .select(COLUNAS_VITRINE_TERCEIROS)
-      .eq("status", "approved")
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("professional_products")
-      .select(COLUNAS_VITRINE_TERCEIROS)
-      .eq("status", "approved")
-      .eq("is_active_by_professional", true)
-      .order("sort_order", { ascending: true }),
+    lerVitrinePaginada("partner_products", (q) => q.eq("status", "approved")),
+    lerVitrinePaginada("professional_products", (q) =>
+      q.eq("status", "approved").eq("is_active_by_professional", true)),
   ]);
 
   const linhas = (r: { data: unknown }) => (r.data ?? []) as unknown as Linha[];
