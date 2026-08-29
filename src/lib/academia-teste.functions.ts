@@ -489,6 +489,38 @@ export const corrigirMensalidadeAcademia = createServerFn({ method: "POST" })
       .eq("status", "ativa");
     if (error) throw new Error(error.message);
 
+    /*
+     * As linhas de pagamento acompanham a correção.
+     *
+     * Sem isto, a correção mudava só a mensalidade e "Por forma de pagamento"
+     * seguia somando o valor velho — foi assim que três lançamentos corrigidos
+     * para R$ 0,00 deixaram R$ 0,03 fantasma no relatório, e o total do período
+     * passou a discordar da soma das formas. Número que não fecha com ele mesmo
+     * é pior que número ausente: a recepção para de confiar na tela inteira.
+     *
+     * Vira uma linha só, porque a correção só aceita uma forma. Guardar a
+     * divisão antiga junto de um valor novo descreveria uma venda que não
+     * existiu.
+     */
+    await admin
+      .from("academia_mensalidade_pagamentos")
+      .delete()
+      .eq("mensalidade_id", data.mensalidadeId);
+
+    if (valor > 0) {
+      const { error: erroPg } = await admin
+        .from("academia_mensalidade_pagamentos")
+        .insert({
+          mensalidade_id: data.mensalidadeId,
+          forma_pagamento: data.formaPagamento,
+          valor,
+          taxa_percentual: pct,
+          taxa_valor: taxaValor,
+          valor_liquido: Math.round((valor - taxaValor) * 100) / 100,
+        });
+      if (erroPg) throw new Error(erroPg.message);
+    }
+
     return { ok: true };
   });
 
@@ -2623,11 +2655,14 @@ export type CategoriaRelatorio =
   | "liberados" | "a_vencer" | "em_carencia" | "bloqueados" | "vencem_em_7"
   | "sem_mensalidade" | "entradas" | "manuais" | "barradas"
   // As de baixo vêm de `academia_relatorio_pessoas_extra`, não da original.
-  | "projecao" | "renovacoes" | "novos" | "sem_frequencia" | "dayuse";
+  | "projecao" | "renovacoes" | "novos" | "sem_frequencia" | "dayuse"
+  // Estas tres precisam de `filtro`: qual forma, qual plano.
+  | "recebido" | "forma" | "plano";
 
 /** Quais categorias moram na função nova. */
 const CATEGORIAS_EXTRA = new Set<CategoriaRelatorio>([
   "projecao", "renovacoes", "novos", "sem_frequencia", "dayuse",
+  "recebido", "forma", "plano",
 ]);
 
 /**
@@ -2639,7 +2674,12 @@ const CATEGORIAS_EXTRA = new Set<CategoriaRelatorio>([
  */
 export const pessoasDoRelatorio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { partnerId: string; categoria: CategoriaRelatorio; de?: string; ate?: string; projecaoAte?: string }) => d)
+  .inputValidator((d: {
+    partnerId: string; categoria: CategoriaRelatorio;
+    de?: string; ate?: string; projecaoAte?: string;
+    /** Qual forma de pagamento, ou qual plano. As outras categorias ignoram. */
+    filtro?: string;
+  }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
     // Duas funções, uma porta. A tela chama sempre a mesma coisa; quem sabe
@@ -2652,7 +2692,7 @@ export const pessoasDoRelatorio = createServerFn({ method: "POST" })
         p_categoria: data.categoria,
         p_de: data.de ?? null,
         p_ate: data.ate ?? null,
-        ...(extra ? { p_projecao_ate: data.projecaoAte ?? null } : {}),
+        ...(extra ? { p_projecao_ate: data.projecaoAte ?? null, p_filtro: data.filtro ?? null } : {}),
       } as never,
     );
     if (error) throw new Error(error.message);

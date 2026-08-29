@@ -71,8 +71,8 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
   const [grade, setGrade] = useState<Grade | null>(null);
   const [carregando, setCarregando] = useState(true);
   // Qual numero esta aberto na lista de pessoas.
-  const [aberto, setAberto] = useState<{ cat: CategoriaRelatorio; titulo: string } | null>(null);
-  const abrir = (cat: CategoriaRelatorio, titulo: string) => () => setAberto({ cat, titulo });
+  const [aberto, setAberto] = useState<{ cat: CategoriaRelatorio; titulo: string; filtro?: string } | null>(null);
+  const abrir = (cat: CategoriaRelatorio, titulo: string, filtro?: string) => () => setAberto({ cat, titulo, filtro });
 
   const carregar = (d: string, a: string, p: string) => {
     setCarregando(true);
@@ -120,7 +120,8 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
       <div>
         <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Dinheiro no período</h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Cartao rot="Recebido" valor={brl(f.bruto)} nota={`${f.lancamentos} lançamento(s)`} />
+          <Cartao rot="Recebido" valor={brl(f.bruto)} nota={`${f.lancamentos} lançamento(s)`}
+            aoClicar={f.lancamentos > 0 ? abrir("recebido", "Quem pagou no período") : undefined} />
           <Cartao rot="Taxas" valor={brl(f.taxas)} tom={Number(f.taxas) > 0 ? "alerta" : undefined}
             nota={Number(f.bruto) > 0 ? `${((Number(f.taxas) / Number(f.bruto)) * 100).toFixed(2)}% do bruto` : "maquininha"} />
           <Cartao rot="Líquido" valor={brl(f.liquido)} tom="ok" nota="o que sobra" />
@@ -208,8 +209,10 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
               </thead>
               <tbody>
                 {dados.por_forma.map((l) => (
-                  <tr key={l.forma} className="border-t border-white/5">
-                    <td className="p-2">{rotuloForma(l.forma)}</td>
+                  <tr key={l.forma}
+                      onClick={abrir("forma", `Pagaram com ${rotuloForma(l.forma)}`, l.forma)}
+                      className="cursor-pointer border-t border-white/5 hover:bg-white/5">
+                    <td className="p-2 underline decoration-white/20 underline-offset-2">{rotuloForma(l.forma)}</td>
                     <td className="p-2 text-right tabular-nums">{brl(l.bruto)}</td>
                     <td className="p-2 text-right tabular-nums text-amber-300">{brl(l.taxas)}</td>
                     <td className="p-2 text-right tabular-nums text-emerald-400">{brl(l.liquido)}</td>
@@ -226,12 +229,14 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Por plano</h3>
           <div className="space-y-1">
             {dados.por_plano.map((p) => (
-              <div key={p.plano} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs">
-                <span className="min-w-0 truncate">{p.plano}</span>
+              <button key={p.plano} type="button"
+                onClick={abrir("plano", `Compraram ${p.plano}`, p.plano)}
+                className="flex w-full items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-left text-xs hover:bg-white/10">
+                <span className="min-w-0 truncate underline decoration-white/20 underline-offset-2">{p.plano}</span>
                 <span className="shrink-0 tabular-nums text-white/60">
                   {p.vendas} × · <strong className="text-white">{brl(p.bruto)}</strong>
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -349,6 +354,7 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           de={de}
           ate={ate}
           projecaoAte={projecaoAte}
+          filtro={aberto.filtro}
           aoFechar={() => setAberto(null)}
         />
       )}

@@ -107,7 +107,7 @@ export function CaixaDeMensagem({
  * cliques, e o que foi dito fica registrado.
  */
 export function PessoasDoRelatorio({
-  partnerId, categoria, titulo, de, ate, projecaoAte, aoFechar,
+  partnerId, categoria, titulo, de, ate, projecaoAte, filtro, aoFechar,
 }: {
   partnerId: string;
   categoria: CategoriaRelatorio;
@@ -116,6 +116,8 @@ export function PessoasDoRelatorio({
   ate: string;
   /** So usado pelas categorias novas; a original ignora. */
   projecaoAte?: string;
+  /** Qual forma de pagamento, ou qual plano. */
+  filtro?: string;
   aoFechar: () => void;
 }) {
   const obter = useServerFn(pessoasDoRelatorio);
@@ -128,12 +130,12 @@ export function PessoasDoRelatorio({
   useEffect(() => {
     let vivo = true;
     setCarregando(true);
-    obter({ data: { partnerId, categoria, de, ate, projecaoAte } })
+    obter({ data: { partnerId, categoria, de, ate, projecaoAte, filtro } })
       .then((r) => { if (vivo) setPessoas(r.pessoas); })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Não consegui carregar a lista."))
       .finally(() => { if (vivo) setCarregando(false); });
     return () => { vivo = false; };
-  }, [partnerId, categoria, de, ate, projecaoAte]);
+  }, [partnerId, categoria, de, ate, projecaoAte, filtro]);
 
   const visiveis = useMemo(() => {
     const t = busca.trim().toLowerCase();
