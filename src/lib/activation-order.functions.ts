@@ -65,7 +65,10 @@ export const getOrCreateActivationOrder = createServerFn({ method: "POST" })
     }
 
     const { data: orderId, error: createError } = await context.supabase.rpc("create_store_order", {
-      _items: [{ kind: "digital", sourceId: activationProductId, quantity: 1 }],
+      // A adesão anual é um plano cadastrado em `products`, não um curso de
+      // `digital_products`. Enviá-la como digital fazia o banco procurar um
+      // curso com este UUID e rejeitar o checkout antes do pagamento.
+      _items: [{ kind: "plan", sourceId: activationProductId, quantity: 1 }],
       _payment_method: "pix",
       _shipping: {},
       _notes: data.notes,
