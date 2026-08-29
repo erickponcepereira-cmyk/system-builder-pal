@@ -21,6 +21,10 @@ const soDigitos = (s: string) => s.replace(/\D/g, "");
  * ficava registrado em lugar nenhum — o relatório dizia "ligue para estes 91" e
  * ninguém sabia depois para quem já tinham ligado. Agora a mensagem entra na
  * mesma fila do resto, com o mesmo espaçamento, e fica gravada na conversa.
+ *
+ * O `painel-academia` no overlay não é decoração: o funil de campanhas abre
+ * esta mesma caixa de fora do painel, e sem a classe os tokens `aca-*` não
+ * teriam valor nenhum ali.
  */
 export function CaixaDeMensagem({
   partnerId, pessoa, aoFechar,
@@ -58,19 +62,20 @@ export function CaixaDeMensagem({
     // Sem parar a propagação aqui, digitar a mensagem fecharia a lista inteira
     // no primeiro clique dentro do campo de texto.
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+      className="painel-academia fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3 sm:items-center"
       onClick={(e) => { e.stopPropagation(); aoFechar(); }}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0B0B0B] p-4"
+        className="w-full max-w-md rounded-2xl border border-aca-line bg-aca-ground p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">{pessoa.nome}</p>
-            <p className="truncate text-[11px] text-white/50">{pessoa.telefone}</p>
+            <p className="truncate text-sm font-bold text-aca-ink">{pessoa.nome}</p>
+            <p className="truncate text-[12px] tabular-nums text-aca-muted">{pessoa.telefone}</p>
           </div>
-          <button type="button" onClick={aoFechar} className="shrink-0 rounded-lg p-1 text-white/50 hover:bg-white/10">
+          <button type="button" onClick={aoFechar}
+            className="shrink-0 rounded-lg p-1 text-aca-muted hover:bg-aca-alto hover:text-aca-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -79,16 +84,16 @@ export function CaixaDeMensagem({
           onChange={(e) => setTexto(e.target.value)}
           rows={4}
           autoFocus
-          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className="w-full resize-none rounded-xl border border-aca-line bg-aca-surface px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao"
           placeholder="Escreva a mensagem…"
         />
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-white/40">Sai pelo número da academia, com o mesmo espaçamento.</span>
+          <span className="text-[10px] leading-snug text-aca-fraco">Sai pelo número da academia, com o mesmo espaçamento.</span>
           <button
             type="button"
             onClick={() => void mandar()}
             disabled={enviando || !texto.trim()}
-            className="shrink-0 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+            className="shrink-0 rounded-xl bg-aca-acao px-3 py-2 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50"
           >
             {enviando ? "Enviando…" : "Enviar"}
           </button>
@@ -148,20 +153,20 @@ export function PessoasDoRelatorio({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+      className="painel-academia fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={titulo}
       onClick={aoFechar}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-white/10 bg-[#141414] sm:rounded-2xl"
+        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-aca-line bg-aca-surface sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2 border-b border-white/10 p-3">
+        <div className="flex items-start justify-between gap-2 border-b border-aca-line p-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">{titulo}</p>
-            <p className="text-[11px] text-white/50">
+            <p className="truncate text-sm font-bold text-aca-ink">{titulo}</p>
+            <p className="text-[12px] tabular-nums text-aca-muted">
               {carregando ? "carregando…" : `${pessoas.length} pessoa(s) · ${comTelefone} com telefone`}
             </p>
           </div>
@@ -169,29 +174,29 @@ export function PessoasDoRelatorio({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="shrink-0 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+            className="shrink-0 rounded-lg p-1.5 text-aca-muted hover:bg-aca-alto hover:text-aca-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {pessoas.length > 8 && (
-          <div className="relative border-b border-white/10 p-2">
-            <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+          <div className="relative border-b border-aca-line p-2">
+            <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-aca-fraco" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Procurar por nome ou identificador"
-              className="w-full rounded-lg border border-white/10 bg-white/5 py-1.5 pl-8 pr-2 text-sm text-white placeholder:text-white/40"
+              className="w-full rounded-lg border border-aca-line bg-aca-alto py-1.5 pl-8 pr-2 text-sm text-aca-ink placeholder:text-aca-fraco focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao"
             />
           </div>
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {carregando ? (
-            <Loader2 className="mx-auto my-10 h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="mx-auto my-10 h-5 w-5 animate-spin text-aca-acao" />
           ) : visiveis.length === 0 ? (
-            <p className="py-10 text-center text-sm text-white/50">
+            <p className="py-10 text-center text-sm text-aca-muted">
               {pessoas.length === 0 ? "Ninguém nesta situação." : "Ninguém com esse nome."}
             </p>
           ) : (
@@ -199,12 +204,12 @@ export function PessoasDoRelatorio({
               {visiveis.map((p, i) => (
                 <div
                   key={`${p.credencial_id ?? p.student_id ?? p.referencia ?? i}-${i}`}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-2"
+                  className="flex items-center justify-between gap-2 rounded-lg bg-aca-alto px-2.5 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm text-white">{p.nome}</p>
-                    <p className="truncate text-[11px] text-white/50">
-                      {p.referencia && <span className="font-mono">id {p.referencia}</span>}
+                    <p className="truncate text-sm text-aca-ink">{p.nome}</p>
+                    <p className="truncate text-[12px] text-aca-muted">
+                      {p.referencia && <span className="font-mono tabular-nums">id {p.referencia}</span>}
                       {p.referencia && p.detalhe ? " · " : ""}
                       {p.detalhe}
                     </p>
@@ -214,12 +219,12 @@ export function PessoasDoRelatorio({
                       type="button"
                       onClick={() => setEscrevendoPara(p)}
                       aria-label={`Mandar mensagem para ${p.nome}`}
-                      className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/25"
+                      className="flex shrink-0 items-center gap-1 rounded-lg border border-aca-line-forte px-2 py-1 text-[11px] font-semibold text-aca-acao hover:border-aca-acao focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao"
                     >
                       <MessageCircle className="h-3 w-3" /> Mensagem
                     </button>
                   ) : (
-                    <span className="shrink-0 text-[10px] text-white/30">sem telefone</span>
+                    <span className="shrink-0 text-[10px] text-aca-fraco">sem telefone</span>
                   )}
                 </div>
               ))}

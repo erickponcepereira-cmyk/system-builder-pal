@@ -50,6 +50,21 @@
   --color-warning-foreground: var(--warning-foreground);
   --font-display: var(--font-display);
   --font-body: var(--font-body);
+
+  /* Painel da academia — ver .painel-academia abaixo. */
+  --color-aca-ground: var(--aca-ground);
+  --color-aca-surface: var(--aca-surface);
+  --color-aca-alto: var(--aca-alto);
+  --color-aca-line: var(--aca-line);
+  --color-aca-line-forte: var(--aca-line-forte);
+  --color-aca-ink: var(--aca-ink);
+  --color-aca-muted: var(--aca-muted);
+  --color-aca-fraco: var(--aca-fraco);
+  --color-aca-acao: var(--aca-acao);
+  --color-aca-ok: var(--aca-ok);
+  --color-aca-atencao: var(--aca-atencao);
+  --color-aca-critico: var(--aca-critico);
+  --color-aca-neutro: var(--aca-neutro);
 }
 
 :root,
@@ -141,6 +156,25 @@
   --sidebar-accent-foreground: oklch(1 0 0);
   --sidebar-border: oklch(0.24 0.005 25);
   --sidebar-ring: oklch(0.645 0.235 28);
+}
+
+/* ---------------------------------------------------------------
+   Painel da academia — paleta própria.
+
+   Fica numa CLASSE, não em :root, de propósito: o app tem outros painéis
+   e o restyle não pode vazar para eles. Quem quiser a paleta veste
+   .painel-academia no container.
+
+   A tese: vermelho é AÇÃO (link, botão). Estado não pinta número — vira
+   tarja na borda esquerda do cartão. Por isso --aca-acao e --aca-critico
+   são o mesmo tom: quem separa os dois é a forma, não a cor.
+---------------------------------------------------------------- */
+.painel-academia {
+  --aca-ground:#0E1113; --aca-surface:#161A1D; --aca-alto:#1E2429;
+  --aca-line:#272E34;   --aca-line-forte:#3A444C;
+  --aca-ink:#EAF0F2;    --aca-muted:#8E9BA3;  --aca-fraco:#5E6970;
+  --aca-acao:#E8483A;
+  --aca-ok:#35A37B; --aca-atencao:#D9A22E; --aca-critico:#E8483A; --aca-neutro:#5E6970;
 }
 
 @layer base {

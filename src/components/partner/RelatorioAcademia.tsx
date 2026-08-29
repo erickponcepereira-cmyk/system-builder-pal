@@ -40,20 +40,54 @@ const diaMes = (s: string) => {
   return `${d}/${m}`;
 };
 
-function Cartao({ rot, valor, nota, tom, aoClicar }: { rot: string; valor: string; nota?: string; tom?: "ok" | "alerta"; aoClicar?: () => void }) {
-  const cor = tom === "ok" ? "text-emerald-400" : tom === "alerta" ? "text-amber-300" : "text-white";
+/**
+ * O estado da academia, e só ele, tem cor própria.
+ *
+ * `neutro` é o padrão porque a maioria dos números só conta o que aconteceu:
+ * dar cor a eles seria pedir uma ação que não existe.
+ */
+type TomDoCartao = "ok" | "atencao" | "critico" | "neutro";
+
+const TARJA_POR_TOM: Record<TomDoCartao, string> = {
+  ok: "bg-aca-ok",
+  atencao: "bg-aca-atencao",
+  critico: "bg-aca-critico",
+  neutro: "bg-aca-neutro",
+};
+
+const EYEBROW = "font-mono text-[10px] uppercase tracking-[0.14em] text-aca-fraco";
+const CABECALHO_TABELA = "bg-aca-alto font-mono text-[10px] uppercase tracking-[0.14em] text-aca-fraco";
+
+/**
+ * Um número do relatório.
+ *
+ * O estado mora na tarja de 3px da borda esquerda, nunca na cor do número:
+ * aqui dentro vermelho significa uma coisa só — dá para clicar.
+ */
+function Cartao({ rot, valor, nota, tom = "neutro", acao = "Ver a lista", aoClicar }: {
+  rot: string; valor: string; nota?: string; tom?: TomDoCartao; acao?: string; aoClicar?: () => void;
+}) {
+  // Moeda é string longa e não cabe no mesmo corpo de um contador de 3 dígitos.
+  const ehMoeda = valor.trimStart().startsWith("R$");
   // Numero que esconde gente vira botao: e daqui que a recepcao chega na lista.
   const Tag = (aoClicar ? "button" : "div") as "button" | "div";
   return (
     <Tag
       type={aoClicar ? "button" : undefined}
       onClick={aoClicar}
-      className={`w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left ${aoClicar ? "hover:border-primary/60 hover:bg-white/10" : ""}`}
+      className={`relative w-full overflow-hidden rounded-xl border border-aca-line bg-aca-surface py-3 pl-4 pr-2.5 text-left md:pr-3 ${
+        aoClicar
+          ? "hover:border-aca-line-forte hover:bg-aca-alto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao"
+          : ""
+      }`}
     >
-      <p className="text-[10px] uppercase tracking-wider text-white/40">{rot}</p>
-      <p className={`text-lg font-bold tabular-nums ${cor}`}>{valor}</p>
-      {nota && <p className="text-[11px] text-white/50">{nota}</p>}
-      {aoClicar && <p className="mt-0.5 text-[10px] font-bold text-primary">ver quem são</p>}
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${TARJA_POR_TOM[tom]}`} />
+      <span className="block text-[10px] uppercase tracking-[0.1em] text-aca-muted">{rot}</span>
+      <span className={`mt-1 block font-bold leading-none tabular-nums text-aca-ink ${ehMoeda ? "text-[20px] lg:text-[23px]" : "text-[28px]"}`}>
+        {valor}
+      </span>
+      {nota && <span className="mt-1.5 block text-[12px] leading-snug text-aca-muted">{nota}</span>}
+      {aoClicar && <span className="mt-1.5 block text-[11px] font-semibold text-aca-acao">{acao} ›</span>}
     </Tag>
   );
 }
@@ -92,43 +126,59 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
 
   useEffect(() => { carregar(de, ate, projecaoAte); }, [partnerId]);
 
-  if (carregando && !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (carregando && !dados) {
+    return (
+      <div className="painel-academia">
+        <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />
+      </div>
+    );
+  }
   if (!dados) return null;
 
   const f = dados.financeiro;
   const s = dados.situacao;
 
+  // Ordena pelo relogio. Sem isto a grade vinha 05:00, 06:00, 19:30, 17:30,
+  // 18:30, 07:00 -- a ordem em que o banco devolveu.
+  const turmas = grade ? [...grade.turmas].sort((a, b) => (a.comeca ?? "99:99").localeCompare(b.comeca ?? "99:99")) : [];
+  // A barra de ocupação é relativa à aula mais cheia: sem um teto absoluto,
+  // é a comparação entre horários que diz onde a academia enche.
+  const aulaMaisCheia = Math.max(1, ...turmas.map((t) => Number(t.entradas) || 0));
+
   return (
-    <div className="space-y-4">
+    <div className="painel-academia space-y-5 text-aca-ink">
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">De</span>
+          <span className="text-[10px] uppercase tracking-[0.1em] text-aca-muted">De</span>
           <input type="date" value={de} onChange={(e) => setDe(e.target.value)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white" />
+            className="rounded-lg border border-aca-line bg-aca-surface px-2 py-1.5 text-xs text-aca-ink" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">Até</span>
+          <span className="text-[10px] uppercase tracking-[0.1em] text-aca-muted">Até</span>
           <input type="date" value={ate} onChange={(e) => setAte(e.target.value)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white" />
+            className="rounded-lg border border-aca-line bg-aca-surface px-2 py-1.5 text-xs text-aca-ink" />
         </label>
         <button type="button" onClick={() => carregar(de, ate, projecaoAte)} disabled={carregando}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50">
+          className="rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50">
           {carregando ? "Carregando…" : "Ver"}
         </button>
       </div>
 
       <div>
-        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Dinheiro no período</h3>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Cartao rot="Recebido" valor={brl(f.bruto)} nota={`${f.lancamentos} lançamento(s)`}
+        <h3 className={`mb-2 ${EYEBROW}`}>Dinheiro no período</h3>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <Cartao rot="Recebido" valor={brl(f.bruto)} tom="ok"
+            nota={`${f.lancamentos} ${f.lancamentos === 1 ? "venda" : "vendas"} no balcão`}
+            acao="Ver quem pagou"
             aoClicar={f.lancamentos > 0 ? abrir("recebido", "Quem pagou no período") : undefined} />
-          <Cartao rot="Taxas" valor={brl(f.taxas)} tom={Number(f.taxas) > 0 ? "alerta" : undefined}
+          <Cartao rot="Taxas" valor={brl(f.taxas)} tom="neutro"
             nota={Number(f.bruto) > 0 ? `${((Number(f.taxas) / Number(f.bruto)) * 100).toFixed(2)}% do bruto` : "maquininha"} />
           <Cartao rot="Líquido" valor={brl(f.liquido)} tom="ok" nota="o que sobra" />
-          <Cartao rot="Vencem em 7 dias" valor={String(dados.vencem_em_7)} nota="lista da recepção" aoClicar={abrir("vencem_em_7", "Vencem nos próximos 7 dias")} />
+          <Cartao rot="Vencem em 7 dias" valor={String(dados.vencem_em_7)} tom="atencao" nota="lista da recepção"
+            acao="Ver a lista" aoClicar={abrir("vencem_em_7", "Vencem nos próximos 7 dias")} />
         </div>
         {Number(f.bruto) === 0 && (
-          <p className="mt-2 text-[11px] text-white/50">
+          <p className="mt-2 text-[12px] leading-snug text-aca-muted">
             Nenhum lançamento com valor neste período. As mensalidades importadas do sistema antigo
             entraram com valor zero — o dinheiro passa a aparecer a partir da primeira renovação feita por aqui.
           </p>
@@ -143,18 +193,18 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
       {extra && (
         <div>
           <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/50">O que ainda vem</h3>
+            <h3 className={EYEBROW}>O que ainda vem</h3>
             <label className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-white/40">projetar até</span>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-aca-muted">projetar até</span>
               <input
                 type="date"
                 value={projecaoAte}
                 onChange={(e) => { setProjecaoAte(e.target.value); carregar(de, ate, e.target.value); }}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white"
+                className="rounded-lg border border-aca-line bg-aca-surface px-2 py-1 text-xs text-aca-ink"
               />
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <Cartao
               rot={`Projeção até ${diaMes(projecaoAte)}`}
               valor={brl(extra.projecaoValor)}
@@ -163,18 +213,22 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
                 `${extra.projecaoPessoas} renovação(ões) prevista(s)` +
                 (extra.projecaoSumidos > 0 ? ` · ${extra.projecaoSumidos} fora por sumiço` : "")
               }
+              acao="Ver quem vence"
               aoClicar={abrir("projecao", `Vencem até ${diaMes(projecaoAte)}`)}
             />
-            <Cartao rot="Renovações no período" valor={String(extra.renovacoesQtd)}
+            <Cartao rot="Renovações no período" valor={String(extra.renovacoesQtd)} tom="ok"
               nota={brl(extra.renovacoesValor) + " lançado"}
+              acao="Ver as renovações"
               aoClicar={abrir("renovacoes", "Renovações no período")} />
-            <Cartao rot="Alunos novos" valor={String(extra.novosQtd)} nota="entraram no período"
+            <Cartao rot="Alunos novos" valor={String(extra.novosQtd)} tom="ok" nota="entraram no período"
+              acao="Ver os novos"
               aoClicar={abrir("novos", "Alunos novos no período")} />
-            <Cartao rot="Day-use" valor={String(extra.dayuseQtd)} nota={brl(extra.dayuseValor)}
+            <Cartao rot="Day-use" valor={String(extra.dayuseQtd)} tom="neutro" nota={brl(extra.dayuseValor)}
+              acao="Ver os day-use"
               aoClicar={extra.dayuseQtd > 0 ? abrir("dayuse", "Day-use no período") : undefined} />
           </div>
           {extra.projecaoSemPreco > 0 && (
-            <p className="mt-2 text-[11px] text-amber-300">
+            <p className="mt-2 border-l-2 border-aca-atencao pl-2 text-[12px] leading-snug text-aca-muted">
               {extra.projecaoSemPreco} pessoa(s) estão num plano que não existe no cadastro, então entraram
               na projeção valendo zero. Cadastre o plano — ou adicione o nome antigo como apelido dele —
               para o número ficar certo.
@@ -188,13 +242,14 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           perda em vez de contar uma que já aconteceu. */}
       {extra && extra.semFrequenciaQtd > 0 && (
         <div>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Atenção</h3>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <h3 className={`mb-2 ${EYEBROW}`}>Atenção</h3>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <Cartao
               rot="Pagando e sumido"
               valor={String(extra.semFrequenciaQtd)}
-              tom="alerta"
+              tom="atencao"
               nota="ativo, sem entrar no período"
+              acao="Ver quem sumiu"
               aoClicar={abrir("sem_frequencia", "Pagando e sem aparecer")}
             />
           </div>
@@ -203,22 +258,22 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
 
       {dados.por_forma.length > 0 && (
         <div>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Por forma de pagamento</h3>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
+          <h3 className={`mb-2 ${EYEBROW}`}>Por forma de pagamento</h3>
+          <div className="overflow-x-auto rounded-xl border border-aca-line">
             <table className="w-full text-xs">
-              <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/40">
-                <tr><th className="p-2 text-left">Forma</th><th className="p-2 text-right">Recebido</th>
-                    <th className="p-2 text-right">Taxa</th><th className="p-2 text-right">Líquido</th></tr>
+              <thead className={CABECALHO_TABELA}>
+                <tr><th className="p-2 text-left font-normal">Forma</th><th className="p-2 text-right font-normal">Recebido</th>
+                    <th className="p-2 text-right font-normal">Taxa</th><th className="p-2 text-right font-normal">Líquido</th></tr>
               </thead>
               <tbody>
                 {dados.por_forma.map((l) => (
                   <tr key={l.forma}
                       onClick={abrir("forma", `Pagaram com ${rotuloForma(l.forma)}`, l.forma)}
-                      className="cursor-pointer border-t border-white/5 hover:bg-white/5">
-                    <td className="p-2 underline decoration-white/20 underline-offset-2">{rotuloForma(l.forma)}</td>
-                    <td className="p-2 text-right tabular-nums">{brl(l.bruto)}</td>
-                    <td className="p-2 text-right tabular-nums text-amber-300">{brl(l.taxas)}</td>
-                    <td className="p-2 text-right tabular-nums text-emerald-400">{brl(l.liquido)}</td>
+                      className="cursor-pointer border-t border-aca-line hover:bg-aca-alto">
+                    <td className="p-2 font-semibold text-aca-acao">{rotuloForma(l.forma)}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.bruto)}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-muted">{brl(l.taxas)}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.liquido)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -229,15 +284,15 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
 
       {dados.por_plano.length > 0 && (
         <div>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Por plano</h3>
+          <h3 className={`mb-2 ${EYEBROW}`}>Por plano</h3>
           <div className="space-y-1">
             {dados.por_plano.map((p) => (
               <button key={p.plano} type="button"
                 onClick={abrir("plano", `Compraram ${p.plano}`, p.plano)}
-                className="flex w-full items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-left text-xs hover:bg-white/10">
-                <span className="min-w-0 truncate underline decoration-white/20 underline-offset-2">{p.plano}</span>
-                <span className="shrink-0 tabular-nums text-white/60">
-                  {p.vendas} × · <strong className="text-white">{brl(p.bruto)}</strong>
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-aca-line bg-aca-surface px-3 py-2 text-left text-xs hover:bg-aca-alto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao">
+                <span className="min-w-0 truncate font-semibold text-aca-acao">{p.plano}</span>
+                <span className="shrink-0 tabular-nums text-aca-muted">
+                  {p.vendas} × · <strong className="font-bold text-aca-ink">{brl(p.bruto)}</strong>
                 </span>
               </button>
             ))}
@@ -246,39 +301,45 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
       )}
 
       <div>
-        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">
-          Quem entra hoje
-        </h3>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Cartao rot="Liberados" valor={String(s.liberados)} tom="ok" aoClicar={abrir("liberados", "Liberados hoje")} />
-          <Cartao rot="A vencer" valor={String(s.a_vencer)} nota="3 dias ou menos" aoClicar={abrir("a_vencer", "A vencer (3 dias ou menos)")} />
-          <Cartao rot="Em carência" valor={String(s.em_carencia)} nota="venceu, ainda entra" aoClicar={abrir("em_carencia", "Em carência")} />
+        <h3 className={`mb-2 ${EYEBROW}`}>Quem entra hoje</h3>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <Cartao rot="Liberados" valor={String(s.liberados)} tom="ok"
+            acao="Ver os liberados" aoClicar={abrir("liberados", "Liberados hoje")} />
+          <Cartao rot="A vencer" valor={String(s.a_vencer)} tom="atencao" nota="3 dias ou menos"
+            acao="Ver quem vence" aoClicar={abrir("a_vencer", "A vencer (3 dias ou menos)")} />
+          <Cartao rot="Em carência" valor={String(s.em_carencia)} tom="atencao" nota="venceu, ainda entra"
+            acao="Ver os em carência" aoClicar={abrir("em_carencia", "Em carência")} />
           {/* Bloqueado há uma semana e bloqueado há um ano exigem coisas
               opostas. Somados viram um número que não pede ação nenhuma. */}
-          <Cartao rot="Bloqueados" valor={String(s.bloqueados)} tom="alerta" nota="dá para cobrar"
-            aoClicar={abrir("bloqueados", "Bloqueados por inadimplência")} />
+          <Cartao rot="Bloqueados" valor={String(s.bloqueados)} tom="critico" nota="dá para cobrar"
+            acao="Ver quem cobrar" aoClicar={abrir("bloqueados", "Bloqueados por inadimplência")} />
         </div>
         {/* "Sem mensalidade" era só um número no rodapé. É gente que está no
             leitor e não entra em lugar nenhum da régua — justamente por isso
             some do relatório se não tiver cartão próprio. */}
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
           <Cartao
             rot="Sem mensalidade"
             valor={String(dados.sem_mensalidade)}
-            tom={dados.sem_mensalidade > 0 ? "alerta" : undefined}
+            tom={dados.sem_mensalidade > 0 ? "atencao" : "neutro"}
             nota="no leitor, sem plano"
+            acao="Ver a lista"
             aoClicar={abrir("sem_mensalidade", "No leitor, sem mensalidade lançada")}
           />
           {s.bloqueados_antigos > 0 && (
+            /* O maior número da tela, e histórico: dar vermelho a ele seria
+               pedir uma ação que não existe mais. */
             <Cartao
               rot="Foram embora"
               valor={String(s.bloqueados_antigos)}
+              tom="neutro"
               nota="venceu há mais de 60 dias"
+              acao="Ver quem saiu"
               aoClicar={abrir("bloqueados_antigos", "Venceram há mais de 60 dias")}
             />
           )}
         </div>
-        <p className="mt-2 text-[11px] text-white/50">
+        <p className="mt-2 text-[12px] text-aca-muted">
           {s.total_com_mensalidade} pessoa(s) com mensalidade lançada.
         </p>
       </div>
@@ -286,39 +347,43 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
       {/* Quantas pessoas vieram em cada aula. A janela de horario da turma e o
           que classifica a passagem — nada novo e pedido a catraca, e o que ja
           foi coletado se organiza sozinho assim que a grade e cadastrada. */}
-      {grade && grade.turmas.length > 0 && (
+      {turmas.length > 0 && (
         <div>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Cliente por aula</h3>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
+          <h3 className={`mb-2 ${EYEBROW}`}>Cliente por aula</h3>
+          <div className="overflow-x-auto rounded-xl border border-aca-line">
             <table className="w-full text-xs">
-              <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/40">
-                <tr><th className="p-2 text-left">Aula</th><th className="p-2 text-left">Horário</th>
-                    <th className="p-2 text-right">Entradas</th><th className="p-2 text-right">Pessoas</th></tr>
+              <thead className={CABECALHO_TABELA}>
+                <tr><th className="p-2 text-left font-normal">Aula</th><th className="p-2 text-left font-normal">Horário</th>
+                    <th className="p-2 text-right font-normal">Entradas</th><th className="p-2 text-right font-normal">Pessoas</th></tr>
               </thead>
               <tbody>
-                {[...grade.turmas]
-                  // Ordena pelo relogio. Sem isto a grade vinha 05:00, 06:00, 19:30,
-                  // 17:30, 18:30, 07:00 -- a ordem em que o banco devolveu.
-                  .sort((a, b) => (a.comeca ?? "99:99").localeCompare(b.comeca ?? "99:99"))
-                  .map((t) => (
-                  <tr key={t.turma_id ?? "fora"} className="border-t border-white/5">
+                {turmas.map((t) => (
+                  <tr key={t.turma_id ?? "fora"} className="border-t border-aca-line hover:bg-aca-alto">
                     <td className="p-2">
-                      {t.turma_id ? t.turma : <span className="text-white/50">Fora de aula</span>}
-                      {t.modalidade && <span className="ml-1 text-white/40">· {t.modalidade}</span>}
+                      <span className="block text-aca-ink">
+                        {t.turma_id ? t.turma : <span className="text-aca-muted">Fora de aula</span>}
+                        {t.modalidade && <span className="ml-1 text-aca-fraco">· {t.modalidade}</span>}
+                      </span>
+                      <span aria-hidden className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-aca-line-forte">
+                        <span
+                          className={`block h-full rounded-full ${t.turma_id ? "bg-aca-ok" : "bg-aca-neutro"}`}
+                          style={{ width: `${Math.round((Number(t.entradas) / aulaMaisCheia) * 100)}%` }}
+                        />
+                      </span>
                     </td>
-                    <td className="p-2 text-white/60">
+                    <td className="p-2 align-top text-aca-muted">
                       {t.dias && <span className="mr-1">{t.dias}</span>}
                       {t.janela}
                     </td>
-                    <td className="p-2 text-right tabular-nums">{t.entradas}</td>
-                    <td className="p-2 text-right tabular-nums text-white/60">{t.pessoas}</td>
+                    <td className="p-2 text-right align-top tabular-nums text-aca-ink">{t.entradas}</td>
+                    <td className="p-2 text-right align-top tabular-nums text-aca-muted">{t.pessoas}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {grade.turmas.some((t) => !t.turma_id) && (
-            <p className="mt-2 text-[11px] text-white/50">
+          {turmas.some((t) => !t.turma_id) && (
+            <p className="mt-2 text-[12px] leading-snug text-aca-muted">
               "Fora de aula" é quem passou num horário que não pertence a nenhuma turma cadastrada.
               Se esse for o maior número da tabela, a grade não descreve o que acontece na academia.
             </p>
@@ -328,24 +393,24 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
 
       {grade && grade.eventos.length > 0 && (
         <div>
-          <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Eventos no período</h3>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
+          <h3 className={`mb-2 ${EYEBROW}`}>Eventos no período</h3>
+          <div className="overflow-x-auto rounded-xl border border-aca-line">
             <table className="w-full text-xs">
-              <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/40">
-                <tr><th className="p-2 text-left">Evento</th><th className="p-2 text-left">Data</th>
-                    <th className="p-2 text-right">Inscritos</th><th className="p-2 text-right">Foram</th>
-                    <th className="p-2 text-right">Recebido</th><th className="p-2 text-right">Líquido</th></tr>
+              <thead className={CABECALHO_TABELA}>
+                <tr><th className="p-2 text-left font-normal">Evento</th><th className="p-2 text-left font-normal">Data</th>
+                    <th className="p-2 text-right font-normal">Inscritos</th><th className="p-2 text-right font-normal">Foram</th>
+                    <th className="p-2 text-right font-normal">Recebido</th><th className="p-2 text-right font-normal">Líquido</th></tr>
               </thead>
               <tbody>
                 {grade.eventos.map((e) => (
-                  <tr key={e.evento_id} className="border-t border-white/5">
-                    <td className="p-2">{e.nome}</td>
-                    <td className="p-2 text-white/60">{diaMes(e.data_evento)}{e.hora_inicio ? ` · ${e.hora_inicio.slice(0, 5)}` : ""}</td>
-                    <td className="p-2 text-right tabular-nums">{e.inscritos}</td>
+                  <tr key={e.evento_id} className="border-t border-aca-line hover:bg-aca-alto">
+                    <td className="p-2 text-aca-ink">{e.nome}</td>
+                    <td className="p-2 text-aca-muted">{diaMes(e.data_evento)}{e.hora_inicio ? ` · ${e.hora_inicio.slice(0, 5)}` : ""}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-ink">{e.inscritos}</td>
                     {/* Inscrito menos compareceu e o unico numero que diz se o evento deu certo. */}
-                    <td className="p-2 text-right tabular-nums text-white/60">{e.compareceram}</td>
-                    <td className="p-2 text-right tabular-nums">{brl(e.bruto)}</td>
-                    <td className="p-2 text-right tabular-nums text-emerald-400">{brl(e.liquido)}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-muted">{e.compareceram}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(e.bruto)}</td>
+                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(e.liquido)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -355,12 +420,15 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
       )}
 
       <div>
-        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">Movimento da catraca</h3>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Cartao rot="Entradas" valor={String(dados.frequencia.entradas)} aoClicar={abrir("entradas", "Entradas no período")} />
-          <Cartao rot="Pessoas" valor={String(dados.frequencia.pessoas)} nota="distintas" />
-          <Cartao rot="Liberadas na mão" valor={String(dados.frequencia.manuais)} nota="pela recepção" aoClicar={abrir("manuais", "Liberadas na mão pela recepção")} />
-          <Cartao rot="Barradas" valor={String(dados.negados)} aoClicar={abrir("barradas", "Barradas na catraca")} />
+        <h3 className={`mb-2 ${EYEBROW}`}>Movimento da catraca</h3>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <Cartao rot="Entradas" valor={String(dados.frequencia.entradas)} tom="neutro"
+            acao="Ver as entradas" aoClicar={abrir("entradas", "Entradas no período")} />
+          <Cartao rot="Pessoas" valor={String(dados.frequencia.pessoas)} tom="neutro" nota="distintas" />
+          <Cartao rot="Liberadas na mão" valor={String(dados.frequencia.manuais)} tom="neutro" nota="pela recepção"
+            acao="Ver as liberações" aoClicar={abrir("manuais", "Liberadas na mão pela recepção")} />
+          <Cartao rot="Barradas" valor={String(dados.negados)} tom="neutro"
+            acao="Ver as barradas" aoClicar={abrir("barradas", "Barradas na catraca")} />
         </div>
       </div>
 
