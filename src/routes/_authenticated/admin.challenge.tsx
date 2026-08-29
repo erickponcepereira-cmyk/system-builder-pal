@@ -1235,6 +1235,41 @@ function AdminChallengePage() {
           </div>
         );
       })()}
+
+      {/* Modal: Regras da competição (somente leitura) */}
+      {showRules && (
+        <div className="fixed inset-0 z-[60] flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-bold text-foreground">Regras da competição — Desafio FitMind</h2>
+              </div>
+              <button onClick={() => setShowRules(false)} className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-y-auto px-5 py-4">
+              <p className="mb-3 text-xs text-muted-foreground">
+                Estas são as regras e declarações que todo participante aceita ao entrar no desafio.
+              </p>
+              <ol className="space-y-2.5">
+                {CHALLENGE_ACCEPTANCE_DECLARATIONS.map((text, idx) => (
+                  <li key={idx} className="flex gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-[13px] leading-relaxed text-foreground/90">
+                    <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">{idx + 1}</span>
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="border-t border-border bg-muted/20 px-5 py-3">
+              <button onClick={() => setShowRules(false)} className="w-full rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
