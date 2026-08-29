@@ -332,7 +332,7 @@ function RankList({ items, metric, showAudit, highlightStudentId, highlightRef }
     if (metric === "muscle") return e.result_muscle_gain_pct;
     return e.result_kg_lost;
   };
-  const unit = metric === "kg" ? "kg" : "%";
+  const unit = metric === "kg" ? "kg" : " p.p.";
   const fmtVal = (v: number | null) => v == null ? "—" : `${v.toFixed(metric === "kg" ? 1 : 2)}${unit}`;
 
   return (
