@@ -53,7 +53,21 @@ export function StoreOrders({ studentId }: { studentId: string | null }) {
     ) : null;
   }
 
-  if (!linhas.length) return null;
+  // Antes isto devolvia null e a loja ficava sem NENHUM caminho até
+  // "Minhas compras" — a rota existe desde sempre e era inalcançável para quem
+  // ainda não tinha comprado, que é justamente quem mais precisa saber que ela
+  // existe (para achar o pedido, o estorno, o download).
+  if (!linhas.length) {
+    return (
+      <Link
+        to="/student/compras"
+        className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-card px-4 py-3"
+      >
+        <span className="text-sm font-bold text-foreground">Minhas compras</span>
+        <span className="text-[11px] font-bold text-primary">Ver histórico e pedidos →</span>
+      </Link>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-2">

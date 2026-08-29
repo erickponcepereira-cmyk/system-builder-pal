@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShoppingBag, Store, Stethoscope, Handshake, CreditCard, Ticket, IdCard } from "lucide-react";
 import { getStudentPurchaseHistory, type StudentPurchaseRow } from "@/lib/student-purchases.functions";
 import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
+import { RefundRequestSheet, type CompraParaEstorno } from "@/components/store/RefundRequestSheet";
+import { meusEstornos, ROTULO_STATUS, type PedidoDeEstorno } from "@/lib/store-returns";
 
 const fmt = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -28,6 +30,22 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
   const [rows, setRows] = useState<StudentPurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
+
+  /**
+   * Os pedidos de estorno desta pessoa, por compra.
+   *
+   * `return_requests` existe no banco desde julho, com RLS pronta, e nunca
+   * teve tela — 0 linhas. Sem um caminho aqui, quem quisesse dinheiro de volta
+   * só tinha o WhatsApp do coach.
+   */
+  const [estornos, setEstornos] = useState<Map<string, PedidoDeEstorno>>(new Map());
+  const [pedindoPara, setPedindoPara] = useState<CompraParaEstorno | null>(null);
+
+  const recarregarEstornos = useCallback(() => {
+    void meusEstornos().then(setEstornos);
+  }, []);
+
+  useEffect(() => { recarregarEstornos(); }, [recarregarEstornos]);
 
   useEffect(() => {
     let cancel = false;
@@ -129,10 +147,44 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
                   </div>
                   <p className="whitespace-nowrap text-sm font-bold text-white">{money(r.amount)}</p>
                 </div>
+
+                {/* Estorno. Só faz sentido em compra paga: o que não foi pago
+                    não tem o que devolver. */}
+                {st === "paid" && (() => {
+                  const pedido = estornos.get(r.id) ?? null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setPedindoPara({
+                        id: r.id,
+                        source: r.source,
+                        produto: r.product_name,
+                        valor: r.amount,
+                        quando: r.paid_at || r.created_at,
+                      })}
+                      className={`mt-2 w-full rounded-lg border px-3 py-2 text-[11px] font-bold ${
+                        pedido
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                          : "border-white/15 bg-white/5 text-white/70"
+                      }`}
+                    >
+                      {pedido ? `Estorno: ${ROTULO_STATUS[pedido.status]}` : "Pedir estorno"}
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}
         </div>
+      )}
+
+      {pedindoPara && (
+        <RefundRequestSheet
+          compra={pedindoPara}
+          existente={estornos.get(pedindoPara.id) ?? null}
+          onFechar={() => setPedindoPara(null)}
+          onMudou={recarregarEstornos}
+        />
       )}
     </div>
   );
