@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2, FileText, RefreshCw, Download, Printer, X } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2, FileText, RefreshCw, Download, Printer, X, BookOpen } from "lucide-react";
+import { CHALLENGE_ACCEPTANCE_DECLARATIONS } from "@/lib/terms";
 import { useServerFn } from "@tanstack/react-start";
 import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
 import { syncEnrollmentCoaches, getChallengeReport, type ChallengeReportRow } from "@/lib/challenge-admin.functions";
@@ -121,6 +122,7 @@ function AdminChallengePage() {
   const [winnerMaleId, setWinnerMaleId] = useState<string>("");
   const [winnerFemaleId, setWinnerFemaleId] = useState<string>("");
   const [finalizing, setFinalizing] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   // Tentativas de moeda
   const [attempts, setAttempts] = useState<AdminTokenAttemptRow[]>([]);
@@ -490,12 +492,20 @@ function AdminChallengePage() {
     if (comp.finalized_at) {
       if (!confirm("Este desafio já foi finalizado. Refinalizar irá registrar uma NOVA entrada de histórico (a anterior será mantida). Continuar?")) return;
     }
-    if (!winnerMaleId) {
+    // Elegíveis por gênero na métrica escolhida (mesmo filtro do modal: resultado > 0)
+    const eligKey = finalizeMetric === "fat" ? "result_fat_pct_lost" : finalizeMetric === "kg" ? "result_kg_lost" : "result_muscle_gain_pct";
+    const hasMaleEligible = enrollments.some(e => e.gender === "M" && ((e as any)[eligKey] ?? 0) > 0);
+    const hasFemaleEligible = enrollments.some(e => e.gender === "F" && ((e as any)[eligKey] ?? 0) > 0);
+    if (hasMaleEligible && !winnerMaleId) {
       toast.error("Selecione o vencedor masculino antes de finalizar.");
       return;
     }
-    if (!winnerFemaleId) {
+    if (hasFemaleEligible && !winnerFemaleId) {
       toast.error("Selecione a vencedora feminina antes de finalizar.");
+      return;
+    }
+    if (!hasMaleEligible && !hasFemaleEligible) {
+      toast.error("Nenhum participante com resultado positivo nesta métrica.");
       return;
     }
     setFinalizing(true);
@@ -1148,7 +1158,9 @@ function AdminChallengePage() {
         const renderList = (list: Enrollment[], gender: "M" | "F", selected: string, setSelected: (id: string) => void) => (
           <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
             {list.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Nenhum participante com resultado positivo.</p>
+              <p className="text-xs text-muted-foreground text-center py-4">
+                {gender === "F" ? "Sem campeã feminina para esta edição." : "Sem campeão masculino para esta edição."}
+              </p>
             ) : list.map((e, i) => (
               <label key={e.id}
                 className={`flex items-center gap-2 rounded-lg border p-2 cursor-pointer ${selected === e.id ? "border-yellow-400 bg-yellow-500/10" : "border-border bg-muted/20 hover:bg-muted/40"}`}>
@@ -1172,8 +1184,13 @@ function AdminChallengePage() {
                   Finalizar {MONTHS[finalizeModal.comp.month]} {finalizeModal.comp.year}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Selecione obrigatoriamente os vencedores Masc. e Fem. O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
+                  Selecione o vencedor de cada gênero que tenha participantes com resultado positivo; gêneros sem resultado ficam registrados como "sem campeão(ã)". O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
                 </p>
+                <button type="button" onClick={() => setShowRules(true)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Dúvidas? Leia as regras da competição
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1207,7 +1224,8 @@ function AdminChallengePage() {
 
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setFinalizeModal(null)} className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
-                <button onClick={finalizeChallenge} disabled={finalizing || !winnerMaleId || !winnerFemaleId}
+                <button onClick={finalizeChallenge}
+                  disabled={finalizing || (males.length > 0 && !winnerMaleId) || (females.length > 0 && !winnerFemaleId) || (males.length === 0 && females.length === 0)}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-2 text-sm font-bold text-black disabled:opacity-60">
                   {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
                   {finalizeModal.comp.finalized_at ? "Refinalizar" : "Finalizar e publicar"}
@@ -1217,6 +1235,41 @@ function AdminChallengePage() {
           </div>
         );
       })()}
+
+      {/* Modal: Regras da competição (somente leitura) */}
+      {showRules && (
+        <div className="fixed inset-0 z-[60] flex justify-center bg-black/70 p-4 overflow-y-auto overscroll-contain modal-safe items-start sm:items-center">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-bold text-foreground">Regras da competição — Desafio FitMind</h2>
+              </div>
+              <button onClick={() => setShowRules(false)} className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-y-auto px-5 py-4">
+              <p className="mb-3 text-xs text-muted-foreground">
+                Estas são as regras e declarações que todo participante aceita ao entrar no desafio.
+              </p>
+              <ol className="space-y-2.5">
+                {CHALLENGE_ACCEPTANCE_DECLARATIONS.map((text, idx) => (
+                  <li key={idx} className="flex gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-[13px] leading-relaxed text-foreground/90">
+                    <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">{idx + 1}</span>
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="border-t border-border bg-muted/20 px-5 py-3">
+              <button onClick={() => setShowRules(false)} className="w-full rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
