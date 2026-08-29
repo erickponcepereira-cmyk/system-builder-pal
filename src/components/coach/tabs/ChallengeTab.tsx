@@ -553,7 +553,7 @@ export function ChallengeTab({ coachId }: Props) {
                       <div className="font-bold text-blue-400">{s.final_muscle_mass != null ? `${s.final_muscle_mass}%` : "—"}</div>
                       <div className="font-bold text-blue-400">
                         {s.initial_muscle_mass != null && s.final_muscle_mass != null
-                          ? `${(s.final_muscle_mass - s.initial_muscle_mass).toFixed(1)}%`
+                          ? `${s.final_muscle_mass - s.initial_muscle_mass >= 0 ? "+" : "−"}${Math.abs(s.final_muscle_mass - s.initial_muscle_mass).toFixed(1)}%`
                           : "—"}
                       </div>
                     </div>
