@@ -16,7 +16,7 @@ No modal "Finalizar Desafio" o botão "Finalizar e publicar" só habilita quando
 
 3. **Texto de apoio**
    - Ajustar a descrição do modal para: selecione o vencedor de cada gênero que tenha participantes com resultado positivo; gêneros sem resultado ficam registrados como "sem campeão(ã)".
-   - Adicionar um link "Ver regras da competição" no rodapé do modal. Como ainda não existe página de regras no projeto, o link aponta para a página de regras que você indicar — se preferir, posso criar uma página `/regras-desafio` com o texto oficial das regras (envie o texto).
+   - Adicionar um link "Dúvidas? Leia as regras da competição" no modal. O link abre o Termo de participação já existente (as 14 declarações de `CHALLENGE_ACCEPTANCE_DECLARATIONS` em `src/lib/terms.ts`) em um modal somente-leitura, sem checkboxes, para consulta — mesmo texto que o participante aceita ao entrar no desafio.
 
 ## Detalhes técnicos
 
