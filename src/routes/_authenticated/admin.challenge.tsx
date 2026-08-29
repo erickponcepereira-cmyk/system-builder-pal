@@ -604,7 +604,7 @@ function AdminChallengePage() {
     const v = e.result_fat_pct_lost;
     return (
       <span className={`font-bold ${v > 0 ? "text-green-400" : v < 0 ? "text-red-400" : "text-muted-foreground"}`}>
-        {v > 0 ? "−" : "+"}{Math.abs(v).toFixed(2)}% gord.
+        {v > 0 ? "−" : "+"}{Math.abs(v).toFixed(2)} p.p. gord.
       </span>
     );
   };
