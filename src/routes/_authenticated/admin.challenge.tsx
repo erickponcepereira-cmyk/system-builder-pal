@@ -122,6 +122,7 @@ function AdminChallengePage() {
   const [winnerMaleId, setWinnerMaleId] = useState<string>("");
   const [winnerFemaleId, setWinnerFemaleId] = useState<string>("");
   const [finalizing, setFinalizing] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   // Tentativas de moeda
   const [attempts, setAttempts] = useState<AdminTokenAttemptRow[]>([]);
