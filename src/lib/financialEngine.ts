@@ -293,10 +293,10 @@ export function calculateReferralDistribution(
 }
 
 // ─── PONTOS ──────────────────────────────────────────────────
-/** Calcula pontos a partir do total de "Taxa do Sistema": FLOOR(taxa / 20) * 10. */
+/** Regra única: 1 ponto a cada R$ 2,00 de "Taxa do Sistema" (mínimo de R$ 2,00). */
 export function calculatePointsFromSystemFee(systemFeeTotal: number): number {
-  if (!Number.isFinite(systemFeeTotal) || systemFeeTotal <= 0) return 0;
-  return Math.floor(systemFeeTotal / 20) * 10;
+  if (!Number.isFinite(systemFeeTotal) || systemFeeTotal < 2) return 0;
+  return Math.floor(systemFeeTotal / 2);
 }
 
 /** Soma o valor (em R$) de todos os slots marcados como is_system_fee. */
