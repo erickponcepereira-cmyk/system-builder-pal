@@ -24,4 +24,5 @@ No modal "Finalizar Desafio" o botão "Finalizar e publicar" só habilita quando
   - `finalizeChallenge`: substituir as validações obrigatórias de `winnerMaleId`/`winnerFemaleId` por validação condicional à existência de elegíveis por gênero (mesma regra de filtro `> 0` já usada no modal).
   - `renderList`: mensagem de vazio parametrizada por gênero.
   - `disabled` do botão: `finalizing || (temMasculinos && !winnerMaleId) || (temFemininas && !winnerFemaleId) || (!temMasculinos && !temFemininas)`.
+  - Novo estado `showRules` no componente + sub-modal somente-leitura renderizando `CHALLENGE_ACCEPTANCE_DECLARATIONS` como lista numerada.
 - Sem alteração de banco: `competition_finalization_log.winner_female_enrollment_id` já aceita nulo e o insert no Hall da Fama já é condicional.
