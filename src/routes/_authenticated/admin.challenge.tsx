@@ -492,12 +492,20 @@ function AdminChallengePage() {
     if (comp.finalized_at) {
       if (!confirm("Este desafio já foi finalizado. Refinalizar irá registrar uma NOVA entrada de histórico (a anterior será mantida). Continuar?")) return;
     }
-    if (!winnerMaleId) {
+    // Elegíveis por gênero na métrica escolhida (mesmo filtro do modal: resultado > 0)
+    const eligKey = finalizeMetric === "fat" ? "result_fat_pct_lost" : finalizeMetric === "kg" ? "result_kg_lost" : "result_muscle_gain_pct";
+    const hasMaleEligible = enrollments.some(e => e.gender === "M" && ((e as any)[eligKey] ?? 0) > 0);
+    const hasFemaleEligible = enrollments.some(e => e.gender === "F" && ((e as any)[eligKey] ?? 0) > 0);
+    if (hasMaleEligible && !winnerMaleId) {
       toast.error("Selecione o vencedor masculino antes de finalizar.");
       return;
     }
-    if (!winnerFemaleId) {
+    if (hasFemaleEligible && !winnerFemaleId) {
       toast.error("Selecione a vencedora feminina antes de finalizar.");
+      return;
+    }
+    if (!hasMaleEligible && !hasFemaleEligible) {
+      toast.error("Nenhum participante com resultado positivo nesta métrica.");
       return;
     }
     setFinalizing(true);
