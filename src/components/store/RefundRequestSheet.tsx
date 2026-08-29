@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, X, AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/ui/ModalShell";
+import { useFecharComEscape, Z_MODAL_DA_LOJA } from "@/hooks/use-fechar-com-escape";
 import {
   MOTIVOS,
   pedirEstorno,
@@ -50,11 +51,7 @@ export function RefundRequestSheet({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === "Escape") onFechar(); };
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
-  }, [onFechar]);
+  useFecharComEscape(onFechar);
 
   const escolhido = MOTIVOS.find((m) => m.valor === motivo);
   const faltaDetalhe = !!escolhido?.pedeDetalhe && detalhe.trim().length < 10;
@@ -117,9 +114,9 @@ export function RefundRequestSheet({
   if (existente) {
     return (
       <>
-        <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[59] cursor-default" />
+        <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[79] cursor-default" />
         <ModalShell
-          zIndex={60}
+          zIndex={Z_MODAL_DA_LOJA}
           header={cabecalho}
           footer={
             podeDesistir ? (
@@ -193,9 +190,9 @@ export function RefundRequestSheet({
   // ---- ainda não pediu: o formulário ----
   return (
     <>
-      <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[59] cursor-default" />
+      <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[79] cursor-default" />
       <ModalShell
-        zIndex={60}
+        zIndex={Z_MODAL_DA_LOJA}
         header={cabecalho}
         footer={
           <button

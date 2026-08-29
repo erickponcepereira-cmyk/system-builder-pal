@@ -16,6 +16,7 @@ import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { ProductReviews } from "@/components/store/ProductReviews";
+import { useFecharComEscape } from "@/hooks/use-fechar-com-escape";
 import { vendedorDoProduto } from "@/lib/store-seller";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
 import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
@@ -570,7 +571,24 @@ export function UnifiedStorePage({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
+    /*
+     * `@container` em vez de breakpoint de viewport, e isso e o ponto todo.
+     *
+     * Esta mesma tela e servida em quatro superficies de largura MUITO
+     * diferente: tres dentro do shell de 430px (`/student/store`,
+     * `/student/loja-teste`, `/coach/loja-teste`) e a aba "Loja" do painel do
+     * coach, que e `max-w-6xl`. Um `lg:grid-cols-4` dispararia pela largura da
+     * JANELA e quebraria as tres estreitas — foi exatamente isso que ja
+     * aconteceu aqui uma vez, com `xl:grid-cols-5` espremendo cinco cards em
+     * 430px, e por isso os breakpoints foram todos removidos.
+     *
+     * Container query mede o PAI, nao a janela. Assim a aba do coach ganha
+     * desktop de verdade e o shell estreito continua com duas colunas.
+     *
+     * O `max-w-6xl` existe para a superficie larga nao esticar linha de texto
+     * ate ficar ilegivel.
+     */
+    <div className="@container mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 pb-6">
       <header className="flex items-start justify-between gap-3 pt-1">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs uppercase tracking-wider text-muted-foreground">
@@ -1017,7 +1035,7 @@ export function UnifiedStorePage({
           {/* 8. A navegação de hoje, preservada para quem já sabe usar */}
           {browsing && usableSections.length > 0 && (
             <Block title="Explorar por seção" hint="navegação de hoje">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @3xl:grid-cols-4">
                 {usableSections.map((s) => {
                   const secaoEscondida = modoCoach
                     && visibilidade.ocultadoPorMim("section", null, s.id);
@@ -1203,7 +1221,7 @@ function Rail({ children }: { children: ReactNode }) {
 
 function Grid({ items, stock, onOpen, mostrarPontos = false }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
       {items.map((item) => {
         const info = stock[item.sourceId];
         const flag = info && info.stock > 0 && info.remaining > 0 && info.remaining <= 3
@@ -1245,7 +1263,7 @@ function Card({
       type="button"
       onClick={() => onOpen(product)}
       className={`flex flex-col overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${
-        variant === "rail" ? "w-[9.25rem] shrink-0" : "w-full"
+        variant === "rail" ? "w-[9.25rem] shrink-0 @3xl:w-[11rem]" : "w-full"
       }`}
     >
       <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted">
@@ -1337,13 +1355,14 @@ function CitySheet({
   onPick: (sel: LocalSelecionado) => void;
   onClose: () => void;
 }) {
+  useFecharComEscape(onClose);
   const [busca, setBusca] = useState("");
   const termo = chaveCidade(busca);
   const lista = termo ? cidades.filter((c) => c.chave.includes(termo)) : cidades;
 
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
@@ -1460,6 +1479,7 @@ function DetailSheet({
   carteirinhaAtiva: boolean;
   onVerGratuitos: () => void;
 }) {
+  useFecharComEscape(onClose);
   const semEstoque = product.stock !== null && product.stock !== undefined && product.stock <= 0;
   const ganhos = modoCoach ? calcularGanhos(product.price, product.comissao, hasUpline) : null;
   const [horario, setHorario] = useState<string | null>(null);
@@ -1468,7 +1488,7 @@ function DetailSheet({
 
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
@@ -1830,13 +1850,14 @@ function CartSheet({
   onClose: () => void;
   checkout: CheckoutProps;
 }) {
+  useFecharComEscape(onClose);
   const multiplo = steps.length > 1;
   /** O primeiro pedido é o da FitMind? É ele que leva o endereço. */
   const entregaAgora = steps[0]?.key === "fitmind";
 
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
@@ -2098,9 +2119,10 @@ function PaySheet({
   onPaid: () => void;
   onClose: () => void;
 }) {
+  useFecharComEscape(onClose);
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-background/80 p-4 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-background/80 p-4 backdrop-blur-sm sm:items-center"
       role="presentation"
     >
       <div
@@ -2224,6 +2246,7 @@ function ClientPickerSheet({
   onPick: (cliente: SaleClient) => void;
   onClose: () => void;
 }) {
+  useFecharComEscape(onClose);
   const [busca, setBusca] = useState("");
   const [aba, setAba] = useState<"meus" | "todos">("meus");
   const [todos, setTodos] = useState<SaleClient[]>([]);
@@ -2264,7 +2287,7 @@ function ClientPickerSheet({
 
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { ModalShell } from "@/components/ui/ModalShell";
+import { useFecharComEscape, Z_MODAL_DA_LOJA } from "@/hooks/use-fechar-com-escape";
 import { StarRating } from "@/components/store/StarRating";
 import { avaliar, type Avaliacao, type OrigemDoProduto } from "@/lib/store-reviews";
 
@@ -43,11 +44,7 @@ export function ReviewSheet({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === "Escape") onFechar(); };
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
-  }, [onFechar]);
+  useFecharComEscape(onFechar);
 
   const enviar = async () => {
     if (nota < 1 || salvando) return;
@@ -66,9 +63,9 @@ export function ReviewSheet({
 
   return (
     <>
-      <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[59] cursor-default" />
+      <button type="button" aria-label="Fechar" onClick={onFechar} className="fixed inset-0 z-[79] cursor-default" />
       <ModalShell
-        zIndex={60}
+        zIndex={Z_MODAL_DA_LOJA}
         header={
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

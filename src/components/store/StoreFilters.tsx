@@ -76,7 +76,7 @@ export function StoreFilterSheet({
 
   return (
     <div
-      className="modal-safe fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
+      className="modal-safe fixed inset-0 z-[80] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center"
       onClick={onClose}
       role="presentation"
     >
