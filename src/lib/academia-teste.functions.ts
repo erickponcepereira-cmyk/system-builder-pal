@@ -2490,6 +2490,7 @@ export const relatorioAcademiaExtra = createServerFn({ method: "POST" })
 
     const l = (Array.isArray(r) ? r[0] : r) as unknown as {
       projecao_valor: number; projecao_pessoas: number; projecao_sem_preco: number;
+      projecao_sumidos: number;
       renovacoes_qtd: number; renovacoes_valor: number; novos_qtd: number;
       sem_frequencia_qtd: number; dayuse_qtd: number; dayuse_valor: number;
     } | null;
@@ -2498,6 +2499,7 @@ export const relatorioAcademiaExtra = createServerFn({ method: "POST" })
       projecaoValor: Number(l?.projecao_valor ?? 0),
       projecaoPessoas: Number(l?.projecao_pessoas ?? 0),
       projecaoSemPreco: Number(l?.projecao_sem_preco ?? 0),
+      projecaoSumidos: Number(l?.projecao_sumidos ?? 0),
       renovacoesQtd: Number(l?.renovacoes_qtd ?? 0),
       renovacoesValor: Number(l?.renovacoes_valor ?? 0),
       novosQtd: Number(l?.novos_qtd ?? 0),

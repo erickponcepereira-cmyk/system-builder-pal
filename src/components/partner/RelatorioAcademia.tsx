@@ -159,7 +159,10 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
               rot={`Projeção até ${diaMes(projecaoAte)}`}
               valor={brl(extra.projecaoValor)}
               tom="ok"
-              nota={`${extra.projecaoPessoas} renovação(ões) prevista(s)`}
+              nota={
+                `${extra.projecaoPessoas} renovação(ões) prevista(s)` +
+                (extra.projecaoSumidos > 0 ? ` · ${extra.projecaoSumidos} fora por sumiço` : "")
+              }
               aoClicar={abrir("projecao", `Vencem até ${diaMes(projecaoAte)}`)}
             />
             <Cartao rot="Renovações no período" valor={String(extra.renovacoesQtd)}
