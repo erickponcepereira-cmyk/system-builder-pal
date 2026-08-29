@@ -40,6 +40,39 @@ export function origemDoProduto(origin: string, kind: string): OrigemDoProduto {
   return "fitmind";
 }
 
+/**
+ * TODAS as notas de uma vez.
+ *
+ * Parece exagero e não é: a view só tem linha para produto que JÁ FOI
+ * avaliado, então ela é uma fração minúscula dos 1911 do catálogo. O caminho
+ * alternativo — mandar os ids dos produtos visíveis num `.in()` — montaria
+ * uma URL com centenas de uuids e estouraria antes disso ser um problema de
+ * volume.
+ *
+ * O teto de 5000 existe só como rede: no dia em que a loja tiver mais
+ * avaliações que isso, o certo é paginar aqui, não na tela.
+ */
+export async function todasAsNotas(): Promise<Map<string, ResumoDeNotas>> {
+  const mapa = new Map<string, ResumoDeNotas>();
+  const { data, error } = await supabase
+    .from("product_review_summary" as never)
+    .select("product_origin,product_id,total,media,positivas" as never)
+    .limit(5000);
+
+  if (error) {
+    console.warn("[avaliacoes] não foi possível ler as notas da vitrine", error);
+    return mapa;
+  }
+  for (const r of ((data as unknown as Array<Record<string, unknown>>) || [])) {
+    mapa.set(`${r.product_origin}:${r.product_id}`, {
+      total: Number(r.total ?? 0),
+      media: Number(r.media ?? 0),
+      positivas: Number(r.positivas ?? 0),
+    });
+  }
+  return mapa;
+}
+
 /** Notas de vários produtos de uma vez — a vitrine pede em lote, não um a um. */
 export async function resumoDeNotas(
   chaves: Array<{ origem: OrigemDoProduto; produtoId: string }>,

@@ -16,6 +16,8 @@ import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { ProductReviews } from "@/components/store/ProductReviews";
+import { NotaCompacta } from "@/components/store/StarRating";
+import { origemDoProduto, todasAsNotas, type ResumoDeNotas } from "@/lib/store-reviews";
 import { useFecharComEscape } from "@/hooks/use-fechar-com-escape";
 import { vendedorDoProduto } from "@/lib/store-seller";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
@@ -226,6 +228,16 @@ export function UnifiedStorePage({
   }, [catalog, visiveis, visibilidade]);
 
   const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
+
+  /**
+   * As notas de todos os produtos avaliados, numa consulta só.
+   *
+   * A nota já aparecia no detalhe, mas quem está escolhendo compara na GRADE —
+   * e ali não havia sinal nenhum. Num marketplace com 37 vendedores, o card
+   * sem nota é o card que não dá para julgar.
+   */
+  const [notas, setNotas] = useState<Map<string, ResumoDeNotas>>(new Map());
+  useEffect(() => { void todasAsNotas().then(setNotas); }, []);
 
   /**
    * Quanto há de gratuito ao alcance desta pessoa, aqui.
@@ -944,11 +956,11 @@ export function UnifiedStorePage({
               item mais parecido com o que a pessoa digitou ia parar no fim,
               embaixo de um cabeçalho que ela não pediu. */}
           {filtros.ordenacao === "relevancia" ? (
-            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
           ) : (
             byOrigin.map((group) => (
               <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
-                <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
+                <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
               </Block>
             ))
           )}
@@ -1027,7 +1039,7 @@ export function UnifiedStorePage({
 
           {/* 7. Vitrine ordenada por score, empate em ordem alfabética */}
           <Block title="Vitrine" hint={`${showcase.length} itens`}>
-            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} />
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
           </Block>
 
           {/* Pedidos: a loja antiga mostrava "Meus pedidos" aqui, e depois de
@@ -1224,7 +1236,7 @@ function Rail({ children }: { children: ReactNode }) {
   );
 }
 
-function Grid({ items, stock, onOpen, mostrarPontos = false }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean }) {
+function Grid({ items, stock, onOpen, mostrarPontos = false, notas }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean; notas?: Map<string, ResumoDeNotas> }) {
   return (
     <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
       {items.map((item) => {
@@ -1232,7 +1244,16 @@ function Grid({ items, stock, onOpen, mostrarPontos = false }: { items: UnifiedP
         const flag = info && info.stock > 0 && info.remaining > 0 && info.remaining <= 3
           ? `${info.remaining} de ${info.stock} vagas`
           : undefined;
-        return <Card key={item.id} product={item} onOpen={onOpen} flag={flag} mostrarPontos={mostrarPontos} />;
+        return (
+          <Card
+            key={item.id}
+            product={item}
+            onOpen={onOpen}
+            flag={flag}
+            mostrarPontos={mostrarPontos}
+            nota={notas?.get(`${origemDoProduto(item.origin, item.kind)}:${item.sourceId}`)}
+          />
+        );
       })}
     </div>
   );
@@ -1253,6 +1274,7 @@ function Card({
   flag,
   variant = "grid",
   mostrarPontos = false,
+  nota,
 }: {
   product: UnifiedProduct;
   onOpen: (p: UnifiedProduct) => void;
@@ -1262,6 +1284,8 @@ function Card({
   mostrarPontos?: boolean;
   /** "rail" tem largura própria porque rola na horizontal; "grid" obedece a célula. */
   variant?: "grid" | "rail";
+  /** Nota média e contagem. Ausente = ninguém avaliou ainda. */
+  nota?: ResumoDeNotas;
 }) {
   return (
     <button
@@ -1309,6 +1333,14 @@ function Card({
                 <Ticket className="h-2.5 w-2.5" />{product.challengeTickets}
               </span>
             )}
+          </div>
+        )}
+
+        {/* A nota fica logo acima do preço porque é a outra metade da mesma
+            decisão: quanto custa e se presta. */}
+        {nota && nota.total > 0 && (
+          <div className="pt-1">
+            <NotaCompacta media={nota.media} total={nota.total} />
           </div>
         )}
 
