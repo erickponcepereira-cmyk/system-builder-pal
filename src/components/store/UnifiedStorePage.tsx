@@ -224,6 +224,27 @@ export function UnifiedStorePage({
 
   const noLocal = useMemo(() => aplicarLocal(visiveis, local, ondeEstou), [visiveis, local, ondeEstou]);
 
+  /**
+   * Quanto há de gratuito ao alcance desta pessoa, aqui.
+   *
+   * Conta sobre `noLocal` porque é a única lista que já passou por tudo que
+   * decide alcance: o que o coach escondeu, o que o upline bloqueou, e a
+   * cidade escolhida. O número vinha de uma leitura crua das tabelas, fora do
+   * catálogo, e por isso somava o país inteiro — mostrava R$ 7.375,50 a quem
+   * tinha uma fração disso ao alcance. Prometer resgate que não existe é pior
+   * do que não prometer nada.
+   */
+  const gratuitos = useMemo(() => {
+    let valor = 0;
+    let quantos = 0;
+    for (const p of noLocal) {
+      if (!p.isFreebie || p.freebieValue <= 0) continue;
+      valor += p.freebieValue;
+      quantos += 1;
+    }
+    return { valor, quantos };
+  }, [noLocal]);
+
   /** Quantos itens cada aba teria — o número que aparece na própria aba. */
   const contagemDaAba = useMemo(() => {
     const base = noLocal
@@ -272,15 +293,52 @@ export function UnifiedStorePage({
   const searching = foldText(query).length > 0;
   const browsing = !searching && !sectionId;
 
+  /*
+   * Os três trilhos saem da MESMA lista, e até aqui nenhum sabia o que o outro
+   * já tinha levado — por isso o mesmo produto aparecia em dois lugares da
+   * mesma tela. Agora o que o trilho de cima pega, o de baixo não repete.
+   *
+   * A ordem é a de conversão, que os comentários da própria página já
+   * declaravam: escassez ("acabando") convence mais que recomendação, e
+   * recomendação mais que procedência.
+   *
+   * A GRADE continua completa de propósito. Os trilhos são limitados (8, 8 e
+   * 10) e rolam na horizontal; tirar da grade o que está num trilho faria um
+   * produto que rolou para fora da tela sumir da loja inteira. E o contador
+   * "N itens", o aviso de filtro e o estado vazio todos descrevem a grade —
+   * subtrair dela faria os três mentirem.
+   */
   const scarcity = useMemo(() => buildScarcity(filtered, stock), [filtered, stock]);
-  const recommendations = useMemo(() => buildRecommendations(filtered, ctx), [filtered, ctx]);
-  const network = useMemo(() => buildNetwork(filtered, ctx), [filtered, ctx]);
+
+  const jaNosTrilhos = useMemo(
+    () => new Set(scarcity.map((s) => s.product.id)),
+    [scarcity],
+  );
+
+  const recommendations = useMemo(
+    () => buildRecommendations(filtered, ctx, 8, jaNosTrilhos),
+    [filtered, ctx, jaNosTrilhos],
+  );
+
+  const network = useMemo(() => {
+    const levados = new Set(jaNosTrilhos);
+    for (const r of recommendations) levados.add(r.product.id);
+    return buildNetwork(filtered, ctx, 10, levados);
+  }, [filtered, ctx, jaNosTrilhos, recommendations]);
+
+  /** Tudo que já apareceu num trilho — a grade usa para não repetir no topo. */
+  const mostradosEmTrilho = useMemo(() => {
+    const ids = new Set(jaNosTrilhos);
+    for (const r of recommendations) ids.add(r.product.id);
+    for (const p of network) ids.add(p.id);
+    return ids;
+  }, [jaNosTrilhos, recommendations, network]);
   // A ordem de recomendação (compra anterior, escassez, rede) é a que vale
   // enquanto a pessoa não pedir outra. Durante uma busca quem manda é a
   // relevância — e por isso a vitrine não reordena nesse caso.
   const showcase = useMemo(() => {
     if (searching && filtros.ordenacao === "relevancia") return filtered;
-    return ordenar(sortShowcase(filtered, ctx, stock), filtros.ordenacao);
+    return ordenar(sortShowcase(filtered, ctx, stock, mostradosEmTrilho), filtros.ordenacao);
   }, [filtered, ctx, stock, filtros.ordenacao, searching]);
 
 
@@ -670,16 +728,16 @@ export function UnifiedStorePage({
       {/* 1. Carteirinha — o argumento de compra mais forte, e o número já está no banco. */}
       {/* O número é a promessa; o toque tem de levar até ela. Antes isto era
           texto morto: mostrava "R$ 1.200 em gratuitos" e não havia caminho. */}
-      {browsing && !ctx.cardActive && ctx.freebiesValue > 0 && (
+      {browsing && !ctx.cardActive && gratuitos.valor > 0 && (
         <button
           type="button"
           onClick={() => navigate({ to: "/student/freebies" })}
           className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-left"
         >
           <span className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-primary">{fmt(ctx.freebiesValue)}</span>
+            <span className="text-2xl font-bold text-primary">{fmt(gratuitos.valor)}</span>
             <span className="text-[11px] leading-tight text-muted-foreground">
-              em {ctx.freebiesCount} gratuitos<br />esperando você
+              em {gratuitos.quantos} gratuitos<br />esperando você
             </span>
           </span>
           <span className="mt-2 block text-[11px] leading-relaxed text-muted-foreground">
@@ -692,7 +750,7 @@ export function UnifiedStorePage({
         </button>
       )}
 
-      {browsing && ctx.cardActive && ctx.freebiesValue > 0 && (
+      {browsing && ctx.cardActive && gratuitos.valor > 0 && (
         <button
           type="button"
           onClick={() => navigate({ to: "/student/freebies" })}
@@ -700,7 +758,7 @@ export function UnifiedStorePage({
         >
           <span className="text-[11px] leading-relaxed text-emerald-500">
             <b>Carteirinha ativa</b> até {new Date(ctx.cardValidUntil as string).toLocaleDateString("pt-BR")} ·
-            {" "}{fmt(ctx.freebiesValue)} em gratuitos disponíveis para resgate.
+            {" "}{fmt(gratuitos.valor)} em gratuitos disponíveis para resgate.
           </span>
           <span className="shrink-0 text-[11px] font-bold text-emerald-500">Resgatar →</span>
         </button>

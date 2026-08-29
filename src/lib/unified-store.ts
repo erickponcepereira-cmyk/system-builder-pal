@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
 import { comAbsolutosReais, type ComissaoBruta, type GanhoReal } from "@/lib/store-earnings";
+import { computeFromCharge, DEFAULT_PARTNER_FEES, type CoachCommissionPct } from "@/lib/partnerFinance";
 
 /**
  * Camada de leitura da vitrine unificada (superfície de teste).
@@ -92,6 +93,16 @@ export type UnifiedProduct = {
    * tem carteirinha é esconder justamente o argumento de tirar uma.
    */
   isFreebie: boolean;
+  /**
+   * Quanto vale este gratuito, em reais. Zero quando não é gratuito.
+   *
+   * Existe para o número da carteirinha poder ser somado a partir do que a
+   * pessoa REALMENTE vê. Antes ele era somado numa leitura crua das tabelas,
+   * fora do catálogo, e por isso incluía o país inteiro: gratuito de outra
+   * cidade, gratuito escondido pelo coach, gratuito de parceiro que o upline
+   * bloqueou. Dava R$ 7.375,50 para quem tinha muito menos ao alcance.
+   */
+  freebieValue: number;
   /** Duração do atendimento agendável, em minutos. Alimenta o seletor de horário. */
   durationMinutes: number;
   /** Pontos de carreira do coach por venda. Só faz sentido em modo coach. */
@@ -271,6 +282,70 @@ function galeria(imageUrl: unknown, imageUrls: unknown): string[] {
     }
   }
   return out;
+}
+
+/**
+ * Valor de um gratuito. Se é desconto, vale só a parte descontada — quem
+ * resgata um "20% off" não ganha o produto, ganha os 20%.
+ */
+function valorDoGratuito(r: Record<string, unknown>): number {
+  if (r.kind !== "free") return 0;
+  const valor = Number(r.estimated_value ?? 0) || 0;
+  if (valor <= 0) return 0;
+  const pct = Number(r.discount_percent ?? 0) || 0;
+  const ehDesconto = String(r.redemption_mode || "").toLowerCase().includes("discount") || pct > 0;
+  return ehDesconto ? valor * (pct / 100) : valor;
+}
+
+/**
+ * Quanto o coach e a rede dele ganham num produto de parceiro ou profissional.
+ *
+ * Estes produtos nunca tiveram ganho na vitrine nova: `comissao` nascia
+ * `null` para as quatro origens de vendedor, e a guarda de `calcularGanhos`
+ * é por dado — sem dado, nada aparecia. Eram ~1823 dos ~1904 produtos do
+ * catálogo mudos para o coach. Era isso que o dono chamou de "sumiu a aba".
+ *
+ * O motor certo aqui é o de `partnerFinance`, não o de fatias: produto de
+ * parceiro roda a cascata (maquininha → imposto → sistema → comissão do coach,
+ * e a rede sai de DENTRO da comissão dele). `computeFromCharge` já lê os
+ * percentuais vigentes, que `carregarTaxasVigentes` alinha com
+ * `taxa_vigente()` no banco — então isto acompanha sozinho a virada de taxa
+ * de 26/08 e as próximas.
+ *
+ * Devolve ABSOLUTOS de propósito: é o caminho de maior confiança dentro de
+ * `calcularGanhos`, e evita que o percentual caia no fallback das colunas
+ * `commission_level*`, que para estes produtos nem existem.
+ */
+function comissaoDeVendedor(r: Record<string, unknown>, paraCoach: boolean): ComissaoBruta | null {
+  if (!paraCoach) return null;
+  const preco = num(r.price);
+  if (preco <= 0) return null;
+  const pct = Number(r.coach_commission_percentage ?? 0) || 0;
+  if (pct <= 0) return null;
+
+  const pix = computeFromCharge(preco, pct as CoachCommissionPct, "pix", DEFAULT_PARTNER_FEES);
+  const cartao = computeFromCharge(preco, pct as CoachCommissionPct, "card", DEFAULT_PARTNER_FEES);
+
+  return {
+    commissionCoach: pct,
+    commissionLevel1: null,
+    commissionLevel2: null,
+    commissionLevel3: null,
+    commissionCoachAbsolute: pix.coachNet,
+    commissionLevel1Absolute: pix.networkL1,
+    commissionLevel2Absolute: pix.networkL2,
+    commissionLevel3Absolute: pix.networkL3,
+    commissionCoachAbsoluteCard: cartao.coachNet,
+    commissionLevel1AbsoluteCard: cartao.networkL1,
+    commissionLevel2AbsoluteCard: cartao.networkL2,
+    commissionLevel3AbsoluteCard: cartao.networkL3,
+    appFee: null,
+    appFeePercentage: null,
+    cardFeePercentage: null,
+    taxPercentage: null,
+    cost: null,
+    otherCosts: null,
+  };
 }
 
 function firstImage(imageUrl: unknown, imageUrls: unknown): string | null {
@@ -478,7 +553,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .order("sort_order"),
     lerPaginado(
       "partner_products",
-      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,is_physical",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,is_physical,estimated_value,discount_percent,redemption_mode,coach_commission_percentage",
       (q) => q
         .eq("status", "approved")
         .in("kind", ["paid", "free"])
@@ -488,7 +563,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     ),
     lerPaginado(
       "professional_products",
-      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,is_physical",
+      "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,restrict_to_networks,allowed_coach_ids,perk_card_days_override,perk_challenge_tickets_override,is_physical,estimated_value,discount_percent,redemption_mode,coach_commission_percentage",
       (q) => q
         .eq("status", "approved")
         .eq("is_active_by_professional", true)
@@ -674,6 +749,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: String(m?.kind ?? r.kind ?? "") === "physical",
       isSchedulable: false,
       isFreebie: false,
+      freebieValue: 0,
       durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
@@ -715,6 +791,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: String(r.kind ?? "") === "physical",
       isSchedulable: false,
       isFreebie: false,
+      freebieValue: 0,
       durationMinutes: 30,
       pointsPerSale: num(r.points_per_sale),
       comissao: comissaoDoProduto(r),
@@ -756,6 +833,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: false,
       isSchedulable: false,
       isFreebie: false,
+      freebieValue: 0,
       durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
@@ -796,6 +874,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: r.is_physical === true,
       isSchedulable: false,
       isFreebie: false,
+      freebieValue: 0,
       durationMinutes: 30,
       pointsPerSale: 0,
       comissao: null,
@@ -839,9 +918,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: r.is_physical === true,
       isSchedulable: false,
       isFreebie: r.kind === "free",
+      freebieValue: valorDoGratuito(r),
       durationMinutes: 30,
       pointsPerSale: 0,
-      comissao: null,
+      comissao: comissaoDeVendedor(r, paraCoach),
     });
   }
 
@@ -882,9 +962,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       isPhysical: r.is_physical === true,
       isSchedulable: !!r.is_schedulable,
       isFreebie: r.kind === "free",
+      freebieValue: valorDoGratuito(r),
       durationMinutes: num(r.default_duration_minutes) || 30,
       pointsPerSale: 0,
-      comissao: null,
+      comissao: comissaoDeVendedor(r, paraCoach),
     });
   }
 

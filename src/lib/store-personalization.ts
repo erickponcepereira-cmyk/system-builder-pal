@@ -54,15 +54,6 @@ export const EMPTY_CONTEXT: StoreContext = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Valor de um gratuito: se é desconto, vale só a parte descontada. */
-function freebieWorth(estimated: unknown, discountPercent: unknown, mode: unknown): number {
-  const value = Number(estimated ?? 0) || 0;
-  if (value <= 0) return 0;
-  const pct = Number(discountPercent ?? 0) || 0;
-  const isDiscount = String(mode || "").toLowerCase().includes("discount") || pct > 0;
-  return isDiscount ? value * (pct / 100) : value;
-}
-
 export async function loadStoreContext(catalog: UnifiedCatalog): Promise<StoreContext> {
   const ctx: StoreContext = {
     ...EMPTY_CONTEXT,
@@ -94,21 +85,8 @@ export async function loadStoreContext(catalog: UnifiedCatalog): Promise<StoreCo
     ctx.cardActive = !!stu?.card_valid_until && new Date(stu.card_valid_until).getTime() > Date.now();
     ctx.coachId = stu?.coach_id ?? null;
 
-    const [chainRes, partnerFreeRes, profFreeRes, ordersRes] = await Promise.all([
+    const [chainRes, ordersRes] = await Promise.all([
       supabase.rpc("minha_cadeia_coaches" as never),
-      supabase
-        .from("partner_products" as never)
-        .select("estimated_value,discount_percent,redemption_mode" as never)
-        .eq("kind" as never, "free" as never)
-        .eq("status" as never, "approved" as never)
-        .eq("is_active_by_partner" as never, true as never)
-        .is("deleted_at" as never, null as never),
-      supabase
-        .from("professional_products" as never)
-        .select("estimated_value,discount_percent,redemption_mode" as never)
-        .eq("kind" as never, "free" as never)
-        .eq("status" as never, "approved" as never)
-        .eq("is_active_by_professional" as never, true as never),
       ctx.studentId
         ? supabase
             .from("store_orders" as never)
@@ -122,17 +100,10 @@ export async function loadStoreContext(catalog: UnifiedCatalog): Promise<StoreCo
 
     ctx.coachChain = ((chainRes.data as unknown as string[]) || []).filter(Boolean);
 
-    const freebieRows = [
-      ...(((partnerFreeRes.data as unknown as Array<Record<string, unknown>>) || [])),
-      ...(((profFreeRes.data as unknown as Array<Record<string, unknown>>) || [])),
-    ];
-    for (const row of freebieRows) {
-      const worth = freebieWorth(row.estimated_value, row.discount_percent, row.redemption_mode);
-      if (worth > 0) {
-        ctx.freebiesValue += worth;
-        ctx.freebiesCount += 1;
-      }
-    }
+    // freebiesValue/freebiesCount NÃO são calculados aqui de propósito.
+    // Quem sabe quantos gratuitos esta pessoa alcança é a vitrine, depois de
+    // aplicar visibilidade e cidade — e é lá que a conta é feita. Aqui só se
+    // enxergam as tabelas cruas, e somá-las dava o país inteiro.
 
     // Compras pagas: alimentam exclusão, afinidade de seção e renovação.
     const orders = (ordersRes.data as unknown as Array<{
@@ -200,9 +171,12 @@ export function buildRecommendations(
   products: UnifiedProduct[],
   ctx: StoreContext,
   limit = 8,
+  excluir?: Set<string>,
 ): Recommendation[] {
   const out: Recommendation[] = [];
-  const used = new Set<string>();
+  // Já nasce com o que os trilhos anteriores levaram: o `used` sempre impediu
+  // repetição DENTRO deste trilho, mas nascia vazio e não sabia de nada fora.
+  const used = new Set<string>(excluir ?? []);
 
   const add = (product: UnifiedProduct, reason: string) => {
     if (out.length >= limit) return;
@@ -261,8 +235,10 @@ export function buildScarcity(
   products: UnifiedProduct[],
   stock: Record<string, { stock: number; remaining: number }>,
   limit = 8,
+  excluir?: Set<string>,
 ): Array<{ product: UnifiedProduct; remaining: number; stock: number }> {
   return products
+    .filter((p) => !excluir?.has(p.id))
     .map((product) => ({ product, info: stock[product.sourceId] }))
     .filter((row) => row.info && row.info.stock > 0 && row.info.remaining > 0)
     .sort((a, b) => a.info!.remaining - b.info!.remaining)
@@ -271,10 +247,18 @@ export function buildScarcity(
 }
 
 /** Produtos do coach do aluno e da cadeia acima dele. */
-export function buildNetwork(products: UnifiedProduct[], ctx: StoreContext, limit = 10): UnifiedProduct[] {
+export function buildNetwork(
+  products: UnifiedProduct[],
+  ctx: StoreContext,
+  limit = 10,
+  excluir?: Set<string>,
+): UnifiedProduct[] {
   if (!ctx.coachChain.length && !ctx.coachId) return [];
   const chain = new Set([...ctx.coachChain, ...(ctx.coachId ? [ctx.coachId] : [])]);
-  return products.filter((p) => p.sellerCoachId && chain.has(p.sellerCoachId)).slice(0, limit);
+  return products
+    .filter((p) => !excluir?.has(p.id))
+    .filter((p) => p.sellerCoachId && chain.has(p.sellerCoachId))
+    .slice(0, limit);
 }
 
 /**
@@ -304,13 +288,30 @@ export function scoreProduct(
   return score;
 }
 
+/**
+ * Ordena a grade.
+ *
+ * `jaNosTrilhos` não tira ninguém da grade — só tira do TOPO dela quem a
+ * pessoa acabou de ver num trilho logo acima. Sem isso o mesmo produto
+ * aparecia duas vezes na mesma dobra: `scoreProduct` dá +4 a "é da minha
+ * rede", que é literalmente o mesmo predicado de `buildNetwork`, então o item
+ * do trilho da rede era também o primeiro da grade. O sinal contava duas
+ * vezes: uma para escolher o trilho, outra para ordenar a grade.
+ *
+ * A penalidade é branda de propósito. O produto da rede continua bem
+ * ranqueado — só perde o direito de ocupar a melhor vaga da grade sendo uma
+ * repetição do que está 200 pixels acima.
+ */
 export function sortShowcase(
   products: UnifiedProduct[],
   ctx: StoreContext,
   stock: Record<string, { stock: number; remaining: number }>,
+  jaNosTrilhos?: Set<string>,
 ): UnifiedProduct[] {
+  const nota = (p: UnifiedProduct) =>
+    scoreProduct(p, ctx, stock) - (jaNosTrilhos?.has(p.id) ? 5 : 0);
   return [...products].sort((a, b) => {
-    const diff = scoreProduct(b, ctx, stock) - scoreProduct(a, ctx, stock);
+    const diff = nota(b) - nota(a);
     if (diff !== 0) return diff;
     return a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" });
   });
