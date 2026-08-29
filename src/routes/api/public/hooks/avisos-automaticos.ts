@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authorizeInternalCron, internalHookJson } from "@/server/internal-hook-auth.server";
 
 /**
  * Solta os avisos de vencimento sem ninguém apertar o botão.
@@ -13,21 +14,12 @@ import { createFileRoute } from "@tanstack/react-router";
  * esquecido seria justamente este, que roda sem ninguém olhando.
  */
 
-const json = (obj: unknown, status = 200) =>
-  new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
-
 export const Route = createFileRoute("/api/public/hooks/avisos-automaticos")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey =
-          request.headers.get("apikey") ||
-          request.headers.get("authorization")?.replace("Bearer ", "");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!apiKey || !expected || apiKey !== expected) {
-          return json({ error: "unauthorized" }, 401);
-        }
+        const unauthorized = authorizeInternalCron(request);
+        if (unauthorized) return unauthorized;
 
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -38,12 +30,12 @@ export const Route = createFileRoute("/api/public/hooks/avisos-automaticos")({
           };
 
           const { data, error } = await db.rpc("academia_avisos_a_disparar");
-          if (error) return json({ ok: false, error: error.message }, 500);
+          if (error) return internalHookJson({ ok: false, error: "Falha ao carregar avisos" }, 500);
 
           const aDisparar = (data ?? []) as Array<{
             disparo_id: string; partner_id: string; nome: string; alvos: number;
           }>;
-          if (!aDisparar.length) return json({ ok: true, disparadas: 0 });
+          if (!aDisparar.length) return internalHookJson({ ok: true, disparadas: 0 });
 
           const resultado: Array<Record<string, unknown>> = [];
           for (const item of aDisparar) {
@@ -76,10 +68,13 @@ export const Route = createFileRoute("/api/public/hooks/avisos-automaticos")({
             }
           }
 
-          return json({ ok: true, disparadas: resultado.length, resultado });
-        } catch (e: any) {
-          console.error("[avisos-automaticos]", e);
-          return json({ ok: false, error: String(e?.message || e) }, 500);
+          return internalHookJson({ ok: true, disparadas: resultado.length, resultado });
+        } catch (error: unknown) {
+          console.error(
+            "[avisos-automaticos]",
+            error instanceof Error ? error.message : "unknown error",
+          );
+          return internalHookJson({ ok: false, error: "Falha ao processar avisos" }, 500);
         }
       },
     },

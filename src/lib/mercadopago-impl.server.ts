@@ -549,14 +549,45 @@ async function persistSavedCard(params: {
   cardToken: string;
   mpResp: any;
 }): Promise<string | null> {
+  let remoteCustomerId: string | null = null;
+  let remoteCardId: string | null = null;
   try {
     if (!params.studentId) return null;
+    const { data: student } = await supabaseAdmin
+      .from("students")
+      .select("profiles:profile_id(user_id)")
+      .eq("id", params.studentId)
+      .maybeSingle();
+    const ownerUserId = (student as any)?.profiles?.user_id as string | undefined;
+    if (!ownerUserId) return null;
+
+    const isFrozen = async () => {
+      const { data, error } = await supabaseAdmin.rpc(
+        "account_deletion_subject_is_frozen" as never,
+        { _user_id: ownerUserId } as never,
+      );
+      if (error) throw new Error("Falha ao verificar bloqueio da conta");
+      return data === true;
+    };
+    if (await isFrozen()) return null;
+
     const holderName = params.holder?.name || params.cardMeta?.cardholderName || params.payer.name || null;
     const holderDoc = (params.holder?.doc || params.payer.doc || "").replace(/\D/g, "") || null;
-    const { findOrCreateCustomer, createCustomerCard } = await import("@/server/mercadopago.server");
+    const {
+      createCustomerCard,
+      deleteCustomerCard,
+      findOrCreateCustomer,
+    } = await import("@/server/mercadopago.server");
     const customer = await findOrCreateCustomer(params.payer.email, params.payer.name, params.payer.doc);
     const card = await createCustomerCard(String(customer.id), params.cardToken);
-    const { data: saved } = await supabaseAdmin.from("saved_payment_cards" as never).insert({
+    remoteCustomerId = String(customer.id);
+    remoteCardId = String(card.id);
+    if (await isFrozen()) {
+      await deleteCustomerCard(remoteCustomerId, remoteCardId);
+      return null;
+    }
+
+    const { data: saved, error: saveError } = await supabaseAdmin.from("saved_payment_cards" as never).insert({
       student_id: params.studentId,
       mp_customer_id: String(customer.id),
       mp_card_id: String(card.id),
@@ -572,9 +603,18 @@ async function persistSavedCard(params: {
       issuer_id: card?.issuer?.id ? String(card.issuer.id) : null,
       is_default: true,
     } as never).select("id").maybeSingle();
-    return (saved as any)?.id ?? null;
-  } catch (e) {
-    console.error("[mp save card] falhou (pagamento não é afetado):", e);
+    if (saveError) throw new Error("Falha ao registrar cartão salvo");
+    const savedId = (saved as any)?.id as string | undefined;
+    if (!savedId) throw new Error("Cartão salvo sem identificador local");
+    return savedId;
+  } catch {
+    if (remoteCustomerId && remoteCardId) {
+      try {
+        const { deleteCustomerCard } = await import("@/server/mercadopago.server");
+        await deleteCustomerCard(remoteCustomerId, remoteCardId);
+      } catch { /* best-effort cleanup; no card data is logged */ }
+    }
+    console.error("[mp save card] falha ao persistir cartão; pagamento não foi afetado");
     return null;
   }
 }

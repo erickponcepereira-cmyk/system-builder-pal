@@ -2,6 +2,16 @@
 // Nunca importar isto em código cliente.
 const MP_BASE = "https://api.mercadopago.com";
 
+export class MercadoPagoApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, _message?: string) {
+    super(`Mercado Pago request failed (${status})`);
+    this.name = "MercadoPagoApiError";
+    this.status = status;
+  }
+}
+
 function getToken(): string {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
@@ -22,16 +32,18 @@ async function mpFetch(
   // Fingerprint do dispositivo (security.js). É o sinal antifraude de maior peso
   // do Mercado Pago; sem ele, cartões caem em cc_rejected_high_risk com frequência.
   if (init.deviceId) headers["X-meli-session-id"] = init.deviceId;
-  const tokenMask = `${token.slice(0, 14)}…${token.slice(-6)} (len=${token.length})`;
-  console.log("[MP REQ]", init.method || "GET", path, "token:", tokenMask, "idem:", init.idempotencyKey || "-", "device:", init.deviceId ? "yes" : "no");
-  const res = await fetch(`${MP_BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${MP_BASE}${path}`, {
+    ...init,
+    headers,
+    signal: init.signal ?? AbortSignal.timeout(20_000),
+  });
   const text = await res.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
   if (!res.ok) {
     const msg = json?.message || json?.error || res.statusText;
-    console.error("[MP API ERROR]", res.status, msg, "response:", text?.slice(0, 1200));
-    throw new Error(`Mercado Pago ${res.status}: ${msg}`);
+    console.error("[MP API ERROR]", res.status);
+    throw new MercadoPagoApiError(res.status, String(msg));
   }
   return json;
 }
@@ -222,14 +234,28 @@ export async function findOrCreateCustomer(email: string, name?: string, doc?: s
 }
 
 export async function createCustomerCard(customerId: string, cardToken: string) {
-  return mpFetch(`/v1/customers/${customerId}/cards`, {
+  return mpFetch(`/v1/customers/${encodeURIComponent(customerId)}/cards`, {
     method: "POST",
     body: JSON.stringify({ token: cardToken }),
   });
 }
 
+export async function getCustomer(customerId: string) {
+  return mpFetch(`/v1/customers/${encodeURIComponent(customerId)}`, { method: "GET" });
+}
+
+export async function getCustomerCard(customerId: string, cardId: string) {
+  return mpFetch(
+    `/v1/customers/${encodeURIComponent(customerId)}/cards/${encodeURIComponent(cardId)}`,
+    { method: "GET" },
+  );
+}
+
 export async function deleteCustomerCard(customerId: string, cardId: string) {
-  return mpFetch(`/v1/customers/${customerId}/cards/${cardId}`, { method: "DELETE" });
+  return mpFetch(
+    `/v1/customers/${encodeURIComponent(customerId)}/cards/${encodeURIComponent(cardId)}`,
+    { method: "DELETE" },
+  );
 }
 
 /** Gera um token de pagamento a partir de um cartão já salvo (recorrência). */
@@ -276,11 +302,14 @@ export async function createPreapproval(input: MpPreapprovalInput) {
 }
 
 export async function getPreapproval(id: string) {
-  return mpFetch(`/preapproval/${id}`, { method: "GET" });
+  return mpFetch(`/preapproval/${encodeURIComponent(id)}`, { method: "GET" });
 }
 
 export async function cancelPreapproval(id: string) {
-  return mpFetch(`/preapproval/${id}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+  return mpFetch(`/preapproval/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ status: "cancelled" }),
+  });
 }
 
 export async function getAuthorizedPayment(id: string) {

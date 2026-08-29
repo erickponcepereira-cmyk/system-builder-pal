@@ -1,0 +1,1417 @@
+-- Safe, retryable account-deletion processor.
+--
+-- The legacy admin_purge_user_dependents function is intentionally NOT used:
+-- it deletes required-FK rows generically and can remove financial history or
+-- records that belong to other people. This migration keeps pseudonymous
+-- tombstones for relational/financial history and explicitly erases personal data.
+
+-- Auth deletion must not cascade the pseudonymous profile tombstone.
+ALTER TABLE public.profiles ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_user_id_fkey;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.account_deletion_requests
+  ADD COLUMN IF NOT EXISTS subject_user_id uuid,
+  ADD COLUMN IF NOT EXISTS subject_profile_id uuid,
+  ADD COLUMN IF NOT EXISTS processing_state text NOT NULL DEFAULT 'queued',
+  ADD COLUMN IF NOT EXISTS processing_stage text NOT NULL DEFAULT 'awaiting_due_date',
+  ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS processing_started_at timestamptz,
+  ADD COLUMN IF NOT EXISTS processing_heartbeat_at timestamptz,
+  ADD COLUMN IF NOT EXISTS processing_finished_at timestamptz,
+  ADD COLUMN IF NOT EXISTS lock_token uuid,
+  ADD COLUMN IF NOT EXISTS last_error_code text,
+  ADD COLUMN IF NOT EXISTS last_error_at timestamptz,
+  ADD COLUMN IF NOT EXISTS step_state jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS processor_version integer NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS billing_frozen_at timestamptz;
+
+ALTER TABLE public.recurring_subscriptions
+  ADD COLUMN IF NOT EXISTS charge_claimed_at timestamptz;
+
+UPDATE public.account_deletion_requests
+SET subject_user_id = COALESCE(subject_user_id, user_id),
+    subject_profile_id = COALESCE(subject_profile_id, profile_id),
+    processing_state = CASE status
+      WHEN 'completed' THEN 'completed'
+      WHEN 'cancelled' THEN 'cancelled'
+      ELSE processing_state
+    END,
+    processing_stage = CASE status
+      WHEN 'completed' THEN 'completed'
+      WHEN 'cancelled' THEN 'user_cancelled'
+      ELSE processing_stage
+    END;
+
+ALTER TABLE public.account_deletion_requests
+  DROP CONSTRAINT IF EXISTS account_deletion_requests_processing_state_check;
+ALTER TABLE public.account_deletion_requests
+  ADD CONSTRAINT account_deletion_requests_processing_state_check
+  CHECK (processing_state IN ('queued', 'processing', 'retry', 'blocked', 'cancelled', 'completed'));
+
+ALTER TABLE public.account_deletion_requests
+  DROP CONSTRAINT IF EXISTS account_deletion_requests_attempt_count_check;
+ALTER TABLE public.account_deletion_requests
+  ADD CONSTRAINT account_deletion_requests_attempt_count_check
+  CHECK (attempt_count >= 0);
+
+CREATE INDEX IF NOT EXISTS account_deletion_requests_processor_idx
+  ON public.account_deletion_requests (processing_state, next_attempt_at, due_at)
+  WHERE status = 'pending';
+
+CREATE OR REPLACE FUNCTION public.initialize_account_deletion_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  NEW.subject_user_id := COALESCE(NEW.subject_user_id, NEW.user_id);
+  NEW.subject_profile_id := COALESCE(NEW.subject_profile_id, NEW.profile_id);
+  NEW.processing_state := COALESCE(NULLIF(NEW.processing_state, ''), 'queued');
+  NEW.processing_stage := COALESCE(NULLIF(NEW.processing_stage, ''), 'awaiting_due_date');
+  NEW.next_attempt_at := COALESCE(NEW.next_attempt_at, now());
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS initialize_account_deletion_request_trigger
+  ON public.account_deletion_requests;
+CREATE TRIGGER initialize_account_deletion_request_trigger
+BEFORE INSERT ON public.account_deletion_requests
+FOR EACH ROW EXECUTE FUNCTION public.initialize_account_deletion_request();
+
+CREATE OR REPLACE FUNCTION public.cancel_own_account_deletion_request(_request_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_cancelled boolean := false;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'authentication required';
+  END IF;
+
+  UPDATE public.account_deletion_requests
+  SET status = 'cancelled',
+      processing_state = 'cancelled',
+      processing_stage = 'user_cancelled',
+      cancelled_at = now(),
+      processing_finished_at = now(),
+      lock_token = NULL,
+      updated_at = now()
+  WHERE id = _request_id
+    AND user_id = auth.uid()
+    AND status = 'pending'
+    AND processing_state = 'queued';
+
+  v_cancelled := FOUND;
+  RETURN v_cancelled;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.cancel_own_account_deletion_request(uuid)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_own_account_deletion_request(uuid)
+  TO authenticated;
+
+CREATE TABLE IF NOT EXISTS public.account_deletion_attempts (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  request_id uuid NOT NULL REFERENCES public.account_deletion_requests(id) ON DELETE CASCADE,
+  attempt_no integer NOT NULL,
+  stage text NOT NULL,
+  outcome text NOT NULL CHECK (outcome IN ('started', 'advanced', 'retry', 'blocked', 'completed')),
+  error_code text,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS account_deletion_attempts_request_idx
+  ON public.account_deletion_attempts (request_id, created_at DESC);
+
+ALTER TABLE public.account_deletion_attempts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Master admins can view deletion attempts" ON public.account_deletion_attempts;
+CREATE POLICY "Master admins can view deletion attempts"
+  ON public.account_deletion_attempts
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE p.user_id = auth.uid()
+        AND p.role = 'admin'
+        AND p.is_master_admin = true
+    )
+  );
+
+REVOKE ALL ON TABLE public.account_deletion_attempts FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.account_deletion_attempts TO authenticated;
+GRANT ALL ON TABLE public.account_deletion_attempts TO service_role;
+
+CREATE OR REPLACE FUNCTION public.claim_account_deletion_requests(
+  _limit integer DEFAULT 3,
+  _request_id uuid DEFAULT NULL
+)
+RETURNS TABLE (
+  request_id uuid,
+  subject_user_id uuid,
+  subject_profile_id uuid,
+  lock_token uuid,
+  attempt_count integer
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_limit integer := LEAST(10, GREATEST(1, COALESCE(_limit, 3)));
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  RETURN QUERY
+  WITH candidates AS (
+    SELECT adr.id
+    FROM public.account_deletion_requests adr
+    WHERE adr.status = 'pending'
+      AND adr.subject_user_id IS NOT NULL
+      AND adr.due_at <= now()
+      AND (_request_id IS NULL OR adr.id = _request_id)
+      AND (
+        (
+          adr.processing_state IN ('queued', 'retry')
+          AND adr.next_attempt_at <= now()
+        )
+        OR (
+          adr.processing_state = 'processing'
+          AND COALESCE(adr.processing_heartbeat_at, adr.processing_started_at, adr.updated_at)
+            < now() - interval '20 minutes'
+        )
+      )
+    ORDER BY adr.due_at, adr.requested_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT v_limit
+  ), claimed AS (
+    UPDATE public.account_deletion_requests adr
+    SET processing_state = 'processing',
+        processing_stage = 'claimed',
+        lock_token = gen_random_uuid(),
+        attempt_count = adr.attempt_count + 1,
+        processing_started_at = now(),
+        processing_heartbeat_at = now(),
+        processing_finished_at = NULL,
+        last_error_code = NULL,
+        updated_at = now()
+    FROM candidates c
+    WHERE adr.id = c.id
+    RETURNING adr.id,
+              adr.subject_user_id,
+              adr.subject_profile_id,
+              adr.lock_token,
+              adr.attempt_count
+  )
+  SELECT c.id, c.subject_user_id, c.subject_profile_id, c.lock_token, c.attempt_count
+  FROM claimed c;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.claim_account_deletion_requests(integer, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_account_deletion_requests(integer, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_set_stage(
+  _request_id uuid,
+  _lock_token uuid,
+  _stage text,
+  _metadata jsonb DEFAULT '{}'::jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_attempt integer;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+  IF _stage IS NULL OR _stage !~ '^[a-z_]{2,64}$' THEN
+    RAISE EXCEPTION 'invalid processor stage';
+  END IF;
+
+  UPDATE public.account_deletion_requests
+  SET processing_stage = _stage,
+      processing_heartbeat_at = now(),
+      step_state = step_state || jsonb_build_object(_stage, COALESCE(_metadata, '{}'::jsonb)),
+      updated_at = now()
+  WHERE id = _request_id
+    AND lock_token = _lock_token
+    AND status = 'pending'
+    AND processing_state = 'processing'
+  RETURNING attempt_count INTO v_attempt;
+
+  IF v_attempt IS NULL THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  INSERT INTO public.account_deletion_attempts (
+    request_id, attempt_no, stage, outcome, metadata
+  ) VALUES (
+    _request_id, v_attempt, _stage,
+    CASE WHEN _stage = 'preflight' THEN 'started' ELSE 'advanced' END,
+    COALESCE(_metadata, '{}'::jsonb)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_set_stage(uuid, uuid, text, jsonb)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_set_stage(uuid, uuid, text, jsonb)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_mark_failure(
+  _request_id uuid,
+  _lock_token uuid,
+  _stage text,
+  _error_code text,
+  _retryable boolean
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_attempt integer;
+  v_state text;
+  v_retry_at timestamptz;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+  IF _error_code IS NULL OR _error_code !~ '^[A-Z0-9_]{3,80}$' THEN
+    _error_code := 'UNCLASSIFIED_PROCESSOR_ERROR';
+  END IF;
+
+  SELECT attempt_count INTO v_attempt
+  FROM public.account_deletion_requests
+  WHERE id = _request_id
+    AND lock_token = _lock_token
+    AND status = 'pending'
+    AND processing_state = 'processing'
+  FOR UPDATE;
+
+  IF v_attempt IS NULL THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  v_state := CASE
+    WHEN _retryable AND v_attempt < 5 THEN 'retry'
+    ELSE 'blocked'
+  END;
+  v_retry_at := now() + CASE v_attempt
+    WHEN 1 THEN interval '5 minutes'
+    WHEN 2 THEN interval '30 minutes'
+    WHEN 3 THEN interval '2 hours'
+    WHEN 4 THEN interval '12 hours'
+    ELSE interval '24 hours'
+  END;
+
+  UPDATE public.account_deletion_requests
+  SET processing_state = v_state,
+      processing_stage = COALESCE(NULLIF(_stage, ''), processing_stage),
+      next_attempt_at = v_retry_at,
+      last_error_code = _error_code,
+      last_error_at = now(),
+      processing_heartbeat_at = now(),
+      processing_finished_at = CASE WHEN v_state = 'blocked' THEN now() ELSE NULL END,
+      lock_token = NULL,
+      updated_at = now()
+  WHERE id = _request_id;
+
+  INSERT INTO public.account_deletion_attempts (
+    request_id, attempt_no, stage, outcome, error_code
+  ) VALUES (
+    _request_id,
+    v_attempt,
+    COALESCE(NULLIF(_stage, ''), 'unknown'),
+    v_state,
+    _error_code
+  );
+
+  RETURN v_state;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_mark_failure(uuid, uuid, text, text, boolean)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_mark_failure(uuid, uuid, text, text, boolean)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_reset_blocked(_request_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  UPDATE public.account_deletion_requests
+  SET processing_state = 'queued',
+      processing_stage = 'manually_requeued',
+      attempt_count = 0,
+      next_attempt_at = now(),
+      processing_finished_at = NULL,
+      last_error_code = NULL,
+      last_error_at = NULL,
+      lock_token = NULL,
+      updated_at = now()
+  WHERE id = _request_id
+    AND status = 'pending'
+    AND processing_state = 'blocked';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_reset_blocked(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_reset_blocked(uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_preflight(
+  _request_id uuid,
+  _lock_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_profile_id uuid;
+  v_student_ids uuid[] := ARRAY[]::uuid[];
+  v_coach_ids uuid[] := ARRAY[]::uuid[];
+  v_partner_ids uuid[] := ARRAY[]::uuid[];
+  v_blockers text[] := ARRAY[]::text[];
+  v_count bigint := 0;
+  v_balance numeric := 0;
+  v_is_master boolean := false;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  SELECT adr.subject_profile_id
+  INTO v_profile_id
+  FROM public.account_deletion_requests adr
+  WHERE adr.id = _request_id
+    AND adr.lock_token = _lock_token
+    AND adr.status = 'pending'
+    AND adr.processing_state = 'processing'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  SELECT COALESCE(array_agg(s.id), ARRAY[]::uuid[])
+  INTO v_student_ids
+  FROM public.students s
+  WHERE s.profile_id = v_profile_id;
+
+  SELECT COALESCE(array_agg(c.id), ARRAY[]::uuid[])
+  INTO v_coach_ids
+  FROM public.coaches c
+  WHERE c.profile_id = v_profile_id;
+
+  SELECT COALESCE(array_agg(p.id), ARRAY[]::uuid[])
+  INTO v_partner_ids
+  FROM public.partners p
+  WHERE p.profile_id = v_profile_id;
+
+  SELECT COALESCE(p.is_master_admin, false)
+  INTO v_is_master
+  FROM public.profiles p
+  WHERE p.id = v_profile_id;
+
+  IF v_is_master THEN
+    v_blockers := array_append(v_blockers, 'MASTER_ADMIN_TRANSFER_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.withdrawal_requests wr
+  WHERE (
+      wr.profile_id = v_profile_id
+      OR wr.partner_id = ANY(v_partner_ids)
+      OR wr.professional_coach_id = ANY(v_coach_ids)
+    )
+    AND wr.status::text IN ('requested', 'approved', 'processing');
+  IF v_count > 0 THEN
+    v_blockers := array_append(v_blockers, 'FINANCIAL_SETTLEMENT_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.student_withdrawal_requests swr
+  WHERE swr.student_id = ANY(v_student_ids)
+    AND swr.status::text IN ('requested', 'approved', 'processing');
+  IF v_count > 0 AND NOT ('FINANCIAL_SETTLEMENT_REQUIRED' = ANY(v_blockers)) THEN
+    v_blockers := array_append(v_blockers, 'FINANCIAL_SETTLEMENT_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.recurring_subscriptions rs
+  WHERE rs.user_id = (
+      SELECT adr.subject_user_id
+      FROM public.account_deletion_requests adr
+      WHERE adr.id = _request_id AND adr.lock_token = _lock_token
+    )
+    AND (
+      rs.pending_charge_id IS NOT NULL
+      OR rs.status::text IN ('processing', 'charging', 'external_creating')
+      OR EXISTS (
+        SELECT 1
+        FROM public.recurring_charges rc
+        WHERE rc.subscription_id = rs.id
+          AND rc.status::text IN ('pending', 'in_process', 'authorized')
+      )
+    );
+  IF v_count > 0 THEN
+    v_blockers := array_append(v_blockers, 'PAYMENT_RECONCILIATION_REQUIRED');
+  END IF;
+
+  SELECT COALESCE(sum(GREATEST(0, COALESCE(w.available_balance, 0)) +
+                          GREATEST(0, COALESCE(w.pending_balance, 0))), 0)
+  INTO v_balance
+  FROM public.wallets w
+  WHERE w.profile_id = v_profile_id;
+
+  SELECT v_balance + COALESCE(sum(GREATEST(0, COALESCE(sw.available_balance, 0)) +
+                                      GREATEST(0, COALESCE(sw.pending_balance, 0))), 0)
+  INTO v_balance
+  FROM public.student_wallets sw
+  WHERE sw.student_id = ANY(v_student_ids);
+
+  SELECT v_balance + COALESCE(sum(GREATEST(0, COALESCE(pw.available_balance, 0)) +
+                                      GREATEST(0, COALESCE(pw.pending_balance, 0))), 0)
+  INTO v_balance
+  FROM public.partner_wallets pw
+  WHERE pw.partner_id = ANY(v_partner_ids);
+
+  SELECT v_balance + COALESCE(sum(GREATEST(0, COALESCE(pw.available_balance, 0)) +
+                                      GREATEST(0, COALESCE(pw.pending_balance, 0))), 0)
+  INTO v_balance
+  FROM public.professional_wallets pw
+  WHERE pw.professional_coach_id = ANY(v_coach_ids);
+
+  SELECT v_balance + COALESCE(sum(GREATEST(0, COALESCE(nw.available_balance, 0)) +
+                                      GREATEST(0, COALESCE(nw.blocked_balance, 0))), 0)
+  INTO v_balance
+  FROM public.nutritionist_wallets nw
+  WHERE nw.profile_id = v_profile_id;
+
+  SELECT v_balance + COALESCE(sum(GREATEST(0, COALESCE(pw.available_balance, 0)) +
+                                      GREATEST(0, COALESCE(pw.blocked_balance, 0))), 0)
+  INTO v_balance
+  FROM public.professor_wallets pw
+  WHERE pw.profile_id = v_profile_id;
+
+  IF v_balance > 0.009 AND NOT ('FINANCIAL_SETTLEMENT_REQUIRED' = ANY(v_blockers)) THEN
+    v_blockers := array_append(v_blockers, 'FINANCIAL_SETTLEMENT_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.commissions c
+  WHERE (
+      c.beneficiary_profile_id = v_profile_id
+      OR c.beneficiary_coach_id = ANY(v_coach_ids)
+      OR c.referred_by_student_id = ANY(v_student_ids)
+    )
+    AND c.status::text IN ('pending', 'available');
+  IF v_count > 0 AND NOT ('FINANCIAL_SETTLEMENT_REQUIRED' = ANY(v_blockers)) THEN
+    v_blockers := array_append(v_blockers, 'FINANCIAL_SETTLEMENT_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.students s
+  WHERE s.coach_id = ANY(v_coach_ids)
+    AND s.profile_id IS DISTINCT FROM v_profile_id;
+  IF v_count > 0 THEN
+    v_blockers := array_append(v_blockers, 'COACH_STUDENT_TRANSFER_REQUIRED');
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.partner_members pm
+  WHERE pm.partner_id = ANY(v_partner_ids)
+    AND pm.profile_id IS DISTINCT FROM v_profile_id;
+  IF v_count > 0 THEN
+    v_blockers := array_append(v_blockers, 'PARTNER_OWNERSHIP_TRANSFER_REQUIRED');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'blockers', to_jsonb(v_blockers),
+    'studentCount', cardinality(v_student_ids),
+    'coachCount', cardinality(v_coach_ids),
+    'partnerCount', cardinality(v_partner_ids)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_preflight(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_preflight(uuid, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_heartbeat(
+  _request_id uuid,
+  _lock_token uuid,
+  _stage text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+  IF _stage IS NULL OR _stage !~ '^[a-z_]{2,64}$' THEN
+    RAISE EXCEPTION 'invalid processor stage';
+  END IF;
+
+  UPDATE public.account_deletion_requests
+  SET processing_stage = _stage,
+      processing_heartbeat_at = now(),
+      updated_at = now()
+  WHERE id = _request_id
+    AND lock_token = _lock_token
+    AND status = 'pending'
+    AND processing_state = 'processing';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_heartbeat(uuid, uuid, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_heartbeat(uuid, uuid, text)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_freeze_billing(
+  _request_id uuid,
+  _lock_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_count integer := 0;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  SELECT adr.subject_user_id
+  INTO v_user_id
+  FROM public.account_deletion_requests adr
+  WHERE adr.id = _request_id
+    AND adr.lock_token = _lock_token
+    AND adr.status = 'pending'
+    AND adr.processing_state = 'processing'
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  -- Serializes against account_deletion_claim_recurring_charge().
+  PERFORM 1
+  FROM public.recurring_subscriptions rs
+  WHERE rs.user_id = v_user_id
+  FOR UPDATE;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.recurring_subscriptions rs
+    WHERE rs.user_id = v_user_id
+      AND (
+        rs.pending_charge_id IS NOT NULL
+        OR rs.status::text IN ('processing', 'charging', 'external_creating')
+        OR EXISTS (
+          SELECT 1
+          FROM public.recurring_charges rc
+          WHERE rc.subscription_id = rs.id
+            AND rc.status::text IN ('pending', 'in_process', 'authorized')
+        )
+      )
+  ) THEN
+    RAISE EXCEPTION 'payment reconciliation required';
+  END IF;
+
+  UPDATE public.recurring_subscriptions
+  SET status = 'deletion_pending',
+      next_charge_at = NULL,
+      charge_claimed_at = NULL,
+      updated_at = now()
+  WHERE user_id = v_user_id
+    AND status IS DISTINCT FROM 'deletion_pending';
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  UPDATE public.account_deletion_requests
+  SET billing_frozen_at = COALESCE(billing_frozen_at, now()),
+      processing_heartbeat_at = now(),
+      updated_at = now()
+  WHERE id = _request_id AND lock_token = _lock_token;
+
+  RETURN jsonb_build_object('frozen', true, 'subscriptionCount', v_count);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_freeze_billing(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_freeze_billing(uuid, uuid)
+  TO service_role;
+
+CREATE TABLE IF NOT EXISTS public.account_deleted_subject_guards (
+  subject_hash bytea PRIMARY KEY,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.account_deleted_subject_guards ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.account_deleted_subject_guards FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.account_deleted_subject_guards TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_subject_is_frozen(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
+AS $$
+  SELECT _user_id IS NOT NULL AND (
+    EXISTS (
+      SELECT 1
+      FROM public.account_deletion_requests adr
+      WHERE adr.subject_user_id = _user_id
+        AND adr.status = 'pending'
+        AND adr.billing_frozen_at IS NOT NULL
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM public.account_deleted_subject_guards g
+      WHERE g.subject_hash = digest(_user_id::text, 'sha256')
+        AND g.expires_at > now()
+    )
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_subject_is_frozen(uuid)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.account_deletion_subject_is_frozen(uuid)
+  TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.guard_frozen_recurring_subscription()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF public.account_deletion_subject_is_frozen(NEW.user_id) THEN
+    IF TG_OP = 'UPDATE' THEN
+      IF OLD.status::text <> 'deletion_pending'
+         AND NEW.status::text = 'deletion_pending' THEN
+        RETURN NEW;
+      END IF;
+    END IF;
+    RAISE EXCEPTION 'account deletion billing freeze';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS guard_frozen_recurring_subscription_trigger
+  ON public.recurring_subscriptions;
+CREATE TRIGGER guard_frozen_recurring_subscription_trigger
+BEFORE INSERT OR UPDATE ON public.recurring_subscriptions
+FOR EACH ROW EXECUTE FUNCTION public.guard_frozen_recurring_subscription();
+
+-- Recurrence writes are server-owned. The old owner RLS allowed a user to
+-- inject a foreign Mercado Pago preapproval ID into their own row.
+REVOKE INSERT, UPDATE ON TABLE public.recurring_subscriptions FROM authenticated;
+
+CREATE OR REPLACE FUNCTION public.guard_frozen_saved_card()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+BEGIN
+  SELECT p.user_id INTO v_user_id
+  FROM public.students s
+  JOIN public.profiles p ON p.id = s.profile_id
+  WHERE s.id = NEW.student_id;
+  IF public.account_deletion_subject_is_frozen(v_user_id) THEN
+    RAISE EXCEPTION 'account deletion billing freeze';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS guard_frozen_saved_card_trigger ON public.saved_payment_cards;
+CREATE TRIGGER guard_frozen_saved_card_trigger
+BEFORE INSERT OR UPDATE ON public.saved_payment_cards
+FOR EACH ROW EXECUTE FUNCTION public.guard_frozen_saved_card();
+
+CREATE OR REPLACE FUNCTION public.guard_frozen_google_token()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF public.account_deletion_subject_is_frozen(NEW.user_id) THEN
+    RAISE EXCEPTION 'account deletion identity freeze';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS guard_frozen_google_token_trigger ON public.coach_google_tokens;
+CREATE TRIGGER guard_frozen_google_token_trigger
+BEFORE INSERT OR UPDATE ON public.coach_google_tokens
+FOR EACH ROW EXECUTE FUNCTION public.guard_frozen_google_token();
+
+DROP POLICY IF EXISTS "Frozen accounts cannot insert storage objects" ON storage.objects;
+CREATE POLICY "Frozen accounts cannot insert storage objects"
+ON storage.objects AS RESTRICTIVE FOR INSERT TO authenticated
+WITH CHECK (NOT public.account_deletion_subject_is_frozen(auth.uid()));
+
+DROP POLICY IF EXISTS "Frozen accounts cannot update storage objects" ON storage.objects;
+CREATE POLICY "Frozen accounts cannot update storage objects"
+ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated
+USING (NOT public.account_deletion_subject_is_frozen(auth.uid()))
+WITH CHECK (NOT public.account_deletion_subject_is_frozen(auth.uid()));
+
+CREATE OR REPLACE FUNCTION public.account_deletion_claim_recurring_charge(
+  _subscription_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_claimed boolean := false;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  UPDATE public.recurring_subscriptions rs
+  SET status = 'charging',
+      charge_claimed_at = now(),
+      updated_at = now()
+  WHERE rs.id = _subscription_id
+    AND rs.engine = 'saved_card'
+    AND rs.pending_charge_id IS NULL
+    AND (
+      rs.status = 'active'
+      OR (
+        rs.status = 'charging'
+        AND rs.charge_claimed_at < now() - interval '20 minutes'
+      )
+    )
+    AND NOT public.account_deletion_subject_is_frozen(rs.user_id);
+
+  v_claimed := FOUND;
+  RETURN v_claimed;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_claim_recurring_charge(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_claim_recurring_charge(uuid)
+  TO service_role;
+
+DROP FUNCTION IF EXISTS public.account_deletion_storage_manifest(uuid, uuid);
+CREATE OR REPLACE FUNCTION public.account_deletion_storage_manifest(
+  _request_id uuid,
+  _lock_token uuid,
+  _limit integer DEFAULT 500,
+  _offset integer DEFAULT 0
+)
+RETURNS TABLE (bucket_id text, name text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, storage, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_profile_id uuid;
+  v_student_ids uuid[] := ARRAY[]::uuid[];
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  SELECT adr.subject_user_id, adr.subject_profile_id
+  INTO v_user_id, v_profile_id
+  FROM public.account_deletion_requests adr
+  WHERE adr.id = _request_id
+    AND adr.lock_token = _lock_token
+    AND adr.status = 'pending'
+    AND adr.processing_state = 'processing';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  SELECT COALESCE(array_agg(s.id), ARRAY[]::uuid[])
+  INTO v_student_ids
+  FROM public.students s
+  WHERE s.profile_id = v_profile_id;
+
+  RETURN QUERY
+  SELECT DISTINCT o.bucket_id::text, o.name::text
+  FROM storage.objects o
+  WHERE o.bucket_id IN ('avatars', 'evolution-photos', 'food-photos', 'group-media')
+    AND (
+      o.owner = v_user_id
+      OR (storage.foldername(o.name))[1] = v_user_id::text
+      OR (
+        o.bucket_id = 'group-media'
+        AND (storage.foldername(o.name))[2] = v_profile_id::text
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.evolution_photos ep
+        WHERE ep.student_id = ANY(v_student_ids) AND ep.photo_url = o.name
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.food_logs fl
+        WHERE fl.student_id = ANY(v_student_ids) AND fl.photo_url = o.name
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.weight_logs wl
+        WHERE wl.student_id = ANY(v_student_ids) AND wl.photo_url = o.name
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.group_messages gm
+        WHERE gm.sender_profile_id = v_profile_id AND gm.media_url = o.name
+      )
+    )
+  ORDER BY o.bucket_id, o.name
+  LIMIT LEAST(500, GREATEST(1, COALESCE(_limit, 500)))
+  OFFSET GREATEST(0, COALESCE(_offset, 0));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_storage_manifest(uuid, uuid, integer, integer)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_storage_manifest(uuid, uuid, integer, integer)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_anonymize(
+  _request_id uuid,
+  _lock_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_profile_id uuid;
+  v_retained_user_id uuid := gen_random_uuid();
+  v_student_ids uuid[] := ARRAY[]::uuid[];
+  v_coach_ids uuid[] := ARRAY[]::uuid[];
+  v_partner_ids uuid[] := ARRAY[]::uuid[];
+  v_preflight jsonb;
+  v_count integer := 0;
+  v_profiles integer := 0;
+  v_students integer := 0;
+  v_coaches integer := 0;
+  v_partners integer := 0;
+  v_payments integer := 0;
+  v_orders integer := 0;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  SELECT adr.subject_user_id, adr.subject_profile_id
+  INTO v_user_id, v_profile_id
+  FROM public.account_deletion_requests adr
+  WHERE adr.id = _request_id
+    AND adr.lock_token = _lock_token
+    AND adr.status = 'pending'
+    AND adr.processing_state = 'processing'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  v_preflight := public.account_deletion_preflight(_request_id, _lock_token);
+  IF jsonb_array_length(COALESCE(v_preflight->'blockers', '[]'::jsonb)) > 0 THEN
+    RAISE EXCEPTION 'account deletion preflight changed';
+  END IF;
+
+  SELECT COALESCE(array_agg(s.id), ARRAY[]::uuid[])
+  INTO v_student_ids FROM public.students s WHERE s.profile_id = v_profile_id;
+  SELECT COALESCE(array_agg(c.id), ARRAY[]::uuid[])
+  INTO v_coach_ids FROM public.coaches c WHERE c.profile_id = v_profile_id;
+  SELECT COALESCE(array_agg(p.id), ARRAY[]::uuid[])
+  INTO v_partner_ids FROM public.partners p WHERE p.profile_id = v_profile_id;
+
+  -- Stop every local recurrence only after remote cancellation/card removal succeeded.
+  DELETE FROM public.recurring_subscriptions WHERE user_id = v_user_id;
+  DELETE FROM public.saved_payment_cards WHERE student_id = ANY(v_student_ids);
+
+  -- Retain accounting totals without retaining the Auth subject identifier.
+  UPDATE public.subscription_invoices
+  SET user_id = v_retained_user_id,
+      notes = NULL,
+      updated_at = now()
+  WHERE user_id = v_user_id;
+  UPDATE public.subscription_payment_log
+  SET user_id = v_retained_user_id,
+      details = '{}'::jsonb
+  WHERE user_id = v_user_id;
+  UPDATE public.user_subscriptions
+  SET user_id = v_retained_user_id,
+      status = 'cancelled',
+      notes = NULL,
+      updated_at = now()
+  WHERE user_id = v_user_id;
+
+  DELETE FROM public.challenge_token_attempts
+  WHERE user_id = v_user_id OR student_id = ANY(v_student_ids);
+
+  -- Erase student health, location, progress and private communication data.
+  DELETE FROM public.anamnesis_forms WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.attendance_logs WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.bioimpedance_evaluations WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.coach_body_assessments WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.coach_evaluation_clients WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.competition_appointments WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.competition_enrollments WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.competition_hall_of_fame WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.course_certificates WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.course_exam_attempts WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.coach_course_progress WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.daily_quote_delivery WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.evolution_photos WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.food_logs WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.run_logs WHERE profile_id = v_profile_id;
+  DELETE FROM public.student_medical_confidential_notes WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.student_protocols WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.student_water_logs WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.weight_logs WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.window_method_logs WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.workout_plans WHERE student_id = ANY(v_student_ids);
+
+  DELETE FROM public.academia_acessos_negados WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_avisos WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_credenciais WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_crm_cartoes WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_evento_inscricoes WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_faces_envio WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.academia_frequencias WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.student_checkin_scans WHERE student_id = ANY(v_student_ids);
+  DELETE FROM public.partner_visits WHERE student_id = ANY(v_student_ids);
+
+  UPDATE public.group_messages
+  SET content = NULL,
+      media_url = NULL,
+      media_type = NULL,
+      is_deleted = true,
+      deleted_by = NULL
+  WHERE sender_profile_id = v_profile_id;
+  DELETE FROM public.group_members WHERE profile_id = v_profile_id;
+  DELETE FROM public.notifications WHERE profile_id = v_profile_id;
+  DELETE FROM public.bot_conversas WHERE profile_id = v_profile_id;
+  DELETE FROM public.bot_verificacoes WHERE profile_id = v_profile_id;
+  DELETE FROM public.crm_cartoes WHERE profile_id = v_profile_id;
+  DELETE FROM public.professional_public_profile WHERE profile_id = v_profile_id;
+  DELETE FROM public.partner_freebie_reservations
+  WHERE profile_id = v_profile_id OR student_id = ANY(v_student_ids);
+  DELETE FROM public.run_challenge_entries WHERE profile_id = v_profile_id;
+
+  -- Retain transaction totals, but remove payer/shipping/raw gateway personal data.
+  UPDATE public.mercadopago_payments
+  SET payer_doc = NULL,
+      payer_email = NULL,
+      payer_name = NULL,
+      pix_qr_code = NULL,
+      pix_qr_code_base64 = NULL,
+      pix_ticket_url = NULL,
+      raw_response = NULL,
+      raw_webhook = NULL,
+      student_id = NULL,
+      updated_at = now()
+  WHERE student_id = ANY(v_student_ids);
+  GET DIAGNOSTICS v_payments = ROW_COUNT;
+
+  UPDATE public.store_orders
+  SET shipping_address = NULL,
+      shipping_city = NULL,
+      shipping_location_url = NULL,
+      shipping_name = NULL,
+      shipping_number = NULL,
+      shipping_phone = NULL,
+      shipping_reference = NULL,
+      shipping_state = NULL,
+      shipping_zip = NULL,
+      notes = NULL,
+      metadata = '{}'::jsonb,
+      public_payment_token = gen_random_uuid(),
+      updated_at = now()
+  WHERE student_id = ANY(v_student_ids);
+  GET DIAGNOSTICS v_orders = ROW_COUNT;
+
+  UPDATE public.partner_product_orders
+  SET shipping_address = NULL,
+      shipping_location_url = NULL,
+      shipping_number = NULL,
+      shipping_reference = NULL,
+      shipping_zip = NULL,
+      notes = NULL,
+      metadata = '{}'::jsonb,
+      public_payment_token = gen_random_uuid(),
+      updated_at = now()
+  WHERE student_id = ANY(v_student_ids);
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  v_orders := v_orders + v_count;
+
+  UPDATE public.transactions SET metadata = '{}'::jsonb
+  WHERE student_id = ANY(v_student_ids);
+
+  UPDATE public.withdrawal_requests
+  SET pix_key = NULL, pix_key_type = NULL, notes = NULL
+  WHERE profile_id = v_profile_id
+     OR partner_id = ANY(v_partner_ids)
+     OR professional_coach_id = ANY(v_coach_ids);
+  UPDATE public.student_withdrawal_requests
+  SET pix_key = NULL,
+      pix_key_type = NULL,
+      bank_name = NULL,
+      bank_agency = NULL,
+      bank_account = NULL,
+      bank_account_type = NULL,
+      holder_cpf = NULL,
+      holder_name = NULL,
+      notes = NULL
+  WHERE student_id = ANY(v_student_ids);
+
+  UPDATE public.student_wallets
+  SET fitcoin_balance = 0,
+      available_balance = 0,
+      pending_balance = 0,
+      updated_at = now()
+  WHERE student_id = ANY(v_student_ids);
+  UPDATE public.wallets
+  SET available_balance = 0, pending_balance = 0, updated_at = now()
+  WHERE profile_id = v_profile_id;
+  UPDATE public.partner_wallets
+  SET available_balance = 0, pending_balance = 0, updated_at = now()
+  WHERE partner_id = ANY(v_partner_ids);
+  UPDATE public.professional_wallets
+  SET available_balance = 0, pending_balance = 0, updated_at = now()
+  WHERE professional_coach_id = ANY(v_coach_ids);
+  UPDATE public.nutritionist_wallets
+  SET available_balance = 0, blocked_balance = 0, updated_at = now()
+  WHERE profile_id = v_profile_id;
+  UPDATE public.professor_wallets
+  SET available_balance = 0, blocked_balance = 0, updated_at = now()
+  WHERE profile_id = v_profile_id;
+
+  -- Remove/deactivate public commercial surfaces while preserving sold content/history.
+  UPDATE public.products
+  SET is_active = false, status = 'inactive', is_recurring = false, updated_at = now()
+  WHERE creator_coach_id = ANY(v_coach_ids);
+  UPDATE public.coach_created_courses
+  SET status = 'inactive', approved_by_admin = false
+  WHERE creator_coach_id = ANY(v_coach_ids);
+  UPDATE public.professional_products
+  SET is_active_by_professional = false,
+      is_ready_for_sale = false,
+      is_recurring = false,
+      status = 'inactive',
+      updated_at = now()
+  WHERE coach_id = ANY(v_coach_ids);
+  UPDATE public.partner_products
+  SET is_active_by_partner = false,
+      is_ready_for_sale = false,
+      is_recurring = false,
+      status = 'inactive',
+      updated_at = now()
+  WHERE partner_id = ANY(v_partner_ids);
+  UPDATE public.partner_created_courses
+  SET status = 'inactive', approved_by_admin = false
+  WHERE partner_id = ANY(v_partner_ids);
+  DELETE FROM public.partner_posts WHERE partner_id = ANY(v_partner_ids);
+
+  -- Tombstones preserve foreign-key history without personal data or access.
+  UPDATE public.students
+  SET activity_factor = NULL,
+      bioimpedance_date = NULL,
+      bmr = NULL,
+      body_fat_percentage = NULL,
+      body_water_percentage = NULL,
+      bone_mass = NULL,
+      card_valid_until = NULL,
+      challenge_override_allowed = false,
+      current_weight = NULL,
+      daily_calories_goal = NULL,
+      food_restrictions = ARRAY[]::text[],
+      goal_description = NULL,
+      goal_weight = NULL,
+      health_goals_updated_at = NULL,
+      height = NULL,
+      is_influencer = false,
+      metabolic_age = NULL,
+      muscle_mass = NULL,
+      notes = NULL,
+      partner_id = NULL,
+      professional_coach_id = NULL,
+      referral_code = NULL,
+      referral_link = NULL,
+      referred_by_student_id = NULL,
+      shipping_address = NULL,
+      shipping_location_url = NULL,
+      shipping_number = NULL,
+      shipping_reference = NULL,
+      shipping_zip = NULL,
+      target_fat_percentage = NULL,
+      target_muscle_mass = NULL,
+      visceral_fat = NULL,
+      water_goal_ml = NULL,
+      updated_at = now()
+  WHERE id = ANY(v_student_ids);
+  GET DIAGNOSTICS v_students = ROW_COUNT;
+
+  UPDATE public.coaches
+  SET pix_key = NULL,
+      pix_key_type = NULL,
+      bank_name = NULL,
+      bank_agency = NULL,
+      bank_account = NULL,
+      bank_account_type = NULL,
+      referral_code = 'deleted-' || left(replace(id::text, '-', ''), 12),
+      referral_link = NULL,
+      approved_at = NULL,
+      approved_by = NULL,
+      blocked_at = now(),
+      blocked_reason = 'account_deleted',
+      card_valid_until = NULL,
+      career_goal_progress = '{}'::jsonb,
+      coach_course_notes = NULL,
+      council_number = NULL,
+      facebook = NULL,
+      herbalife_portal_url = NULL,
+      instagram = NULL,
+      is_professional = false,
+      onboarding_stage = 'deleted',
+      professional_council = NULL,
+      quiz_result_url = NULL,
+      serves_whole_network = false,
+      social_links = '[]'::jsonb,
+      specialty_custom_description = NULL,
+      tiktok = NULL,
+      website = NULL,
+      youtube = NULL,
+      can_create_fitmind_events = false
+  WHERE id = ANY(v_coach_ids);
+  GET DIAGNOSTICS v_coaches = ROW_COUNT;
+
+  UPDATE public.partners
+  SET activation_note = NULL,
+      address = NULL,
+      approved_at = NULL,
+      blocked_at = now(),
+      blocked_reason = 'account_deleted',
+      business_area = NULL,
+      card_valid_until = NULL,
+      city = NULL,
+      cover_url = NULL,
+      description = NULL,
+      document = NULL,
+      document_type = NULL,
+      facebook = NULL,
+      fantasy_name = 'Parceiro removido',
+      instagram = NULL,
+      latitude = NULL,
+      longitude = NULL,
+      photo_url = NULL,
+      public_whatsapp = NULL,
+      referral_code = NULL,
+      referral_link = NULL,
+      specialty = NULL,
+      state = NULL,
+      status = 'inactive',
+      website = NULL,
+      whatsapp = NULL,
+      zip_code = NULL,
+      updated_at = now()
+  WHERE id = ANY(v_partner_ids);
+  GET DIAGNOSTICS v_partners = ROW_COUNT;
+
+  UPDATE public.profiles
+  SET name = 'Conta removida',
+      email = 'deleted+' || replace(id::text, '-', '') || '@invalid.fitmind.local',
+      phone = NULL,
+      cpf = NULL,
+      cpf_hash = NULL,
+      birthdate = NULL,
+      photo_url = NULL,
+      avatar_url = NULL,
+      bio = NULL,
+      street = NULL,
+      number = NULL,
+      neighborhood = NULL,
+      city = NULL,
+      state = NULL,
+      zip_code = NULL,
+      status = 'deleted',
+      report_permissions = '{}'::jsonb,
+      admin_permissions = '{}'::jsonb,
+      is_master_admin = false,
+      patent = NULL,
+      gender = NULL,
+      blood_type = NULL,
+      instagram = NULL,
+      profession = NULL,
+      theme_preference = NULL,
+      withdrawal_blocked = true,
+      withdrawal_block_reason = 'account_deleted',
+      must_reset_password = false,
+      is_test = false,
+      updated_at = now()
+  WHERE id = v_profile_id;
+  GET DIAGNOSTICS v_profiles = ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'processorVersion', 1,
+    'profilesAnonymized', v_profiles,
+    'studentsAnonymized', v_students,
+    'coachesAnonymized', v_coaches,
+    'partnersAnonymized', v_partners,
+    'paymentsAnonymized', v_payments,
+    'ordersAnonymized', v_orders,
+    'financialHistoryRetained', true
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_anonymize(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_anonymize(uuid, uuid)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.account_deletion_complete(
+  _request_id uuid,
+  _lock_token uuid,
+  _retention_summary jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
+AS $$
+DECLARE
+  v_attempt integer;
+  v_user_id uuid;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role required';
+  END IF;
+
+  SELECT subject_user_id
+  INTO v_user_id
+  FROM public.account_deletion_requests
+  WHERE id = _request_id
+    AND lock_token = _lock_token
+    AND status = 'pending'
+    AND processing_state = 'processing'
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_user_id IS NULL THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  -- Keep only a short-lived one-way guard so JWTs minted before Auth deletion
+  -- cannot write again after the raw Auth subject UUID is removed from the queue.
+  INSERT INTO public.account_deleted_subject_guards (subject_hash, expires_at)
+  VALUES (digest(v_user_id::text, 'sha256'), now() + interval '48 hours')
+  ON CONFLICT (subject_hash) DO UPDATE
+  SET expires_at = GREATEST(account_deleted_subject_guards.expires_at, EXCLUDED.expires_at);
+
+  DELETE FROM public.account_deleted_subject_guards WHERE expires_at <= now();
+
+  UPDATE public.account_deletion_requests
+  SET status = 'completed',
+      processing_state = 'completed',
+      processing_stage = 'completed',
+      completed_at = now(),
+      processing_finished_at = now(),
+      processing_heartbeat_at = now(),
+      email_snapshot = 'deleted+' || replace(id::text, '-', '') || '@invalid.fitmind.local',
+      role_snapshot = NULL,
+      user_id = NULL,
+      profile_id = NULL,
+      subject_user_id = NULL,
+      subject_profile_id = NULL,
+      lock_token = NULL,
+      last_error_code = NULL,
+      last_error_at = NULL,
+      retention_summary = COALESCE(_retention_summary, '{}'::jsonb),
+      updated_at = now()
+  WHERE id = _request_id
+    AND lock_token = _lock_token
+    AND status = 'pending'
+    AND processing_state = 'processing'
+  RETURNING attempt_count INTO v_attempt;
+
+  IF v_attempt IS NULL THEN
+    RAISE EXCEPTION 'processor lease lost';
+  END IF;
+
+  INSERT INTO public.account_deletion_attempts (
+    request_id, attempt_no, stage, outcome, metadata
+  ) VALUES (
+    _request_id,
+    v_attempt,
+    'complete',
+    'completed',
+    jsonb_build_object('processorVersion', 1)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.account_deletion_complete(uuid, uuid, jsonb)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.account_deletion_complete(uuid, uuid, jsonb)
+  TO service_role;
+
+COMMENT ON FUNCTION public.account_deletion_anonymize(uuid, uuid) IS
+  'Explicit allow-list account anonymization. Never calls the legacy generic FK purge.';
+COMMENT ON TABLE public.account_deletion_attempts IS
+  'Sanitized stage/error audit for the retryable account-deletion worker; contains no email, token or payment payload.';

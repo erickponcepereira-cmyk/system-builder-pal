@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authorizeInternalCron, internalHookJson } from "@/server/internal-hook-auth.server";
 
 /**
  * Roda na virada do dia (00:05 America/Cuiaba) via pg_cron.
@@ -8,7 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/hooks/challenge-final-weighin")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const unauthorized = authorizeInternalCron(request);
+        if (unauthorized) return unauthorized;
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { syncCoachesForGroups, buildChallengeReport } = await import("@/lib/challenge-admin.server");
@@ -28,7 +31,7 @@ export const Route = createFileRoute("/api/public/hooks/challenge-final-weighin"
             final_weigh_in_date: string;
           }>;
           if (!rows.length) {
-            return Response.json({ ok: true, date: today, groups: 0 });
+            return internalHookJson({ ok: true, date: today, groups: 0 });
           }
 
           await syncCoachesForGroups(rows.map((g) => g.id));
@@ -65,10 +68,13 @@ export const Route = createFileRoute("/api/public/hooks/challenge-final-weighin"
             }
           }
 
-          return Response.json({ ok: true, date: today, groups: rows.length, saved });
-        } catch (e) {
-          console.error("challenge-final-weighin failed", e);
-          return Response.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+          return internalHookJson({ ok: true, date: today, groups: rows.length, saved });
+        } catch (error: unknown) {
+          console.error(
+            "challenge-final-weighin failed",
+            error instanceof Error ? error.message : "unknown error",
+          );
+          return internalHookJson({ ok: false, error: "Falha ao gerar pesagem final" }, 500);
         }
       },
     },

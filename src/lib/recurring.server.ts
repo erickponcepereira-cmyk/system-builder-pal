@@ -210,6 +210,7 @@ async function markSuccess(sub: Sub) {
       next_charge_at: nextChargeDate(sub),
       pending_charge_id: null,
       pending_since: null,
+      charge_claimed_at: null,
     } as never)
     .eq("id" as never, sub.id as never);
   await entregarRenovacao(sub);
@@ -231,6 +232,7 @@ async function markFailure(sub: Sub, reason: string) {
       next_charge_at: exhausted ? null : retryDate.toISOString().slice(0, 10),
       pending_charge_id: null,
       pending_since: null,
+      charge_claimed_at: null,
     } as never)
     .eq("id" as never, sub.id as never);
 }
@@ -247,12 +249,24 @@ async function markWaiting(sub: Sub, chargeId?: string, detail?: string | null) 
       last_failure_reason: detail ? `aguardando: ${String(detail).slice(0, 280)}` : "aguardando análise do Mercado Pago",
       pending_charge_id: chargeId || null,
       pending_since: new Date().toISOString(),
+      charge_claimed_at: null,
     } as never)
     .eq("id" as never, sub.id as never);
 }
 
 /** Executa a cobrança de uma assinatura (com update de próxima data / falhas). */
 async function runChargeCycle(sub: Sub) {
+  const { data: claimed, error: claimError } = await supabaseAdmin.rpc(
+    "account_deletion_claim_recurring_charge" as never,
+    { _subscription_id: sub.id } as never,
+  );
+  if (claimError) {
+    return { id: sub.id, ok: false as const, error: "falha ao reservar cobrança" };
+  }
+  if (claimed !== true) {
+    return { id: sub.id, ok: true as const, skipped: true as const };
+  }
+
   try {
     const outcome = await chargeOne(sub);
     if (outcome.state === "waiting") {
@@ -286,6 +300,9 @@ export async function settleRecurringCharge(
     .maybeSingle();
   const sub = data as unknown as (Sub & { pending_charge_id: string | null }) | null;
   if (!sub) return { ok: false, error: "assinatura não encontrada" };
+  if (sub.status === "deletion_pending") {
+    return { ok: false, error: "assinatura congelada para exclusão de conta" };
+  }
 
   if (finalStatus === "pending" || finalStatus === "in_process") {
     return { ok: true, waiting: true };
@@ -340,10 +357,13 @@ async function runPool<T, R>(items: T[], limit: number, worker: (item: T) => Pro
 }
 
 async function fetchDuePage(today: string, offset: number) {
+  const staleClaim = new Date(Date.now() - 20 * 60_000).toISOString();
   const { data } = await supabaseAdmin
     .from("recurring_subscriptions" as never)
     .select("*" as never)
-    .eq("status" as never, "active" as never)
+    .or(
+      `status.eq.active,and(status.eq.charging,charge_claimed_at.lt.${staleClaim})` as never,
+    )
     .eq("engine" as never, "saved_card" as never)
     .lte("next_charge_at" as never, today as never)
     .order("next_charge_at" as never, { ascending: true } as never)
@@ -358,7 +378,13 @@ async function fetchDuePage(today: string, offset: number) {
  */
 export async function chargeDueSubscriptions() {
   const today = new Date().toISOString().slice(0, 10);
-  const results: Array<{ id: string; ok: boolean; error?: string; waiting?: boolean }> = [];
+  const results: Array<{
+    id: string;
+    ok: boolean;
+    error?: string;
+    waiting?: boolean;
+    skipped?: boolean;
+  }> = [];
   let processed = 0;
   let offset = 0;
   let remaining = 0;
@@ -376,7 +402,7 @@ export async function chargeDueSubscriptions() {
 
     // Assinaturas que continuam vencidas (falha com retentativa hoje) não podem
     // ser relidas em loop infinito — avançamos o cursor sobre elas.
-    const stillDue = batchResults.filter((r) => !r.ok).length;
+    const stillDue = batchResults.filter((r) => !r.ok || r.skipped).length;
     offset += stillDue;
     if (batch.length < PAGE_SIZE && stillDue === 0) {
       // Fila drenada nesta página; próxima iteração confirma se sobrou algo.
@@ -392,8 +418,9 @@ export async function chargeDueSubscriptions() {
 
   return {
     processed,
-    approved: results.filter((r) => r.ok && !r.waiting).length,
+    approved: results.filter((r) => r.ok && !r.waiting && !r.skipped).length,
     waiting: results.filter((r) => r.waiting).length,
+    skipped: results.filter((r) => r.skipped).length,
     failed: results.filter((r) => !r.ok).length,
     remaining,
     results,

@@ -93,11 +93,16 @@ function AccountDeletionPage() {
         {request ? (
           <section className="rounded-3xl border border-amber-500/30 bg-card p-6 sm:p-8">
             <CheckCircle2 className="h-10 w-10 text-amber-300" />
-            <h1 className="mt-4 text-2xl font-bold">Solicitação registrada</h1>
+            <h1 className="mt-4 text-2xl font-bold">
+              {request.processingState === "queued" ? "Solicitação registrada" : "Exclusão em processamento"}
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Recebemos o pedido de exclusão da conta <strong className="text-foreground">{email}</strong>.
-              O processamento será concluído até a data abaixo, após cancelar cobranças recorrentes e
-              separar os registros que precisam de retenção legal.
+              {request.processingState === "queued"
+                ? " O processamento será concluído até a data abaixo, após cancelar cobranças recorrentes e separar os registros que precisam de retenção legal."
+                : request.processingState === "blocked"
+                  ? " A solicitação precisa de uma revisão operacional antes da conclusão. Nossa equipe deve resolver vínculos financeiros ou transferências pendentes sem exigir um novo pedido."
+                  : " A conta já foi bloqueada para novas cobranças e o processador concluirá as etapas restantes com repetição automática em caso de falha temporária."}
             </p>
             <div className="mt-5 flex items-center gap-3 rounded-2xl bg-foreground/5 p-4">
               <CalendarClock className="h-5 w-5 text-amber-300" />
@@ -107,10 +112,17 @@ function AccountDeletionPage() {
               </div>
             </div>
             {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
-            <button type="button" disabled={submitting} onClick={() => void handleCancel()} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold disabled:opacity-50">
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-              Cancelar solicitação
-            </button>
+            {request.processingState === "queued" ? (
+              <button type="button" disabled={submitting} onClick={() => void handleCancel()} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-semibold disabled:opacity-50">
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                Cancelar solicitação
+              </button>
+            ) : (
+              <div className="mt-5 flex items-start gap-3 rounded-2xl border border-border p-4 text-sm text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <p>O cancelamento deixa de estar disponível quando o processamento definitivo começa.</p>
+              </div>
+            )}
           </section>
         ) : (
           <section className="rounded-3xl border border-red-500/25 bg-card p-6 sm:p-8">
