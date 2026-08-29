@@ -464,11 +464,25 @@ export function ChallengeTab({ coachId }: Props) {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {isUrgent && <span className="text-xs font-bold text-red-400">{days}d</span>}
-                    {s.result_pct != null && (
-                      <span className={`text-sm font-bold ${s.result_pct > 0 ? "text-green-400" : "text-red-400"}`}>
-                        {s.result_pct > 0 ? "−" : "+"}{Math.abs(s.result_pct)}%
-                      </span>
-                    )}
+                    {(() => {
+                      if (s.initial_body_fat != null && s.final_body_fat != null) {
+                        const d = s.initial_body_fat - s.final_body_fat; // positivo = perdeu gordura
+                        return (
+                          <span className={`text-sm font-bold ${d > 0 ? "text-green-400" : "text-red-400"}`}>
+                            {d > 0 ? "−" : "+"}{Math.abs(d).toFixed(1)}% gord.
+                          </span>
+                        );
+                      }
+                      if (s.initial_weight != null && s.final_weight != null) {
+                        const d = s.initial_weight - s.final_weight; // positivo = perdeu peso
+                        return (
+                          <span className={`text-sm font-bold ${d > 0 ? "text-green-400" : "text-red-400"}`}>
+                            {d > 0 ? "−" : "+"}{Math.abs(d).toFixed(1)} kg
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     <span className={`text-xs rounded-full px-1.5 py-0.5 ${
                       s.status === "weighed_final" ? "bg-green-500/10 text-green-400" :
