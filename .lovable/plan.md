@@ -4,7 +4,7 @@
 
 - Alexander Martins Ferreira está correto como aluno: tem perfil, cadastro de aluno com coach confirmado (sem pendência) e parceiro aprovado, com a Adesão Anual de R$ 179,90 **paga** em 29/08.
 - O bloqueio que ele vê é apenas na tela do curso: "Seu acesso a este curso ainda não foi liberado".
-- Motivo confirmado: existe um único curso na plataforma ("Formação de Coach FitMind") e a regra de acesso só libera para (a) quem tem uma compra registrada do curso ou (b) coach aprovado. Alexander é parceiro.
+- Regra confirmada: parceiro/profissional também nasce coach — Alexander tem cadastro de coach aprovado em 29/08 às 01:46, sem bloqueio de mensalidade. Existe um único curso na plataforma ("Formação de Coach FitMind"), liberado hoje para ele por ser coach aprovado; o bloqueio da tela vinha do período anterior à aprovação, quando ainda não havia nenhuma via de acesso registrada.
 - A tabela de compras de curso está **vazia para todos os usuários**: nenhuma compra de curso foi registrada até hoje. A rotina que libera curso após o pagamento só olha itens do pedido marcados como curso digital — e a Adesão Anual é um item do tipo plano, sem ligação com o curso.
 - Ou seja: quem paga a Adesão Anual (que na descrição inclui "o curso completo... e certificado") nunca recebeu o curso. Não é um caso isolado do Alexander; é a regra que nunca existiu.
 
