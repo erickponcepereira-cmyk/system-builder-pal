@@ -2455,7 +2455,7 @@ export const relatorioAcademia = createServerFn({ method: "POST" })
       financeiro: { lancamentos: number; bruto: number; taxas: number; liquido: number };
       por_forma: Array<{ forma: string; bruto: number; taxas: number; liquido: number }>;
       por_plano: Array<{ plano: string; vendas: number; bruto: number }>;
-      situacao: { liberados: number; em_carencia: number; a_vencer: number; bloqueados: number; total_com_mensalidade: number };
+      situacao: { liberados: number; em_carencia: number; a_vencer: number; bloqueados: number; bloqueados_antigos: number; total_com_mensalidade: number };
       sem_mensalidade: number;
       vencem_em_7: number;
       frequencia: { entradas: number; pessoas: number; manuais: number };
@@ -2536,7 +2536,8 @@ export const relatorioTurmasEEventos = createServerFn({ method: "POST" })
     return {
       turmas: (turmas.data ?? []) as unknown as Array<{
         turma_id: string | null; turma: string; modalidade: string | null;
-        dias: string | null; janela: string; entradas: number; pessoas: number;
+        dias: string | null; janela: string; comeca: string | null;
+        entradas: number; pessoas: number;
       }>,
       eventos: (eventos.data ?? []) as unknown as Array<{
         evento_id: string; nome: string; data_evento: string; hora_inicio: string | null;
@@ -2659,12 +2660,12 @@ export type CategoriaRelatorio =
   // As de baixo vêm de `academia_relatorio_pessoas_extra`, não da original.
   | "projecao" | "renovacoes" | "novos" | "sem_frequencia" | "dayuse"
   // Estas tres precisam de `filtro`: qual forma, qual plano.
-  | "recebido" | "forma" | "plano";
+  | "recebido" | "forma" | "plano" | "bloqueados_antigos";
 
 /** Quais categorias moram na função nova. */
 const CATEGORIAS_EXTRA = new Set<CategoriaRelatorio>([
   "projecao", "renovacoes", "novos", "sem_frequencia", "dayuse",
-  "recebido", "forma", "plano",
+  "recebido", "forma", "plano", "bloqueados_antigos",
 ]);
 
 /**

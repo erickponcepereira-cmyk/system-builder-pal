@@ -253,7 +253,10 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
           <Cartao rot="Liberados" valor={String(s.liberados)} tom="ok" aoClicar={abrir("liberados", "Liberados hoje")} />
           <Cartao rot="A vencer" valor={String(s.a_vencer)} nota="3 dias ou menos" aoClicar={abrir("a_vencer", "A vencer (3 dias ou menos)")} />
           <Cartao rot="Em carência" valor={String(s.em_carencia)} nota="venceu, ainda entra" aoClicar={abrir("em_carencia", "Em carência")} />
-          <Cartao rot="Bloqueados" valor={String(s.bloqueados)} tom="alerta" aoClicar={abrir("bloqueados", "Bloqueados por inadimplência")} />
+          {/* Bloqueado há uma semana e bloqueado há um ano exigem coisas
+              opostas. Somados viram um número que não pede ação nenhuma. */}
+          <Cartao rot="Bloqueados" valor={String(s.bloqueados)} tom="alerta" nota="dá para cobrar"
+            aoClicar={abrir("bloqueados", "Bloqueados por inadimplência")} />
         </div>
         {/* "Sem mensalidade" era só um número no rodapé. É gente que está no
             leitor e não entra em lugar nenhum da régua — justamente por isso
@@ -266,6 +269,14 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
             nota="no leitor, sem plano"
             aoClicar={abrir("sem_mensalidade", "No leitor, sem mensalidade lançada")}
           />
+          {s.bloqueados_antigos > 0 && (
+            <Cartao
+              rot="Foram embora"
+              valor={String(s.bloqueados_antigos)}
+              nota="venceu há mais de 60 dias"
+              aoClicar={abrir("bloqueados_antigos", "Venceram há mais de 60 dias")}
+            />
+          )}
         </div>
         <p className="mt-2 text-[11px] text-white/50">
           {s.total_com_mensalidade} pessoa(s) com mensalidade lançada.
@@ -285,7 +296,11 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
                     <th className="p-2 text-right">Entradas</th><th className="p-2 text-right">Pessoas</th></tr>
               </thead>
               <tbody>
-                {grade.turmas.map((t) => (
+                {[...grade.turmas]
+                  // Ordena pelo relogio. Sem isto a grade vinha 05:00, 06:00, 19:30,
+                  // 17:30, 18:30, 07:00 -- a ordem em que o banco devolveu.
+                  .sort((a, b) => (a.comeca ?? "99:99").localeCompare(b.comeca ?? "99:99"))
+                  .map((t) => (
                   <tr key={t.turma_id ?? "fora"} className="border-t border-white/5">
                     <td className="p-2">
                       {t.turma_id ? t.turma : <span className="text-white/50">Fora de aula</span>}
