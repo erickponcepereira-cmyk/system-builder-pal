@@ -20,8 +20,9 @@ export type Avaliacao = {
   seller_reply: string | null;
   seller_replied_at: string | null;
   created_at: string;
-  author_id: string;
-  profiles?: { name: string | null } | null;
+  author_id?: string;
+  /** Nome abreviado de quem escreveu, como a RPC devolve. */
+  autor?: string | null;
 };
 
 export type ResumoDeNotas = { total: number; media: number; positivas: number };
@@ -73,13 +74,15 @@ export async function avaliacoesDoProduto(
   produtoId: string,
   limite = 20,
 ): Promise<Avaliacao[]> {
-  const { data, error } = await supabase
-    .from("product_reviews" as never)
-    .select("id,product_origin,product_id,order_id,rating,comment,seller_reply,seller_replied_at,created_at,author_id,profiles!product_reviews_author_id_fkey(name)" as never)
-    .eq("product_origin" as never, origem as never)
-    .eq("product_id" as never, produtoId as never)
-    .order("created_at" as never, { ascending: false } as never)
-    .limit(limite);
+  // Por RPC, e nao por embed. A policy "profiles_public_basic_select" exige
+  // que o perfil seja de um coach aprovado — o de um ALUNO comum nao e legivel
+  // por outro aluno, entao o embed devolveria null e toda avaliacao apareceria
+  // assinada como "Cliente". A funcao devolve o nome ja abreviado.
+  const { data, error } = await supabase.rpc("avaliacoes_do_produto" as never, {
+    _origem: origem,
+    _produto_id: produtoId,
+    _limite: limite,
+  } as never);
 
   if (error) {
     console.warn("[avaliacoes] não foi possível ler", error);

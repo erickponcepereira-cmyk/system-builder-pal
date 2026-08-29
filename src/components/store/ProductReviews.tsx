@@ -90,7 +90,7 @@ export function ProductReviews({
             <div className="flex items-center gap-2">
               <StarRating nota={a.rating} />
               <span className="text-[11px] font-bold text-foreground">
-                {a.profiles?.name || "Cliente"}
+                {a.autor || "Cliente"}
               </span>
               <span className="text-[11px] text-muted-foreground">{quando(a.created_at)}</span>
             </div>

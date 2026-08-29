@@ -134,6 +134,7 @@ import { Route as AuthenticatedAdminFitcoinWalletRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminFinancialSummaryRouteImport } from './routes/_authenticated/admin.financial-summary'
 import { Route as AuthenticatedAdminFinanceiroRouteImport } from './routes/_authenticated/admin.financeiro'
 import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/_authenticated/admin.evaluation-links'
+import { Route as AuthenticatedAdminEstornosRouteImport } from './routes/_authenticated/admin.estornos'
 import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin.cursos'
@@ -171,6 +172,7 @@ import { Route as AuthenticatedStudentProfileEditRouteImport } from './routes/_a
 import { Route as AuthenticatedStudentPartnersPartnerIdRouteImport } from './routes/_authenticated/student.partners.$partnerId'
 import { Route as AuthenticatedStudentCursoIdRouteImport } from './routes/_authenticated/student.curso.$id'
 import { Route as AuthenticatedAdminCoachesInactivityRouteImport } from './routes/_authenticated/admin.coaches.inactivity'
+import { Route as AuthenticatedStudentVendedorTipoIdRouteImport } from './routes/_authenticated/student.vendedor.$tipo.$id'
 
 const TermosProfissionalRoute = TermosProfissionalRouteImport.update({
   id: '/termos-profissional',
@@ -876,6 +878,12 @@ const AuthenticatedAdminEvaluationLinksRoute =
     path: '/evaluation-links',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEstornosRoute =
+  AuthenticatedAdminEstornosRouteImport.update({
+    id: '/estornos',
+    path: '/estornos',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminEmailReleasesRoute =
   AuthenticatedAdminEmailReleasesRouteImport.update({
     id: '/email-releases',
@@ -1088,6 +1096,12 @@ const AuthenticatedAdminCoachesInactivityRoute =
     path: '/inactivity',
     getParentRoute: () => AuthenticatedAdminCoachesRoute,
   } as any)
+const AuthenticatedStudentVendedorTipoIdRoute =
+  AuthenticatedStudentVendedorTipoIdRouteImport.update({
+    id: '/vendedor/$tipo/$id',
+    path: '/vendedor/$tipo/$id',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -1148,6 +1162,7 @@ export interface FileRoutesByFullPath {
   '/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
+  '/admin/estornos': typeof AuthenticatedAdminEstornosRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1251,6 +1266,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/student/vendedor/$tipo/$id': typeof AuthenticatedStudentVendedorTipoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1309,6 +1325,7 @@ export interface FileRoutesByTo {
   '/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
+  '/admin/estornos': typeof AuthenticatedAdminEstornosRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1412,6 +1429,7 @@ export interface FileRoutesByTo {
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/student/vendedor/$tipo/$id': typeof AuthenticatedStudentVendedorTipoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1474,6 +1492,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
+  '/_authenticated/admin/estornos': typeof AuthenticatedAdminEstornosRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/_authenticated/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/_authenticated/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1577,6 +1596,7 @@ export interface FileRoutesById {
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/_authenticated/student/vendedor/$tipo/$id': typeof AuthenticatedStudentVendedorTipoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1639,6 +1659,7 @@ export interface FileRouteTypes {
     | '/admin/cursos'
     | '/admin/digital-products'
     | '/admin/email-releases'
+    | '/admin/estornos'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1742,6 +1763,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/student/vendedor/$tipo/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1800,6 +1822,7 @@ export interface FileRouteTypes {
     | '/admin/cursos'
     | '/admin/digital-products'
     | '/admin/email-releases'
+    | '/admin/estornos'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1903,6 +1926,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/student/vendedor/$tipo/$id'
   id:
     | '__root__'
     | '/'
@@ -1964,6 +1988,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/cursos'
     | '/_authenticated/admin/digital-products'
     | '/_authenticated/admin/email-releases'
+    | '/_authenticated/admin/estornos'
     | '/_authenticated/admin/evaluation-links'
     | '/_authenticated/admin/financeiro'
     | '/_authenticated/admin/financial-summary'
@@ -2067,6 +2092,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/_authenticated/student/vendedor/$tipo/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -3002,6 +3028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEvaluationLinksRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/estornos': {
+      id: '/_authenticated/admin/estornos'
+      path: '/estornos'
+      fullPath: '/admin/estornos'
+      preLoaderRoute: typeof AuthenticatedAdminEstornosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/email-releases': {
       id: '/_authenticated/admin/email-releases'
       path: '/email-releases'
@@ -3261,6 +3294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCoachesInactivityRouteImport
       parentRoute: typeof AuthenticatedAdminCoachesRoute
     }
+    '/_authenticated/student/vendedor/$tipo/$id': {
+      id: '/_authenticated/student/vendedor/$tipo/$id'
+      path: '/vendedor/$tipo/$id'
+      fullPath: '/student/vendedor/$tipo/$id'
+      preLoaderRoute: typeof AuthenticatedStudentVendedorTipoIdRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
   }
 }
 
@@ -3297,6 +3337,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
   AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
+  AuthenticatedAdminEstornosRoute: typeof AuthenticatedAdminEstornosRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
   AuthenticatedAdminFinanceiroRoute: typeof AuthenticatedAdminFinanceiroRoute
   AuthenticatedAdminFinancialSummaryRoute: typeof AuthenticatedAdminFinancialSummaryRoute
@@ -3363,6 +3404,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
   AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
+  AuthenticatedAdminEstornosRoute: AuthenticatedAdminEstornosRoute,
   AuthenticatedAdminEvaluationLinksRoute:
     AuthenticatedAdminEvaluationLinksRoute,
   AuthenticatedAdminFinanceiroRoute: AuthenticatedAdminFinanceiroRoute,
@@ -3482,6 +3524,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentWorkoutRoute: typeof AuthenticatedStudentWorkoutRoute
   AuthenticatedStudentIndexRoute: typeof AuthenticatedStudentIndexRoute
   AuthenticatedStudentCursoIdRoute: typeof AuthenticatedStudentCursoIdRoute
+  AuthenticatedStudentVendedorTipoIdRoute: typeof AuthenticatedStudentVendedorTipoIdRoute
 }
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
@@ -3519,6 +3562,8 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentWorkoutRoute: AuthenticatedStudentWorkoutRoute,
   AuthenticatedStudentIndexRoute: AuthenticatedStudentIndexRoute,
   AuthenticatedStudentCursoIdRoute: AuthenticatedStudentCursoIdRoute,
+  AuthenticatedStudentVendedorTipoIdRoute:
+    AuthenticatedStudentVendedorTipoIdRoute,
 }
 
 const AuthenticatedStudentRouteWithChildren =

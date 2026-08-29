@@ -16,6 +16,7 @@ import { StoreBanner, StorePopup } from "@/components/store/StoreBanner";
 import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners";
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { ProductReviews } from "@/components/store/ProductReviews";
+import { vendedorDoProduto } from "@/lib/store-seller";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
 import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
@@ -1092,6 +1093,7 @@ export function UnifiedStorePage({
           product={detail}
           onClose={() => setDetail(null)}
           onAdd={adicionarAoCarrinho}
+          navigate={navigate}
           noCarrinho={carrinho.cart.some((item) => item.sourceId === detail.sourceId && item.kind === detail.kind)}
           modoCoach={modoCoach}
           hasUpline={coach.hasUpline}
@@ -1425,6 +1427,7 @@ function DetailSheet({
   product,
   onClose,
   onAdd,
+  navigate,
   noCarrinho,
   modoCoach,
   hasUpline,
@@ -1439,6 +1442,7 @@ function DetailSheet({
   product: UnifiedProduct;
   onClose: () => void;
   onAdd: (product: UnifiedProduct, horario?: string | null) => Promise<void>;
+  navigate: ReturnType<typeof useNavigate>;
   noCarrinho: boolean;
   modoCoach: boolean;
   hasUpline: boolean;
@@ -1477,10 +1481,33 @@ function DetailSheet({
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {ORIGIN_LABEL[product.origin]} · {product.sellerName}
-              {product.sellerCity ? ` · ${product.sellerCity}` : ""}
-            </p>
+            {/* O nome do vendedor era texto morto. Agora leva a quem vende:
+                há quanto tempo, quantas vendas, o que mais tem. Produto da
+                própria FitMind não tem página — a loja é a FitMind. */}
+            {(() => {
+              const dono = vendedorDoProduto(product.origin, product.sellerId);
+              const rotulo = (
+                <>
+                  {ORIGIN_LABEL[product.origin]} · <span className={dono ? "font-bold text-primary underline" : ""}>{product.sellerName}</span>
+                  {product.sellerCity ? ` · ${product.sellerCity}` : ""}
+                </>
+              );
+              if (!dono) {
+                return <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{rotulo}</p>;
+              }
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    void navigate({ to: "/student/vendedor/$tipo/$id", params: { tipo: dono.tipo, id: dono.id } });
+                  }}
+                  className="text-left text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
+                  {rotulo}
+                </button>
+              );
+            })()}
             <h2 className="text-base font-bold text-foreground">{product.title}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0">
