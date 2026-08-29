@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Save, Search, ClipboardList, Loader2 } from "lucide-react";
+import { AnamnesisView, ANAMNESIS_COLUMNS, type AnamnesisRow } from "@/components/shared/AnamnesisView";
 
 interface Props { coachId: string }
 
-type Client = { id: string; name: string; whatsapp: string | null; email: string | null };
+type Client = { id: string; name: string; whatsapp: string | null; email: string | null; student_id?: string | null };
 type Question = { id: string; label: string; kind: string; options: string[]; position: number };
 
 const DEFAULT_QUESTIONS: Question[] = [
@@ -27,6 +28,7 @@ export function AnamneseTab({ coachId }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [officialForms, setOfficialForms] = useState<AnamnesisRow[]>([]);
 
   useEffect(() => {
     if (!coachId) return;
@@ -38,7 +40,7 @@ export function AnamneseTab({ coachId }: Props) {
       while (true) {
         const { data: cli } = await supabase
           .from("coach_evaluation_clients" as never)
-          .select("id,name,whatsapp,email" as never)
+          .select("id,name,whatsapp,email,student_id" as never)
           .eq("coach_id" as never, coachId as never)
           .order("name" as never)
           .range(from, from + PAGE - 1);
@@ -74,6 +76,16 @@ export function AnamneseTab({ coachId }: Props) {
       .eq("evaluation_client_id" as never, c.id as never)
       .maybeSingle();
     setAnswers(((data as { answers?: Record<string, string> } | null)?.answers) || {});
+
+    setOfficialForms([]);
+    if (c.student_id) {
+      const { data: forms } = await supabase
+        .from("anamnesis_forms" as never)
+        .select(ANAMNESIS_COLUMNS as never)
+        .eq("student_id" as never, c.student_id as never)
+        .order("filled_at" as never, { ascending: false } as never);
+      setOfficialForms(((forms as unknown as AnamnesisRow[]) || []));
+    }
     setLoading(false);
   };
 
@@ -137,6 +149,18 @@ export function AnamneseTab({ coachId }: Props) {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar anamnese
         </button>
       </div>
+
+      {officialForms.length > 0 && (
+        <div className="mb-4 rounded-2xl p-5 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
+          <div>
+            <p className="text-sm font-bold text-white">Anamnese oficial FitMind</p>
+            <p className="text-xs text-white/40">Preenchida pelo próprio aluno no app</p>
+          </div>
+          {officialForms.map((f) => (
+            <AnamnesisView key={String(f.id)} row={f} />
+          ))}
+        </div>
+      )}
 
       <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: "#1A1A1A" }}>
         {loading ? (
