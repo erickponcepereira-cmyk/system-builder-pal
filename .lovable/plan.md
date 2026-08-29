@@ -10,7 +10,7 @@
 
 1. **Benefício vai para o vendedor, não para o titular.** Nos pedidos de parceiro/profissional os pontos são lançados para `selling_coach_id` no momento do pagamento. Nos dois pedidos de R$ 1.300 da Gabi Litran (PP-D38D35CB e PP-BBDD2EDD) os 45 + 45 pontos ficaram com a Vimark/Vanessa, embora o titular já tenha sido corrigido para a Mari.
 2. **Loja usa pontuação fixa por produto.** Nas vendas de catálogo o ponto vem de `points_per_sale` do produto (hoje há produtos com 1, 2, 3, 4, 10, 30, 60 e 100 pontos) e, quando está zerado, o sistema dá 1 ponto "de consolo". Nada disso olha a taxa de sistema — é daí que vem a impressão de pontuação inflada/desigual.
-3. **Duas vendas idênticas de R$ 1.300 para a mesma aluna** (PP-D38D35CB e PP-BBDD2EDD, pagas com 26 minutos de diferença) geraram 45 pontos cada. Se a segunda for teste/duplicidade, os 45 pontos dela também precisam sair.
+3. **As duas vendas de R$ 1.300 para a mesma aluna** (PP-D38D35CB e PP-BBDD2EDD) são legítimas: 45 pontos cada, ambos válidos — só precisam ir para o titular.
 
 ## Correção proposta
 
