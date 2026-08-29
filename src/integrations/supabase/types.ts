@@ -15556,6 +15556,7 @@ export type Database = {
           novos_qtd: number
           projecao_pessoas: number
           projecao_sem_preco: number
+          projecao_sumidos: number
           projecao_valor: number
           renovacoes_qtd: number
           renovacoes_valor: number
@@ -16751,6 +16752,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      professional_can_view_student: {
+        Args: { _student_id: string }
+        Returns: boolean
       }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
