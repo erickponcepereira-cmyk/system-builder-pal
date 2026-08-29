@@ -488,7 +488,12 @@ export function UnifiedStorePage({
 
     // A venda do coach não tem entrega: `create_coach_sale` não recebe
     // endereço. Quem compra físico pelo coach acerta a entrega no painel.
-    if (!modoCoach && precisaEntrega && carrinho.steps[0]?.key === "fitmind") {
+    //
+    // Fora isso, a exigência vale para QUALQUER passo, não só o da FitMind.
+    // Enquanto olhava só `steps[0]?.key === "fitmind"`, um carrinho que
+    // começasse por vendedor passava direto — e o pedido de parceiro nascia
+    // sem endereço, calado.
+    if (!modoCoach && precisaEntrega) {
       const falta = faltaParaEntrega(shipping, aceitouPrazo, aceitouEndereco);
       if (falta) { toast.error(falta); return; }
     }
@@ -1852,8 +1857,6 @@ function CartSheet({
 }) {
   useFecharComEscape(onClose);
   const multiplo = steps.length > 1;
-  /** O primeiro pedido é o da FitMind? É ele que leva o endereço. */
-  const entregaAgora = steps[0]?.key === "fitmind";
 
   return (
     <div
@@ -2017,10 +2020,9 @@ function CartSheet({
             {!checkout.modoCoach && checkout.precisaEntrega && (
               <div className="mt-3 grid gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs font-bold text-primary">Entrega (produto físico)</p>
-                {!entregaAgora && (
+                {steps.length > 1 && (
                   <p className="text-[10px] leading-relaxed text-muted-foreground">
-                    O endereço vale para o pedido da FitMind, que é o último da fila. Os pedidos
-                    de parceiro vêm antes e não têm entrega.
+                    O mesmo endereço vale para todos os {steps.length} pedidos deste carrinho.
                   </p>
                 )}
                 {CAMPOS_ENTREGA.map(({ campo, label }) => (

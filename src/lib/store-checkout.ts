@@ -125,7 +125,7 @@ export async function criarProximoPedido({
   const nome = (userData.user?.user_metadata?.name as string) || "";
 
   if (deVendedor.length > 0) {
-    return criarPedidoDeVendedor(deVendedor[0], { paymentMethod, studentId, referrerStudentId, email, nome });
+    return criarPedidoDeVendedor(deVendedor[0], { paymentMethod, studentId, referrerStudentId, email, nome, shipping, attachShipping });
   }
 
   return criarPedidoFitMind(daFitMind, { paymentMethod, shipping, referrerStudentId, email, nome, attachShipping });
@@ -139,6 +139,8 @@ async function criarPedidoDeVendedor(
     referrerStudentId: string | null;
     email: string;
     nome: string;
+    shipping: ShippingForm;
+    attachShipping: AttachShipping;
   },
 ): Promise<PayOrder> {
   const metodo = partnerRpcPaymentMethod(ctx.paymentMethod);
@@ -187,6 +189,14 @@ async function criarPedidoDeVendedor(
   }
 
   if (!pedidoId) throw new Error("Pedido não retornado");
+
+  // Produto de parceiro tambem se entrega. `partner_product_orders` sempre teve
+  // as colunas de endereco e `attachShippingToOrder` sempre soube gravar nelas
+  // — o que faltava era esta chamada. Enquanto faltou, todo pedido fisico de
+  // parceiro nasceu sem para onde ir.
+  if (item.isPhysical) {
+    await anexarEntrega(String(pedidoId), [item], ctx.shipping, ctx.attachShipping, "partner_product_order");
+  }
 
   const { data: linha } = await supabase
     .from("partner_product_orders" as never)
@@ -266,12 +276,18 @@ async function anexarEntrega(
   itens: CartItem[],
   shipping: ShippingForm,
   attachShipping: AttachShipping,
+  kind: "store_order" | "partner_product_order" = "store_order",
 ): Promise<void> {
   const productIds = itens.map((item) => item.sourceId).filter(Boolean);
   let prazo: number | null = null;
   if (productIds.length) {
-    const { data } = await supabase.from("products").select("id,delivery_days").in("id", productIds as never);
-    const dias = ((data as Array<{ delivery_days: number | null }>) || [])
+    // O prazo mora numa tabela diferente por origem. Perguntar em `products`
+    // por um id de `partner_products` nao da erro: volta vazio, e o pedido
+    // nasce sem prazo nenhum.
+    const tabela = kind === "store_order" ? "products"
+      : itens[0]?.kind === "partner_company" ? "partner_products" : "professional_products";
+    const { data } = await supabase.from(tabela as never).select("id,delivery_days" as never).in("id" as never, productIds as never);
+    const dias = ((data as unknown as Array<{ delivery_days: number | null }>) || [])
       .map((linha) => Number(linha.delivery_days || 0))
       .filter((n) => n > 0);
     prazo = dias.length ? Math.max(...dias) : null;
@@ -279,7 +295,7 @@ async function anexarEntrega(
 
   await attachShipping({
     data: {
-      kind: "store_order",
+      kind,
       order_id: orderId,
       save_to_profile: true,
       delivery_days: prazo,
