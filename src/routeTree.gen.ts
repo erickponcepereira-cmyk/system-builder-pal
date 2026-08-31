@@ -144,7 +144,6 @@ import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminCoachIdsRouteImport } from './routes/_authenticated/admin.coach-ids'
 import { Route as AuthenticatedAdminCoachApplicationsRouteImport } from './routes/_authenticated/admin.coach-applications'
 import { Route as AuthenticatedAdminChallengeRouteImport } from './routes/_authenticated/admin.challenge'
-import { Route as AuthenticatedAdminAcademiasRouteImport } from './routes/_authenticated/admin.academias'
 import { Route as AuthenticatedAdminCarteirinhaRouteImport } from './routes/_authenticated/admin.carteirinha'
 import { Route as AuthenticatedAdminCareerRouteImport } from './routes/_authenticated/admin.career'
 import { Route as AuthenticatedAdminCalendarsRouteImport } from './routes/_authenticated/admin.calendars'
@@ -153,6 +152,7 @@ import { Route as AuthenticatedAdminBannersRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminAssessmentDeletionsRouteImport } from './routes/_authenticated/admin.assessment-deletions'
 import { Route as AuthenticatedAdminAdminWalletRouteImport } from './routes/_authenticated/admin.admin-wallet'
 import { Route as AuthenticatedAdminAchievementsRouteImport } from './routes/_authenticated/admin.achievements'
+import { Route as AuthenticatedAdminAcademiasRouteImport } from './routes/_authenticated/admin.academias'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -938,12 +938,6 @@ const AuthenticatedAdminChallengeRoute =
     path: '/challenge',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminAcademiasRoute =
-  AuthenticatedAdminAcademiasRouteImport.update({
-    id: '/academias',
-    path: '/academias',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedAdminCarteirinhaRoute =
   AuthenticatedAdminCarteirinhaRouteImport.update({
     id: '/carteirinha',
@@ -990,6 +984,12 @@ const AuthenticatedAdminAchievementsRoute =
   AuthenticatedAdminAchievementsRouteImport.update({
     id: '/achievements',
     path: '/achievements',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAcademiasRoute =
+  AuthenticatedAdminAcademiasRouteImport.update({
+    id: '/academias',
+    path: '/academias',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
@@ -1152,6 +1152,7 @@ export interface FileRoutesByFullPath {
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -1159,7 +1160,6 @@ export interface FileRoutesByFullPath {
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/admin/career': typeof AuthenticatedAdminCareerRoute
-  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1316,6 +1316,7 @@ export interface FileRoutesByTo {
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -1323,7 +1324,6 @@ export interface FileRoutesByTo {
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/admin/career': typeof AuthenticatedAdminCareerRoute
-  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1484,6 +1484,7 @@ export interface FileRoutesById {
   '/resultado/$token': typeof ResultadoTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/_authenticated/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/_authenticated/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/_authenticated/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -1491,7 +1492,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/_authenticated/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/_authenticated/admin/career': typeof AuthenticatedAdminCareerRoute
-  '/_authenticated/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/_authenticated/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/_authenticated/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/_authenticated/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1652,6 +1652,7 @@ export interface FileRouteTypes {
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/academias'
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
@@ -1659,7 +1660,6 @@ export interface FileRouteTypes {
     | '/admin/branding'
     | '/admin/calendars'
     | '/admin/career'
-    | '/admin/academias'
     | '/admin/carteirinha'
     | '/admin/challenge'
     | '/admin/coach-applications'
@@ -1816,6 +1816,7 @@ export interface FileRouteTypes {
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/academias'
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
@@ -1823,7 +1824,6 @@ export interface FileRouteTypes {
     | '/admin/branding'
     | '/admin/calendars'
     | '/admin/career'
-    | '/admin/academias'
     | '/admin/carteirinha'
     | '/admin/challenge'
     | '/admin/coach-applications'
@@ -1983,6 +1983,7 @@ export interface FileRouteTypes {
     | '/resultado/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/admin/academias'
     | '/_authenticated/admin/achievements'
     | '/_authenticated/admin/admin-wallet'
     | '/_authenticated/admin/assessment-deletions'
@@ -1990,7 +1991,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/branding'
     | '/_authenticated/admin/calendars'
     | '/_authenticated/admin/career'
-    | '/_authenticated/admin/academias'
     | '/_authenticated/admin/carteirinha'
     | '/_authenticated/admin/challenge'
     | '/_authenticated/admin/coach-applications'
@@ -3111,13 +3111,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminChallengeRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/academias': {
-      id: '/_authenticated/admin/academias'
-      path: '/academias'
-      fullPath: '/admin/academias'
-      preLoaderRoute: typeof AuthenticatedAdminAcademiasRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
     '/_authenticated/admin/carteirinha': {
       id: '/_authenticated/admin/carteirinha'
       path: '/carteirinha'
@@ -3172,6 +3165,13 @@ declare module '@tanstack/react-router' {
       path: '/achievements'
       fullPath: '/admin/achievements'
       preLoaderRoute: typeof AuthenticatedAdminAchievementsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/academias': {
+      id: '/_authenticated/admin/academias'
+      path: '/academias'
+      fullPath: '/admin/academias'
+      preLoaderRoute: typeof AuthenticatedAdminAcademiasRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/.mcp/invoke-tool/$tool': {
@@ -3340,6 +3340,7 @@ const AuthenticatedAdminCoachesRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAcademiasRoute: typeof AuthenticatedAdminAcademiasRoute
   AuthenticatedAdminAchievementsRoute: typeof AuthenticatedAdminAchievementsRoute
   AuthenticatedAdminAdminWalletRoute: typeof AuthenticatedAdminAdminWalletRoute
   AuthenticatedAdminAssessmentDeletionsRoute: typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -3347,7 +3348,6 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminBrandingRoute: typeof AuthenticatedAdminBrandingRoute
   AuthenticatedAdminCalendarsRoute: typeof AuthenticatedAdminCalendarsRoute
   AuthenticatedAdminCareerRoute: typeof AuthenticatedAdminCareerRoute
-  AuthenticatedAdminAcademiasRoute: typeof AuthenticatedAdminAcademiasRoute
   AuthenticatedAdminCarteirinhaRoute: typeof AuthenticatedAdminCarteirinhaRoute
   AuthenticatedAdminChallengeRoute: typeof AuthenticatedAdminChallengeRoute
   AuthenticatedAdminCoachApplicationsRoute: typeof AuthenticatedAdminCoachApplicationsRoute
@@ -3405,6 +3405,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAcademiasRoute: AuthenticatedAdminAcademiasRoute,
   AuthenticatedAdminAchievementsRoute: AuthenticatedAdminAchievementsRoute,
   AuthenticatedAdminAdminWalletRoute: AuthenticatedAdminAdminWalletRoute,
   AuthenticatedAdminAssessmentDeletionsRoute:
@@ -3413,7 +3414,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminBrandingRoute: AuthenticatedAdminBrandingRoute,
   AuthenticatedAdminCalendarsRoute: AuthenticatedAdminCalendarsRoute,
   AuthenticatedAdminCareerRoute: AuthenticatedAdminCareerRoute,
-  AuthenticatedAdminAcademiasRoute: AuthenticatedAdminAcademiasRoute,
   AuthenticatedAdminCarteirinhaRoute: AuthenticatedAdminCarteirinhaRoute,
   AuthenticatedAdminChallengeRoute: AuthenticatedAdminChallengeRoute,
   AuthenticatedAdminCoachApplicationsRoute:
