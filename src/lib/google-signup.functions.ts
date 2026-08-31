@@ -128,6 +128,11 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
         referredByStudentId: z.string().uuid().nullable().optional(),
         referralCode: z.string().nullable().optional(),
         partnerId: z.string().uuid().nullable().optional(),
+        touchId: z.string().uuid().nullable().optional(),
+      })
+      .refine((v) => !v.name.includes("@"), {
+        message: "Informe seu nome completo (não use o e-mail).",
+        path: ["name"],
       })
       .parse(input),
   )
@@ -166,6 +171,31 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
       partnerId = row.partner_id ?? null;
     }
 
+    // Sem código na tela (storage perdido no meio do OAuth): o toque gravado
+    // no servidor quando a pessoa abriu o link é a prova de origem.
+    let touchCoachId: string | null = null;
+    if (data.touchId) {
+      const { data: toque } = await supabaseAdmin
+        .from("referral_touches")
+        .select("coach_id, partner_id, referred_by_student_id, claimed_profile_id")
+        .eq("id", data.touchId)
+        .maybeSingle();
+      const t = toque as {
+        coach_id: string | null;
+        partner_id: string | null;
+        referred_by_student_id: string | null;
+        claimed_profile_id: string | null;
+      } | null;
+      if (t?.coach_id && !t.claimed_profile_id) {
+        touchCoachId = t.coach_id;
+        if (!data.referralCode) {
+          coachId = t.coach_id;
+          referredByStudentId = t.referred_by_student_id ?? referredByStudentId;
+          partnerId = t.partner_id ?? partnerId;
+        }
+      }
+    }
+
 
     // Blindagem: se já existe profile (por user_id ou e-mail), não cria outro —
     // apenas completa os dados e garante a linha de aluno.
@@ -192,6 +222,7 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
       if (!existing.role || existing.role === "student") {
         await ensureStudentForProfile(existing.id as string, coachId, partnerId, referredByStudentId);
       }
+      await claimTouch(supabaseAdmin, data.touchId ?? null, existing.id as string, coachId, touchCoachId);
       return { ok: true, alreadyExisted: true };
     }
 
@@ -219,5 +250,38 @@ export const completeGoogleStudentSignup = createServerFn({ method: "POST" })
       .update({ phone: data.phone, gender: data.gender, birthdate: data.birthdate })
       .eq("user_id", userId);
 
+    const { data: created } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    await claimTouch(supabaseAdmin, data.touchId ?? null, (created?.id as string) ?? null, coachId, touchCoachId);
+
     return { ok: true, alreadyExisted: false };
   });
+
+/**
+ * Marca o toque de indicação como usado por este perfil e registra quando o
+ * coach gravado diverge do coach do link — é o que alimenta o alerta do admin.
+ */
+async function claimTouch(
+  supabaseAdmin: { from: (t: string) => any },
+  touchId: string | null,
+  profileId: string | null,
+  coachIdGravado: string | null,
+  coachIdDoLink: string | null,
+) {
+  if (!touchId || !profileId) return;
+  try {
+    await supabaseAdmin
+      .from("referral_touches")
+      .update({ claimed_profile_id: profileId, claimed_at: new Date().toISOString() })
+      .eq("id", touchId)
+      .is("claimed_profile_id", null);
+    if (coachIdDoLink && coachIdGravado && coachIdDoLink !== coachIdGravado) {
+      console.error("[indicacao] divergencia de coach", { touchId, profileId, coachIdDoLink, coachIdGravado });
+    }
+  } catch (e) {
+    console.error("[indicacao] falha ao vincular toque", e);
+  }
+}

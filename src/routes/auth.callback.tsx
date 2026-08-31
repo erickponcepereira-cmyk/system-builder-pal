@@ -7,6 +7,8 @@ import { resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { clearPostAuthIntent, peekPostAuthIntent, setPostAuthIntent } from "@/lib/post-auth-intent";
+import { gravarAtribuicaoResolvida, gravarToqueId, resolverCodigo } from "@/lib/atribuicao";
+
 
 
 export const Route = createFileRoute("/auth/callback")({
@@ -53,7 +55,21 @@ function AuthCallbackPage() {
     ran.current = true;
 
     (async () => {
+      // A indicação viaja na própria URL de retorno: é o que sobrevive quando
+      // o login com Apple/Google termina em outro navegador (link do WhatsApp).
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get("ref");
+        const toque = params.get("rt");
+        if (toque) gravarToqueId(toque);
+        if (ref) {
+          const row = await resolverCodigo(ref);
+          if (row) gravarAtribuicaoResolvida(ref, row);
+        }
+      } catch { /* indicação é melhor-esforço, não bloqueia o login */ }
+
       // Aguarda a sessão ser hidratada (o SDK pode ainda estar gravando o token).
+
       let session = null as Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"];
       for (let i = 0; i < 25; i++) {
         const { data } = await supabase.auth.getSession();

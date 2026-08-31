@@ -65,7 +65,7 @@ function ReferralLandingPage() {
       // o link de indicação travava na tela "Validando seu convite...".
       // O link explícito atual é autoritativo e substitui uma indicação antiga
       // ainda não convertida neste navegador.
-      gravarAtribuicaoResolvida(code, row);
+      gravarAtribuicaoResolvida(code, row, productId ?? null);
       let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         setPendingProduct(productId, null);

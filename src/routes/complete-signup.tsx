@@ -12,7 +12,7 @@ import { maskPhone } from "@/lib/masks";
 import { completeGoogleStudentSignup, resolveGoogleAccount } from "@/lib/google-signup.functions";
 import { readReferralSignup, clearReferralSignup, type ReferralSignup } from "@/lib/referral-signup";
 import { clearPostAuthIntent, peekPostAuthIntent } from "@/lib/post-auth-intent";
-import { resolverCodigo } from "@/lib/atribuicao";
+import { lerToqueId, resolverCodigo, resolverToque } from "@/lib/atribuicao";
 import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
 import { CURATION_DOC, TERMS_PDF_URL, TERMS_VERSION } from "@/lib/terms";
 import { UFS } from "@/lib/compliance-gate";
@@ -50,6 +50,8 @@ function CompleteSignupPage() {
   const navigate = useNavigate();
   const { role: intendedRole } = Route.useSearch();
   const [referral, setReferral] = useState<ReferralSignup | null>(null);
+  const [touchId, setTouchId] = useState<string | null>(null);
+
   const [checking, setChecking] = useState(true);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState("");
@@ -82,7 +84,10 @@ function CompleteSignupPage() {
           return;
         }
         setEmail(state.email || "");
-        setName(state.name || "");
+        // Apple não devolve o nome: não deixe o e-mail virar nome do perfil.
+        const nomeVindo = (state.name || "").trim();
+        setName(nomeVindo.includes("@") ? "" : nomeVindo);
+
       } catch {
         setEmail(data.session.user.email || "");
       }
@@ -113,6 +118,26 @@ function CompleteSignupPage() {
           setError("O link de indicação expirou. Selecione um coach para continuar.");
         }
       }
+
+      // Sem indicação no navegador (storage perdido no OAuth): usa o toque
+      // registrado no servidor quando a pessoa abriu o link.
+      const toque = lerToqueId();
+      setTouchId(toque);
+      if (!ref.coachId && toque) {
+        const t = await resolverToque(toque);
+        if (t?.coachId && !t.claimedProfileId) {
+          ref = {
+            code: t.code || ref.code,
+            kind: ref.kind ?? null,
+            coachId: t.coachId,
+            sponsorName: t.sponsorName,
+            partnerId: t.partnerId ?? ref.partnerId,
+            referredByStudentId: t.referredByStudentId ?? ref.referredByStudentId,
+          };
+          setError(null);
+        }
+      }
+
       setReferral(ref);
       if (ref.coachId) {
         setCoach({
@@ -123,6 +148,7 @@ function CompleteSignupPage() {
       }
 
 
+
       setChecking(false);
     })();
   }, [navigate, intendedRole]);
@@ -130,7 +156,8 @@ function CompleteSignupPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (name.trim().length < 2) return setError("Informe seu nome completo.");
+    if (name.trim().length < 2 || name.includes("@")) return setError("Informe seu nome completo (não use o e-mail).");
+    if (name.trim().split(/\s+/).length < 2) return setError("Informe nome e sobrenome.");
     if (phone.replace(/\D/g, "").length < 10) return setError("Informe um telefone válido com DDD.");
     if (!gender) return setError("Selecione o sexo.");
     if (!birthdate) return setError("Informe a data de nascimento.");
@@ -150,6 +177,7 @@ function CompleteSignupPage() {
           referredByStudentId: referral?.referredByStudentId ?? null,
           referralCode: referral?.code ?? null,
           partnerId: referral?.partnerId ?? null,
+          touchId: touchId,
         },
       });
 
@@ -281,7 +309,7 @@ function CompleteSignupPage() {
               <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-white/80">
                 Você foi indicado(a) por{" "}
                 <span className="font-semibold text-white">{referral.sponsorName || "seu coach"}</span> — essa
-                indicação fica registrada na sua conta.
+                indicação fica registrada na sua conta e não pode ser alterada.
               </div>
             ) : (
               <CoachSelector value={coach} onChange={setCoach} />

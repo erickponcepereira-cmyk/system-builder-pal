@@ -12045,6 +12045,83 @@ export type Database = {
           },
         ]
       }
+      referral_touches: {
+        Row: {
+          claimed_at: string | null
+          claimed_profile_id: string | null
+          coach_id: string | null
+          code: string
+          created_at: string
+          id: string
+          landing_path: string | null
+          partner_id: string | null
+          product_id: string | null
+          referred_by_student_id: string | null
+          sponsor_name: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_profile_id?: string | null
+          coach_id?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          partner_id?: string | null
+          product_id?: string | null
+          referred_by_student_id?: string | null
+          sponsor_name?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_profile_id?: string | null
+          coach_id?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          landing_path?: string | null
+          partner_id?: string | null
+          product_id?: string | null
+          referred_by_student_id?: string | null
+          sponsor_name?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_touches_claimed_profile_id_fkey"
+            columns: ["claimed_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_touches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_touches_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_touches_referred_by_student_id_fkey"
+            columns: ["referred_by_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       return_requests: {
         Row: {
           admin_notes: string | null
@@ -17493,6 +17570,15 @@ export type Database = {
         Args: { _location?: string; _notes?: string; _student_id: string }
         Returns: Json
       }
+      registrar_toque_indicacao: {
+        Args: {
+          _code: string
+          _landing_path?: string
+          _product_id?: string
+          _user_agent?: string
+        }
+        Returns: string
+      }
       release_available_commissions: { Args: never; Returns: number }
       release_due_commissions_cron: { Args: never; Returns: number }
       release_due_partner_product_wallets: { Args: never; Returns: number }
@@ -17845,6 +17931,21 @@ export type Database = {
         }
       }
       test_mode_cutoff: { Args: never; Returns: string }
+      toque_indicacao_por_id: {
+        Args: { _touch_id: string }
+        Returns: {
+          claimed_profile_id: string
+          coach_id: string
+          code: string
+          created_at: string
+          id: string
+          landing_path: string
+          partner_id: string
+          product_id: string
+          referred_by_student_id: string
+          sponsor_name: string
+        }[]
+      }
       touch_my_activity: { Args: never; Returns: undefined }
       transfer_evaluation_client_link: {
         Args: {
@@ -17951,6 +18052,10 @@ export type Database = {
           curso: string
           emitido_em: string
         }[]
+      }
+      vincular_toque_ao_perfil: {
+        Args: { _profile_id: string; _touch_id: string }
+        Returns: boolean
       }
       voltar_curso_para_rascunho: {
         Args: { _digital_product_id: string }

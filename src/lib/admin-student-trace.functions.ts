@@ -126,7 +126,42 @@ export type StudentTrace = {
     lastTransactionAt: string | null;
     activeSubscription: boolean;
   };
+  /** Cliques em links de indicação registrados no servidor. */
+  touches: {
+    id: string;
+    code: string;
+    sponsorName: string | null;
+    coachId: string | null;
+    coachName: string | null;
+    landingPath: string | null;
+    productId: string | null;
+    createdAt: string;
+    claimed: boolean;
+  }[];
+  /** Coach do link divergente do coach gravado. */
+  coachMismatch: { linkCoachId: string; linkCoachName: string | null; code: string } | null;
+  /** Como a conta foi criada: apple, google, e-mail/senha… */
+  signupProvider: string | null;
+  purchases: {
+    id: string;
+    description: string | null;
+    amount: number;
+    paymentMethod: string | null;
+    status: string | null;
+    paidAt: string | null;
+    createdAt: string | null;
+  }[];
+  annualFee: { paid: boolean; paidAt: string | null; amount: number | null; source: string | null };
+  profileSubscription: {
+    status: string | null;
+    paidUntil: string | null;
+    nextInvoiceMonth: string | null;
+    paymentMethod: string | null;
+    invoices: { month: string | null; dueDate: string | null; amount: number | null; status: string | null; paidAt: string | null; method: string | null }[];
+  } | null;
+  profilesOwned: { kind: string; createdAt: string | null; status: string | null }[];
 };
+
 
 export const adminTraceStudent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
