@@ -178,11 +178,85 @@ function AdminStudentTrace() {
             )}
           </Section>
 
+          <Section title="Jornada do link (toques registrados)" icon={Sparkles}>
+            {trace.coachMismatch && (
+              <div className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-white/90">
+                Divergência: o link usado ({trace.coachMismatch.code}) era do coach{" "}
+                <b>{trace.coachMismatch.linkCoachName || trace.coachMismatch.linkCoachId}</b>, mas o
+                cadastro ficou com <b>{trace.coach?.name || "outro coach"}</b>.
+              </div>
+            )}
+            <Row label="Cadastro feito com" value={trace.signupProvider} />
+            {trace.touches.length === 0 ? (
+              <p className="text-sm text-white/60">Nenhum clique de link registrado para esta conta.</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {trace.touches.map((t) => (
+                  <div key={t.id} className="rounded-lg bg-white/5 p-2 text-xs text-white/70">
+                    <div className="font-mono text-white/90">{t.code}</div>
+                    <div>Coach do link: {t.coachName || t.sponsorName || "—"}</div>
+                    <div>Página: {t.landingPath || "—"}</div>
+                    {t.productId && <div>Produto: {t.productId}</div>}
+                    <div>{fmtDate(t.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <Section title="Perfis criados" icon={Sparkles}>
+            {trace.profilesOwned.map((p, i) => (
+              <Row key={i} label={p.kind} value={`${fmtDate(p.createdAt) || "—"} · ${p.status || "—"}`} />
+            ))}
+          </Section>
+
+          <Section title="Anuidade e mensalidade" icon={FileDown}>
+            <Row
+              label="Anuidade"
+              value={trace.annualFee.paid ? `Paga em ${fmtDate(trace.annualFee.paidAt)}` : "Não paga"}
+            />
+            {trace.profileSubscription ? (
+              <>
+                <Row label="Assinatura do perfil" value={trace.profileSubscription.status} />
+                <Row label="Paga até" value={fmtDate(trace.profileSubscription.paidUntil)} />
+                <Row label="Próxima competência" value={trace.profileSubscription.nextInvoiceMonth} />
+                <Row label="Forma de pagamento" value={trace.profileSubscription.paymentMethod} />
+                <div className="mt-2 space-y-1">
+                  {trace.profileSubscription.invoices.map((inv, i) => (
+                    <div key={i} className="text-xs text-white/70">
+                      {inv.month || fmtDate(inv.dueDate)} · {inv.status} ·{" "}
+                      {inv.amount === null ? "—" : `R$ ${inv.amount.toFixed(2)}`}
+                      {inv.paidAt ? ` · pago ${fmtDate(inv.paidAt)}` : ""}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-white/60">Sem mensalidade de coach/parceiro/profissional.</p>
+            )}
+          </Section>
+
+          <Section title="Compras" icon={FileDown}>
+            {trace.purchases.length === 0 ? (
+              <p className="text-sm text-white/60">Nenhuma compra registrada.</p>
+            ) : (
+              <div className="space-y-1">
+                {trace.purchases.map((p) => (
+                  <div key={p.id} className="text-xs text-white/75">
+                    {fmtDate(p.paidAt || p.createdAt)} · {p.description || "—"} · R$ {p.amount.toFixed(2)} ·{" "}
+                    {p.paymentMethod || "—"} · {p.status || "—"}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
           <Section title="Atividade" icon={FileDown}>
             <Row label="Última avaliação" value={fmtDate(trace.activity.lastAssessmentAt)} />
             <Row label="Última transação" value={fmtDate(trace.activity.lastTransactionAt)} />
             <Row label="Assinatura ativa" value={trace.activity.activeSubscription ? "Sim" : "Não"} />
           </Section>
+
         </div>
       )}
     </div>
