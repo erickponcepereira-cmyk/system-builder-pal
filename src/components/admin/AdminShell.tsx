@@ -57,6 +57,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/network-unlock-history", label: "Histórico Liberação", icon: BarChart3, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },
   { to: "/admin/partners", label: "Empresas Parceiras", icon: Store, perm: "partners" },
+  { to: "/admin/academias", label: "Academias", icon: Dumbbell, perm: "partners" },
   { to: "/admin/crm", label: "CRM", icon: KanbanSquare, perm: "crm" },
   { to: "/admin/robo", label: "Robô de WhatsApp", icon: Bot, perm: "robo" },
   { to: "/admin/partner-releases", label: "Liberar Parceiros", icon: UserCheck, perm: "partners" },

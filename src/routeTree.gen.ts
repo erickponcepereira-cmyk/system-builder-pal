@@ -144,6 +144,7 @@ import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminCoachIdsRouteImport } from './routes/_authenticated/admin.coach-ids'
 import { Route as AuthenticatedAdminCoachApplicationsRouteImport } from './routes/_authenticated/admin.coach-applications'
 import { Route as AuthenticatedAdminChallengeRouteImport } from './routes/_authenticated/admin.challenge'
+import { Route as AuthenticatedAdminAcademiasRouteImport } from './routes/_authenticated/admin.academias'
 import { Route as AuthenticatedAdminCarteirinhaRouteImport } from './routes/_authenticated/admin.carteirinha'
 import { Route as AuthenticatedAdminCareerRouteImport } from './routes/_authenticated/admin.career'
 import { Route as AuthenticatedAdminCalendarsRouteImport } from './routes/_authenticated/admin.calendars'
@@ -937,6 +938,12 @@ const AuthenticatedAdminChallengeRoute =
     path: '/challenge',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminAcademiasRoute =
+  AuthenticatedAdminAcademiasRouteImport.update({
+    id: '/academias',
+    path: '/academias',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCarteirinhaRoute =
   AuthenticatedAdminCarteirinhaRouteImport.update({
     id: '/carteirinha',
@@ -1152,6 +1159,7 @@ export interface FileRoutesByFullPath {
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/admin/career': typeof AuthenticatedAdminCareerRoute
+  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1315,6 +1323,7 @@ export interface FileRoutesByTo {
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/admin/career': typeof AuthenticatedAdminCareerRoute
+  '/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1482,6 +1491,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/_authenticated/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
   '/_authenticated/admin/career': typeof AuthenticatedAdminCareerRoute
+  '/_authenticated/admin/academias': typeof AuthenticatedAdminAcademiasRoute
   '/_authenticated/admin/carteirinha': typeof AuthenticatedAdminCarteirinhaRoute
   '/_authenticated/admin/challenge': typeof AuthenticatedAdminChallengeRoute
   '/_authenticated/admin/coach-applications': typeof AuthenticatedAdminCoachApplicationsRoute
@@ -1649,6 +1659,7 @@ export interface FileRouteTypes {
     | '/admin/branding'
     | '/admin/calendars'
     | '/admin/career'
+    | '/admin/academias'
     | '/admin/carteirinha'
     | '/admin/challenge'
     | '/admin/coach-applications'
@@ -1812,6 +1823,7 @@ export interface FileRouteTypes {
     | '/admin/branding'
     | '/admin/calendars'
     | '/admin/career'
+    | '/admin/academias'
     | '/admin/carteirinha'
     | '/admin/challenge'
     | '/admin/coach-applications'
@@ -1978,6 +1990,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/branding'
     | '/_authenticated/admin/calendars'
     | '/_authenticated/admin/career'
+    | '/_authenticated/admin/academias'
     | '/_authenticated/admin/carteirinha'
     | '/_authenticated/admin/challenge'
     | '/_authenticated/admin/coach-applications'
@@ -3098,6 +3111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminChallengeRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/academias': {
+      id: '/_authenticated/admin/academias'
+      path: '/academias'
+      fullPath: '/admin/academias'
+      preLoaderRoute: typeof AuthenticatedAdminAcademiasRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/carteirinha': {
       id: '/_authenticated/admin/carteirinha'
       path: '/carteirinha'
@@ -3327,6 +3347,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminBrandingRoute: typeof AuthenticatedAdminBrandingRoute
   AuthenticatedAdminCalendarsRoute: typeof AuthenticatedAdminCalendarsRoute
   AuthenticatedAdminCareerRoute: typeof AuthenticatedAdminCareerRoute
+  AuthenticatedAdminAcademiasRoute: typeof AuthenticatedAdminAcademiasRoute
   AuthenticatedAdminCarteirinhaRoute: typeof AuthenticatedAdminCarteirinhaRoute
   AuthenticatedAdminChallengeRoute: typeof AuthenticatedAdminChallengeRoute
   AuthenticatedAdminCoachApplicationsRoute: typeof AuthenticatedAdminCoachApplicationsRoute
@@ -3392,6 +3413,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminBrandingRoute: AuthenticatedAdminBrandingRoute,
   AuthenticatedAdminCalendarsRoute: AuthenticatedAdminCalendarsRoute,
   AuthenticatedAdminCareerRoute: AuthenticatedAdminCareerRoute,
+  AuthenticatedAdminAcademiasRoute: AuthenticatedAdminAcademiasRoute,
   AuthenticatedAdminCarteirinhaRoute: AuthenticatedAdminCarteirinhaRoute,
   AuthenticatedAdminChallengeRoute: AuthenticatedAdminChallengeRoute,
   AuthenticatedAdminCoachApplicationsRoute:

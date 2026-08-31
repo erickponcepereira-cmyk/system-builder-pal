@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown, Pencil } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown, Pencil, X } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
@@ -88,6 +88,11 @@ import {
   type PessoaAcademia,
 } from "@/lib/academia-teste.functions";
 import { formatDateOnlyBR } from "@/lib/date-only";
+import {
+  BOTAO_ACAO, BOTAO_ICONE, BOTAO_NEUTRO, BOTAO_TEXTO, CAMPO, CAMPO_MINI,
+  Bloco, Campo, Cartao, Etiqueta, EYEBROW, FOCO, LinhaDado, NOTA, Pilula, ROTULO,
+  Selo, escolha, type Tom,
+} from "@/components/partner/VisualAcademia";
 
 
 type SubAba = "relatorio" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "instalacao" | "config";
@@ -101,12 +106,16 @@ const LIMITE_PENDENTES = 20;
 
 // Chaveado pelos motivos que a função acesso_classificar devolve, para a tela
 // não manter uma segunda versão da régua.
-const ESTADOS: Record<string, { label: string; cls: string }> = {
-  contrato_ativo: { label: "Ativo", cls: "bg-green-500/15 text-green-400" },
-  vencimento_proximo: { label: "Vence em breve", cls: "bg-amber-500/15 text-amber-400" },
-  em_carencia: { label: "Em carência", cls: "bg-orange-500/15 text-orange-400" },
-  vencido_bloqueado: { label: "Bloqueado", cls: "bg-red-500/15 text-red-400" },
-  sem_mensalidade: { label: "Sem mensalidade", cls: "bg-white/10 text-white/60" },
+//
+// O tom deixou de ser classe de cor e virou significado: quem decide onde ele
+// aparece é o cartão, na tarja da borda esquerda. "Sem mensalidade" é neutro
+// porque não é castigo nem urgência — é ausência de lançamento.
+const ESTADOS: Record<string, { label: string; tom: Tom }> = {
+  contrato_ativo: { label: "Ativo", tom: "ok" },
+  vencimento_proximo: { label: "Vence em breve", tom: "atencao" },
+  em_carencia: { label: "Em carência", tom: "atencao" },
+  vencido_bloqueado: { label: "Bloqueado", tom: "critico" },
+  sem_mensalidade: { label: "Sem mensalidade", tom: "neutro" },
 };
 
 export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
@@ -118,17 +127,20 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
   // justamente de quem trabalha nela.
   return (
     <>
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-          <p className="flex items-center gap-2 text-sm font-bold text-white">
-            <Dumbbell className="h-4 w-4 text-primary" /> Gestão da academia
+      {/* `painel-academia` mora aqui, no container raiz: é ele que define os
+          tokens `aca-*`, e é assim que as 14 abas herdam a paleta sem cada uma
+          se embrulhar por conta própria. */}
+      <div className="painel-academia space-y-4 text-aca-ink">
+        <Bloco>
+          <p className="flex items-center gap-2 text-sm font-bold text-aca-ink">
+            <Dumbbell className="h-4 w-4 text-aca-muted" /> Gestão da academia
           </p>
-          <p className="text-[11px] text-white/50">
+          <p className={`mt-1 ${NOTA}`}>
             Catraca, alunos, mensalidade e avisos. A academia só monitora a frequência; o aluno continua do coach responsável.
           </p>
-        </div>
+        </Bloco>
 
-        {/* Rola no celular, quebra em linhas no computador: com 13 abas,
+        {/* Rola no celular, quebra em linhas no computador: com 14 abas,
             rolar lateralmente para achar "Configurações" e trabalho a toa. */}
         <div className="flex gap-2 overflow-x-auto lg:flex-wrap lg:overflow-visible">
           {([
@@ -149,8 +161,10 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
           ] as [SubAba, string][]).map(([k, label]) => (
             <button
               key={k}
+              type="button"
+              aria-current={sub === k ? "page" : undefined}
               onClick={() => setSub(k)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${sub === k ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] transition ${escolha(sub === k)}`}
             >
               {label}
             </button>
@@ -234,16 +248,16 @@ function DayUse({ partnerId }: { partnerId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
+      <Bloco>
+        <p className={NOTA}>
           Caminho separado da mensalidade. A regra de quantas vezes cada CPF pode
           entrar é a que estiver em Configurações.
         </p>
-        <p className="mt-1.5 text-[11px] text-white/60">
+        <p className={`mt-1.5 ${NOTA}`}>
           O CPF é guardado como código embaralhado, não como número — só os 3
           últimos dígitos ficam visíveis para a recepção conferir com o documento.
         </p>
-      </div>
+      </Bloco>
 
       <div className="flex gap-2">
         <input
@@ -251,71 +265,73 @@ function DayUse({ partnerId }: { partnerId: string }) {
           onChange={(e) => { setCpf(e.target.value); setVeredito(null); }}
           placeholder="CPF de quem vai entrar"
           inputMode="numeric"
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className={`min-w-0 flex-1 ${CAMPO}`}
         />
         <button
           type="button"
           onClick={() => void checar()}
           disabled={checando || digitos.length !== 11}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+          className={`shrink-0 ${BOTAO_NEUTRO}`}
         >
           {checando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           Consultar
         </button>
       </div>
 
+      {/* O veredito é estado, então vem na tarja — e não na cor do texto, que
+          diria "clique aqui" para uma frase que não é clicável. */}
       {veredito && (
-        <div className={`rounded-xl border p-3 ${liberado ? "border-green-500/30 bg-green-500/10" : "border-red-500/30 bg-red-500/10"}`}>
-          <p className={`text-sm font-bold ${liberado ? "text-green-400" : "text-red-400"}`}>
+        <Bloco tom={liberado ? "ok" : "critico"}>
+          <p className="text-sm font-bold text-aca-ink">
             {MOTIVO_DAYUSE[veredito.motivo] ?? veredito.motivo}
           </p>
           {veredito.usos > 0 && (
-            <p className="mt-0.5 text-[11px] text-white/60">
+            <p className={`mt-0.5 ${NOTA}`}>
               {veredito.usos} uso(s) registrado(s)
               {veredito.ultimo_uso && ` · último em ${new Date(`${veredito.ultimo_uso}T12:00:00`).toLocaleDateString("pt-BR")}`}
             </p>
           )}
-        </div>
+        </Bloco>
       )}
 
       {liberado && (
-        <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+        <Bloco className="space-y-2">
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Nome completo"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            className={`w-full ${CAMPO}`}
           />
           <input
             value={telefone}
             onChange={(e) => setTelefone(e.target.value)}
             placeholder="Telefone (opcional)"
             inputMode="tel"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            className={`w-full ${CAMPO}`}
           />
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+            className={`w-full ${CAMPO}`}
           >
             {TIPOS_DAYUSE.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
 
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
-              <CurrencyInputBRL value={valor} onChange={setValor} />
+              <CurrencyInputBRL value={valor} onChange={setValor} className={`w-full ${CAMPO}`} />
             </div>
             {valor > 0 && (
               <select
                 value={forma}
                 onChange={(e) => setForma(e.target.value as FormaPagamento)}
-                className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 text-sm text-white"
+                className={`shrink-0 ${CAMPO}`}
               >
                 {FORMAS_PAGAMENTO.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             )}
           </div>
-          <p className="text-[11px] text-white/50">
+          <p className={NOTA}>
             Deixe o valor em zero para entrada gratuita.
           </p>
 
@@ -323,12 +339,12 @@ function DayUse({ partnerId }: { partnerId: string }) {
             type="button"
             onClick={() => void gravar()}
             disabled={salvando || nome.trim().length < 3}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            className={`w-full ${BOTAO_ACAO}`}
           >
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />}
             Liberar e registrar
           </button>
-        </div>
+        </Bloco>
       )}
     </div>
   );
@@ -379,46 +395,46 @@ function Eventos({ partnerId }: { partnerId: string }) {
   };
   useEffect(carregar, [partnerId]);
 
-  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   return (
     <div className="space-y-3">
       {dados.facesPendentes.length > 0 && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-          <p className="text-[11px] font-bold text-red-400">
+        <Bloco tom="critico">
+          <p className="text-[12px] font-bold text-aca-ink">
             {dados.facesPendentes.length} rosto(s) para apagar do leitor
           </p>
-          <p className="mt-0.5 text-[11px] text-white/60">
+          <p className={`mt-0.5 ${NOTA}`}>
             O prazo venceu. Enquanto o agente da academia não existir, isso é
             tarefa manual — apagar no próprio iDFace.
           </p>
           <div className="mt-1.5 space-y-0.5">
             {dados.facesPendentes.slice(0, 6).map((f) => (
-              <p key={f.inscricao_id} className="text-[11px] text-white/70">
-                <strong className="text-white">{f.nome}</strong> — {f.evento}
+              <p key={f.inscricao_id} className="text-[12px] text-aca-muted">
+                <strong className="font-semibold text-aca-ink">{f.nome}</strong> — {f.evento}
               </p>
             ))}
           </div>
-        </div>
+        </Bloco>
       )}
 
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Novo evento</p>
+      <Bloco className="space-y-2">
+        <p className={EYEBROW}>Novo evento</p>
         <input
           value={nome} onChange={(e) => setNome(e.target.value)}
           placeholder="Nome (ex.: Aulão de funcional)"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className={`w-full ${CAMPO}`}
         />
         <div className="flex gap-2">
           <input
             type="date" value={dataEv} onChange={(e) => setDataEv(e.target.value)}
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            className={`min-w-0 flex-1 ${CAMPO}`}
           />
-          <div className="min-w-0 flex-1"><CurrencyInputBRL value={valorEv} onChange={setValorEv} /></div>
+          <div className="min-w-0 flex-1"><CurrencyInputBRL value={valorEv} onChange={setValorEv} className={`w-full ${CAMPO}`} /></div>
         </div>
         <select
           value={acesso} onChange={(e) => setAcesso(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          className={`w-full ${CAMPO}`}
         >
           {OPCOES_ACESSO_EVENTO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -426,11 +442,13 @@ function Eventos({ partnerId }: { partnerId: string }) {
           <>
             <select
               value={facePol} onChange={(e) => setFacePol(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              className={`w-full ${CAMPO}`}
             >
               {OPCOES_FACE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <p className="text-[11px] text-amber-400">
+            {/* Aviso de responsabilidade, não botão: a barra à esquerda marca o
+                peso sem prometer clique. */}
+            <p className={`border-l-2 border-aca-atencao pl-2 ${NOTA}`}>
               Rosto de quem não é aluno é dado sensível. O prazo de exclusão nasce
               junto com o cadastro e a academia é responsável por cumpri-lo.
             </p>
@@ -446,19 +464,19 @@ function Eventos({ partnerId }: { partnerId: string }) {
             } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
           }}
           disabled={nome.trim().length < 3 || !dataEv}
-          className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+          className={`w-full ${BOTAO_NEUTRO}`}
         >
           Criar evento
         </button>
-      </div>
+      </Bloco>
 
       {dados.eventos.length > 0 && (
         <>
-          <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-            <p className="text-[11px] font-bold text-white">Inscrever participante</p>
+          <Bloco className="space-y-2">
+            <p className={EYEBROW}>Inscrever participante</p>
             <select
               value={inscEvento} onChange={(e) => setInscEvento(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              className={`w-full ${CAMPO}`}
             >
               <option value="">Escolha o evento…</option>
               {dados.eventos.filter((e) => e.ativo).map((e) => (
@@ -470,12 +488,12 @@ function Eventos({ partnerId }: { partnerId: string }) {
             <input
               value={inscNome} onChange={(e) => setInscNome(e.target.value)}
               placeholder="Nome do participante"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              className={`w-full ${CAMPO}`}
             />
             <input
               value={inscCpf} onChange={(e) => setInscCpf(e.target.value)}
               placeholder="CPF (opcional)" inputMode="numeric"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              className={`w-full ${CAMPO}`}
             />
             <button
               type="button"
@@ -493,19 +511,19 @@ function Eventos({ partnerId }: { partnerId: string }) {
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
               }}
               disabled={!inscEvento || inscNome.trim().length < 3}
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+              className={`w-full ${BOTAO_ACAO}`}
             >
               Inscrever
             </button>
-          </div>
+          </Bloco>
 
-          <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-            <p className="text-[11px] font-bold text-white">Validar entrada</p>
+          <Bloco className="space-y-2">
+            <p className={EYEBROW}>Validar entrada</p>
             <div className="flex gap-2">
               <input
                 value={credencial} onChange={(e) => { setCredencial(e.target.value); setVeredito(null); }}
                 placeholder="Credencial do participante"
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                className={`min-w-0 flex-1 ${CAMPO}`}
               />
               <button
                 type="button"
@@ -516,34 +534,37 @@ function Eventos({ partnerId }: { partnerId: string }) {
                   } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
                 }}
                 disabled={credencial.trim().length < 6}
-                className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+                className={`shrink-0 ${BOTAO_NEUTRO}`}
               >
                 Validar
               </button>
             </div>
             {veredito && (
-              <div className={`rounded-xl border p-2.5 ${veredito.decisao === "liberado" ? "border-green-500/30 bg-green-500/10" : "border-red-500/30 bg-red-500/10"}`}>
-                <p className={`text-sm font-bold ${veredito.decisao === "liberado" ? "text-green-400" : "text-red-400"}`}>
+              <Bloco tom={veredito.decisao === "liberado" ? "ok" : "critico"}>
+                <p className="text-sm font-bold text-aca-ink">
                   {MOTIVO_EVENTO[veredito.motivo] ?? veredito.motivo}
                 </p>
-                {veredito.nome && <p className="text-[11px] text-white/60">{veredito.nome}</p>}
-              </div>
+                {veredito.nome && <p className={`mt-0.5 ${NOTA}`}>{veredito.nome}</p>}
+              </Bloco>
             )}
-          </div>
+          </Bloco>
 
           <div className="space-y-2">
             {dados.eventos.map((e) => {
               const insc = dados.inscricoes.filter((i) => i.evento_id === e.id);
               const usados = insc.filter((i) => i.usado_em).length;
               return (
-                <div key={e.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="font-semibold text-white">{e.nome}</p>
-                  <p className="text-[11px] text-white/50">
+                /* Evento passado e evento por vir pedem coisas opostas, e a tela
+                   não sabe qual é qual sem consultar a data — cinza para os dois
+                   é mais honesto que inventar uma urgência. */
+                <Bloco key={e.id} tom="neutro">
+                  <p className="font-semibold text-aca-ink">{e.nome}</p>
+                  <p className={`mt-0.5 tabular-nums ${NOTA}`}>
                     {new Date(`${e.data_evento}T12:00:00`).toLocaleDateString("pt-BR")}
                     {e.valor > 0 && ` · ${brl(Number(e.valor))}`}
                     {" · "}{insc.length} inscrito(s), {usados} entrou(entraram)
                   </p>
-                </div>
+                </Bloco>
               );
             })}
           </div>
@@ -612,19 +633,19 @@ function Frequencia({ partnerId }: { partnerId: string }) {
    *
    * Agora o formulário fica de pé e o spinner vive só na área do resultado.
    */
-  if (!dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (!dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
   const c = dados.config;
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Como esta academia conta</p>
+      <Bloco className="space-y-2">
+        <p className={EYEBROW}>Como esta academia conta</p>
 
         <select
           value={c.validacao_frequencia}
           onChange={(e) => void gravarCfg({ validacao: e.target.value })}
           disabled={salvando}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          className={`w-full ${CAMPO}`}
         >
           {OPCOES_VALIDACAO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -633,7 +654,7 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           value={c.frequencia_conta}
           onChange={(e) => void gravarCfg({ conta: e.target.value })}
           disabled={salvando}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          className={`w-full ${CAMPO}`}
         >
           {OPCOES_CONTA.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -642,7 +663,7 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           value={c.frequencia_periodo}
           onChange={(e) => void gravarCfg({ periodo: e.target.value })}
           disabled={salvando}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          className={`w-full ${CAMPO}`}
         >
           {OPCOES_PERIODO.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -653,21 +674,21 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           value={c.frequencia_meta ?? ""}
           onChange={(e) => void gravarCfg({ meta: e.target.value === "" ? null : Number(e.target.value) })}
           placeholder="Meta de aulas para premiação (ex.: 100)"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className={`w-full ${CAMPO}`}
         />
-        <p className="text-[11px] text-white/50">
+        <p className={NOTA}>
           Toda entrada é sempre registrada, inclusive a segunda do mesmo dia. A
-          configuração decide o que <strong className="text-white/70">conta</strong>, não o que é guardado.
+          configuração decide o que <strong className="font-semibold text-aca-ink">conta</strong>, não o que é guardado.
         </p>
-      </div>
+      </Bloco>
 
       <div className="flex flex-wrap gap-2">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">Turma</span>
+          <span className={ROTULO}>Turma</span>
           <select
             value={turmaId}
             onChange={(e) => setTurmaId(e.target.value)}
-            className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            className={`min-w-0 ${CAMPO}`}
           >
             <option value="">Todas as turmas</option>
             {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
@@ -677,25 +698,25 @@ function Frequencia({ partnerId }: { partnerId: string }) {
             ou data da aula. No servidor ele vira `entrada_em >= p_desde`: é o
             começo da contagem, e não existe data final. */}
         <label className="flex shrink-0 flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-white/40">Contar a partir de</span>
+          <span className={ROTULO}>Contar a partir de</span>
           <input
             type="date"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+            className={CAMPO}
           />
         </label>
         {desde && (
           <button
             type="button"
             onClick={() => setDesde("")}
-            className="self-end rounded-xl px-2 py-2 text-[11px] font-bold text-primary hover:bg-white/10"
+            className={`self-end ${BOTAO_TEXTO}`}
           >
             limpar
           </button>
         )}
       </div>
-      <p className="text-[11px] text-white/50">
+      <p className={NOTA}>
         Em branco, conta desde sempre. Com data, conta só as entradas daquele dia em diante.
       </p>
 
@@ -709,7 +730,7 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           value={novaTurma}
           onChange={(e) => setNovaTurma(e.target.value)}
           placeholder="Nova turma (ex.: Bike Indoor 19h)"
-          className="min-w-[180px] flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className={`min-w-[180px] flex-1 ${CAMPO}`}
         />
         {/* Dias como botões, não como <select> de um item só: a mesma aula
             acontece de segunda a sexta, e no modelo antigo isso viraria cinco
@@ -721,8 +742,9 @@ function Frequencia({ partnerId }: { partnerId: string }) {
               <button
                 key={d}
                 type="button"
+                aria-pressed={on}
                 onClick={() => setDiasTurma((v) => (on ? v.filter((x) => x !== i) : [...v, i].sort()))}
-                className={`w-9 rounded-lg py-2 text-[11px] font-bold capitalize transition ${on ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+                className={`w-9 rounded-lg py-2 text-[11px] capitalize transition ${escolha(on)}`}
               >
                 {d}
               </button>
@@ -730,9 +752,9 @@ function Frequencia({ partnerId }: { partnerId: string }) {
           })}
         </div>
         <input type="time" value={inicioTurma} onChange={(e) => setInicioTurma(e.target.value)}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white" />
+          className={`shrink-0 ${CAMPO}`} />
         <input type="time" value={fimTurma} onChange={(e) => setFimTurma(e.target.value)}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white" />
+          className={`shrink-0 ${CAMPO}`} />
         <button
           type="button"
           onClick={async () => {
@@ -778,7 +800,7 @@ function Frequencia({ partnerId }: { partnerId: string }) {
             }
           }}
           disabled={salvando || novaTurma.trim().length < 2}
-          className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+          className={`shrink-0 ${BOTAO_NEUTRO}`}
         >
           {salvando ? "Criando…" : "Criar"}
         </button>
@@ -790,29 +812,30 @@ function Frequencia({ partnerId }: { partnerId: string }) {
       {dados.turmas.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {dados.turmas.map((t) => (
-            <span
-              key={t.id}
-              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70"
-            >
-              {t.nome}
+            <Etiqueta key={t.id}>
+              <span className="text-aca-ink">{t.nome}</span>
               {t.hora_inicio && (
-                <span className="ml-1 text-white/45">
+                <span className="tabular-nums text-aca-fraco">
                   {rotuloDias(t.dias_semana)} {t.hora_inicio.slice(0, 5)}–{(t.hora_fim ?? "").slice(0, 5)}
                 </span>
               )}
               {/* Sem horário a turma não entra em "Cliente por aula". Dizer
                   isso aqui é mais barato que a academia descobrir olhando um
                   relatório vazio. */}
-              {!t.hora_inicio && <span className="ml-1 text-amber-300/70">sem horário</span>}
-            </span>
+              {!t.hora_inicio && (
+                <span className="flex items-center gap-1 text-aca-fraco">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" /> sem horário
+                </span>
+              )}
+            </Etiqueta>
           ))}
         </div>
       )}
 
       {loading ? (
-        <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-primary" />
+        <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-aca-acao" />
       ) : dados.linhas.length === 0 ? (
-        <p className="py-8 text-center text-sm text-white/50">
+        <p className={`py-8 text-center ${NOTA}`}>
           Nenhuma frequência registrada ainda. Ela aparece quando a catraca ou o
           QR começarem a registrar entrada.
         </p>
@@ -823,26 +846,27 @@ function Frequencia({ partnerId }: { partnerId: string }) {
             const meta = c.frequencia_meta ?? 0;
             const bateu = meta > 0 && contagem >= meta;
             return (
-              <div key={l.student_id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              /* Bater a meta é a única coisa aqui que muda de estado. Sem meta
+                 cadastrada a linha é histórico puro, e histórico é neutro. */
+              <Bloco key={l.student_id} tom={meta > 0 && bateu ? "ok" : "neutro"}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-white">{l.nome}</p>
-                    <p className="text-[11px] text-white/50">
+                    <p className="truncate font-semibold text-aca-ink">{l.nome}</p>
+                    <p className={`mt-0.5 tabular-nums ${NOTA}`}>
                       {contagem} {c.frequencia_conta === "dia" ? "dia(s)" : "entrada(s)"}
                       {l.minutos_medios > 0 && ` · ${l.minutos_medios} min em média`}
                       {l.ultima && ` · última em ${new Date(l.ultima).toLocaleDateString("pt-BR")}`}
                     </p>
                     {l.repetiu_hoje && (
-                      <p className="text-[11px] text-amber-400">Entrou mais de uma vez hoje</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-[12px] text-aca-muted">
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" />
+                        Entrou mais de uma vez hoje
+                      </p>
                     )}
                   </div>
-                  {meta > 0 && (
-                    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${bateu ? "bg-green-500/15 text-green-400" : "bg-white/10 text-white/60"}`}>
-                      {contagem}/{meta}
-                    </span>
-                  )}
+                  {meta > 0 && <Selo>{contagem}/{meta}</Selo>}
                 </div>
-              </div>
+              </Bloco>
             );
           })}
         </div>
@@ -899,33 +923,41 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
   const coach = planos[0]?.coach_do_aluno;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div
+      className="painel-academia fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Treinos de ${nomeAluno}`}
+      onClick={onClose}
+    >
       <div
-        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-[#12171C] p-4 sm:rounded-2xl"
+        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-aca-line bg-aca-ground p-4 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">Treinos de {nomeAluno}</p>
+            <p className="truncate text-sm font-bold text-aca-ink">Treinos de {nomeAluno}</p>
             {coach && (
-              <p className="text-[11px] text-white/50">
-                Aluno de <strong className="text-white/80">{coach}</strong> — o vínculo e a comissão não mudam.
+              <p className={`mt-0.5 ${NOTA}`}>
+                Aluno de <strong className="font-semibold text-aca-ink">{coach}</strong> — o vínculo e a comissão não mudam.
               </p>
             )}
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-lg p-1 text-white/60 hover:bg-white/10">✕</button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className={BOTAO_ICONE}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {loading ? (
-          <Loader2 className="mx-auto my-8 h-6 w-6 animate-spin text-primary" />
+          <Loader2 className="mx-auto my-8 h-6 w-6 animate-spin text-aca-acao" />
         ) : (
           <div className="space-y-3">
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] font-bold text-white">Aplicar um treino pronto</p>
+            <Bloco className="space-y-2">
+              <p className={EYEBROW}>Aplicar um treino pronto</p>
               <select
                 value={modeloId}
                 onChange={(e) => setModeloId(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                className={`w-full ${CAMPO}`}
               >
                 <option value="">Escolha um modelo…</option>
                 {modelos.map((m) => (
@@ -935,7 +967,7 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
               <select
                 value={dia}
                 onChange={(e) => setDia(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                className={`w-full ${CAMPO}`}
               >
                 <option value="">Sem dia fixo</option>
                 {DIAS.map((d, i) => <option key={d} value={i}>{d}</option>)}
@@ -944,40 +976,38 @@ function TreinosAluno({ partnerId, studentId, nomeAluno, onClose }: {
                 type="button"
                 onClick={() => void criar()}
                 disabled={salvando || !modeloId}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                className={`w-full ${BOTAO_ACAO}`}
               >
                 {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Dumbbell className="h-4 w-4" />}
                 Criar treino
               </button>
               {modelos.length === 0 && (
-                <p className="text-[11px] text-white/50">
+                <p className={NOTA}>
                   Nenhum modelo global cadastrado ainda. Os modelos vêm da biblioteca de treinos prontos.
                 </p>
               )}
-            </div>
+            </Bloco>
 
             {planos.length === 0 ? (
-              <p className="py-6 text-center text-sm text-white/50">Este aluno ainda não tem treino.</p>
+              <p className={`py-6 text-center ${NOTA}`}>Este aluno ainda não tem treino.</p>
             ) : (
               <div className="space-y-2">
                 {planos.map((p) => (
-                  <div key={p.plano_id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <Bloco key={p.plano_id} tom={p.ativo ? "ok" : "neutro"}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-white">{p.nome}</p>
-                        <p className="text-[11px] text-white/50">
+                        <p className="truncate font-semibold text-aca-ink">{p.nome}</p>
+                        <p className={`mt-0.5 ${NOTA}`}>
                           {p.exercicios} exercício(s)
                           {p.dia_semana != null && ` · ${DIAS[p.dia_semana]}`}
                         </p>
-                        <p className="text-[11px] text-white/50">
-                          Montado por <strong className="text-white/80">{p.montado_por_nome}</strong>
+                        <p className={NOTA}>
+                          Montado por <strong className="font-semibold text-aca-ink">{p.montado_por_nome}</strong>
                         </p>
                       </div>
-                      {!p.ativo && (
-                        <span className="shrink-0 rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/60">Inativo</span>
-                      )}
+                      {!p.ativo && <Selo>Inativo</Selo>}
                     </div>
-                  </div>
+                  </Bloco>
                 ))}
               </div>
             )}
@@ -1049,30 +1079,37 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
   const comErro = fila.filter((f) => f.status === "erro");
 
   return (
-    <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-      <p className="text-[11px] font-bold text-white">Cadastrar rosto pela foto</p>
-      <p className="text-[11px] text-white/60">
+    <Bloco className="space-y-2">
+      <p className={EYEBROW}>Cadastrar rosto pela foto</p>
+      <p className={NOTA}>
         Escolha o aluno e envie a foto. O agente grava no leitor na próxima
-        sincronização — <strong className="text-white/80">sem precisar estar na academia</strong>.
+        sincronização — <strong className="font-semibold text-aca-ink">sem precisar estar na academia</strong>.
       </p>
 
       {alvo ? (
         <>
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
-            <span className="truncate text-sm text-white">{alvo.nome}</span>
-            <button type="button" onClick={() => { setAlvo(null); setFoto(null); }} className="shrink-0 text-white/50 hover:text-white">✕</button>
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-aca-alto px-2.5 py-1.5">
+            <span className="truncate text-sm text-aca-ink">{alvo.nome}</span>
+            <button
+              type="button"
+              onClick={() => { setAlvo(null); setFoto(null); }}
+              aria-label="Escolher outro aluno"
+              className={BOTAO_ICONE}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
 
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setCapturando(true)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-bold text-white hover:bg-white/15"
+              className={`flex-1 ${BOTAO_NEUTRO}`}
             >
               <Camera className="h-4 w-4" />
               {foto ? "Tirar outra" : "Tirar foto agora"}
             </button>
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm text-white/70 hover:bg-white/10">
+            <label className={`cursor-pointer ${BOTAO_NEUTRO}`}>
               Escolher arquivo
               <input
                 type="file" accept="image/jpeg,image/png" className="hidden"
@@ -1082,7 +1119,7 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
           </div>
 
           {foto && (
-            <img src={foto} alt="" className="mx-auto max-h-40 rounded-lg border border-white/10" />
+            <img src={foto} alt="" className="mx-auto max-h-40 rounded-lg border border-aca-line" />
           )}
 
           {capturando && (
@@ -1092,7 +1129,7 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
             />
           )}
 
-          <p className="text-[11px] text-white/50">
+          <p className={NOTA}>
             "Tirar foto agora" confere nitidez, luz e enquadramento antes de
             aceitar — evita descobrir que a foto era ruim só na sincronização.
           </p>
@@ -1101,7 +1138,7 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
             type="button"
             onClick={() => void mandar()}
             disabled={enviando || !foto}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            className={`w-full ${BOTAO_ACAO}`}
           >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             Enviar para o leitor
@@ -1112,12 +1149,12 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
           <input
             value={termo} onChange={(e) => setTermo(e.target.value)}
             placeholder="Buscar aluno pelo nome, CPF ou e-mail"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            className={`w-full ${CAMPO}`}
           />
           {achados.map((a) => (
             <button
               key={a.studentId} type="button" onClick={() => setAlvo(a)}
-              className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+              className={`w-full truncate rounded-lg bg-aca-alto px-2.5 py-1.5 text-left text-sm text-aca-ink hover:bg-aca-line ${FOCO}`}
             >
               {a.nome}
             </button>
@@ -1126,16 +1163,16 @@ function CadastrarRostoPelaFoto({ partnerId }: { partnerId: string }) {
       )}
 
       {pendentes > 0 && (
-        <p className="text-[11px] text-amber-400">
+        <p className={`border-l-2 border-aca-atencao pl-2 ${NOTA}`}>
           {pendentes} foto(s) esperando a próxima sincronização do agente.
         </p>
       )}
       {comErro.map((f) => (
-        <p key={f.id} className="text-[11px] text-red-400">
+        <p key={f.id} className={`border-l-2 border-aca-critico pl-2 ${NOTA}`}>
           {f.nome}: {f.erro}
         </p>
       ))}
-    </div>
+    </Bloco>
   );
 }
 
@@ -1167,12 +1204,14 @@ function RostoDepoisDoCadastro({
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+    /* Verde: a mensalidade entrou. O que falta é opcional, e um tom de alarme
+       aqui faria a recepção achar que o lançamento não pegou. */
+    <Bloco tom="ok" className="space-y-3">
       <div>
-        <p className="text-sm font-bold text-white">Mensalidade registrada</p>
-        <p className="mt-1 text-[11px] text-white/60">
+        <p className="text-sm font-bold text-aca-ink">Mensalidade registrada</p>
+        <p className={`mt-1 ${NOTA}`}>
           {pessoa.nome} já será sincronizada com a catraca pelo identificador{" "}
-          <span className="font-mono text-white/80">{pessoa.referencia}</span>.
+          <span className="font-mono tabular-nums text-aca-ink">{pessoa.referencia}</span>.
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -1203,7 +1242,7 @@ function RostoDepoisDoCadastro({
           onCancelar={() => setCapturando(false)}
         />
       )}
-    </div>
+    </Bloco>
   );
 }
 
@@ -1259,17 +1298,18 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
       (c.nome_no_equipamento ?? "").toLowerCase().includes(t) || c.referencia.toLowerCase().includes(t));
   }, [dados, filtroPend]);
 
-  if (loading) return <Loader2 className="mx-auto my-5 h-5 w-5 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto my-5 h-5 w-5 animate-spin text-aca-acao" />;
   if (!dados || dados.total === 0) return null;
 
   return (
-    <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-      <p className="text-[11px] font-bold text-amber-300">
+    // Rosto no leitor e ninguém ligado é gente que não entra: pede trabalho hoje.
+    <Bloco tom="atencao" className="space-y-2">
+      <p className="text-[12px] font-bold text-aca-ink">
         {dados.total} pessoa(s) no leitor sem aluno vinculado
       </p>
-      <p className="text-[11px] text-white/60">
+      <p className={NOTA}>
         O rosto já está no equipamento. Ligue cada uma ao aluno da plataforma —
-        <strong className="text-white/80"> ninguém precisa recadastrar</strong>. Sem vínculo, a pessoa não entra.
+        <strong className="font-semibold text-aca-ink"> ninguém precisa recadastrar</strong>. Sem vínculo, a pessoa não entra.
       </p>
 
       {/* Despejar as centenas de pendentes de uma vez enterra o resto da aba.
@@ -1278,27 +1318,27 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
         value={filtroPend}
         onChange={(e) => setFiltroPend(e.target.value)}
         placeholder="Procurar na lista por nome ou identificador"
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder:text-white/40"
+        className={`w-full ${CAMPO}`}
       />
 
       {visiveisPend.length === 0 ? (
-        <p className="py-3 text-center text-[11px] text-white/50">Ninguém com esse nome ou identificador.</p>
+        <p className={`py-3 text-center ${NOTA}`}>Ninguém com esse nome ou identificador.</p>
       ) : null}
 
       {visiveisPend.slice(0, LIMITE_PENDENTES).map((c) => (
-        <div key={c.id} className="rounded-lg border border-white/10 bg-white/5 p-2.5">
+        <div key={c.id} className="rounded-lg border border-aca-line bg-aca-alto p-2.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">
+              <p className="truncate text-sm font-semibold text-aca-ink">
                 {c.nome_no_equipamento || "Sem nome no leitor"}
               </p>
-              <p className="font-mono text-[11px] text-white/50">id {c.referencia}</p>
+              <p className="font-mono text-[11px] tabular-nums text-aca-muted">id {c.referencia}</p>
             </div>
             {aberto !== c.id && (
               <button
                 type="button"
                 onClick={() => { setAberto(c.id); setTermo(c.nome_no_equipamento || ""); }}
-                className="shrink-0 rounded px-2 py-0.5 text-[10px] font-bold text-primary hover:bg-white/10"
+                className={`shrink-0 ${BOTAO_TEXTO}`}
               >
                 Vincular
               </button>
@@ -1306,19 +1346,19 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
           </div>
 
           {aberto === c.id && (
-            <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2">
+            <div className="mt-2 space-y-1.5 border-t border-aca-line pt-2">
               {c.sugestoes.length > 0 && (
                 <>
-                  <p className="text-[10px] uppercase tracking-wider text-white/40">Parecidos</p>
+                  <p className={EYEBROW}>Parecidos</p>
                   {c.sugestoes.map((s) => (
                     <button
                       key={s.student_id}
                       type="button"
                       onClick={() => void ligar(c, s.student_id)}
-                      className="flex w-full items-center justify-between gap-2 rounded bg-white/5 px-2 py-1.5 text-left hover:bg-white/10"
+                      className={`flex w-full items-center justify-between gap-2 rounded bg-aca-surface px-2 py-1.5 text-left hover:bg-aca-line ${FOCO}`}
                     >
-                      <span className="min-w-0 truncate text-sm text-white">{s.nome}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-white/40">
+                      <span className="min-w-0 truncate text-sm text-aca-ink">{s.nome}</span>
+                      <span className="shrink-0 font-mono text-[10px] tabular-nums text-aca-fraco">
                         {Math.round(s.semelhanca * 100)}%
                       </span>
                     </button>
@@ -1330,14 +1370,14 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
                 value={termo}
                 onChange={(e) => setTermo(e.target.value)}
                 placeholder="Buscar outro aluno pelo nome"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder:text-white/40"
+                className={`w-full ${CAMPO}`}
               />
               {achados.map((a) => (
                 <button
                   key={a.studentId}
                   type="button"
                   onClick={() => void ligar(c, a.studentId)}
-                  className="w-full truncate rounded bg-white/5 px-2 py-1.5 text-left text-sm text-white hover:bg-white/10"
+                  className={`w-full truncate rounded bg-aca-surface px-2 py-1.5 text-left text-sm text-aca-ink hover:bg-aca-line ${FOCO}`}
                 >
                   {a.nome}
                 </button>
@@ -1345,7 +1385,7 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
               <button
                 type="button"
                 onClick={() => { setAberto(null); setTermo(""); }}
-                className="w-full rounded px-2 py-1 text-[11px] text-white/50 hover:bg-white/10"
+                className={`w-full rounded px-2 py-1 text-[11px] text-aca-muted hover:bg-aca-surface ${FOCO}`}
               >
                 Voltar
               </button>
@@ -1355,11 +1395,11 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
       ))}
 
       {visiveisPend.length > LIMITE_PENDENTES && (
-        <p className="pt-1 text-center text-[11px] text-white/50">
+        <p className={`pt-1 text-center ${NOTA}`}>
           Mostrando {LIMITE_PENDENTES} de {visiveisPend.length}. Use a busca acima para achar quem você quer ligar.
         </p>
       )}
-    </div>
+    </Bloco>
   );
 }
 
@@ -1394,23 +1434,23 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
     return () => clearTimeout(t);
   }, [termo, partnerId]);
 
-  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   const pareados = dados.agentes.filter((a) => a.pareado_em);
   const pendentes = dados.agentes.filter((a) => !a.pareado_em && a.codigo_pareamento);
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
+      <Bloco>
+        <p className={NOTA}>
           O programa roda no PC da academia porque a porta da catraca é local.
           Ele baixa quem pode entrar e sobe as entradas.
         </p>
-        <p className="mt-1.5 text-[11px] text-white/60">
-          Ele recebe <strong className="text-white/80">só identificador e data</strong> — sem nome,
+        <p className={`mt-1.5 ${NOTA}`}>
+          Ele recebe <strong className="font-semibold text-aca-ink">só identificador e data</strong> — sem nome,
           sem CPF, sem contrato, sem valor. Toda a regra fica aqui.
         </p>
-      </div>
+      </Bloco>
 
       <button
         type="button"
@@ -1421,24 +1461,26 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
             carregar();
           } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
         }}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+        className={`w-full ${BOTAO_ACAO}`}
       >
         <Plug className="h-4 w-4" />
         Gerar código de instalação
       </button>
 
       {novoCodigo && (
-        <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-center">
-          <p className="text-[11px] text-white/60">Digite este código no programa recém-instalado</p>
-          <p className="my-1 font-mono text-2xl font-bold tracking-[0.2em] text-green-400">{novoCodigo.codigo}</p>
-          <p className="text-[11px] text-white/50">
+        <Bloco tom="ok" className="text-center">
+          <p className={NOTA}>Digite este código no programa recém-instalado</p>
+          {/* O código é o dado principal do cartão e sobe para o corpo de 28px
+              do painel: quem está digitando no outro computador lê de longe. */}
+          <p className="my-1 font-mono text-[28px] font-bold leading-none tracking-[0.2em] text-aca-ink">{novoCodigo.codigo}</p>
+          <p className={NOTA}>
             Uso único, vale até {new Date(novoCodigo.expira_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </p>
-        </div>
+        </Bloco>
       )}
 
       {pendentes.length > 0 && (
-        <p className="text-[11px] text-amber-400">
+        <p className={`border-l-2 border-aca-atencao pl-2 ${NOTA}`}>
           {pendentes.length} código(s) aguardando instalação.
         </p>
       )}
@@ -1448,22 +1490,22 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
           ? Math.round((Date.now() - Date.parse(a.ultimo_contato_em)) / 60000) : null;
         const online = min !== null && min < 10;
         return (
-          <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+          // Agente fora do ar é catraca parada: é o único estado desta aba que
+          // manda alguém andar até a recepção.
+          <Bloco key={a.id} tom={online ? "ok" : "critico"}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{a.nome}</p>
-                <p className="text-[11px] text-white/50">
+                <p className="truncate font-semibold text-aca-ink">{a.nome}</p>
+                <p className={`mt-0.5 tabular-nums ${NOTA}`}>
                   {a.versao && `versão ${a.versao} · `}
                   {a.ultima_sync_em
                     ? `última sincronização ${new Date(a.ultima_sync_em).toLocaleString("pt-BR")}`
                     : "nunca sincronizou"}
                 </p>
               </div>
-              <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${online ? "bg-green-500/15 text-green-400" : "bg-white/10 text-white/60"}`}>
-                {min === null ? "sem contato" : online ? "online" : `há ${min} min`}
-              </span>
+              <Selo>{min === null ? "sem contato" : online ? "online" : `há ${min} min`}</Selo>
             </div>
-          </div>
+          </Bloco>
         );
       })}
 
@@ -1471,50 +1513,47 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
 
       <CredenciaisSemVinculo partnerId={partnerId} aoVincular={carregar} />
 
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Pessoas vinculadas</p>
-        <p className="text-[11px] text-white/60">
+      <Bloco className="space-y-2">
+        <p className={EYEBROW}>Pessoas vinculadas</p>
+        <p className={NOTA}>
           {dados.credenciais.length} pessoa(s) ligada(s) ao leitor.
         </p>
-        <p className="text-[11px] text-white/50">
-          Para ligar mais alguém, use <strong className="text-white/70">Cadastrar rosto pela foto</strong> acima,
+        <p className={NOTA}>
+          Para ligar mais alguém, use <strong className="font-semibold text-aca-ink">Cadastrar rosto pela foto</strong> acima,
           ou a lista de quem veio do leitor. O identificador dentro do
           equipamento é escolhido pelo sistema — ninguém precisa digitar número.
         </p>
-      </div>
+      </Bloco>
 
+      {/* Barrada de ontem já não pede nada — é registro, e registro é neutro. */}
       {dados.negados.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <p className="text-[11px] font-bold text-white">Tentaram e não entraram</p>
+        <Bloco>
+          <p className={EYEBROW}>Tentaram e não entraram</p>
           <div className="mt-1.5 space-y-1">
             {dados.negados.map((n) => (
-              <div key={n.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-[11px] text-white/70">
-                  {n.referencia ?? "sem identificação"} — {ESTADOS[n.motivo]?.label ?? n.motivo}
-                </span>
-                <span className="shrink-0 text-[10px] text-white/40">
-                  {new Date(n.tentado_em).toLocaleString("pt-BR")}
-                </span>
-              </div>
+              <LinhaDado
+                key={n.id}
+                esquerda={`${n.referencia ?? "sem identificação"} — ${ESTADOS[n.motivo]?.label ?? n.motivo}`}
+                direita={new Date(n.tentado_em).toLocaleString("pt-BR")}
+              />
             ))}
           </div>
-        </div>
+        </Bloco>
       )}
 
       {dados.entradas.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <p className="text-[11px] font-bold text-white">Últimas entradas</p>
+        <Bloco>
+          <p className={EYEBROW}>Últimas entradas</p>
           <div className="mt-1.5 space-y-1">
             {dados.entradas.map((e) => (
-              <div key={e.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-[11px] text-white/70">{e.nome}</span>
-                <span className="shrink-0 text-[10px] text-white/40">
-                  {e.origem} · {new Date(e.entrada_em).toLocaleString("pt-BR")}
-                </span>
-              </div>
+              <LinhaDado
+                key={e.id}
+                esquerda={e.nome}
+                direita={`${e.origem} · ${new Date(e.entrada_em).toLocaleString("pt-BR")}`}
+              />
             ))}
           </div>
-        </div>
+        </Bloco>
       )}
     </div>
   );
@@ -1586,19 +1625,17 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
     setAberto(true);
   };
 
-  const campo = "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white";
-
-  if (carregando) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-primary" />;
+  if (carregando) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-aca-acao" />;
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+    <Bloco className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-bold text-white">Planos da academia</p>
+        <p className="text-sm font-bold text-aca-ink">Planos da academia</p>
         {!aberto && (
           <button
             type="button"
             onClick={() => { setForm(vazio); setCortesia(false); setAberto(true); }}
-            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground"
+            className={`shrink-0 px-3 py-1.5 text-[12px] ${BOTAO_ACAO}`}
           >
             <Plus className="h-3.5 w-3.5" /> Novo plano
           </button>
@@ -1606,21 +1643,21 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
       </div>
 
       {aberto && (
-        <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2.5">
+        <div className="space-y-2 rounded-xl border border-aca-line-forte bg-aca-alto p-2.5">
           <input
             value={form.nome}
             onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
             placeholder="Nome do plano (ex.: Mensal - 3x semana)"
-            className={`w-full ${campo}`}
+            className={`w-full ${CAMPO}`}
           />
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-[11px] text-white/70">
+            <label className="flex items-center gap-1.5 text-[11px] text-aca-muted">
               <input
                 type="checkbox"
                 checked={cortesia}
                 onChange={(e) => setCortesia(e.target.checked)}
-                className="h-3.5 w-3.5 accent-primary"
+                className="h-3.5 w-3.5 accent-aca-acao"
               />
               Cortesia (sem valor)
             </label>
@@ -1628,26 +1665,27 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
               <CurrencyInputBRL
                 value={form.valor}
                 onChange={(v) => setForm((f) => ({ ...f, valor: v }))}
-                className={`w-32 ${campo}`}
+                className={`w-32 ${CAMPO}`}
               />
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-white/50">Libera por</span>
+            <span className={ROTULO}>Libera por</span>
             <input
               type="number" min={1} max={3650}
               value={form.dias}
               onChange={(e) => setForm((f) => ({ ...f, dias: Number(e.target.value) }))}
-              className={`w-20 ${campo}`}
+              className={`w-20 tabular-nums ${CAMPO}`}
             />
-            <span className="text-[11px] text-white/50">dias</span>
+            <span className={ROTULO}>dias</span>
             {DURACOES.map((d) => (
               <button
                 key={d}
                 type="button"
+                aria-pressed={form.dias === d}
                 onClick={() => setForm((f) => ({ ...f, dias: d }))}
-                className={`rounded-lg px-2 py-1 text-[11px] ${form.dias === d ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/70"}`}
+                className={`rounded-lg px-2 py-1 text-[11px] tabular-nums ${escolha(form.dias === d)}`}
               >
                 {d}
               </button>
@@ -1655,11 +1693,11 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-white/50">Entra na catraca</span>
+            <span className={ROTULO}>Entra na catraca</span>
             <select
               value={form.limite}
               onChange={(e) => setForm((f) => ({ ...f, limite: Number(e.target.value) }))}
-              className={campo}
+              className={CAMPO}
             >
               {LIMITES_SEMANA.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -1667,12 +1705,12 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
             </select>
           </div>
 
-          <label className="flex items-center gap-1.5 text-[11px] text-white/70">
+          <label className="flex items-center gap-1.5 text-[11px] text-aca-muted">
             <input
               type="checkbox"
               checked={form.ativo}
               onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
-              className="h-3.5 w-3.5 accent-primary"
+              className="h-3.5 w-3.5 accent-aca-acao"
             />
             Disponível para venda
           </label>
@@ -1682,7 +1720,7 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
               type="button"
               onClick={() => void gravar()}
               disabled={salvando || !form.nome.trim()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+              className={`flex-1 px-3 py-1.5 text-[12px] ${BOTAO_ACAO}`}
             >
               {salvando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               {form.id ? "Salvar" : "Criar plano"}
@@ -1690,7 +1728,7 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
             <button
               type="button"
               onClick={() => { setAberto(false); setForm(vazio); }}
-              className="rounded-xl bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white"
+              className={`px-3 py-1.5 text-[12px] ${BOTAO_NEUTRO}`}
             >
               Cancelar
             </button>
@@ -1703,27 +1741,27 @@ function PlanosAcademia({ partnerId }: { partnerId: string }) {
           key={p.id}
           type="button"
           onClick={() => editar(p)}
-          className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5 text-left hover:border-white/25"
+          className={`flex w-full items-center gap-2 rounded-xl border border-aca-line bg-aca-alto p-2.5 text-left hover:border-aca-line-forte ${FOCO}`}
         >
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-white">
+            <p className="truncate text-[12px] font-bold text-aca-ink">
               {p.nome}
-              {!p.ativo && <span className="ml-1.5 text-[10px] font-normal text-white/40">(desligado)</span>}
+              {!p.ativo && <span className="ml-1.5 text-[10px] font-normal text-aca-fraco">(desligado)</span>}
             </p>
-            <p className="text-[11px] text-white/50">
+            <p className={`tabular-nums ${NOTA}`}>
               {Number(p.valor_padrao) > 0 ? brl(Number(p.valor_padrao)) : "Cortesia"} · {p.dias} dias ·{" "}
               {p.limite_dias_semana ? `${p.limite_dias_semana}x por semana` : "todo dia"}
             </p>
           </div>
-          <Pencil className="h-3.5 w-3.5 shrink-0 text-white/30" />
+          <Pencil className="h-3.5 w-3.5 shrink-0 text-aca-acao" />
         </button>
       ))}
 
-      <p className="text-[11px] text-white/40">
+      <p className={NOTA}>
         O plano vira opção na hora de lançar e renovar. O limite semanal viaja para
         a venda: quem comprou 3x continua com 3x mesmo que o plano mude depois.
       </p>
-    </div>
+    </Bloco>
   );
 }
 
@@ -1759,40 +1797,42 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
     return () => clearTimeout(t);
   }, [termo, partnerId]);
 
-  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
+      <Bloco>
+        <p className={NOTA}>
           Nada de loja, checkout ou produto é criado aqui — tudo isso já existe.
-          Isto só diz <strong className="text-white/80">quais produtos liberam mensalidade</strong> nesta
+          Isto só diz <strong className="font-semibold text-aca-ink">quais produtos liberam mensalidade</strong> nesta
           academia quando a compra é confirmada.
         </p>
-        <p className="mt-1.5 text-[11px] text-white/60">
+        <p className={`mt-1.5 ${NOTA}`}>
           A liberação exige o pagamento aprovado pelo gateway configurado, não só
           o pedido criado.
         </p>
-      </div>
+      </Bloco>
 
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Vincular um produto</p>
+      <Bloco className="space-y-2">
+        <p className={EYEBROW}>Vincular um produto</p>
         {novo ? (
           <>
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
-              <span className="truncate text-sm text-white">{novo.name}</span>
-              <button type="button" onClick={() => setNovo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-aca-alto px-2.5 py-1.5">
+              <span className="truncate text-sm text-aca-ink">{novo.name}</span>
+              <button type="button" onClick={() => setNovo(null)} aria-label="Escolher outro produto" className={BOTAO_ICONE}>
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
             <div className="flex gap-2">
               <input
                 type="number" min={1} value={dias}
                 onChange={(e) => setDias(Number(e.target.value))}
                 placeholder="Dias"
-                className="w-24 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                className={`w-24 shrink-0 tabular-nums ${CAMPO}`}
               />
               <select
                 value={politica} onChange={(e) => setPolitica(e.target.value)}
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                className={`min-w-0 flex-1 ${CAMPO}`}
               >
                 {POLITICAS_RENOVACAO.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
@@ -1806,7 +1846,7 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
                   toast.success("Produto vinculado.");
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
               }}
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+              className={`w-full ${BOTAO_ACAO}`}
             >
               Vincular
             </button>
@@ -1816,35 +1856,37 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
             <input
               value={termo} onChange={(e) => setTermo(e.target.value)}
               placeholder="Buscar produto pelo nome"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              className={`w-full ${CAMPO}`}
             />
             {achados.map((p) => (
               <button
                 key={p.id} type="button" onClick={() => setNovo(p)}
-                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+                className={`w-full truncate rounded-lg bg-aca-alto px-2.5 py-1.5 text-left text-sm text-aca-ink hover:bg-aca-line ${FOCO}`}
               >
                 {p.name}
               </button>
             ))}
           </>
         )}
-      </div>
+      </Bloco>
 
       {dados.vinculos.length > 0 && (
         <div className="space-y-2">
           {dados.vinculos.map((v) => (
-            <div key={v.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+            // Vínculo desligado não libera compra nenhuma, e descobrir isso pela
+            // reclamação do cliente é caro: a tarja diz qual está de pé.
+            <Bloco key={v.id} tom={v.ativo ? "ok" : "neutro"}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-white">
+                  <p className="truncate font-semibold text-aca-ink">
                     {dados.nomes[v.product_id] ?? v.plano}
                   </p>
-                  <p className="text-[11px] text-white/50">
+                  <p className={`mt-0.5 tabular-nums ${NOTA}`}>
                     {v.dias_validade} dia(s) ·{" "}
                     {POLITICAS_RENOVACAO.find((p) => p.value === v.politica_renovacao)?.label ?? v.politica_renovacao}
                   </p>
                 </div>
-                <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-white/60">
+                <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-aca-muted">
                   <input
                     type="checkbox" checked={v.ativo}
                     onChange={async (e) => {
@@ -1859,12 +1901,12 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
                         carregar();
                       } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
                     }}
-                    className="h-3.5 w-3.5 accent-primary"
+                    className="h-3.5 w-3.5 accent-aca-acao"
                   />
                   Ativo
                 </label>
               </div>
-            </div>
+            </Bloco>
           ))}
         </div>
       )}
@@ -1883,7 +1925,7 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
               : "Nenhuma compra pendente — está tudo liberado.");
           } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
         }}
-        className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15"
+        className={`w-full ${BOTAO_NEUTRO}`}
       >
         Procurar compras pagas que não liberaram nada
       </button>
@@ -3046,7 +3088,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${e.cls}`}>{e.label}</span>
+                    <Pilula tom={e.tom}>{e.label}</Pilula>
                     {abertoId !== l.id && renovandoId !== l.id && (
                       <div className="flex items-center gap-1">
                         <button
@@ -3598,15 +3640,6 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
       <button onClick={salvar} disabled={salvando} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">
         {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar configurações
       </button>
-    </div>
-  );
-}
-
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1 text-[11px] uppercase tracking-wider text-white/40">{label}</p>
-      {children}
     </div>
   );
 }
