@@ -89,6 +89,7 @@ import {
 } from "@/lib/academia-teste.functions";
 import { formatDateOnlyBR } from "@/lib/date-only";
 import { FluxoCaixa } from "@/components/partner/FluxoCaixa";
+import { RecepcaoQR } from "@/components/partner/RecepcaoQR";
 import {
   BOTAO_ACAO, BOTAO_ICONE, BOTAO_NEUTRO, BOTAO_TEXTO, CAMPO, CAMPO_MINI,
   Bloco, Campo, Cartao, Etiqueta, EYEBROW, FOCO, LinhaDado, NOTA, Pilula, ROTULO,
@@ -96,7 +97,7 @@ import {
 } from "@/components/partner/VisualAcademia";
 
 
-type SubAba = "relatorio" | "caixa" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "instalacao" | "config";
+type SubAba = "relatorio" | "caixa" | "recepcao" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "instalacao" | "config";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -149,6 +150,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
             ["caixa", "Fluxo de caixa"],
             ["alunos", "Alunos da academia"],
             ["mensalidade", "Registrar / renovar"],
+            ["recepcao", "Recepção e reservas"],
             ["frequencia", "Frequência"],
             ["avisos", "Avisos de vencimento"],
             ["crm", "CRM"],
@@ -178,6 +180,7 @@ export function AcademiaTestePanel({ partnerId }: { partnerId: string }) {
         {sub === "alunos" && <ListaAlunos partnerId={partnerId} />}
         {sub === "mensalidade" && <FormMensalidade partnerId={partnerId} />}
         {sub === "avisos" && <AvisosVencimento partnerId={partnerId} />}
+        {sub === "recepcao" && <RecepcaoQR partnerId={partnerId} />}
         {sub === "frequencia" && <Frequencia partnerId={partnerId} />}
         {sub === "crm" && <CrmAcademia partnerId={partnerId} />}
         {sub === "robo" && <PartnerRoboPanel partnerId={partnerId} />}

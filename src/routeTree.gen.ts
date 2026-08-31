@@ -73,6 +73,7 @@ import { Route as AuthenticatedStudentLojaAntigaRouteImport } from './routes/_au
 import { Route as AuthenticatedStudentLibraryRouteImport } from './routes/_authenticated/student.library'
 import { Route as AuthenticatedStudentHealthRouteImport } from './routes/_authenticated/student.health'
 import { Route as AuthenticatedStudentGroupRouteImport } from './routes/_authenticated/student.group'
+import { Route as AuthenticatedStudentAcademiaRouteImport } from './routes/_authenticated/student.academia'
 import { Route as AuthenticatedStudentFreebiesRouteImport } from './routes/_authenticated/student.freebies'
 import { Route as AuthenticatedStudentEvolutionRouteImport } from './routes/_authenticated/student.evolution'
 import { Route as AuthenticatedStudentDownloadsRouteImport } from './routes/_authenticated/student.downloads'
@@ -514,6 +515,12 @@ const AuthenticatedStudentGroupRoute =
   AuthenticatedStudentGroupRouteImport.update({
     id: '/group',
     path: '/group',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
+const AuthenticatedStudentAcademiaRoute =
+  AuthenticatedStudentAcademiaRouteImport.update({
+    id: '/academia',
+    path: '/academia',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
 const AuthenticatedStudentFreebiesRoute =
@@ -1231,6 +1238,7 @@ export interface FileRoutesByFullPath {
   '/student/compras': typeof AuthenticatedStudentComprasRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
+  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1395,6 +1403,7 @@ export interface FileRoutesByTo {
   '/student/compras': typeof AuthenticatedStudentComprasRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
+  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1563,6 +1572,7 @@ export interface FileRoutesById {
   '/_authenticated/student/compras': typeof AuthenticatedStudentComprasRoute
   '/_authenticated/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/_authenticated/student/evolution': typeof AuthenticatedStudentEvolutionRoute
+  '/_authenticated/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/_authenticated/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/_authenticated/student/group': typeof AuthenticatedStudentGroupRoute
   '/_authenticated/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1731,6 +1741,7 @@ export interface FileRouteTypes {
     | '/student/compras'
     | '/student/downloads'
     | '/student/evolution'
+    | '/student/academia'
     | '/student/freebies'
     | '/student/group'
     | '/student/health'
@@ -1895,6 +1906,7 @@ export interface FileRouteTypes {
     | '/student/compras'
     | '/student/downloads'
     | '/student/evolution'
+    | '/student/academia'
     | '/student/freebies'
     | '/student/group'
     | '/student/health'
@@ -2062,6 +2074,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/compras'
     | '/_authenticated/student/downloads'
     | '/_authenticated/student/evolution'
+    | '/_authenticated/student/academia'
     | '/_authenticated/student/freebies'
     | '/_authenticated/student/group'
     | '/_authenticated/student/health'
@@ -2612,6 +2625,13 @@ declare module '@tanstack/react-router' {
       path: '/group'
       fullPath: '/student/group'
       preLoaderRoute: typeof AuthenticatedStudentGroupRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
+    '/_authenticated/student/academia': {
+      id: '/_authenticated/student/academia'
+      path: '/academia'
+      fullPath: '/student/academia'
+      preLoaderRoute: typeof AuthenticatedStudentAcademiaRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
     '/_authenticated/student/freebies': {
@@ -3527,6 +3547,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentComprasRoute: typeof AuthenticatedStudentComprasRoute
   AuthenticatedStudentDownloadsRoute: typeof AuthenticatedStudentDownloadsRoute
   AuthenticatedStudentEvolutionRoute: typeof AuthenticatedStudentEvolutionRoute
+  AuthenticatedStudentAcademiaRoute: typeof AuthenticatedStudentAcademiaRoute
   AuthenticatedStudentFreebiesRoute: typeof AuthenticatedStudentFreebiesRoute
   AuthenticatedStudentGroupRoute: typeof AuthenticatedStudentGroupRoute
   AuthenticatedStudentHealthRoute: typeof AuthenticatedStudentHealthRoute
@@ -3559,6 +3580,7 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentComprasRoute: AuthenticatedStudentComprasRoute,
   AuthenticatedStudentDownloadsRoute: AuthenticatedStudentDownloadsRoute,
   AuthenticatedStudentEvolutionRoute: AuthenticatedStudentEvolutionRoute,
+  AuthenticatedStudentAcademiaRoute: AuthenticatedStudentAcademiaRoute,
   AuthenticatedStudentFreebiesRoute: AuthenticatedStudentFreebiesRoute,
   AuthenticatedStudentGroupRoute: AuthenticatedStudentGroupRoute,
   AuthenticatedStudentHealthRoute: AuthenticatedStudentHealthRoute,
