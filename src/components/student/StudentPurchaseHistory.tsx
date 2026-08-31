@@ -35,7 +35,7 @@ const sourceIcon = (s: StudentPurchaseRow["source"]) => {
   return <Store className="h-3.5 w-3.5" />;
 };
 
-export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
+export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { studentId: string; somenteLeitura?: boolean }) {
   const fetchHistory = useServerFn(getStudentPurchaseHistory);
   const [rows, setRows] = useState<StudentPurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,9 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
     void meusEstornos().then(setEstornos);
   }, []);
 
-  useEffect(() => { recarregarEstornos(); }, [recarregarEstornos]);
+  useEffect(() => {
+    if (!somenteLeitura) recarregarEstornos();
+  }, [recarregarEstornos, somenteLeitura]);
 
   /**
    * O convite para avaliar mora aqui, e não na vitrine.
@@ -71,7 +73,9 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
     void minhasAvaliacoes().then(setAvaliacoes);
   }, []);
 
-  useEffect(() => { recarregarAvaliacoes(); }, [recarregarAvaliacoes]);
+  useEffect(() => {
+    if (!somenteLeitura) recarregarAvaliacoes();
+  }, [recarregarAvaliacoes, somenteLeitura]);
 
   useEffect(() => {
     let cancel = false;
@@ -176,7 +180,7 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
 
                 {/* Estorno. Só faz sentido em compra paga: o que não foi pago
                     não tem o que devolver. */}
-                {st === "paid" && (() => {
+                {st === "paid" && !somenteLeitura && (() => {
                   const pedido = estornos.get(r.id) ?? null;
                   const nota = avaliacoes.get(r.id) ?? null;
                   return (
@@ -222,7 +226,7 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
         </div>
       )}
 
-      {avaliando?.product_id && (
+      {!somenteLeitura && avaliando?.product_id && (
         <ReviewSheet
           produto={avaliando.product_name}
           origem={origemDaCompra(avaliando.source)}
@@ -235,7 +239,7 @@ export function StudentPurchaseHistory({ studentId }: { studentId: string }) {
         />
       )}
 
-      {pedindoPara && (
+      {!somenteLeitura && pedindoPara && (
         <RefundRequestSheet
           compra={pedindoPara}
           existente={estornos.get(pedindoPara.id) ?? null}

@@ -122,7 +122,20 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
     const productNameMap = new Map<string, string>();
     ((products as any[]) || []).forEach((p) => productNameMap.set(p.id, p.name));
 
-    const txRows: StudentPurchaseRow[] = ((txs as any[]) || []).map((t) => {
+    // Pedidos da loja também geram uma `transaction` financeira. Quando os
+    // dois registros existem, o cartão do pedido é a fonte completa (número,
+    // itens e benefícios), então a transação vinculada não deve aparecer como
+    // uma segunda compra no histórico.
+    const storeOrderIdSet = new Set<string>();
+
+    const buildTxRows = (hiddenStoreOrderIds: Set<string>): StudentPurchaseRow[] =>
+      ((txs as any[]) || []).filter((t) => {
+        const linkedOrderId = typeof t.metadata?.store_order_id === "string"
+          ? t.metadata.store_order_id
+          : null;
+        if (linkedOrderId && hiddenStoreOrderIds.has(linkedOrderId)) return false;
+        return !(t.purchase_type === "store_order" && linkedOrderId);
+      }).map((t) => {
       const meta = t.product_id ? productMeta.get(t.product_id) : null;
       const isSubscription = String(t.purchase_type || "").toLowerCase().includes("subscription")
         || String(t.purchase_type || "").toLowerCase().includes("assinatura");
@@ -145,7 +158,7 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
         duration_days: meta?.duration ?? null,
         metadata: t.metadata ?? null,
       };
-    });
+      });
 
     // 2) store_orders + items
     const { data: storeOrders } = await supabaseAdmin
@@ -155,6 +168,7 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(200);
     const storeOrderIds = ((storeOrders as any[]) || []).map((o) => o.id);
+    storeOrderIds.forEach((id) => storeOrderIdSet.add(id));
     const itemsByOrder = new Map<string, Array<{ title: string; quantity: number; product_id: string | null }>>();
     if (storeOrderIds.length) {
       const { data: items } = await supabaseAdmin
@@ -241,6 +255,7 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
       };
     });
 
+    const txRows = buildTxRows(storeOrderIdSet);
     const all = [...txRows, ...storeRows, ...ppRows].sort((a, b) =>
       (b.paid_at || b.created_at).localeCompare(a.paid_at || a.created_at),
     );
