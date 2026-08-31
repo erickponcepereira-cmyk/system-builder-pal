@@ -535,5 +535,13 @@ export const adminTraceStudent = createServerFn({ method: "POST" })
         lastTransactionAt: (lastTx?.[0] as any)?.created_at || null,
         activeSubscription: (sub?.length || 0) > 0,
       },
+      touches,
+      coachMismatch,
+      signupProvider,
+      purchases,
+      annualFee,
+      profileSubscription,
+      profilesOwned,
     };
+
   });
