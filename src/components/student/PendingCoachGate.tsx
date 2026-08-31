@@ -8,7 +8,7 @@ import {
   submitMyPendingCoach,
   type PendingCoachStatus,
 } from "@/lib/pending-coach.functions";
-import { enriquecerAtribuicao, lerAtribuicao } from "@/lib/atribuicao";
+import { enriquecerAtribuicao, lerAtribuicao, lerToqueId, resolverToque } from "@/lib/atribuicao";
 
 /**
  * Alunos cuja conta foi recuperada automaticamente (cadastro incompleto)
@@ -23,6 +23,8 @@ export function PendingCoachGate({ children }: { children: ReactNode }) {
   const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [saving, setSaving] = useState(false);
+  /** Coach veio do convite: campo travado, sem escolha manual. */
+  const [coachTravado, setCoachTravado] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,7 +43,17 @@ export function PendingCoachGate({ children }: { children: ReactNode }) {
         if (atribuicao?.codigo && !atribuicao.coachId) {
           atribuicao = await enriquecerAtribuicao();
         }
-        const coachIdSalvo = atribuicao?.coachId ?? null;
+        let coachIdSalvo = atribuicao?.coachId ?? null;
+        let coachNomeSalvo = atribuicao?.coachNome ?? null;
+        // Storage perdido no meio do login social: usa o toque do servidor.
+        if (!coachIdSalvo) {
+          const t = await resolverToque(lerToqueId());
+          if (t?.coachId) {
+            coachIdSalvo = t.coachId;
+            coachNomeSalvo = t.sponsorName;
+          }
+        }
+        if (coachIdSalvo) setCoachTravado(true);
 
         if (coachIdSalvo) {
           const faltaAlgo = res.missing.phone || res.missing.gender || res.missing.birthdate;
@@ -60,7 +72,7 @@ export function PendingCoachGate({ children }: { children: ReactNode }) {
           setCoach({
             id: coachIdSalvo,
             profileId: "",
-            name: atribuicao?.coachNome || "Coach da sua indicação",
+            name: coachNomeSalvo || "Coach da sua indicação",
           });
         }
 
@@ -146,7 +158,12 @@ export function PendingCoachGate({ children }: { children: ReactNode }) {
       }
     >
       <div className="space-y-4 p-5">
-        <CoachSelector value={coach} onChange={setCoach} label="Quem é o coach que te trouxe? *" />
+        <CoachSelector
+          value={coach}
+          onChange={setCoach}
+          locked={coachTravado}
+          label="Quem é o coach que te trouxe? *"
+        />
 
         {status.missing.phone && (
           <div>

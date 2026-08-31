@@ -15,8 +15,11 @@
 
 const CHAVE = "fitmind_atribuicao";
 const CHAVE_LEGADA = "fitmind_referral";
+/** Id do "toque" gravado no servidor — prova de origem quando o storage some. */
+const CHAVE_TOQUE = "fitmind_toque";
 const VALIDADE_DIAS = 30;
 export const ATTRIBUTION_CHANGED_EVENT = "fitmind:attribution-changed";
+
 
 export type Atribuicao = {
   codigo: string;
@@ -91,10 +94,53 @@ export function gravarAtribuicao(nova: Omit<Atribuicao, "em">): Atribuicao | nul
   return registro;
 }
 
+/** Id do último toque de indicação registrado no servidor neste aparelho. */
+export function lerToqueId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(CHAVE_TOQUE);
+  } catch {
+    return null;
+  }
+}
+
+export function gravarToqueId(id: string | null) {
+  if (typeof window === "undefined" || !id) return;
+  try {
+    window.localStorage.setItem(CHAVE_TOQUE, id);
+  } catch { /* ignora */ }
+}
+
+/**
+ * Registra no servidor que este código de indicação foi aberto.
+ * O armazenamento do navegador se perde quando o cadastro termina em outro
+ * contexto (WebView do WhatsApp -> Safari no login com Apple). O toque fica
+ * no banco e serve como prova de origem, além de alimentar o rastreio no admin.
+ */
+export async function registrarToque(codigo: string, productId?: string | null): Promise<string | null> {
+  if (typeof window === "undefined" || !codigo) return null;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data, error } = await supabase.rpc("registrar_toque_indicacao" as never, {
+      _code: codigo,
+      _product_id: productId ?? null,
+      _landing_path: `${window.location.pathname}${window.location.search}`.slice(0, 400),
+      _user_agent: window.navigator.userAgent.slice(0, 400),
+    } as never);
+    const id = (typeof data === "string" ? data : null) as string | null;
+    if (error || !id) return null;
+    gravarToqueId(id);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 /** Grava e espelha todos os campos retornados pela validação do código. */
 export function gravarAtribuicaoResolvida(
   codigo: string,
   row: CodigoResolvido,
+  productId?: string | null,
 ): Atribuicao | null {
   const registro = gravarAtribuicao({
     codigo,
@@ -107,9 +153,11 @@ export function gravarAtribuicaoResolvida(
       referredByStudentId: row.referred_by_student_id,
       kind: row.kind,
     });
+    void registrarToque(codigo, productId ?? null);
   }
   return registro;
 }
+
 
 /** Espelho no formato legado lido pelos formulários de cadastro. */
 function espelharSessao(a: Atribuicao, extras?: { referredByStudentId?: string | null; kind?: string | null }) {
@@ -193,12 +241,15 @@ export function capturarAtribuicaoDaUrl(busca?: string): Atribuicao | null {
   const params = new URLSearchParams(busca ?? window.location.search);
   const codigo = params.get("ref");
   if (codigo) {
-    return gravarAtribuicao({
+    const registro = gravarAtribuicao({
       codigo,
       coachId: null,
       coachNome: null,
       parceiroId: null,
     });
+    // Prova de origem no servidor: sobrevive à troca de navegador no OAuth.
+    void registrarToque(codigo, params.get("p"));
+    return registro;
   }
   return lerAtribuicao();
 }
@@ -211,13 +262,68 @@ export function comAtribuicao(caminho: string): string {
   return `${caminho}${sep}ref=${encodeURIComponent(a.codigo)}`;
 }
 
+/**
+ * Anexa a indicação vigente (código + id do toque) a uma URL absoluta de
+ * retorno do OAuth. É isso que faz a indicação sobreviver quando o login
+ * com Apple/Google continua em outro navegador.
+ */
+export function urlDeRetornoComIndicacao(url: string): string {
+  const a = lerAtribuicao();
+  const toque = lerToqueId();
+  if (!a && !toque) return url;
+  try {
+    const u = new URL(url);
+    if (a?.codigo) u.searchParams.set("ref", a.codigo);
+    if (toque) u.searchParams.set("rt", toque);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+
 /** Limpa. Usar apos o cadastro concluir e a indicacao ja ter sido registrada. */
 export function limparAtribuicao() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(CHAVE);
+    window.localStorage.removeItem(CHAVE_TOQUE);
     window.sessionStorage.removeItem(CHAVE_LEGADA);
+
   } catch {
     /* ignora */
+  }
+}
+
+export type ToqueIndicacao = {
+  id: string;
+  code: string;
+  coachId: string | null;
+  sponsorName: string | null;
+  partnerId: string | null;
+  referredByStudentId: string | null;
+  claimedProfileId: string | null;
+};
+
+/** Lê no servidor o toque de indicação registrado quando o link foi aberto. */
+export async function resolverToque(id: string | null): Promise<ToqueIndicacao | null> {
+  if (!id) return null;
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data, error } = await supabase.rpc("toque_indicacao_por_id" as never, { _touch_id: id } as never);
+    if (error) return null;
+    const row = (Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : null) ?? null;
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      code: String(row.code ?? ""),
+      coachId: (row.coach_id as string | null) ?? null,
+      sponsorName: (row.sponsor_name as string | null) ?? null,
+      partnerId: (row.partner_id as string | null) ?? null,
+      referredByStudentId: (row.referred_by_student_id as string | null) ?? null,
+      claimedProfileId: (row.claimed_profile_id as string | null) ?? null,
+    };
+  } catch {
+    return null;
   }
 }

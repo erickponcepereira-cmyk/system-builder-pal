@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
+import { urlDeRetornoComIndicacao } from "@/lib/atribuicao";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
 import { enriquecerAtribuicao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
@@ -60,7 +61,7 @@ export function GoogleSignInButton({
       await enriquecerAtribuicao();
       persistReferralForOAuth();
 
-      const redirectUri = getAuthRedirectUrl("/auth/callback");
+      const redirectUri = urlDeRetornoComIndicacao(getAuthRedirectUrl("/auth/callback"));
 
       // 1) Tenta pop-up (não sai da página e preserva a sessão no app).
       const popup = await signInWithGooglePopup(redirectUri);

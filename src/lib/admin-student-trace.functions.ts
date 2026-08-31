@@ -126,7 +126,42 @@ export type StudentTrace = {
     lastTransactionAt: string | null;
     activeSubscription: boolean;
   };
+  /** Cliques em links de indicação registrados no servidor. */
+  touches: {
+    id: string;
+    code: string;
+    sponsorName: string | null;
+    coachId: string | null;
+    coachName: string | null;
+    landingPath: string | null;
+    productId: string | null;
+    createdAt: string;
+    claimed: boolean;
+  }[];
+  /** Coach do link divergente do coach gravado. */
+  coachMismatch: { linkCoachId: string; linkCoachName: string | null; code: string } | null;
+  /** Como a conta foi criada: apple, google, e-mail/senha… */
+  signupProvider: string | null;
+  purchases: {
+    id: string;
+    description: string | null;
+    amount: number;
+    paymentMethod: string | null;
+    status: string | null;
+    paidAt: string | null;
+    createdAt: string | null;
+  }[];
+  annualFee: { paid: boolean; paidAt: string | null; amount: number | null; source: string | null };
+  profileSubscription: {
+    status: string | null;
+    paidUntil: string | null;
+    nextInvoiceMonth: string | null;
+    paymentMethod: string | null;
+    invoices: { month: string | null; dueDate: string | null; amount: number | null; status: string | null; paidAt: string | null; method: string | null }[];
+  } | null;
+  profilesOwned: { kind: string; createdAt: string | null; status: string | null }[];
 };
+
 
 export const adminTraceStudent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -325,7 +360,160 @@ export const adminTraceStudent = createServerFn({ method: "POST" })
       .eq("status", "active")
       .limit(1);
 
+    // ---- Origem do link: toques registrados no servidor ----
+    const { data: touchRows } = await supabaseAdmin
+      .from("referral_touches")
+      .select("id, code, sponsor_name, coach_id, landing_path, product_id, created_at, claimed_profile_id")
+      .or(`claimed_profile_id.eq.${student.profile_id}`)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    const touchList = (touchRows || []) as any[];
+    const coachIdsToName = Array.from(
+      new Set(touchList.map((t) => t.coach_id).filter(Boolean)),
+    ) as string[];
+    const coachNames = new Map<string, string | null>();
+    if (coachIdsToName.length) {
+      const { data: cs } = await supabaseAdmin
+        .from("coaches").select("id, profile_id").in("id", coachIdsToName);
+      const profIds = (cs || []).map((c: any) => c.profile_id);
+      const { data: ps } = await supabaseAdmin
+        .from("profiles").select("id, name").in("id", profIds.length ? profIds : ["00000000-0000-0000-0000-000000000000"]);
+      const nameByProfile = new Map((ps || []).map((p: any) => [p.id, p.name as string | null]));
+      for (const c of cs || []) coachNames.set((c as any).id, nameByProfile.get((c as any).profile_id) ?? null);
+    }
+
+    const touches: StudentTrace["touches"] = touchList.map((t) => ({
+      id: t.id,
+      code: t.code,
+      sponsorName: t.sponsor_name ?? null,
+      coachId: t.coach_id ?? null,
+      coachName: t.coach_id ? coachNames.get(t.coach_id) ?? t.sponsor_name ?? null : null,
+      landingPath: t.landing_path ?? null,
+      productId: t.product_id ?? null,
+      createdAt: t.created_at,
+      claimed: Boolean(t.claimed_profile_id),
+    }));
+
+    const linkTouch = touches.find((t) => t.coachId);
+    const coachMismatch =
+      linkTouch?.coachId && student.coach_id && linkTouch.coachId !== student.coach_id
+        ? { linkCoachId: linkTouch.coachId, linkCoachName: linkTouch.coachName, code: linkTouch.code }
+        : null;
+
+    // ---- Como a conta foi criada ----
+    let signupProvider: string | null = null;
+    if (prof?.user_id) {
+      try {
+        const { data: au } = await supabaseAdmin.auth.admin.getUserById(prof.user_id);
+        const meta = (au?.user?.app_metadata ?? {}) as { provider?: string; providers?: string[] };
+        signupProvider = meta.provider || (meta.providers || [])[0] || "email";
+      } catch { /* sem acesso ao auth: segue sem provider */ }
+    }
+
+    // ---- Compras ----
+    const { data: txs } = await supabaseAdmin
+      .from("transactions")
+      .select("id, gross_amount, payment_method, status, paid_at, created_at, product_id, purchase_type, metadata")
+      .eq("student_id", student.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const productIds = Array.from(new Set((txs || []).map((t: any) => t.product_id).filter(Boolean))) as string[];
+    const productNames = new Map<string, string>();
+    if (productIds.length) {
+      const { data: prods } = await supabaseAdmin.from("products").select("id, name").in("id", productIds);
+      for (const p of prods || []) productNames.set((p as any).id, (p as any).name);
+    }
+    const purchases: StudentTrace["purchases"] = (txs || []).map((t: any) => ({
+      id: t.id,
+      description:
+        (t.product_id ? productNames.get(t.product_id) : null) ||
+        (t.metadata as any)?.description ||
+        t.purchase_type ||
+        null,
+      amount: Number(t.gross_amount || 0),
+      paymentMethod: t.payment_method ?? null,
+      status: t.status ?? null,
+      paidAt: t.paid_at ?? null,
+      createdAt: t.created_at ?? null,
+    }));
+
+    // ---- Perfis que a pessoa tem + anuidade + mensalidade ----
+    const profilesOwned: StudentTrace["profilesOwned"] = [
+      { kind: "Aluno", createdAt: student.created_at || null, status: prof?.status || null },
+    ];
+    let annualFee: StudentTrace["annualFee"] = { paid: false, paidAt: null, amount: null, source: null };
+
+    const { data: coachRow } = await supabaseAdmin
+      .from("coaches")
+      .select("id, created_at, is_professional, activation_paid_at")
+      .eq("profile_id", student.profile_id)
+      .maybeSingle();
+    if (coachRow) {
+      profilesOwned.push({
+        kind: (coachRow as any).is_professional ? "Profissional" : "Coach",
+        createdAt: (coachRow as any).created_at || null,
+        status: (coachRow as any).activation_paid_at ? "ativo" : "aguardando anuidade",
+      });
+      if ((coachRow as any).activation_paid_at) {
+        annualFee = { paid: true, paidAt: (coachRow as any).activation_paid_at, amount: null, source: "coach" };
+      }
+    }
+    const { data: partnerRow } = await supabaseAdmin
+      .from("partners")
+      .select("id, created_at, status, activation_paid_at, activation_source")
+      .eq("profile_id", student.profile_id)
+      .maybeSingle();
+    if (partnerRow) {
+      profilesOwned.push({
+        kind: "Parceiro",
+        createdAt: (partnerRow as any).created_at || null,
+        status: (partnerRow as any).status || null,
+      });
+      if ((partnerRow as any).activation_paid_at) {
+        annualFee = {
+          paid: true,
+          paidAt: (partnerRow as any).activation_paid_at,
+          amount: null,
+          source: (partnerRow as any).activation_source || "parceiro",
+        };
+      }
+    }
+
+    let profileSubscription: StudentTrace["profileSubscription"] = null;
+    if (prof?.user_id && (coachRow || partnerRow)) {
+      const { data: us } = await supabaseAdmin
+        .from("user_subscriptions")
+        .select("id, status, paid_until, next_invoice_month, preferred_payment_method")
+        .eq("user_id", prof.user_id)
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+      if (us) {
+        const { data: invs } = await supabaseAdmin
+          .from("subscription_invoices")
+          .select("reference_month, due_date, amount, status, paid_at, payment_method")
+          .eq("user_subscription_id", (us as any).id)
+          .order("due_date", { ascending: false })
+          .limit(12);
+        profileSubscription = {
+          status: (us as any).status ?? null,
+          paidUntil: (us as any).paid_until ?? null,
+          nextInvoiceMonth: (us as any).next_invoice_month ?? null,
+          paymentMethod: (us as any).preferred_payment_method ?? null,
+          invoices: (invs || []).map((i: any) => ({
+            month: i.reference_month ?? null,
+            dueDate: i.due_date ?? null,
+            amount: i.amount === null ? null : Number(i.amount),
+            status: i.status ?? null,
+            paidAt: i.paid_at ?? null,
+            method: i.payment_method ?? null,
+          })),
+        };
+      }
+    }
+
     return {
+
       student: {
         studentId: student.id,
         profileId: student.profile_id,
@@ -347,5 +535,13 @@ export const adminTraceStudent = createServerFn({ method: "POST" })
         lastTransactionAt: (lastTx?.[0] as any)?.created_at || null,
         activeSubscription: (sub?.length || 0) > 0,
       },
+      touches,
+      coachMismatch,
+      signupProvider,
+      purchases,
+      annualFee,
+      profileSubscription,
+      profilesOwned,
     };
+
   });

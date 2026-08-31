@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 import { getAuthRedirectUrl } from "@/lib/auth-redirects";
 import { persistReferralForOAuth } from "@/lib/referral-signup";
-import { enriquecerAtribuicao } from "@/lib/atribuicao";
+import { enriquecerAtribuicao, urlDeRetornoComIndicacao } from "@/lib/atribuicao";
 import { peekPostAuthIntent } from "@/lib/post-auth-intent";
 
 /** Ícone da maçã (SVG inline, monocromático). */
@@ -49,7 +49,7 @@ export function AppleSignInButton({
       persistReferralForOAuth();
 
       const result = await lovable.auth.signInWithOAuth("apple", {
-        redirect_uri: getAuthRedirectUrl("/auth/callback"),
+        redirect_uri: urlDeRetornoComIndicacao(getAuthRedirectUrl("/auth/callback")),
       });
 
       if (result.error) {
