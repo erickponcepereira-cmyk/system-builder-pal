@@ -15976,6 +15976,24 @@ export type Database = {
           vencido_desde: string
         }[]
       }
+      academia_faltas: {
+        Args: { p_ate?: string; p_de?: string; p_partner_id: string }
+        Returns: {
+          credencial_id: string
+          dia_semana: number
+          faltas: number
+          horario: string
+          meta_semanal: number
+          nome: string
+          referencia: string
+          regime: string
+          student_id: string
+          telefone: string
+          treinos: number
+          turma: string
+          turma_id: string
+        }[]
+      }
       academia_frequencia_contador: {
         Args: { p_partner_id: string; p_student_id: string }
         Returns: {
