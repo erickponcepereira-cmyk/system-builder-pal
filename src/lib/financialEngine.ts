@@ -299,10 +299,17 @@ export function calculatePointsFromSystemFee(systemFeeTotal: number): number {
   return Math.floor(systemFeeTotal / 2);
 }
 
-/** Soma o valor (em R$) de todos os slots marcados como is_system_fee. */
+/**
+ * Soma o valor (em R$) da taxa de sistema real da venda.
+ *
+ * Conta os slots marcados como is_system_fee e os que vao direto para a
+ * carteira do sistema (destination = admin_wallet). Valores que so caem na
+ * carteira do sistema por falta de destinatario (nutricionista/professor
+ * ausente) NAO entram aqui — eram eles que inflavam a pontuacao.
+ */
 export function sumSystemFee(slots: ValueSlot[], productPrice: number): number {
   return slots
-    .filter((s) => s.is_system_fee)
+    .filter((s) => s.is_system_fee || s.destination === "admin_wallet")
     .reduce(
       (acc, s) =>
         acc + (s.value_type === "fixed" ? s.value_amount : productPrice * (s.value_amount / 100)),
