@@ -572,26 +572,31 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       }
       const agg = commAgg.get(p.id);
       const cre = creatorAgg.get(p.id) || { available: 0, blocked: 0, earned: 0 };
+      const st = stMap.get(p.id);
       const available = cutoff
         ? (agg?.available || 0) + cre.available
         : (role === "student_referrer"
           ? n(sw?.available_balance)
-          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance));
+          : (st ? st.available + n(nw?.available_balance)
+                : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance)));
       const blocked = cutoff
         ? (agg?.blocked || 0) + cre.blocked
         : (role === "student_referrer"
           ? 0
-          : n((w as { pending_balance?: number } | undefined)?.pending_balance) + n(pw?.pending_balance) + n(profw?.pending_balance));
+          : (st ? st.blocked
+                : n((w as { pending_balance?: number } | undefined)?.pending_balance) + n(pw?.pending_balance) + n(profw?.pending_balance)));
       const totalEarned = cutoff
         ? (agg?.earned || 0) + cre.earned
         : (role === "student_referrer"
           ? 0
-          : n((w as { total_earned?: number } | undefined)?.total_earned) + n(pw?.total_earned) + n(profw?.total_earned));
+          : (st ? st.earned
+                : n((w as { total_earned?: number } | undefined)?.total_earned) + n(pw?.total_earned) + n(profw?.total_earned)));
       const totalWithdrawn = cutoff
         ? 0
         : (role === "student_referrer"
           ? n(sw?.total_withdrawn)
-          : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn));
+          : (st ? st.withdrawn + n(nw?.total_withdrawn)
+                : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn)));
       return {
         profileId: p.id,
         name: p.name || "—",
@@ -600,6 +605,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         blocked,
         totalEarned,
         totalWithdrawn,
+        overpaid: st?.overpaid || 0,
         pendingRequestId: r?.id || null,
         pendingRequestAmount: r?.amount || 0,
         pendingRequestStatus: r?.status || null,
