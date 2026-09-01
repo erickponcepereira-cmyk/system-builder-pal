@@ -28,7 +28,7 @@ Vendas com mais de 1 unidade encontradas: **3** (as duas de R$ 200 pagas em 31/0
 ## O que vai ser feito
 
 1. **Corrigir a distribuição por quantidade** — `process_paid_transaction` passa a ler a quantidade do pedido (`store_order_items`) e multiplicar todo slot de tipo "valor fixo" por ela. Slots percentuais continuam iguais (já acompanham o valor total).
-2. **Voltar a aplicar o imposto de 6%** na criação da transação da loja (gravar `tax_amount`), usando a taxa vigente configurada — sem duplicar quando o produto estiver marcado como isento.
+2. **Nada de imposto** — o imposto de 6% não existe mais; `tax_amount = 0` fica como está e a única correção é a da quantidade.
 3. **Reprocessar as vendas afetadas** — rodar novamente a distribuição das transações com quantidade > 1 e das vendas de loja com imposto zerado, recriando comissões, taxa de sistema, pontos e entradas de rede com os valores corretos.
 4. **Recalcular as carteiras** de todos os beneficiários tocados (Julia, Vimark, valdenici, Nathan e demais), incluindo saldo disponível, pendente e pontos.
 5. **Relatório final** com, para cada venda corrigida: valor antigo × novo por beneficiário, e o total devolvido à carteira do sistema.
