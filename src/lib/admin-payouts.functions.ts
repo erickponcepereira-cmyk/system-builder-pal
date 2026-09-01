@@ -541,6 +541,22 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       if (!stuReqsByStudent.has(r.student_id)) stuReqsByStudent.set(r.student_id, { id: r.id, amount: n(r.amount), status: r.status });
     }
 
+    // Fonte única de verdade: mesmo extrato consolidado usado no modal da pessoa.
+    const stMap = new Map<string, { available: number; blocked: number; earned: number; withdrawn: number; overpaid: number }>();
+    if (!cutoff) {
+      const { data: stRows } = await supabaseAdmin.rpc("wallet_statement_bulk" as never, { _profile_ids: profileIds } as never);
+      ((stRows as unknown as Array<{ profile_id: string; statement: Record<string, unknown> }>) || []).forEach((row) => {
+        const s = row.statement || {};
+        stMap.set(row.profile_id, {
+          available: n(s["available"]),
+          blocked: n(s["pending_total"]),
+          earned: n(s["total_earned"]),
+          withdrawn: n(s["withdrawn_paid"]),
+          overpaid: n(s["overpaid"]),
+        });
+      });
+    }
+
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
       const pw = pwMap.get(p.id);
