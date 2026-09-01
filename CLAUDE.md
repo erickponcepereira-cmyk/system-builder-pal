@@ -14,12 +14,15 @@ node node_modules/typescript/bin/tsc --noEmit
 
 - **Não use `npx tsc`**: baixa um pacote decoy e não funciona.
 - Não existe script `typecheck` no `package.json`. É o binário direto, acima.
-- **Linha de base: 15 erros pré-existentes** (verificada em 28/08/2026), todos
-  `TS2307`/`TS18046` em três lugares:
-  `src/lib/email-templates/*`, `src/routes/lovable/email/*`, `src/lib/__tests__/*` (vitest).
-  São pacotes declarados no `package.json` mas ausentes do `node_modules` local —
-  **não são bugs do repo**. Erro fora desses três caminhos é regressão sua: conserte
-  antes de entregar.
+- **Linha de base: 0 erros**, com o `node_modules` completo (verificado em
+  01/09/2026: tsc 5.9.3, 2067 arquivos no programa, 659 de `src/`).
+  **Qualquer** erro é regressão sua — conserte antes de entregar.
+- **Se aparecerem 15 erros** `TS2307`/`TS18046` em `src/lib/email-templates/*`,
+  `src/routes/lovable/email/*` e `src/lib/__tests__/*`, o defeito é o seu
+  `node_modules`, não o repo: quatro pacotes do `package.json` não foram baixados.
+  Os quatro **existem no registro público** e `npm install` os traz. Era isso que
+  produzia a antiga "linha de base de 15" anotada em 28/08/2026 — não uma
+  característica do projeto. Rode `npm install` em vez de contornar.
 - "Deve funcionar" não é verificação. Rode, mostre a saída. Se falhar, diga que falhou
   e mostre o erro — nunca relate sucesso sem evidência.
 
@@ -88,7 +91,9 @@ CRM (`crm_quadros`/`crm_cartoes`), bot (`bot_fluxos`/`bot_disparos`),
   senão reverte o que acabou de gerar.
 - **`npm run dev` quebra pelo mesmo `mcpPlugin()`**, e mesmo comentando ele o SSR dá 500
   em **qualquer** rota: `routeTree.gen.ts` importa tudo de forma ansiosa, e quatro pacotes
-  do `package.json` faltam no `node_modules` — os mesmos dos 15 erros da linha de base.
+  do `package.json` faltam no `node_modules` — os mesmos da antiga linha de base de 15.
+  **Um `npm install` completo traz os quatro** (conferido em 01/09/2026), o que
+  provavelmente dispensa os stubs abaixo; isso não foi testado com o dev de pé.
   Para ver tela, crie stubs locais de `@lovable.dev/email-js`, `@lovable.dev/webhooks-js`,
   `@react-email/render` e `@react-email/components`, **e apague no fim**: com eles a linha
   de base deixa de ser 15 e o próximo turno se perde. O Vite cacheia o stub — trocar o
@@ -120,7 +125,7 @@ CRM (`crm_quadros`/`crm_cartoes`), bot (`bot_fluxos`/`bot_disparos`),
 - [ ] Fiz exatamente o que foi pedido?
 - [ ] Editei todos os arquivos necessários, incluindo dependentes?
 - [ ] **Rodei** o código — não só li?
-- [ ] `tsc --noEmit` nos 15 erros da linha de base, sem regressão?
+- [ ] `tsc --noEmit` limpo, zero erros?
 - [ ] Algum caso de borda ficou de fora?
 
 Se qualquer item falhar, conserte antes de entregar. Se algo ficou por fazer,

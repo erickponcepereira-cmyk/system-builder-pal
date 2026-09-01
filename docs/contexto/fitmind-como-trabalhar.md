@@ -30,9 +30,13 @@ para o bundle do navegador de qualquer jeito), então estar no repo não é
 vazamento — mas a afirmação errada mandou o Erick procurar o que não existia.
 
 **How to apply:** antes de qualquer entrega, `node
-node_modules\typescript\bin\tsc --noEmit` — linha de base 15 erros. Depois de
-aplicar SQL pelo MCP, conferir `md5(prosrc)` contra o corpo no arquivo da
-migration: nas primeiras vezes divergiu em três de três. Depois de publicar
+node_modules\typescript\bin\tsc --noEmit` — linha de base 0 erros, desde que o
+`node_modules` esteja completo. Depois de aplicar SQL pelo MCP, conferir
+`md5(prosrc)` contra o corpo no arquivo da migration: nas primeiras vezes
+divergiu em três de três. **Compare normalizando o fim de linha** — o banco
+guarda o corpo em LF e `core.autocrlf=true` deixa o arquivo em CRLF no disco,
+então comparar o arquivo cru nunca bate e a conferência vira ritual vazio.
+Depois de publicar
 versão do agente, conferir `md5` de cada arquivo publicado contra o disco —
 publicar uma versão quebrada prende o agente, porque a versão instalada passa a
 bater com a publicada e ele nunca mais busca correção. A saída é bump.
@@ -67,7 +71,9 @@ recusa `routesDir` com barra invertida no Windows. Mesmo remédio — comentar
 
 Feito isso, o SSR ainda dá 500 em **qualquer** rota, porque `routeTree.gen.ts`
 importa toda rota de forma ansiosa e quatro pacotes do `package.json` não estão
-no `node_modules` local — os mesmos dos 15 erros da linha de base. Para ver a
+no `node_modules` local — os mesmos da antiga linha de base de 15. Em 01/09/2026
+conferi no registro: os quatro existem e `npm install` os baixa, então num clone
+com dependências completas nada disto abaixo deveria ser necessário. Para ver a
 tela, criar stubs locais (só em `node_modules`, nunca no repo) com **os nomes
 exatos** que o código importa:
 
