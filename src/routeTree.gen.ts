@@ -73,7 +73,6 @@ import { Route as AuthenticatedStudentLojaAntigaRouteImport } from './routes/_au
 import { Route as AuthenticatedStudentLibraryRouteImport } from './routes/_authenticated/student.library'
 import { Route as AuthenticatedStudentHealthRouteImport } from './routes/_authenticated/student.health'
 import { Route as AuthenticatedStudentGroupRouteImport } from './routes/_authenticated/student.group'
-import { Route as AuthenticatedStudentAcademiaRouteImport } from './routes/_authenticated/student.academia'
 import { Route as AuthenticatedStudentFreebiesRouteImport } from './routes/_authenticated/student.freebies'
 import { Route as AuthenticatedStudentEvolutionRouteImport } from './routes/_authenticated/student.evolution'
 import { Route as AuthenticatedStudentDownloadsRouteImport } from './routes/_authenticated/student.downloads'
@@ -84,6 +83,7 @@ import { Route as AuthenticatedStudentCardRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStudentCalendarRouteImport } from './routes/_authenticated/student.calendar'
 import { Route as AuthenticatedStudentBenefitsRouteImport } from './routes/_authenticated/student.benefits'
 import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_authenticated/student.assessments'
+import { Route as AuthenticatedStudentAcademiaRouteImport } from './routes/_authenticated/student.academia'
 import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional_.orders-in-progress'
 import { Route as AuthenticatedProfessionalHerbalifeBoletosRouteImport } from './routes/_authenticated/professional_.herbalife-boletos'
 import { Route as AuthenticatedProfessionalCursosTesteRouteImport } from './routes/_authenticated/professional_.cursos-teste'
@@ -517,12 +517,6 @@ const AuthenticatedStudentGroupRoute =
     path: '/group',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
-const AuthenticatedStudentAcademiaRoute =
-  AuthenticatedStudentAcademiaRouteImport.update({
-    id: '/academia',
-    path: '/academia',
-    getParentRoute: () => AuthenticatedStudentRoute,
-  } as any)
 const AuthenticatedStudentFreebiesRoute =
   AuthenticatedStudentFreebiesRouteImport.update({
     id: '/freebies',
@@ -581,6 +575,12 @@ const AuthenticatedStudentAssessmentsRoute =
   AuthenticatedStudentAssessmentsRouteImport.update({
     id: '/assessments',
     path: '/assessments',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
+const AuthenticatedStudentAcademiaRoute =
+  AuthenticatedStudentAcademiaRouteImport.update({
+    id: '/academia',
+    path: '/academia',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
 const AuthenticatedProfessionalOrdersInProgressRoute =
@@ -1229,6 +1229,7 @@ export interface FileRoutesByFullPath {
   '/professional/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
+  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1238,7 +1239,6 @@ export interface FileRoutesByFullPath {
   '/student/compras': typeof AuthenticatedStudentComprasRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
-  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1394,6 +1394,7 @@ export interface FileRoutesByTo {
   '/professional/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
+  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1403,7 +1404,6 @@ export interface FileRoutesByTo {
   '/student/compras': typeof AuthenticatedStudentComprasRoute
   '/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/student/evolution': typeof AuthenticatedStudentEvolutionRoute
-  '/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/student/group': typeof AuthenticatedStudentGroupRoute
   '/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1563,6 +1563,7 @@ export interface FileRoutesById {
   '/_authenticated/professional_/cursos-teste': typeof AuthenticatedProfessionalCursosTesteRoute
   '/_authenticated/professional_/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/_authenticated/professional_/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
+  '/_authenticated/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/_authenticated/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/_authenticated/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/_authenticated/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1572,7 +1573,6 @@ export interface FileRoutesById {
   '/_authenticated/student/compras': typeof AuthenticatedStudentComprasRoute
   '/_authenticated/student/downloads': typeof AuthenticatedStudentDownloadsRoute
   '/_authenticated/student/evolution': typeof AuthenticatedStudentEvolutionRoute
-  '/_authenticated/student/academia': typeof AuthenticatedStudentAcademiaRoute
   '/_authenticated/student/freebies': typeof AuthenticatedStudentFreebiesRoute
   '/_authenticated/student/group': typeof AuthenticatedStudentGroupRoute
   '/_authenticated/student/health': typeof AuthenticatedStudentHealthRoute
@@ -1732,6 +1732,7 @@ export interface FileRouteTypes {
     | '/professional/cursos-teste'
     | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
+    | '/student/academia'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1741,7 +1742,6 @@ export interface FileRouteTypes {
     | '/student/compras'
     | '/student/downloads'
     | '/student/evolution'
-    | '/student/academia'
     | '/student/freebies'
     | '/student/group'
     | '/student/health'
@@ -1897,6 +1897,7 @@ export interface FileRouteTypes {
     | '/professional/cursos-teste'
     | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
+    | '/student/academia'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1906,7 +1907,6 @@ export interface FileRouteTypes {
     | '/student/compras'
     | '/student/downloads'
     | '/student/evolution'
-    | '/student/academia'
     | '/student/freebies'
     | '/student/group'
     | '/student/health'
@@ -2065,6 +2065,7 @@ export interface FileRouteTypes {
     | '/_authenticated/professional_/cursos-teste'
     | '/_authenticated/professional_/herbalife-boletos'
     | '/_authenticated/professional_/orders-in-progress'
+    | '/_authenticated/student/academia'
     | '/_authenticated/student/assessments'
     | '/_authenticated/student/benefits'
     | '/_authenticated/student/calendar'
@@ -2074,7 +2075,6 @@ export interface FileRouteTypes {
     | '/_authenticated/student/compras'
     | '/_authenticated/student/downloads'
     | '/_authenticated/student/evolution'
-    | '/_authenticated/student/academia'
     | '/_authenticated/student/freebies'
     | '/_authenticated/student/group'
     | '/_authenticated/student/health'
@@ -2627,13 +2627,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentGroupRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
-    '/_authenticated/student/academia': {
-      id: '/_authenticated/student/academia'
-      path: '/academia'
-      fullPath: '/student/academia'
-      preLoaderRoute: typeof AuthenticatedStudentAcademiaRouteImport
-      parentRoute: typeof AuthenticatedStudentRoute
-    }
     '/_authenticated/student/freebies': {
       id: '/_authenticated/student/freebies'
       path: '/freebies'
@@ -2702,6 +2695,13 @@ declare module '@tanstack/react-router' {
       path: '/assessments'
       fullPath: '/student/assessments'
       preLoaderRoute: typeof AuthenticatedStudentAssessmentsRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
+    '/_authenticated/student/academia': {
+      id: '/_authenticated/student/academia'
+      path: '/academia'
+      fullPath: '/student/academia'
+      preLoaderRoute: typeof AuthenticatedStudentAcademiaRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
     '/_authenticated/professional_/orders-in-progress': {
@@ -3538,6 +3538,7 @@ const AuthenticatedStudentProfileRouteWithChildren =
   )
 
 interface AuthenticatedStudentRouteChildren {
+  AuthenticatedStudentAcademiaRoute: typeof AuthenticatedStudentAcademiaRoute
   AuthenticatedStudentAssessmentsRoute: typeof AuthenticatedStudentAssessmentsRoute
   AuthenticatedStudentBenefitsRoute: typeof AuthenticatedStudentBenefitsRoute
   AuthenticatedStudentCalendarRoute: typeof AuthenticatedStudentCalendarRoute
@@ -3547,7 +3548,6 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentComprasRoute: typeof AuthenticatedStudentComprasRoute
   AuthenticatedStudentDownloadsRoute: typeof AuthenticatedStudentDownloadsRoute
   AuthenticatedStudentEvolutionRoute: typeof AuthenticatedStudentEvolutionRoute
-  AuthenticatedStudentAcademiaRoute: typeof AuthenticatedStudentAcademiaRoute
   AuthenticatedStudentFreebiesRoute: typeof AuthenticatedStudentFreebiesRoute
   AuthenticatedStudentGroupRoute: typeof AuthenticatedStudentGroupRoute
   AuthenticatedStudentHealthRoute: typeof AuthenticatedStudentHealthRoute
@@ -3571,6 +3571,7 @@ interface AuthenticatedStudentRouteChildren {
 }
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
+  AuthenticatedStudentAcademiaRoute: AuthenticatedStudentAcademiaRoute,
   AuthenticatedStudentAssessmentsRoute: AuthenticatedStudentAssessmentsRoute,
   AuthenticatedStudentBenefitsRoute: AuthenticatedStudentBenefitsRoute,
   AuthenticatedStudentCalendarRoute: AuthenticatedStudentCalendarRoute,
@@ -3580,7 +3581,6 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentComprasRoute: AuthenticatedStudentComprasRoute,
   AuthenticatedStudentDownloadsRoute: AuthenticatedStudentDownloadsRoute,
   AuthenticatedStudentEvolutionRoute: AuthenticatedStudentEvolutionRoute,
-  AuthenticatedStudentAcademiaRoute: AuthenticatedStudentAcademiaRoute,
   AuthenticatedStudentFreebiesRoute: AuthenticatedStudentFreebiesRoute,
   AuthenticatedStudentGroupRoute: AuthenticatedStudentGroupRoute,
   AuthenticatedStudentHealthRoute: AuthenticatedStudentHealthRoute,
