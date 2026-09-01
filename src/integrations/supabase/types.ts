@@ -463,6 +463,7 @@ export type Database = {
           nascimento: string | null
           nome_no_equipamento: string | null
           partner_id: string
+          qr_token: string | null
           referencia: string
           student_id: string | null
           telefone: string | null
@@ -476,6 +477,7 @@ export type Database = {
           nascimento?: string | null
           nome_no_equipamento?: string | null
           partner_id: string
+          qr_token?: string | null
           referencia: string
           student_id?: string | null
           telefone?: string | null
@@ -489,6 +491,7 @@ export type Database = {
           nascimento?: string | null
           nome_no_equipamento?: string | null
           partner_id?: string
+          qr_token?: string | null
           referencia?: string
           student_id?: string | null
           telefone?: string | null
@@ -1386,6 +1389,106 @@ export type Database = {
           },
         ]
       }
+      academia_reservas: {
+        Row: {
+          cancelada_em: string | null
+          credencial_id: string | null
+          data: string
+          dia_semana: number
+          fim: string
+          frequencia_id: string | null
+          id: string
+          inicio: string
+          origem: string
+          partner_id: string
+          presente_em: string | null
+          profile_id: string | null
+          reservada_em: string
+          status: string
+          student_id: string | null
+          turma_id: string
+        }
+        Insert: {
+          cancelada_em?: string | null
+          credencial_id?: string | null
+          data: string
+          dia_semana: number
+          fim: string
+          frequencia_id?: string | null
+          id?: string
+          inicio: string
+          origem?: string
+          partner_id: string
+          presente_em?: string | null
+          profile_id?: string | null
+          reservada_em?: string
+          status?: string
+          student_id?: string | null
+          turma_id: string
+        }
+        Update: {
+          cancelada_em?: string | null
+          credencial_id?: string | null
+          data?: string
+          dia_semana?: number
+          fim?: string
+          frequencia_id?: string | null
+          id?: string
+          inicio?: string
+          origem?: string
+          partner_id?: string
+          presente_em?: string | null
+          profile_id?: string | null
+          reservada_em?: string
+          status?: string
+          student_id?: string | null
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academia_reservas_credencial_id_fkey"
+            columns: ["credencial_id"]
+            isOneToOne: false
+            referencedRelation: "academia_credenciais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_reservas_frequencia_id_fkey"
+            columns: ["frequencia_id"]
+            isOneToOne: false
+            referencedRelation: "academia_frequencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_reservas_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_reservas_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_reservas_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_reservas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "academia_turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academia_sombra: {
         Row: {
           agente_id: string | null
@@ -1517,6 +1620,7 @@ export type Database = {
       academia_turmas: {
         Row: {
           ativo: boolean
+          capacidade: number | null
           created_at: string
           dia_semana: number | null
           dias_semana: number[]
@@ -1529,6 +1633,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          capacidade?: number | null
           created_at?: string
           dia_semana?: number | null
           dias_semana?: number[]
@@ -1541,6 +1646,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          capacidade?: number | null
           created_at?: string
           dia_semana?: number | null
           dias_semana?: number[]
@@ -15696,6 +15802,27 @@ export type Database = {
           student_id: string
         }[]
       }
+      academia_aulas_disponiveis: {
+        Args: { p_ate?: string; p_de?: string; p_partner_id: string }
+        Returns: {
+          capacidade: number
+          data: string
+          dia_semana: number
+          eu_reservei: boolean
+          fechada: boolean
+          fim: string
+          hora_fim: string
+          hora_inicio: string
+          inicio: string
+          minha_reserva_id: string
+          modalidade: string
+          motivo: string
+          reservados: number
+          turma: string
+          turma_id: string
+          vagas: number
+        }[]
+      }
       academia_aviso_texto_padrao: {
         Args: { p_marco: string }
         Returns: string
@@ -15830,6 +15957,10 @@ export type Database = {
           liquido: number
           taxa: number
         }[]
+      }
+      academia_cancelar_reserva: {
+        Args: { p_reserva_id: string }
+        Returns: Json
       }
       academia_constancia: {
         Args: { p_partner_id: string; p_semanas?: number }
@@ -15994,6 +16125,10 @@ export type Database = {
           turma_id: string
         }[]
       }
+      academia_fechar_faltas: {
+        Args: { p_ate?: string; p_partner_id: string }
+        Returns: Json
+      }
       academia_frequencia_contador: {
         Args: { p_partner_id: string; p_student_id: string }
         Returns: {
@@ -16063,6 +16198,7 @@ export type Database = {
         Args: { p_partner_id: string }
         Returns: number
       }
+      academia_meu_qr: { Args: { p_partner_id: string }; Returns: Json }
       academia_meu_rosto_enfileirar: {
         Args: { p_foto_base64: string }
         Returns: {
@@ -16081,6 +16217,31 @@ export type Database = {
           referencia: string
           tem_rosto: boolean
           valido_ate: string
+        }[]
+      }
+      academia_minhas_academias: {
+        Args: never
+        Returns: {
+          cidade: string
+          estado: string
+          foto: string
+          nome: string
+          partner_id: string
+          regime_turma: string
+          tem_reserva: boolean
+        }[]
+      }
+      academia_minhas_reservas: {
+        Args: { p_partner_id?: string }
+        Returns: {
+          academia: string
+          data: string
+          fim: string
+          inicio: string
+          partner_id: string
+          reserva_id: string
+          status: string
+          turma: string
         }[]
       }
       academia_modelo_aplicar: {
@@ -16215,6 +16376,10 @@ export type Database = {
           valido_ate: string
         }[]
       }
+      academia_qr_validar: {
+        Args: { p_partner_id: string; p_token: string }
+        Returns: Json
+      }
       academia_reativacao_preparar: {
         Args: {
           p_dias_max?: number
@@ -16343,6 +16508,24 @@ export type Database = {
           mensalidade_id: string
           taxas: number
           valido_ate: string
+        }[]
+      }
+      academia_reservar_aula: {
+        Args: { p_data: string; p_partner_id: string; p_turma_id: string }
+        Returns: Json
+      }
+      academia_reservas_do_dia: {
+        Args: { p_data?: string; p_partner_id: string }
+        Returns: {
+          capacidade: number
+          faltas: number
+          hora_fim: string
+          hora_inicio: string
+          pessoas: Json
+          presentes: number
+          reservados: number
+          turma: string
+          turma_id: string
         }[]
       }
       academia_sombra_placar: {
@@ -17181,6 +17364,7 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      meu_profile_id: { Args: never; Returns: string }
       minha_cadeia_coaches: { Args: never; Returns: string[] }
       minhas_unidades_parceiro: {
         Args: never
