@@ -62,6 +62,11 @@ Requisito ambíguo → pergunte, não presuma.
 
 Edite o arquivo **e todos os dependentes na mesma tarefa**. Nunca deixe import quebrado.
 
+**Contexto que o código não conta** — decisões, o porquê delas, e armadilhas que já
+custaram tempo — está em [`docs/contexto/`](docs/contexto/INDICE.md), um arquivo por
+frente. Leia o da frente em que for mexer, não todos. Ao aprender algo que valeria para
+a próxima sessão, **edite o arquivo da frente e commite junto com o código**.
+
 **Antes de criar um módulo, audite o que já existe.** O banco já tem ~200 tabelas,
 incluindo assinatura (`subscriptions`, `subscription_invoices`, `recurring_charges`),
 financeiro (`transactions`, `wallets`, `commissions`, `mercadopago_payments`),
