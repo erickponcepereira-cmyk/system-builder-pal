@@ -240,7 +240,7 @@ export function UnifiedStorePage({
 
   /** O que o card precisa da indicacao, numa referencia estavel. */
   const indicacaoDoCard = useMemo(() => ({
-    pode: (sourceId: string) => indicacao.podeIndicar(sourceId),
+    pode: (sourceId: string, origem: string) => indicacao.podeIndicar(sourceId, origem),
     compartilhar: (sourceId: string) => void indicacao.compartilhar(sourceId, indicacao.meuCodigo),
   }), [indicacao]);
   useEffect(() => { void todasAsNotas().then(setNotas); }, []);
@@ -1154,7 +1154,7 @@ export function UnifiedStorePage({
           noCarrinho={carrinho.cart.some((item) => item.sourceId === detail.sourceId && item.kind === detail.kind)}
           modoCoach={modoCoach}
           hasUpline={coach.hasUpline}
-          podeIndicar={indicacao.podeIndicar(detail.sourceId)}
+          podeIndicar={indicacao.podeIndicar(detail.sourceId, detail.origin)}
           onIndicar={() => void indicacao.compartilhar(detail.sourceId, indicacao.meuCodigo)}
           podeCurar={modoCoach && !!visibilidade.kindDeCuradoria(detail)}
           escondidoDaRede={visibilidade.ocultadoPorMim(
@@ -1266,7 +1266,7 @@ function Rail({ children }: { children: ReactNode }) {
  * quem vai indicar um produto para o grupo do WhatsApp não abre a ficha antes.
  */
 type IndicacaoDoCard = {
-  pode: (sourceId: string) => boolean;
+  pode: (sourceId: string, origem: string) => boolean;
   compartilhar: (sourceId: string) => void;
 };
 
@@ -1348,7 +1348,7 @@ function Card({
         {/* Indicar e ganhar, no card — que e onde ele morava na loja antiga.
             `stopPropagation` porque o card inteiro abre o detalhe, e quem toca
             aqui quer compartilhar, nao abrir. */}
-        {indicacao?.pode(product.sourceId) && (
+        {indicacao?.pode(product.sourceId, product.origin) && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); indicacao.compartilhar(product.sourceId); }}
