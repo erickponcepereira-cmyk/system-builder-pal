@@ -237,6 +237,12 @@ export function UnifiedStorePage({
    * sem nota é o card que não dá para julgar.
    */
   const [notas, setNotas] = useState<Map<string, ResumoDeNotas>>(new Map());
+
+  /** O que o card precisa da indicacao, numa referencia estavel. */
+  const indicacaoDoCard = useMemo(() => ({
+    pode: (sourceId: string) => indicacao.podeIndicar(sourceId),
+    compartilhar: (sourceId: string) => void indicacao.compartilhar(sourceId, indicacao.meuCodigo),
+  }), [indicacao]);
   useEffect(() => { void todasAsNotas().then(setNotas); }, []);
 
   /**
@@ -972,11 +978,11 @@ export function UnifiedStorePage({
               item mais parecido com o que a pessoa digitou ia parar no fim,
               embaixo de um cabeçalho que ela não pediu. */}
           {filtros.ordenacao === "relevancia" ? (
-            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} indicacao={indicacaoDoCard} />
           ) : (
             byOrigin.map((group) => (
               <Block key={group.origin} title={ORIGIN_LABEL[group.origin]} hint={`${group.items.length}`}>
-                <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
+                <Grid items={group.items} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} indicacao={indicacaoDoCard} />
               </Block>
             ))
           )}
@@ -1055,7 +1061,7 @@ export function UnifiedStorePage({
 
           {/* 7. Vitrine ordenada por score, empate em ordem alfabética */}
           <Block title="Vitrine" hint={`${showcase.length} itens`}>
-            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} />
+            <Grid items={showcase} stock={stock} onOpen={setDetail} mostrarPontos={modoCoach} notas={notas} indicacao={indicacaoDoCard} />
           </Block>
 
           {/* Pedidos: a loja antiga mostrava "Meus pedidos" aqui, e depois de
@@ -1252,7 +1258,19 @@ function Rail({ children }: { children: ReactNode }) {
   );
 }
 
-function Grid({ items, stock, onOpen, mostrarPontos = false, notas }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean; notas?: Map<string, ResumoDeNotas> }) {
+/**
+ * O que o card precisa saber para oferecer "indique e ganhe".
+ *
+ * O botão morava no CARD da loja antiga e, na nova, só existia dentro do modal
+ * de detalhe. Dois cliques mais fundo, num fluxo que só funciona por impulso:
+ * quem vai indicar um produto para o grupo do WhatsApp não abre a ficha antes.
+ */
+type IndicacaoDoCard = {
+  pode: (sourceId: string) => boolean;
+  compartilhar: (sourceId: string) => void;
+};
+
+function Grid({ items, stock, onOpen, mostrarPontos = false, notas, indicacao }: { items: UnifiedProduct[]; stock: StockMap; onOpen: (p: UnifiedProduct) => void; mostrarPontos?: boolean; notas?: Map<string, ResumoDeNotas>; indicacao?: IndicacaoDoCard }) {
   return (
     <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @3xl:grid-cols-4 @5xl:grid-cols-5">
       {items.map((item) => {
@@ -1268,6 +1286,7 @@ function Grid({ items, stock, onOpen, mostrarPontos = false, notas }: { items: U
             flag={flag}
             mostrarPontos={mostrarPontos}
             nota={notas?.get(`${origemDoProduto(item.origin, item.kind)}:${item.sourceId}`)}
+            indicacao={indicacao}
           />
         );
       })}
@@ -1291,6 +1310,7 @@ function Card({
   variant = "grid",
   mostrarPontos = false,
   nota,
+  indicacao,
 }: {
   product: UnifiedProduct;
   onOpen: (p: UnifiedProduct) => void;
@@ -1302,6 +1322,8 @@ function Card({
   variant?: "grid" | "rail";
   /** Nota média e contagem. Ausente = ninguém avaliou ainda. */
   nota?: ResumoDeNotas;
+  /** Indicar e ganhar. Ausente = a superfície não oferece indicação. */
+  indicacao?: IndicacaoDoCard;
 }) {
   return (
     <button
@@ -1321,6 +1343,21 @@ function Card({
           <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
             <Timer className="h-2.5 w-2.5" />{flag}
           </span>
+        )}
+
+        {/* Indicar e ganhar, no card — que e onde ele morava na loja antiga.
+            `stopPropagation` porque o card inteiro abre o detalhe, e quem toca
+            aqui quer compartilhar, nao abrir. */}
+        {indicacao?.pode(product.sourceId) && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); indicacao.compartilhar(product.sourceId); }}
+            aria-label={`Indicar ${product.title} e ganhar comissao`}
+            title="Indicar e ganhar"
+            className="absolute right-1.5 top-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+          </button>
         )}
       </div>
 
