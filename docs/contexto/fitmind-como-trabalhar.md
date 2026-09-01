@@ -17,6 +17,18 @@ desta máquina aponta para outro projeto e não serve.
 **Why:** perder tempo procurando um terceiro caminho, ou pedir ao Erick algo que
 ele não pode fazer, trava o trabalho.
 
+**Sempre que pedir uma ação sobre um arquivo, dê o caminho completo.** "Copie o
+`.env`" sem dizer onde faz o Erick procurar; `C:\dev\fitmind-bugs\.env` resolve na
+hora. Vale para arquivo, pasta e comando — o caminho é parte do pedido, não um
+detalhe que ele descobre depois.
+
+**E confira o caminho antes de citá-lo.** Em 01/09 eu disse que o `.env` ficava
+fora do repo e precisava ser copiado entre máquinas. Ele **está versionado** — o
+clone traz. Um `ls` teria evitado. As sete chaves dele são todas públicas
+(`*_PUBLISHABLE_KEY`, `VITE_MP_PUBLIC_KEY`, URL e project id; tudo `VITE_` vai
+para o bundle do navegador de qualquer jeito), então estar no repo não é
+vazamento — mas a afirmação errada mandou o Erick procurar o que não existia.
+
 **How to apply:** antes de qualquer entrega, `node
 node_modules\typescript\bin\tsc --noEmit` — linha de base 15 erros. Depois de
 aplicar SQL pelo MCP, conferir `md5(prosrc)` contra o corpo no arquivo da
