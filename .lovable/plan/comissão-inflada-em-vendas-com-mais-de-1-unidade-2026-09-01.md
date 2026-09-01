@@ -43,3 +43,7 @@ Vendas com mais de 1 unidade encontradas: **3** (as duas de R$ 200 pagas em 31/0
 ## Ponto a confirmar
 
 Se a intenção for que o imposto de 6% **não** incida em algum produto específico (ex.: tickets de desafio), diga qual — nesse caso mantenho apenas a correção da quantidade nele.
+
+o imposto nao incide em mais nenhum produto. ja ajustamos isso em outra correção.
+
+&nbsp;
