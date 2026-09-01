@@ -240,3 +240,73 @@ caminho foi criar a credencial a partir da própria lista de clientes.
 
 **Nenhum dos 113 tem QR ainda** — zero `student_id`. Sem conciliação a academia
 abre com a porta na mão.
+
+## 01/09/2026 — medida a conciliação do Reino: 77 das 83 não têm conta
+
+Números do Reino (`af6dd958`), medidos: 113 credenciais, 83 ativas, **zero com
+`student_id`**, 103 com CPF, e **todas as 113 com telefone**. Nenhuma vista no
+equipamento — o Jean não tem catraca, então `importado_em` nulo aqui é normal, e
+não o sinal de defeito que é na Estação.
+
+A régua `academia_credenciais_sugerir_vinculo` devolve **7 pares para 6
+credenciais**: 2 'alta', 3 'media', 2 'baixa' (as duas do mesmo Jean). Ou seja
+**77 das 83 ativas não têm candidato nenhum** — mesma proporção da Estação, e
+pelo mesmo motivo: a pessoa não tem conta na FitMind. A tela
+(`ConciliarCredenciais.tsx`) já existe e já trata `sem_candidato` como número de
+primeira classe, então o que falta **não é tela nem régua: é conta**. Conciliar
+não abre a porta do Reino; só cadastro abre.
+
+**O CPF do Reino não salva a conciliação, e vale saber por quê.** Casa apenas
+**1** das 83 — não porque falte CPF na credencial (76 das ativas têm), mas
+porque `profiles.cpf` está preenchido em só **53 de 479** perfis (11%). Telefone
+está em 452 de 479 (94%). Então, para casar, telefone continua sendo a chave
+prática e CPF é chave de **desempate**, não de varredura. Quem for propor
+"casar por CPF" precisa saber disso antes de investir.
+
+Onde o CPF vale muito: **desempatar**. A credencial "Jean Reis" tem dois alunos
+no mesmo telefone e por isso cai em 'baixa' ("confirme quem é"). A credencial
+tem CPF `03706027143`, e exatamente uma das duas contas tem esse CPF — a outra
+não tem CPF nenhum. O CPF resolve sozinho o que a régua manda o humano resolver.
+
+**Telefone de dígito repetido é falso positivo.** "Davi Martins Pego de
+Freitas" casa com "João do Açaí" em `(99) 99999-9999` e sai como **'media'** —
+e `academia_credencial_vincular` religa mensalidade paga para a credencial
+ligada, então par errado aqui mexe em dinheiro. Só que o problema é pequeno e
+contido: em toda a base há **1 perfil e 2 credenciais** com dígito repetido, e
+na Estação a única (`consumidor`, `00000000000`) não forma par com ninguém.
+Vale blindar como prevenção, não como incêndio.
+
+**A Estação não tem nenhum CPF** (0 de 416), o que torna qualquer regra de CPF
+inócua lá por construção. Distribuição atual dela: 21 'alta', 3 'media', 5
+'baixa', **nenhum par apoiado em telefone-lixo**. Isso é o que permite mexer na
+régua compartilhada sem risco para a Estação — mas confira de novo antes de
+mexer, porque no dia em que a Estação ganhar CPF a conta muda.
+
+### 01/09 — CPF vira desempate na régua, e telefone-lixo sai de evidência
+
+Aplicado em `academia_credenciais_sugerir_vinculo`
+(`supabase/migrations/20260901230000_cpf_desempata_conciliacao.sql`,
+`md5(prosrc)` = `d3b827ea788e7dcfe69e2f64afd65e52`, conferido e batendo de
+primeira). Três mudanças, **sem alterar a assinatura nem as colunas de saída** —
+`ConciliarCredenciais.tsx` e `academia-conciliacao.functions.ts` seguem valendo
+sem tocar em nada.
+
+1. **CPF idêntico e único dos dois lados vale 'alta'**, mesmo quando o telefone é
+   ambíguo. É o que resolve o Jean: a régua mandava o humano escolher entre duas
+   contas no mesmo número, e o documento já estava no banco decidindo sozinho.
+2. **CPF divergente derruba para 'baixa'.** Quando os dois documentos existem e
+   são diferentes, não é a mesma pessoa — por mais que telefone e nome combinem.
+3. **Telefone de dígito repetido vira NULL** nos dois lados, então não forma par.
+
+Também entrou o CPF no universo de candidatos (antes era só "aluno da unidade"
+ou "telefone que a academia já tem"). Continua estreito de propósito: casamento
+exato de documento, não varredura da plataforma.
+
+Reino antes: 7 pares / 6 credenciais, 2 'alta'. Depois: 6 pares / 5 credenciais,
+3 'alta', e o par Davi ↔ João do Açaí sumiu. A segunda conta do Jean (a sem CPF)
+continua aparecendo em 'baixa' — está certo: é candidata de verdade, e cabe ao
+humano recusar.
+
+**Estação medida antes e depois: 21 'alta', 3 'media', 5 'baixa' — idêntica.**
+Era o resultado esperado (0 CPF em 416 credenciais torna as regras de CPF
+inócuas lá), mas foi conferido, não presumido.
