@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dedupePointLogs } from "@/lib/financial-dedupe";
+import { tzCurrentYearMonth, TZ_OFFSET } from "@/lib/timezone";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
 
 export type RewardPlan = {
   id: string;
