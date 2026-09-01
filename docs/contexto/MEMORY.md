@@ -29,6 +29,8 @@ volta a ficar preso numa máquina.
   mesmo repo, o que já existe no banco, e o padrão do agente que roda no PC da academia
 - [AG Kit — skills globais](ag-kit-skills-globais.md) — as skills de `~/.claude/skills`,
   as que estão desligadas, e por que nunca rodar `ag-kit init` sem `--path`
+- [AG Kit — o segundo PC](ag-kit-segundo-pc.md) — o que a máquina nova instalou, como o clone
+  autenticou sem token, e onde as duas máquinas divergem
 
 ### Vertical de acesso e catraca
 - [Vertical de acesso](fitmind-vertical-acesso.md) — **o arquivo mais denso.** Unidade é o
