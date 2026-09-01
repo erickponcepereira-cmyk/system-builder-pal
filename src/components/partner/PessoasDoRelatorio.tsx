@@ -93,7 +93,7 @@ export function CaixaDeMensagem({
             type="button"
             onClick={() => void mandar()}
             disabled={enviando || !texto.trim()}
-            className="shrink-0 rounded-xl bg-aca-acao px-3 py-2 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50"
+            className="shrink-0 rounded-xl bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50"
           >
             {enviando ? "Enviando…" : "Enviar"}
           </button>

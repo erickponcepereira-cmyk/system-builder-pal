@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown, Pencil, X } from "lucide-react";
+import { Loader2, Search, Save, Dumbbell, Ban, Send, Ticket, FileText, KanbanSquare, Plug, Camera, RefreshCw, UserPlus, Plus, Trash2, ChevronUp, ChevronDown, Pencil, X, Link2 } from "lucide-react";
 import { RenovarAluno } from "@/components/partner/RenovarAluno";
 import { CadastrarPessoaAcademia } from "@/components/partner/CadastrarPessoaAcademia";
 import { RelatorioAcademia } from "@/components/partner/RelatorioAcademia";
@@ -90,6 +90,9 @@ import {
 import { formatDateOnlyBR } from "@/lib/date-only";
 import { FluxoCaixa } from "@/components/partner/FluxoCaixa";
 import { RecepcaoQR } from "@/components/partner/RecepcaoQR";
+import { Constancia, Faltas } from "@/components/partner/ConstanciaEFaltas";
+import { ConciliarCredenciais } from "@/components/partner/ConciliarCredenciais";
+import { ManualDaRecepcao } from "@/components/partner/ManualDaRecepcao";
 import {
   BOTAO_ACAO, BOTAO_ICONE, BOTAO_NEUTRO, BOTAO_TEXTO, CAMPO, CAMPO_MINI,
   Bloco, Campo, Cartao, Etiqueta, EYEBROW, FOCO, LinhaDado, NOTA, Pilula, ROTULO,
@@ -112,6 +115,27 @@ const LIMITE_PENDENTES = 20;
 // O tom deixou de ser classe de cor e virou significado: quem decide onde ele
 // aparece é o cartão, na tarja da borda esquerda. "Sem mensalidade" é neutro
 // porque não é castigo nem urgência — é ausência de lançamento.
+// Os três regimes de `partner_acesso_config.regime_turma`. A explicação diz a
+// CONSEQUÊNCIA de cada um, e não o que ele é: quem escolhe aqui está decidindo
+// o que o aluno vê no aplicativo e o que a aba Faltas vai chamar de falta.
+const REGIMES: Array<{ value: string; label: string; explica: string }> = [
+  {
+    value: "livre",
+    label: "Treino livre",
+    explica: "O aluno treina na hora que quiser. Falta é semana completa abaixo da meta do plano — nunca “não veio na terça”. O aplicativo não oferece reserva.",
+  },
+  {
+    value: "marcado",
+    label: "Turma marcada",
+    explica: "Cada aluno tem turma fixa. Falta é aula em que ele está matriculado e não passou na catraca.",
+  },
+  {
+    value: "reserva",
+    label: "Reserva de aula",
+    explica: "O aluno reserva a aula pelo aplicativo e mostra o QR na entrada. Falta é vaga guardada que ninguém ocupou; quem cancela a tempo não falta.",
+  },
+];
+
 const ESTADOS: Record<string, { label: string; tom: Tom }> = {
   contrato_ativo: { label: "Ativo", tom: "ok" },
   vencimento_proximo: { label: "Vence em breve", tom: "atencao" },
@@ -580,10 +604,14 @@ function Eventos({ partnerId }: { partnerId: string }) {
   );
 }
 
+/** As três perguntas que a academia faz sobre frequência, na ordem em que doem. */
+type VistaFrequencia = "treinos" | "constancia" | "faltas";
+
 function Frequencia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterFrequenciaAcademia);
   const salvarCfg = useServerFn(salvarConfigFrequencia);
   const criarTurma = useServerFn(salvarTurma);
+  const [vista, setVista] = useState<VistaFrequencia>("treinos");
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
@@ -688,194 +716,222 @@ function Frequencia({ partnerId }: { partnerId: string }) {
         </p>
       </Bloco>
 
-      <div className="flex flex-wrap gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className={ROTULO}>Turma</span>
-          <select
-            value={turmaId}
-            onChange={(e) => setTurmaId(e.target.value)}
-            className={`min-w-0 ${CAMPO}`}
-          >
-            <option value="">Todas as turmas</option>
-            {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-          </select>
-        </label>
-        {/* O campo não tinha rótulo nenhum, e ninguém sabia se era início, fim
-            ou data da aula. No servidor ele vira `entrada_em >= p_desde`: é o
-            começo da contagem, e não existe data final. */}
-        <label className="flex shrink-0 flex-col gap-1">
-          <span className={ROTULO}>Contar a partir de</span>
-          <input
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            className={CAMPO}
-          />
-        </label>
-        {desde && (
+      {/* "Quem treinou" conta o que aconteceu. "Constância" e "Faltas" julgam o
+          que aconteceu contra a meta — e é aí que mora o "quem pode estar
+          desanimado". As três leem a mesma régua do bloco acima. */}
+      <div className="flex gap-2 overflow-x-auto">
+        {([
+          ["treinos", "Quem treinou"],
+          ["constancia", "Constância"],
+          ["faltas", "Faltas"],
+        ] as [VistaFrequencia, string][]).map(([k, label]) => (
           <button
+            key={k}
             type="button"
-            onClick={() => setDesde("")}
-            className={`self-end ${BOTAO_TEXTO}`}
+            aria-current={vista === k ? "page" : undefined}
+            onClick={() => setVista(k)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] transition ${escolha(vista === k)}`}
           >
-            limpar
+            {label}
           </button>
-        )}
+        ))}
       </div>
-      <p className={NOTA}>
-        Em branco, conta desde sempre. Com data, conta só as entradas daquele dia em diante.
-      </p>
 
-      {/* Dia e horário deixaram de ser opcionais na prática.
-          É a janela de horário que faz o relatório "Cliente por aula" existir:
-          a catraca não sabe qual aula está rolando, então a passagem é
-          classificada pelo relógio. Turma sem horário não aparece lá — some do
-          relatório sem dizer por quê. */}
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={novaTurma}
-          onChange={(e) => setNovaTurma(e.target.value)}
-          placeholder="Nova turma (ex.: Bike Indoor 19h)"
-          className={`min-w-[180px] flex-1 ${CAMPO}`}
-        />
-        {/* Dias como botões, não como <select> de um item só: a mesma aula
-            acontece de segunda a sexta, e no modelo antigo isso viraria cinco
-            turmas iguais. Nenhum marcado = todo dia. */}
-        <div className="flex shrink-0 gap-1">
-          {DIAS_CURTOS.map((d, i) => {
-            const on = diasTurma.includes(i);
-            return (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setDiasTurma((v) => (on ? v.filter((x) => x !== i) : [...v, i].sort()))}
-                className={`w-9 rounded-lg py-2 text-[11px] capitalize transition ${escolha(on)}`}
+      {vista === "constancia" && <Constancia partnerId={partnerId} />}
+      {vista === "faltas" && <Faltas partnerId={partnerId} />}
+
+      {vista === "treinos" && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className={ROTULO}>Turma</span>
+              <select
+                value={turmaId}
+                onChange={(e) => setTurmaId(e.target.value)}
+                className={`min-w-0 ${CAMPO}`}
               >
-                {d}
+                <option value="">Todas as turmas</option>
+                {dados.turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+            </label>
+            {/* O campo não tinha rótulo nenhum, e ninguém sabia se era início, fim
+                ou data da aula. No servidor ele vira `entrada_em >= p_desde`: é o
+                começo da contagem, e não existe data final. */}
+            <label className="flex shrink-0 flex-col gap-1">
+              <span className={ROTULO}>Contar a partir de</span>
+              <input
+                type="date"
+                value={desde}
+                onChange={(e) => setDesde(e.target.value)}
+                className={CAMPO}
+              />
+            </label>
+            {desde && (
+              <button
+                type="button"
+                onClick={() => setDesde("")}
+                className={`self-end ${BOTAO_TEXTO}`}
+              >
+                limpar
               </button>
-            );
-          })}
-        </div>
-        <input type="time" value={inicioTurma} onChange={(e) => setInicioTurma(e.target.value)}
-          className={`shrink-0 ${CAMPO}`} />
-        <input type="time" value={fimTurma} onChange={(e) => setFimTurma(e.target.value)}
-          className={`shrink-0 ${CAMPO}`} />
-        <button
-          type="button"
-          onClick={async () => {
-            /*
-             * A turma SEMPRE foi criada — o que faltava era dizer isso.
-             *
-             * O clique gravava, limpava o campo e recarregava. Sem toast e sem
-             * lista visível, o único efeito na tela era o texto sumir, o que se
-             * lê como "não criou nada". E como não há unique em (partner, nome),
-             * clicar de novo criava uma segunda turma igual.
-             */
-            const nome = novaTurma.trim();
-            // Janela pela metade não classifica nada: a consulta exige as duas
-            // pontas. Melhor barrar aqui do que criar uma turma que nunca vai
-            // aparecer no relatório de aulas.
-            if ((inicioTurma && !fimTurma) || (!inicioTurma && fimTurma)) {
-              toast.error("Informe o horário de início E de fim, ou deixe os dois em branco.");
-              return;
-            }
-            if (inicioTurma && fimTurma && fimTurma <= inicioTurma) {
-              toast.error("O fim precisa ser depois do início.");
-              return;
-            }
-            setSalvando(true);
-            try {
-              await criarTurma({ data: {
-                partnerId, nome,
-                diasSemana: diasTurma,
-                horaInicio: inicioTurma || null,
-                horaFim: fimTurma || null,
-              } });
-              setNovaTurma(""); setDiasTurma([]); setInicioTurma(""); setFimTurma("");
-              toast.success(
-                inicioTurma
-                  ? `Turma "${nome}" criada. Ela já aparece em "Cliente por aula" no relatório.`
-                  : `Turma "${nome}" criada — sem horário, ela não entra em "Cliente por aula".`,
-              );
-              carregar();
-            } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Não foi possível criar a turma.");
-            } finally {
-              setSalvando(false);
-            }
-          }}
-          disabled={salvando || novaTurma.trim().length < 2}
-          className={`shrink-0 ${BOTAO_NEUTRO}`}
-        >
-          {salvando ? "Criando…" : "Criar"}
-        </button>
-      </div>
+            )}
+          </div>
+          <p className={NOTA}>
+            Em branco, conta desde sempre. Com data, conta só as entradas daquele dia em diante.
+          </p>
 
-      {/* As turmas só existiam como <option> dentro do seletor acima, cujo
-          rótulo continua "Todas as turmas". Criar uma não mudava um pixel da
-          tela. Aqui elas ficam visíveis. */}
-      {dados.turmas.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {dados.turmas.map((t) => (
-            <Etiqueta key={t.id}>
-              <span className="text-aca-ink">{t.nome}</span>
-              {t.hora_inicio && (
-                <span className="tabular-nums text-aca-fraco">
-                  {rotuloDias(t.dias_semana)} {t.hora_inicio.slice(0, 5)}–{(t.hora_fim ?? "").slice(0, 5)}
-                </span>
-              )}
-              {/* Sem horário a turma não entra em "Cliente por aula". Dizer
-                  isso aqui é mais barato que a academia descobrir olhando um
-                  relatório vazio. */}
-              {!t.hora_inicio && (
-                <span className="flex items-center gap-1 text-aca-fraco">
-                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" /> sem horário
-                </span>
-              )}
-            </Etiqueta>
-          ))}
-        </div>
-      )}
+          {/* Dia e horário deixaram de ser opcionais na prática.
+              É a janela de horário que faz o relatório "Cliente por aula" existir:
+              a catraca não sabe qual aula está rolando, então a passagem é
+              classificada pelo relógio. Turma sem horário não aparece lá — some do
+              relatório sem dizer por quê. */}
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={novaTurma}
+              onChange={(e) => setNovaTurma(e.target.value)}
+              placeholder="Nova turma (ex.: Bike Indoor 19h)"
+              className={`min-w-[180px] flex-1 ${CAMPO}`}
+            />
+            {/* Dias como botões, não como <select> de um item só: a mesma aula
+                acontece de segunda a sexta, e no modelo antigo isso viraria cinco
+                turmas iguais. Nenhum marcado = todo dia. */}
+            <div className="flex shrink-0 gap-1">
+              {DIAS_CURTOS.map((d, i) => {
+                const on = diasTurma.includes(i);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setDiasTurma((v) => (on ? v.filter((x) => x !== i) : [...v, i].sort()))}
+                    className={`w-9 rounded-lg py-2 text-[11px] capitalize transition ${escolha(on)}`}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+            <input type="time" value={inicioTurma} onChange={(e) => setInicioTurma(e.target.value)}
+              className={`shrink-0 ${CAMPO}`} />
+            <input type="time" value={fimTurma} onChange={(e) => setFimTurma(e.target.value)}
+              className={`shrink-0 ${CAMPO}`} />
+            <button
+              type="button"
+              onClick={async () => {
+                /*
+                 * A turma SEMPRE foi criada — o que faltava era dizer isso.
+                 *
+                 * O clique gravava, limpava o campo e recarregava. Sem toast e sem
+                 * lista visível, o único efeito na tela era o texto sumir, o que se
+                 * lê como "não criou nada". E como não há unique em (partner, nome),
+                 * clicar de novo criava uma segunda turma igual.
+                 */
+                const nome = novaTurma.trim();
+                // Janela pela metade não classifica nada: a consulta exige as duas
+                // pontas. Melhor barrar aqui do que criar uma turma que nunca vai
+                // aparecer no relatório de aulas.
+                if ((inicioTurma && !fimTurma) || (!inicioTurma && fimTurma)) {
+                  toast.error("Informe o horário de início E de fim, ou deixe os dois em branco.");
+                  return;
+                }
+                if (inicioTurma && fimTurma && fimTurma <= inicioTurma) {
+                  toast.error("O fim precisa ser depois do início.");
+                  return;
+                }
+                setSalvando(true);
+                try {
+                  await criarTurma({ data: {
+                    partnerId, nome,
+                    diasSemana: diasTurma,
+                    horaInicio: inicioTurma || null,
+                    horaFim: fimTurma || null,
+                  } });
+                  setNovaTurma(""); setDiasTurma([]); setInicioTurma(""); setFimTurma("");
+                  toast.success(
+                    inicioTurma
+                      ? `Turma "${nome}" criada. Ela já aparece em "Cliente por aula" no relatório.`
+                      : `Turma "${nome}" criada — sem horário, ela não entra em "Cliente por aula".`,
+                  );
+                  carregar();
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Não foi possível criar a turma.");
+                } finally {
+                  setSalvando(false);
+                }
+              }}
+              disabled={salvando || novaTurma.trim().length < 2}
+              className={`shrink-0 ${BOTAO_NEUTRO}`}
+            >
+              {salvando ? "Criando…" : "Criar"}
+            </button>
+          </div>
 
-      {loading ? (
-        <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-aca-acao" />
-      ) : dados.linhas.length === 0 ? (
-        <p className={`py-8 text-center ${NOTA}`}>
-          Nenhuma frequência registrada ainda. Ela aparece quando a catraca ou o
-          QR começarem a registrar entrada.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {dados.linhas.map((l) => {
-            const contagem = c.frequencia_conta === "dia" ? l.dias : l.visitas;
-            const meta = c.frequencia_meta ?? 0;
-            const bateu = meta > 0 && contagem >= meta;
-            return (
-              /* Bater a meta é a única coisa aqui que muda de estado. Sem meta
-                 cadastrada a linha é histórico puro, e histórico é neutro. */
-              <Bloco key={l.student_id} tom={meta > 0 && bateu ? "ok" : "neutro"}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-aca-ink">{l.nome}</p>
-                    <p className={`mt-0.5 tabular-nums ${NOTA}`}>
-                      {contagem} {c.frequencia_conta === "dia" ? "dia(s)" : "entrada(s)"}
-                      {l.minutos_medios > 0 && ` · ${l.minutos_medios} min em média`}
-                      {l.ultima && ` · última em ${new Date(l.ultima).toLocaleDateString("pt-BR")}`}
-                    </p>
-                    {l.repetiu_hoje && (
-                      <p className="mt-0.5 flex items-center gap-1 text-[12px] text-aca-muted">
-                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" />
-                        Entrou mais de uma vez hoje
-                      </p>
-                    )}
-                  </div>
-                  {meta > 0 && <Selo>{contagem}/{meta}</Selo>}
-                </div>
-              </Bloco>
-            );
-          })}
-        </div>
+          {/* As turmas só existiam como <option> dentro do seletor acima, cujo
+              rótulo continua "Todas as turmas". Criar uma não mudava um pixel da
+              tela. Aqui elas ficam visíveis. */}
+          {dados.turmas.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {dados.turmas.map((t) => (
+                <Etiqueta key={t.id}>
+                  <span className="text-aca-ink">{t.nome}</span>
+                  {t.hora_inicio && (
+                    <span className="tabular-nums text-aca-fraco">
+                      {rotuloDias(t.dias_semana)} {t.hora_inicio.slice(0, 5)}–{(t.hora_fim ?? "").slice(0, 5)}
+                    </span>
+                  )}
+                  {/* Sem horário a turma não entra em "Cliente por aula". Dizer
+                      isso aqui é mais barato que a academia descobrir olhando um
+                      relatório vazio. */}
+                  {!t.hora_inicio && (
+                    <span className="flex items-center gap-1 text-aca-fraco">
+                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" /> sem horário
+                    </span>
+                  )}
+                </Etiqueta>
+              ))}
+            </div>
+          )}
+
+          {loading ? (
+            <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-aca-acao" />
+          ) : dados.linhas.length === 0 ? (
+            <p className={`py-8 text-center ${NOTA}`}>
+              Nenhuma frequência registrada ainda. Ela aparece quando a catraca ou o
+              QR começarem a registrar entrada.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {dados.linhas.map((l) => {
+                const contagem = c.frequencia_conta === "dia" ? l.dias : l.visitas;
+                const meta = c.frequencia_meta ?? 0;
+                const bateu = meta > 0 && contagem >= meta;
+                return (
+                  /* Bater a meta é a única coisa aqui que muda de estado. Sem meta
+                     cadastrada a linha é histórico puro, e histórico é neutro. */
+                  <Bloco key={l.student_id} tom={meta > 0 && bateu ? "ok" : "neutro"}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-aca-ink">{l.nome}</p>
+                        <p className={`mt-0.5 tabular-nums ${NOTA}`}>
+                          {contagem} {c.frequencia_conta === "dia" ? "dia(s)" : "entrada(s)"}
+                          {l.minutos_medios > 0 && ` · ${l.minutos_medios} min em média`}
+                          {l.ultima && ` · última em ${new Date(l.ultima).toLocaleDateString("pt-BR")}`}
+                        </p>
+                        {l.repetiu_hoje && (
+                          <p className="mt-0.5 flex items-center gap-1 text-[12px] text-aca-muted">
+                            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-aca-atencao" />
+                            Entrou mais de uma vez hoje
+                          </p>
+                        )}
+                      </div>
+                      {meta > 0 && <Selo>{contagem}/{meta}</Selo>}
+                    </div>
+                  </Bloco>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -1316,6 +1372,13 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
       <p className={NOTA}>
         O rosto já está no equipamento. Ligue cada uma ao aluno da plataforma —
         <strong className="font-semibold text-aca-ink"> ninguém precisa recadastrar</strong>. Sem vínculo, a pessoa não entra.
+      </p>
+      {/* Esta lista é para o caso local: acabei de fotografar alguém, quem é?
+          Ligar as centenas de uma vez é outro trabalho, e tem tela própria. */}
+      <p className={NOTA}>
+        Para ligar muitas de uma vez, use
+        <strong className="font-semibold text-aca-ink"> Conciliar com as contas da FitMind</strong>,
+        na aba Alunos da academia: lá o casamento é por telefone e vem com o grau de confiança.
       </p>
 
       {/* Despejar as centenas de pendentes de uma vez enterra o resto da aba.
@@ -1970,7 +2033,7 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
     return () => clearTimeout(t);
   }, [termo, partnerId]);
 
-  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   const rotuloEvento = (id: string) => {
     const e = dados.eventos.find((ev) => ev.id === id);
@@ -1979,28 +2042,28 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
-          Aqui é o mesmo gancho, para <strong className="text-white/80">eventos</strong>: quando a
+      <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+        <p className="text-[11px] text-aca-muted">
+          Aqui é o mesmo gancho, para <strong className="text-aca-ink">eventos</strong>: quando a
           compra é confirmada, o participante já nasce inscrito e com a credencial de entrada.
         </p>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] font-bold text-white">Vincular um produto a um evento</p>
+      <div className="space-y-2 rounded-xl border border-aca-line bg-aca-alto p-3">
+        <p className="text-[11px] font-bold text-aca-ink">Vincular um produto a um evento</p>
         {dados.eventos.length === 0 ? (
-          <p className="text-[11px] text-white/50">
+          <p className="text-[11px] text-aca-muted">
             Nenhum evento ativo. Cadastre o evento na aba Eventos antes de vincular um produto.
           </p>
         ) : novo ? (
           <>
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
-              <span className="truncate text-sm text-white">{novo.name}</span>
-              <button type="button" onClick={() => setNovo(null)} className="shrink-0 text-white/50 hover:text-white">✕</button>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-aca-alto px-2.5 py-1.5">
+              <span className="truncate text-sm text-aca-ink">{novo.name}</span>
+              <button type="button" onClick={() => setNovo(null)} className="shrink-0 text-aca-muted hover:text-aca-ink">✕</button>
             </div>
             <select
               value={eventoId} onChange={(e) => setEventoId(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+              className="w-full rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink"
             >
               <option value="">Escolha o evento</option>
               {dados.eventos.map((e) => (
@@ -2017,7 +2080,7 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
                   toast.success("Produto vinculado ao evento.");
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
               }}
-              className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-40"
+              className="w-full rounded-xl bg-aca-acao px-4 py-2 text-sm font-bold text-aca-acao-ink disabled:opacity-40"
             >
               Vincular
             </button>
@@ -2027,12 +2090,12 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
             <input
               value={termo} onChange={(e) => setTermo(e.target.value)}
               placeholder="Buscar produto pelo nome"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              className="w-full rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
             />
             {achados.map((p) => (
               <button
                 key={p.id} type="button" onClick={() => setNovo(p)}
-                className="w-full truncate rounded-lg bg-white/5 px-2.5 py-1.5 text-left text-sm text-white hover:bg-white/10"
+                className="w-full truncate rounded-lg bg-aca-alto px-2.5 py-1.5 text-left text-sm text-aca-ink hover:bg-aca-line"
               >
                 {p.name}
               </button>
@@ -2044,16 +2107,16 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
       {dados.vinculos.length > 0 && (
         <div className="space-y-2">
           {dados.vinculos.map((v) => (
-            <div key={v.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div key={v.id} className="rounded-xl border border-aca-line bg-aca-alto p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-white">
+                  <p className="truncate font-semibold text-aca-ink">
                     {dados.nomes[v.product_id] ?? "Produto removido da loja"}
                   </p>
-                  <p className="truncate text-[11px] text-white/50">{rotuloEvento(v.evento_id)}</p>
+                  <p className="truncate text-[11px] text-aca-muted">{rotuloEvento(v.evento_id)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+                  <label className="flex items-center gap-1.5 text-[10px] text-aca-muted">
                     <input
                       type="checkbox" checked={v.ativo}
                       onChange={async (e) => {
@@ -2080,7 +2143,7 @@ function ProdutosEvento({ partnerId }: { partnerId: string }) {
                         toast.success("Vínculo removido.");
                       } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
                     }}
-                    className="text-white/40 hover:text-red-400"
+                    className="text-aca-fraco hover:text-aca-critico"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -2159,7 +2222,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
     }
   };
 
-  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   /*
    * O quadro mora aqui, não só no painel de parceiro.
@@ -2177,14 +2240,14 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
         <button
           type="button"
           onClick={() => setVista("funil")}
-          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "funil" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "funil" ? "bg-aca-acao text-aca-acao-ink" : "bg-aca-alto text-aca-muted hover:bg-aca-line"}`}
         >
           Funil
         </button>
         <button
           type="button"
           onClick={() => setVista("automacao")}
-          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "automacao" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold ${vista === "automacao" ? "bg-aca-acao text-aca-acao-ink" : "bg-aca-alto text-aca-muted hover:bg-aca-line"}`}
         >
           Automação
         </button>
@@ -2194,7 +2257,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
         quadroDaAcademia
           ? <CrmBoard quadroId={quadroDaAcademia} partnerId={partnerId} />
           : (
-            <p className="py-8 text-center text-sm text-white/50">
+            <p className="py-8 text-center text-sm text-aca-muted">
               Esta unidade ainda não tem funil de CRM. Crie um na aba Automação
               escolhendo um quadro para as situações.
             </p>
@@ -2203,55 +2266,55 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
 
       {vista === "automacao" && (
       <>
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
+      <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+        <p className="text-[11px] text-aca-muted">
           Usa os funis que já existem no CRM da unidade. Cada situação manda o
           aluno para o funil e a coluna que você escolher.
         </p>
-        <p className="mt-1.5 text-[11px] text-white/60">
-          A automação <strong className="text-white/80">só cria cartão novo</strong>.
+        <p className="mt-1.5 text-[11px] text-aca-muted">
+          A automação <strong className="text-aca-ink">só cria cartão novo</strong>.
           Se alguém mover o cartão, aquele aluno sai da automação e passa a ser
           tratado onde a equipe colocou.
         </p>
       </div>
 
       {emVarios.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-          <p className="text-[11px] font-semibold text-amber-300">
+        <Bloco tom="atencao">
+          <p className="text-[11px] font-semibold text-aca-atencao">
             {emVarios.length} pessoa(s) em mais de um funil ao mesmo tempo
           </p>
-          <p className="mt-0.5 text-[11px] text-white/50">
+          <p className="mt-0.5 text-[11px] text-aca-muted">
             Não é erro — só avisando. A automação não mexe nesses cartões.
           </p>
           <div className="mt-1.5 space-y-0.5">
             {emVarios.slice(0, 8).map((p) => (
-              <p key={p.nome} className="text-[11px] text-white/70">
-                <strong className="text-white">{p.nome}</strong> — {p.quadros}
+              <p key={p.nome} className="text-[11px] text-aca-muted">
+                <strong className="text-aca-ink">{p.nome}</strong> — {p.quadros}
               </p>
             ))}
             {emVarios.length > 8 && (
-              <p className="text-[11px] text-white/40">e mais {emVarios.length - 8}…</p>
+              <p className="text-[11px] text-aca-fraco">e mais {emVarios.length - 8}…</p>
             )}
           </div>
-        </div>
+        </Bloco>
       )}
 
       {quadros.length === 0 ? (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+        <Bloco tom="atencao"><p className="text-[11px] text-aca-ink">
           Esta unidade ainda não tem nenhum funil no CRM. Crie um na aba CRM
           (por exemplo, "Retenção") e volte aqui.
-        </p>
+        </p></Bloco>
       ) : (
         <>
           {GATILHOS_CRM.map((g) => {
             const atual = regras[g.value] ?? { quadroId: "", colunaId: "", ativo: true };
             const colunasDoQuadro = colunas.filter((c) => c.quadro_id === atual.quadroId);
             return (
-              <div key={g.value} className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div key={g.value} className="space-y-2 rounded-xl border border-aca-line bg-aca-alto p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-white">{g.label}</span>
+                  <span className="text-[11px] font-bold text-aca-ink">{g.label}</span>
                   {atual.quadroId && (
-                    <label className="flex items-center gap-1.5 text-[10px] text-white/60">
+                    <label className="flex items-center gap-1.5 text-[10px] text-aca-muted">
                       <input
                         type="checkbox"
                         checked={atual.ativo}
@@ -2266,7 +2329,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
                   <select
                     value={atual.quadroId}
                     onChange={(e) => void aplicar(g.value, { quadroId: e.target.value, colunaId: "", ativo: atual.ativo })}
-                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                    className="min-w-0 flex-1 rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink"
                   >
                     <option value="">Não criar cartão</option>
                     {quadros.map((q) => <option key={q.id} value={q.id}>{q.nome}</option>)}
@@ -2275,7 +2338,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
                     value={atual.colunaId}
                     onChange={(e) => void aplicar(g.value, { ...atual, colunaId: e.target.value })}
                     disabled={!atual.quadroId}
-                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white disabled:opacity-40"
+                    className="min-w-0 flex-1 rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink disabled:opacity-40"
                   >
                     <option value="">Coluna…</option>
                     {colunasDoQuadro.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -2289,7 +2352,7 @@ function CrmAcademia({ partnerId }: { partnerId: string }) {
             type="button"
             onClick={() => void rodar()}
             disabled={sincronizando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-aca-acao px-4 py-2.5 text-sm font-bold text-aca-acao-ink disabled:opacity-50"
           >
             {sincronizando ? <Loader2 className="h-4 w-4 animate-spin" /> : <KanbanSquare className="h-4 w-4" />}
             Gerar cartões agora
@@ -2416,39 +2479,39 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
       toast.success("Aviso criado.");
     });
 
-  if (loading) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-aca-acao" />;
 
-  const campo = "rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white";
+  const campo = "rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-[11px] text-aca-ink";
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
-      <p className="text-sm font-bold text-white">Mensagens e automação</p>
+    <div className="space-y-3 rounded-xl border border-aca-line bg-aca-alto p-3">
+      <p className="text-sm font-bold text-aca-ink">Mensagens e automação</p>
 
-      <label className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5">
+      <label className="flex items-start gap-2.5 rounded-xl border border-aca-line bg-aca-alto p-2.5">
         <input
           type="checkbox"
           checked={automatico}
           onChange={(e) => setAutomatico(e.target.checked)}
           className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
         />
-        <span className="text-[11px] text-white/70">
-          <strong className="text-white">Montar campanhas automaticamente todo dia</strong>
+        <span className="text-[11px] text-aca-muted">
+          <strong className="text-aca-ink">Montar campanhas automaticamente todo dia</strong>
           <br />
           Só MONTA. Nada é enviado por causa desta caixa: as campanhas aparecem
           prontas na aba Robô e alguém precisa disparar. Quem envia sozinho é a
-          outra opção, em <strong className="text-white">Avisos de vencimento</strong>.
+          outra opção, em <strong className="text-aca-ink">Avisos de vencimento</strong>.
         </span>
       </label>
 
       {modelos.map((m, i) => (
-        <div key={m.marco} className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
+        <div key={m.marco} className="space-y-2 rounded-xl border border-aca-line bg-aca-alto p-2.5">
           <div className="flex items-start gap-2">
             <div className="flex shrink-0 flex-col">
               <button
                 type="button" title="Subir"
                 disabled={i === 0 || ocupado}
                 onClick={() => trocarOrdem(i, -1)}
-                className="rounded p-0.5 text-white/40 hover:text-white disabled:opacity-20"
+                className="rounded p-0.5 text-aca-fraco hover:text-aca-ink disabled:opacity-20"
               >
                 <ChevronUp className="h-3.5 w-3.5" />
               </button>
@@ -2456,7 +2519,7 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
                 type="button" title="Descer"
                 disabled={i === modelos.length - 1 || ocupado}
                 onClick={() => trocarOrdem(i, 1)}
-                className="rounded p-0.5 text-white/40 hover:text-white disabled:opacity-20"
+                className="rounded p-0.5 text-aca-fraco hover:text-aca-ink disabled:opacity-20"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
@@ -2466,10 +2529,10 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
               value={m.nome}
               onChange={(e) => mexer(i, { nome: e.target.value })}
               placeholder="Nome do aviso"
-              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[12px] font-bold text-white placeholder:text-white/30"
+              className="min-w-0 flex-1 rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-[12px] font-bold text-aca-ink placeholder:text-aca-fraco"
             />
 
-            <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-white/60">
+            <label className="flex shrink-0 items-center gap-1.5 text-[10px] text-aca-muted">
               <input
                 type="checkbox"
                 checked={m.ativo}
@@ -2483,14 +2546,14 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
               type="button" title="Apagar"
               disabled={ocupado}
               onClick={() => apagar(m)}
-              className="shrink-0 rounded p-1 text-white/30 hover:text-red-400 disabled:opacity-20"
+              className="shrink-0 rounded p-1 text-aca-fraco hover:text-aca-critico disabled:opacity-20"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 pl-5">
-            <span className="text-[11px] text-white/40">Dispara</span>
+            <span className="text-[11px] text-aca-fraco">Dispara</span>
             <input
               type="number" min={0} max={LIMITE_DIAS_AVISO}
               value={Math.abs(m.quando)}
@@ -2501,7 +2564,7 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
               onBlur={() => comitarMomento(modelos[i])}
               className={`w-14 ${campo}`}
             />
-            <span className="text-[11px] text-white/40">dia(s)</span>
+            <span className="text-[11px] text-aca-fraco">dia(s)</span>
             <select
               value={m.quando >= 0 ? "antes" : "depois"}
               disabled={ocupado || m.quando === 0}
@@ -2528,7 +2591,7 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
               <option value="vencimento">do vencimento</option>
               <option value="bloqueio">do bloqueio</option>
             </select>
-            <span className="text-[10px] text-white/35">
+            <span className="text-[10px] text-aca-fraco">
               {descreverMomento(m.referencia, m.quando)}
             </span>
           </div>
@@ -2537,22 +2600,22 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
             value={m.texto}
             onChange={(e) => mexer(i, { texto: e.target.value })}
             rows={2}
-            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/40"
+            className="w-full resize-y rounded-lg border border-aca-line bg-aca-alto px-2.5 py-1.5 text-[12px] text-aca-ink placeholder:text-aca-fraco"
           />
         </div>
       ))}
 
       {novo.aberto ? (
-        <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2.5">
-          <p className="text-[11px] font-bold text-white">Novo aviso</p>
+        <div className="space-y-2 rounded-xl border border-aca-acao bg-aca-alto p-2.5">
+          <p className="text-[11px] font-bold text-aca-ink">Novo aviso</p>
           <input
             value={novo.nome}
             onChange={(e) => setNovo((n) => ({ ...n, nome: e.target.value }))}
             placeholder="Nome (ex.: Faltam 10 dias)"
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[12px] text-white placeholder:text-white/30"
+            className="w-full rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-[12px] text-aca-ink placeholder:text-aca-fraco"
           />
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-white/40">Dispara</span>
+            <span className="text-[11px] text-aca-fraco">Dispara</span>
             <input
               type="number" min={0} max={LIMITE_DIAS_AVISO}
               value={Math.abs(novo.quando)}
@@ -2561,7 +2624,7 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
               }))}
               className={`w-14 ${campo}`}
             />
-            <span className="text-[11px] text-white/40">dia(s)</span>
+            <span className="text-[11px] text-aca-fraco">dia(s)</span>
             <select
               value={novo.quando >= 0 ? "antes" : "depois"}
               onChange={(e) => setNovo((n) => ({ ...n, quando: comporQuando(Math.abs(n.quando), e.target.value) }))}
@@ -2584,21 +2647,21 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
             onChange={(e) => setNovo((n) => ({ ...n, texto: e.target.value }))}
             rows={2}
             placeholder="Oi {nome}! ..."
-            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/40"
+            className="w-full resize-y rounded-lg border border-aca-line bg-aca-alto px-2.5 py-1.5 text-[12px] text-aca-ink placeholder:text-aca-fraco"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={criarNovo}
               disabled={ocupado}
-              className="flex-1 rounded-xl bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground disabled:opacity-50"
+              className="flex-1 rounded-xl bg-aca-acao px-3 py-1.5 text-[12px] font-bold text-aca-acao-ink disabled:opacity-50"
             >
               Criar aviso
             </button>
             <button
               type="button"
               onClick={() => setNovo((n) => ({ ...n, aberto: false }))}
-              className="rounded-xl bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white"
+              className="rounded-xl bg-aca-line px-3 py-1.5 text-[12px] font-bold text-aca-ink"
             >
               Cancelar
             </button>
@@ -2608,18 +2671,18 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
         <button
           type="button"
           onClick={() => setNovo((n) => ({ ...n, aberto: true }))}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 px-4 py-2 text-[12px] font-bold text-white/70 hover:border-white/40 hover:text-white"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-aca-line px-4 py-2 text-[12px] font-bold text-aca-muted hover:border-aca-line-forte hover:text-aca-ink"
         >
           <Plus className="h-3.5 w-3.5" />
           Novo aviso
         </button>
       )}
 
-      <p className="text-[11px] leading-relaxed text-white/50">
-        <code className="rounded bg-white/10 px-1">{"{nome}"}</code> vira o primeiro nome de quem recebe.{" "}
-        <code className="rounded bg-white/10 px-1">{"{data}"}</code> vira a data de vencimento.
+      <p className="text-[11px] leading-relaxed text-aca-muted">
+        <code className="rounded bg-aca-line px-1">{"{nome}"}</code> vira o primeiro nome de quem recebe.{" "}
+        <code className="rounded bg-aca-line px-1">{"{data}"}</code> vira a data de vencimento.
         <br />
-        <strong className="text-white/70">Bloqueio</strong> é o último dia em que a pessoa ainda
+        <strong className="text-aca-muted">Bloqueio</strong> é o último dia em que a pessoa ainda
         entra: {carencia} dia(s) depois do vencimento. Mudar a carência move todos os avisos
         de bloqueio junto.
         <br />
@@ -2631,7 +2694,7 @@ function ModelosAviso({ partnerId }: { partnerId: string }) {
         type="button"
         onClick={() => void gravar()}
         disabled={salvando || ocupado}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-aca-line px-4 py-2 text-sm font-bold text-aca-ink hover:bg-aca-line-forte disabled:opacity-50"
       >
         {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         Salvar mensagens
@@ -2705,7 +2768,7 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
     }
   };
 
-  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
   if (!dados) return null;
 
   const conectado = dados.conexao?.status === "conectado";
@@ -2718,7 +2781,7 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
           antes. Mensagem automática errada não se conserta depois — o que se
           perde é o chip. */}
       {auto && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
           <label className="flex items-start gap-2.5">
             <input
               type="checkbox"
@@ -2728,29 +2791,29 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
               className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
             />
             <span className="min-w-0">
-              <span className="block text-[11px] font-bold text-white">Enviar sozinho, sem eu apertar nada</span>
-              <span className="block text-[11px] text-white/50">
+              <span className="block text-[11px] font-bold text-aca-ink">Enviar sozinho, sem eu apertar nada</span>
+              <span className="block text-[11px] text-aca-muted">
                 As campanhas do dia já são montadas de manhã. Ligando isto, elas saem no horário
-                marcado. <strong className="text-white/80">Só as que o sistema montou</strong> —
+                marcado. <strong className="text-aca-ink">Só as que o sistema montou</strong> —
                 campanha que você escreveu na aba Robô nunca sai sozinha, mesmo com isto ligado.
               </span>
             </span>
           </label>
 
           {auto.automatico && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
-              <span className="text-[10px] uppercase tracking-wider text-white/40">às</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-aca-line pt-3">
+              <span className="text-[10px] uppercase tracking-wider text-aca-fraco">às</span>
               <select
                 value={auto.hora}
                 disabled={salvandoAuto}
                 onChange={(e) => void gravarAuto({ hora: Number(e.target.value) })}
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white"
+                className="rounded-lg border border-aca-line bg-aca-alto px-2 py-1.5 text-xs text-aca-ink"
               >
                 {Array.from({ length: 24 }, (_, h) => (
                   <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
                 ))}
               </select>
-              <span className="text-[10px] uppercase tracking-wider text-white/40">em</span>
+              <span className="text-[10px] uppercase tracking-wider text-aca-fraco">em</span>
               <div className="flex gap-1">
                 {DIAS_CURTOS.map((d, i) => {
                   const on = auto.dias.includes(i);
@@ -2764,14 +2827,14 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
                           dias: on ? auto.dias.filter((x) => x !== i) : [...auto.dias, i].sort(),
                         })
                       }
-                      className={`w-9 rounded-lg py-1.5 text-[11px] font-bold transition ${on ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+                      className={`w-9 rounded-lg py-1.5 text-[11px] font-bold transition ${on ? "bg-aca-acao text-aca-acao-ink" : "bg-aca-alto text-aca-muted hover:bg-aca-line"}`}
                     >
                       {d}
                     </button>
                   );
                 })}
               </div>
-              <span className="w-full text-[11px] text-white/50">
+              <span className="w-full text-[11px] text-aca-muted">
                 Horário da academia. Nada sai fora dessa janela, e nada sai duas vezes.
               </span>
             </div>
@@ -2779,41 +2842,41 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-[11px] text-white/60">
+      <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+        <p className="text-[11px] text-aca-muted">
           Usa a mesma régua que libera a catraca. Cada pessoa entra uma única vez
           por vencimento — rodar de novo não repete ninguém.
         </p>
-        <p className="mt-1.5 text-[11px] text-white/60">
-          Este botão <strong className="text-white/80">monta a campanha</strong> e
-          para aí. O envio acontece na aba <strong className="text-white/80">Robô</strong>,
+        <p className="mt-1.5 text-[11px] text-aca-muted">
+          Este botão <strong className="text-aca-ink">monta a campanha</strong> e
+          para aí. O envio acontece na aba <strong className="text-aca-ink">Robô</strong>,
           que é onde ficam o limite diário do número e o intervalo entre
           mensagens — mandar por fora disso queima o chip da academia.
         </p>
       </div>
 
       {!dados.conexao && (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+        <Bloco tom="atencao"><p className="text-[11px] text-aca-ink">
           Esta academia não tem conexão de WhatsApp configurada. Sem ela não há como enviar.
-        </p>
+        </p></Bloco>
       )}
       {dados.conexao && !conectado && (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+        <Bloco tom="atencao"><p className="text-[11px] text-aca-ink">
           A conexão "{dados.conexao.nome}" está {dados.conexao.status}. Reconecte antes de enviar.
-        </p>
+        </p></Bloco>
       )}
 
       {total === 0 ? (
-        <p className="py-8 text-center text-sm text-white/50">Ninguém para avisar hoje.</p>
+        <p className="py-8 text-center text-sm text-aca-muted">Ninguém para avisar hoje.</p>
       ) : (
         <div className="space-y-2">
           {dados.comTelefone.map((a) => (
-            <div key={`${a.credencial_id ?? a.student_id}-${a.marco}`} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div key={`${a.credencial_id ?? a.student_id}-${a.marco}`} className="flex items-center justify-between gap-2 rounded-xl border border-aca-line bg-aca-alto p-3">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{a.nome}</p>
-                <p className="text-[11px] text-white/50">{a.telefone}</p>
+                <p className="truncate font-semibold text-aca-ink">{a.nome}</p>
+                <p className="text-[11px] text-aca-muted">{a.telefone}</p>
               </div>
-              <span className="shrink-0 rounded bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+              <span className="shrink-0 rounded bg-aca-alto px-2 py-0.5 text-[10px] font-bold text-aca-atencao">
                 {dados.rotulos[a.marco] ?? ROTULO_MARCO[a.marco] ?? a.marco}
               </span>
             </div>
@@ -2822,11 +2885,11 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
       )}
 
       {dados.semTelefone.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <p className="text-[11px] font-semibold text-white/70">
+        <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+          <p className="text-[11px] font-semibold text-aca-muted">
             {dados.semTelefone.length} sem telefone cadastrado — não serão avisados
           </p>
-          <p className="mt-1 text-[11px] text-white/40">
+          <p className="mt-1 text-[11px] text-aca-fraco">
             {dados.semTelefone.map((a) => a.nome).join(", ")}
           </p>
         </div>
@@ -2837,7 +2900,7 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
           type="button"
           onClick={() => void confirmar()}
           disabled={preparando || !conectado}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-aca-acao px-4 py-2.5 text-sm font-bold text-aca-acao-ink disabled:opacity-50"
         >
           {preparando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           Montar campanha com {total} contato(s)
@@ -2883,6 +2946,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   const [treinoDe, setTreinoDe] = useState<{ id: string; nome: string } | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
+  // Conciliação fechada por padrão: ver adiante, onde ela é desenhada.
+  const [conciliando, setConciliando] = useState(false);
   // id do lançamento com o formulário de cancelamento aberto
   const [abertoId, setAbertoId] = useState<string | null>(null);
   const [tipoCancel, setTipoCancel] = useState<"cancelada" | "estornada">("cancelada");
@@ -2968,24 +3033,24 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
     );
   }, [linhas, filtro, busca]);
 
-  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-aca-fraco" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por nome ou identificador"
-            className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/40"
+            className="w-full rounded-xl border border-aca-line bg-aca-alto py-2 pl-9 pr-3 text-sm text-aca-ink placeholder:text-aca-fraco"
           />
         </div>
         <select
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
-          className="rounded-xl border border-white/10 bg-white/5 px-2 text-sm text-white"
+          className="rounded-xl border border-aca-line bg-aca-alto px-2 text-sm text-aca-ink"
         >
           <option value="todos">Todos</option>
           <option value="contrato_ativo">Ativos</option>
@@ -2995,11 +3060,34 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
         </select>
       </div>
 
+      {/* A conciliação é trabalho periódico, não diário — por isso ela abre em
+          vez de estar sempre aberta. Fechada, não busca nada e não empurra a
+          lista de alunos para baixo todo dia; aberta, é a tela inteira. */}
+      {!conciliando ? (
+        <button
+          type="button"
+          onClick={() => setConciliando(true)}
+          className={`w-full ${BOTAO_NEUTRO}`}
+        >
+          <Link2 className="h-3.5 w-3.5" /> Conciliar com as contas da FitMind
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className={EYEBROW}>Conciliação</p>
+            <button type="button" onClick={() => setConciliando(false)} className={BOTAO_TEXTO}>
+              fechar
+            </button>
+          </div>
+          <ConciliarCredenciais partnerId={partnerId} aoMudar={recarregar} />
+        </div>
+      )}
+
       {!cadastrando && !pessoaNova && (
         <button
           type="button"
           onClick={() => { setCadastrando(true); setRenovandoId(null); }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-aca-acao bg-aca-alto px-3 py-2 text-xs font-bold text-aca-acao hover:bg-aca-line"
         >
           <UserPlus className="h-3.5 w-3.5" /> Cadastrar pessoa nova (não é da FitMind)
         </button>
@@ -3014,10 +3102,10 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
       )}
 
       {pessoaNova && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <p className="text-sm font-bold text-white">{pessoaNova.nome}</p>
-          <p className="text-[11px] text-white/50">
-            Identificador <span className="font-mono text-white/70">{pessoaNova.referencia}</span>
+        <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+          <p className="text-sm font-bold text-aca-ink">{pessoaNova.nome}</p>
+          <p className="text-[11px] text-aca-muted">
+            Identificador <span className="font-mono text-aca-muted">{pessoaNova.referencia}</span>
           </p>
           <RenovarAluno
             partnerId={partnerId}
@@ -3045,13 +3133,13 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
 
 
       {visiveis.length === 0 ? (
-        <p className="py-8 text-center text-sm text-white/50">Nenhum aluno com mensalidade nesta academia.</p>
+        <p className="py-8 text-center text-sm text-aca-muted">Nenhum aluno com mensalidade nesta academia.</p>
       ) : (
         <div className="space-y-2">
           {visiveis.map((l) => {
             const e = ESTADOS[l.motivo] ?? ESTADOS["sem_mensalidade"];
             return (
-              <div key={l.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <Bloco key={l.id} tom={e.tom}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     {/* Ficha completa só existe para quem é aluno da plataforma.
@@ -3061,30 +3149,37 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                       <button
                         type="button"
                         onClick={() => setFichaId(l.student_id)}
-                        className="flex items-center gap-1.5 text-left font-semibold text-white hover:text-primary"
+                        className="flex items-center gap-1.5 text-left font-semibold text-aca-ink hover:text-aca-acao"
                       >
                         <span className="truncate">{l.nome}</span>
                         <FileText className="h-3.5 w-3.5 shrink-0 opacity-60" />
                       </button>
                     ) : (
-                      <p className="truncate font-semibold text-white">{l.nome}</p>
+                      <p className="truncate font-semibold text-aca-ink">{l.nome}</p>
                     )}
-                    <p className="text-[11px] text-white/50">
+                    <p className="text-[11px] text-aca-muted">
                       {l.plano} · {brl(Number(l.valor) || 0)}
+                      {/* O id fica mais forte que o resto da linha de propósito:
+                          é o número que a recepção lê em voz alta quando alguém
+                          para na catraca. */}
                       {l.referencia && (
-                        <> · <span className="font-mono text-white/70">id {l.referencia}</span></>
+                        <> · <span className="font-mono tabular-nums text-aca-ink">id {l.referencia}</span></>
                       )}
                     </p>
                     {/* Mensalidade em dia não basta: sem rosto no equipamento o
                         leitor nunca reconhece a pessoa, e a catraca nunca chega
                         a ser acionada. Dizer isso aqui evita a recepção mandar
                         alguém para a porta achando que está resolvido. */}
+                    {/* Ponto e texto, e não pílula colorida: a tarja do cartão
+                        já carrega o estado da mensalidade, e uma segunda mancha
+                        de cor ao lado dela desfaz a leitura das duas. */}
                     {l.sem_rosto_no_leitor && (
-                      <p className="mt-1 inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-                        <Camera className="h-3 w-3" /> Falta cadastrar o rosto — não passa na catraca
+                      <p className="mt-1 flex items-center gap-1 text-[11px] text-aca-muted">
+                        <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-aca-atencao" />
+                        <Camera className="h-3 w-3 shrink-0" /> Falta cadastrar o rosto — não passa na catraca
                       </p>
                     )}
-                    <p className="text-[11px] text-white/50">
+                    <p className="text-[11px] text-aca-muted">
                       Válido até {new Date(`${l.valido_ate}T12:00:00`).toLocaleDateString("pt-BR")}
                       {l.dias_restantes !== null && (
                         l.dias_restantes >= 0
@@ -3100,7 +3195,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         <button
                           type="button"
                           onClick={() => { setRenovandoId(l.id); setAbertoId(null); }}
-                          className="flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary hover:bg-primary/25"
+                          className="flex items-center gap-1 rounded bg-aca-alto px-1.5 py-0.5 text-[10px] font-bold text-aca-acao hover:bg-aca-line"
                         >
                           <RefreshCw className="h-3 w-3" /> Renovar
                         </button>
@@ -3108,7 +3203,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                           <button
                             type="button"
                             onClick={() => setTreinoDe({ id: l.student_id as string, nome: l.nome })}
-                            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-aca-muted hover:bg-aca-line hover:text-aca-ink"
                           >
                             <Dumbbell className="h-3 w-3" /> Treino
                           </button>
@@ -3121,7 +3216,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                             setRenovandoId(null);
                             setCorr({ valor: l.valor ?? 0, forma: "dinheiro", ate: l.valido_ate, motivo: "" });
                           }}
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-aca-muted hover:bg-aca-line hover:text-aca-ink"
                         >
                           <Pencil className="h-3 w-3" /> Corrigir
                         </button>
@@ -3140,7 +3235,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                               .catch(() => setDepoisDe(null))
                               .finally(() => setPreverPronto(true));
                           }}
-                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/50 hover:bg-white/10 hover:text-white"
+                          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-aca-muted hover:bg-aca-line hover:text-aca-ink"
                         >
                           <Ban className="h-3 w-3" /> Cancelar
                         </button>
@@ -3163,8 +3258,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                 )}
 
                 {corrigindoId === l.id && (
-                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                    <p className="text-[11px] text-white/60">
+                  <div className="mt-3 space-y-2 border-t border-aca-line pt-3">
+                    <p className="text-[11px] text-aca-muted">
                       Corrige o lançamento no lugar, sem tirar o aluno da liberação.
                       O valor anterior fica registrado na observação.
                     </p>
@@ -3172,12 +3267,12 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                       <CurrencyInputBRL
                         value={corr.valor}
                         onChange={(v) => setCorr((c) => ({ ...c, valor: v }))}
-                        className="w-32 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                        className="w-32 rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink"
                       />
                       <select
                         value={corr.forma}
                         onChange={(ev) => setCorr((c) => ({ ...c, forma: ev.target.value }))}
-                        className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                        className="rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink"
                       >
                         {FORMAS_PAGAMENTO.map((f) => (
                           <option key={f.value} value={f.value}>{f.label}</option>
@@ -3187,21 +3282,21 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         type="date"
                         value={corr.ate}
                         onChange={(ev) => setCorr((c) => ({ ...c, ate: ev.target.value }))}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+                        className="rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink"
                       />
                     </div>
                     <input
                       value={corr.motivo}
                       onChange={(ev) => setCorr((c) => ({ ...c, motivo: ev.target.value }))}
                       placeholder="O que está sendo corrigido (obrigatório)"
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                      className="w-full rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
                     />
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setCorrigindoId(null)}
                         disabled={salvandoCorr}
-                        className="rounded-xl px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 disabled:opacity-50"
+                        className="rounded-xl px-3 py-1.5 text-xs text-aca-muted hover:bg-aca-line disabled:opacity-50"
                       >
                         Voltar
                       </button>
@@ -3209,7 +3304,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         type="button"
                         onClick={() => void confirmarCorrecao(l.id)}
                         disabled={salvandoCorr}
-                        className="flex items-center gap-1.5 rounded-xl bg-primary/20 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/30 disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-xl bg-aca-alto px-3 py-1.5 text-xs font-bold text-aca-acao hover:bg-aca-line disabled:opacity-50"
                       >
                         {salvandoCorr ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
                         Salvar correção
@@ -3219,8 +3314,8 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                 )}
 
                 {abertoId === l.id && (
-                  <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                    <p className="text-[11px] text-white/60">
+                  <div className="mt-3 space-y-2 border-t border-aca-line pt-3">
+                    <p className="text-[11px] text-aca-muted">
                       O lançamento continua no histórico financeiro e deixa de valer para acesso.
                     </p>
 
@@ -3231,29 +3326,31 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                       uma coisa à outra.
                     */}
                     {!preverPronto ? (
-                      <p className="text-[11px] text-white/40">Conferindo até quando ele fica liberado…</p>
+                      <p className="text-[11px] text-aca-fraco">Conferindo até quando ele fica liberado…</p>
                     ) : depoisDe ? (
-                      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
-                        <span className="text-[11px] text-white/60">Depois de cancelar, o acesso vai até</span>
+                      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-aca-line bg-aca-alto p-2">
+                        <span className="text-[11px] text-aca-muted">Depois de cancelar, o acesso vai até</span>
                         <input
                           type="date"
                           value={depoisDe}
                           onChange={(ev) => setDepoisDe(ev.target.value)}
-                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white"
+                          className="rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-sm text-aca-ink"
                         />
-                        <span className="text-[10px] text-white/40">dá para mudar</span>
+                        <span className="text-[10px] text-aca-fraco">dá para mudar</span>
                       </div>
                     ) : (
-                      <p className="rounded-xl border border-red-400/20 bg-red-500/5 p-2 text-[11px] text-red-300">
-                        Não sobra nenhuma mensalidade ativa: o aluno fica <strong>sem acesso</strong> assim que
-                        você confirmar.
-                      </p>
+                      <Bloco tom="critico">
+                        <p className="text-[11px] text-aca-ink">
+                          Não sobra nenhuma mensalidade ativa: o aluno fica{" "}
+                          <strong className="font-semibold">sem acesso</strong> assim que você confirmar.
+                        </p>
+                      </Bloco>
                     )}
                     <div className="flex gap-2">
                       <select
                         value={tipoCancel}
                         onChange={(ev) => setTipoCancel(ev.target.value as "cancelada" | "estornada")}
-                        className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+                        className="rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink"
                       >
                         <option value="cancelada">Cancelado</option>
                         <option value="estornada">Estornado</option>
@@ -3262,7 +3359,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         value={motivo}
                         onChange={(ev) => setMotivo(ev.target.value)}
                         placeholder="Motivo (obrigatório)"
-                        className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+                        className="min-w-0 flex-1 rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
                       />
                     </div>
                     <div className="flex justify-end gap-2">
@@ -3270,7 +3367,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         type="button"
                         onClick={fecharCancelamento}
                         disabled={salvandoCancel}
-                        className="rounded-xl px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 disabled:opacity-50"
+                        className="rounded-xl px-3 py-1.5 text-xs text-aca-muted hover:bg-aca-line disabled:opacity-50"
                       >
                         Voltar
                       </button>
@@ -3278,7 +3375,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                         type="button"
                         onClick={() => void confirmarCancelamento(l.id)}
                         disabled={salvandoCancel}
-                        className="flex items-center gap-1.5 rounded-xl bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/25 disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-xl bg-aca-alto px-3 py-1.5 text-xs font-bold text-aca-critico hover:bg-aca-line disabled:opacity-50"
                       >
                         {salvandoCancel ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ban className="h-3 w-3" />}
                         Confirmar
@@ -3286,7 +3383,7 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     </div>
                   </div>
                 )}
-              </div>
+              </Bloco>
             );
           })}
         </div>
@@ -3358,20 +3455,20 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
               value={termo}
               onChange={(e) => setTermo(e.target.value)}
               placeholder="Nome, telefone ou identificador da catraca"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+              className="w-full rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
             />
-            {buscando && <p className="mt-1 text-[11px] text-white/40">Buscando…</p>}
+            {buscando && <p className="mt-1 text-[11px] text-aca-fraco">Buscando…</p>}
             {opcoes.length > 0 && (
-              <div className="mt-1 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-[#141414]">
+              <div className="mt-1 max-h-60 overflow-y-auto rounded-xl border border-aca-line bg-aca-surface">
                 {opcoes.map((o, i) => (
                   <button
                     key={`${o.credencialId ?? o.studentId}-${i}`}
                     type="button"
                     onClick={() => { setPessoa(o); setOpcoes([]); }}
-                    className="block w-full px-3 py-2 text-left hover:bg-white/5"
+                    className="block w-full px-3 py-2 text-left hover:bg-aca-alto"
                   >
-                    <span className="block text-sm text-white">{o.nome}</span>
-                    <span className="block text-[11px] text-white/45">
+                    <span className="block text-sm text-aca-ink">{o.nome}</span>
+                    <span className="block text-[11px] text-aca-muted">
                       {o.referencia ? `id ${o.referencia}` : o.studentId ? "aluno FitMind" : "cadastro da academia"}
                       {o.validoAte ? ` · vence ${formatDateOnlyBR(o.validoAte)}` : " · sem mensalidade"}
                     </span>
@@ -3384,7 +3481,7 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
           <button
             type="button"
             onClick={() => setCadastrando(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-aca-acao bg-aca-alto px-3 py-2 text-xs font-bold text-aca-acao hover:bg-aca-line"
           >
             <UserPlus className="h-3.5 w-3.5" /> Cadastrar pessoa nova (não é da FitMind)
           </button>
@@ -3406,16 +3503,16 @@ function FormMensalidade({ partnerId }: { partnerId: string }) {
       )}
 
       {pessoa && !pessoaParaRosto && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+        <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-white">{pessoa.nome}</p>
-              <p className="text-[11px] text-white/50">
-                {pessoa.referencia ? <>Identificador <span className="font-mono text-white/70">{pessoa.referencia}</span></> : "Aluno FitMind"}
+              <p className="truncate text-sm font-bold text-aca-ink">{pessoa.nome}</p>
+              <p className="text-[11px] text-aca-muted">
+                {pessoa.referencia ? <>Identificador <span className="font-mono text-aca-muted">{pessoa.referencia}</span></> : "Aluno FitMind"}
                 {pessoa.validoAte ? ` · vence ${formatDateOnlyBR(pessoa.validoAte)}` : ""}
               </p>
             </div>
-            <button type="button" onClick={limpar} className="text-[11px] text-primary">trocar</button>
+            <button type="button" onClick={limpar} className="text-[11px] text-aca-acao">trocar</button>
           </div>
           <RenovarAluno
             partnerId={partnerId}
@@ -3486,9 +3583,9 @@ function FeriadosDaAcademia({ partnerId }: { partnerId: string }) {
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <p className="mb-1 text-[11px] uppercase tracking-wider text-white/40">Dias em que não abrimos</p>
-      <p className="mb-2 text-[11px] text-white/50">
+    <div className="rounded-xl border border-aca-line bg-aca-alto p-3">
+      <p className="mb-1 text-[11px] uppercase tracking-wider text-aca-fraco">Dias em que não abrimos</p>
+      <p className="mb-2 text-[11px] text-aca-muted">
         O robô para de marcar aula experimental nesses dias e avisa qual é o feriado.
         Feriado nacional não fecha toda academia — cadastre só os seus.
       </p>
@@ -3498,19 +3595,19 @@ function FeriadosDaAcademia({ partnerId }: { partnerId: string }) {
           type="date"
           value={dia}
           onChange={(e) => setDia(e.target.value)}
-          className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-sm text-white"
+          className="shrink-0 rounded-xl border border-aca-line bg-aca-alto px-2 py-2 text-sm text-aca-ink"
         />
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="ex.: 7 de Setembro, reforma, férias"
-          className="min-w-[160px] flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className="min-w-[160px] flex-1 rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
         />
         <button
           type="button"
           onClick={() => void adicionar()}
           disabled={salvando || !dia || nome.trim().length < 2}
-          className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-aca-line px-3 py-2 text-sm font-bold text-aca-ink hover:bg-aca-line-forte disabled:opacity-50"
         >
           Adicionar
         </button>
@@ -3519,13 +3616,13 @@ function FeriadosDaAcademia({ partnerId }: { partnerId: string }) {
       {lista.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {lista.map((f) => (
-            <span key={f.id} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/70">
+            <span key={f.id} className="flex items-center gap-1.5 rounded-full border border-aca-line bg-aca-alto px-2.5 py-1 text-[11px] text-aca-muted">
               {f.data.slice(8, 10)}/{f.data.slice(5, 7)} · {f.nome}
               <button
                 type="button"
                 onClick={() => void remover(f.id)}
                 aria-label={`Remover ${f.nome}`}
-                className="text-white/40 hover:text-white"
+                className="text-aca-fraco hover:text-aca-ink"
               >
                 ×
               </button>
@@ -3547,6 +3644,7 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
   const [regra, setRegra] = useState("uma_vez_na_vida");
   const [tz, setTz] = useState("America/Sao_Paulo");
   const [catraca, setCatraca] = useState("");
+  const [regime, setRegime] = useState("livre");
   const [taxas, setTaxas] = useState<Record<string, { pct: number; fixa: number }>>({});
 
   useEffect(() => {
@@ -3559,6 +3657,7 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
         setRegra(r.config.regra_dayuse);
         setTz(r.config.timezone);
         setCatraca(r.config.modelo_catraca ?? "");
+        setRegime(r.config.regime_turma ?? "livre");
         const m: Record<string, { pct: number; fixa: number }> = {};
         for (const t of r.taxas) m[t.forma_pagamento] = { pct: Number(t.taxa_percentual), fixa: Number(t.taxa_fixa) };
         setTaxas(m);
@@ -3574,6 +3673,7 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
       await salvarFn({ data: {
         partnerId, diasCarencia: carencia, exigeSenha, regraDayuse: regra, timezone: tz,
         modeloCatraca: catraca.trim() || null,
+        regimeTurma: regime,
         taxas: FORMAS_PAGAMENTO.filter((f) => f.value !== "dinheiro").map((f) => ({
           forma_pagamento: f.value,
           taxa_percentual: taxas[f.value]?.pct ?? 0,
@@ -3588,21 +3688,55 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
     }
   };
 
-  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (loading) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   return (
     <div className="space-y-3">
+      {/* O regime era o único passo da implantação que não tinha tela: ligar
+          uma academia por reserva exigia um UPDATE à mão no banco. É também a
+          configuração de maior alcance daqui — ela decide se o aluno vê o
+          botão de reservar e o que a aba Faltas conta. Por isso vem primeiro, e
+          com a consequência escrita ao lado de cada opção. */}
+      <Bloco className="space-y-2">
+        <p className={EYEBROW}>Como esta academia trabalha</p>
+        <div className="flex flex-wrap gap-2">
+          {REGIMES.map((r) => (
+            <button
+              key={r.value}
+              type="button"
+              aria-pressed={regime === r.value}
+              onClick={() => setRegime(r.value)}
+              className={`rounded-full px-3 py-1.5 text-[11px] transition ${escolha(regime === r.value)}`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <p className={NOTA}>{REGIMES.find((r) => r.value === regime)?.explica}</p>
+        {regime === "reserva" && (
+          <p className={NOTA}>
+            Só vale com turma que tenha <strong className="font-semibold text-aca-ink">dia e
+            horário</strong>. Turma sem horário não vira aula reservável e some da grade do aluno
+            sem avisar — confira na aba Frequência.
+          </p>
+        )}
+      </Bloco>
+
       <Campo label="Dias de carência após o vencimento">
-        <input type="number" min={0} value={carencia} onChange={(e) => setCarencia(Number(e.target.value) || 0)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
+        <input
+          type="number" min={0} value={carencia}
+          onChange={(e) => setCarencia(Number(e.target.value) || 0)}
+          className={`w-full ${CAMPO}`}
+        />
       </Campo>
 
-      <label className="flex items-center gap-2 text-sm text-white/80">
+      <label className="flex items-center gap-2 text-sm text-aca-ink">
         <input type="checkbox" checked={exigeSenha} onChange={(e) => setExigeSenha(e.target.checked)} />
         Exigir senha para liberação manual
       </label>
 
       <Campo label="Regra de day use">
-        <select value={regra} onChange={(e) => setRegra(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
+        <select value={regra} onChange={(e) => setRegra(e.target.value)} className={`w-full ${CAMPO}`}>
           <option value="uma_vez_na_vida">Uma vez na vida</option>
           <option value="uma_vez_por_mes">Uma vez por mês</option>
           <option value="livre_com_registro">Livre com registro</option>
@@ -3611,41 +3745,49 @@ function ConfigAcademia({ partnerId }: { partnerId: string }) {
       </Campo>
 
       <Campo label="Fuso horário">
-        <input value={tz} onChange={(e) => setTz(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" />
+        <input value={tz} onChange={(e) => setTz(e.target.value)} className={`w-full ${CAMPO}`} />
       </Campo>
 
       <FeriadosDaAcademia partnerId={partnerId} />
 
       <Campo label="Modelo de catraca (opcional)">
-        <input value={catraca} onChange={(e) => setCatraca(e.target.value)} placeholder="ex.: controlid_idblock" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40" />
+        <input
+          value={catraca} onChange={(e) => setCatraca(e.target.value)}
+          placeholder="ex.: controlid_idblock"
+          className={`w-full ${CAMPO}`}
+        />
       </Campo>
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="mb-2 text-[11px] uppercase tracking-wider text-white/40">Taxas da venda externa</p>
+      <Bloco>
+        <p className={`mb-2 ${EYEBROW}`}>Taxas da venda externa</p>
         <div className="space-y-2">
           {FORMAS_PAGAMENTO.filter((f) => f.value !== "dinheiro").map((f) => (
             <div key={f.value} className="flex items-center gap-2">
-              <span className="w-32 shrink-0 text-xs text-white/70">{f.label}</span>
+              <span className="w-32 shrink-0 text-xs text-aca-muted">{f.label}</span>
               <input
                 type="number" step="0.01" placeholder="%"
                 value={taxas[f.value]?.pct ?? 0}
                 onChange={(e) => setTaxas((p) => ({ ...p, [f.value]: { pct: Number(e.target.value) || 0, fixa: p[f.value]?.fixa ?? 0 } }))}
-                className="w-20 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white"
+                className={`w-20 ${CAMPO_MINI}`}
               />
               <input
                 type="number" step="0.01" placeholder="R$ fixo"
                 value={taxas[f.value]?.fixa ?? 0}
                 onChange={(e) => setTaxas((p) => ({ ...p, [f.value]: { pct: p[f.value]?.pct ?? 0, fixa: Number(e.target.value) || 0 } }))}
-                className="w-24 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white"
+                className={`w-24 ${CAMPO_MINI}`}
               />
             </div>
           ))}
         </div>
-      </div>
+      </Bloco>
 
-      <button onClick={salvar} disabled={salvando} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">
+      <button onClick={salvar} disabled={salvando} className={`w-full py-3 ${BOTAO_ACAO}`}>
         {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar configurações
       </button>
+
+      {/* O manual mora aqui, e não numa página fora do sistema, porque manual
+          longe do botão que ele descreve é manual que ninguém abre. */}
+      <ManualDaRecepcao />
     </div>
   );
 }

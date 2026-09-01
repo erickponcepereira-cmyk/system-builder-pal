@@ -53,12 +53,12 @@ export function CadastrarPessoaAcademia({
     nome.trim().length >= 3 && telefone.replace(/\D/g, "").length >= 10 && nascimento.length === 10;
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3">
+    <div className="space-y-3 rounded-xl border border-aca-line bg-aca-alto p-3">
       <div className="flex items-center gap-2">
-        <UserPlus className="h-4 w-4 text-primary" />
-        <p className="text-sm font-bold text-white">Cadastrar pessoa nova</p>
+        <UserPlus className="h-4 w-4 text-aca-acao" />
+        <p className="text-sm font-bold text-aca-ink">Cadastrar pessoa nova</p>
       </div>
-      <p className="text-[11px] text-white/50">
+      <p className="text-[11px] text-aca-muted">
         Para quem não tem conta na FitMind. Fica só nesta academia e já segue para a mensalidade.
       </p>
 
@@ -66,7 +66,7 @@ export function CadastrarPessoaAcademia({
         value={nome}
         onChange={(e) => setNome(e.target.value)}
         placeholder="Nome completo"
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+        className="w-full rounded-lg border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
       />
       <div className="flex gap-2">
         <input
@@ -75,14 +75,14 @@ export function CadastrarPessoaAcademia({
           inputMode="numeric"
           placeholder="(11) 99999-0000"
           aria-label="Telefone"
-          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+          className="min-w-0 flex-1 rounded-lg border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
         />
         <input
           value={nascimento}
           onChange={(e) => setNascimento(e.target.value)}
           type="date"
           aria-label="Data de nascimento"
-          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+          className="min-w-0 flex-1 rounded-lg border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink"
         />
       </div>
 
@@ -91,7 +91,7 @@ export function CadastrarPessoaAcademia({
           type="button"
           onClick={() => void confirmar()}
           disabled={salvando || !podeSalvar}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink disabled:opacity-50"
         >
           {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           Cadastrar e lançar mensalidade
@@ -99,7 +99,7 @@ export function CadastrarPessoaAcademia({
         <button
           type="button"
           onClick={aoCancelar}
-          className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70 hover:bg-white/10"
+          className="rounded-lg border border-aca-line px-3 py-2 text-xs text-aca-muted hover:bg-aca-line"
         >
           Cancelar
         </button>

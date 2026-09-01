@@ -55,6 +55,14 @@ const temaSchema = z.object({
   sidebar_ring: z.string(),
 });
 
+const salvarSchema = temaSchema.extend({
+  /**
+   * Salvar mesmo com texto ilegível. Não é atalho: é a saída para o caso em que
+   * o admin sabe que aquele par não aparece junto na prática.
+   */
+  ignorar_contraste: z.boolean().optional(),
+});
+
 export type TemaMarcaInput = z.infer<typeof temaSchema>;
 
 export const listAdminBrandThemes = createServerFn({ method: "POST" })
@@ -66,13 +74,45 @@ export const listAdminBrandThemes = createServerFn({ method: "POST" })
   });
 
 export const saveBrandTheme = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => temaSchema.parse(input))
+  .inputValidator((input: unknown) => salvarSchema.parse(input))
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await exigirAdmin(context.userId);
+
+    /*
+     * A conferência de contraste existia e SÓ AVISAVA.
+     *
+     * O tema do Reino Muay Thai foi salvo com fundo #ff0000 e primária #ff5252
+     * — a auditoria da própria tela reprovava cinco pares, inclusive "texto do
+     * destaque" em 2,06:1 e "cor principal x fundo" em 1,25:1 — e nada impediu
+     * o save. A academia abriu a tela com botão invisível.
+     *
+     * Aviso que não segura nada é decoração. Aqui o servidor recusa, e recusa
+     * no servidor de propósito: bloquear só no botão deixaria passar qualquer
+     * chamada que não fosse por aquele botão.
+     *
+     * Barra apenas LEGIBILIDADE DE TEXTO (mínimo 4.5). Superfície e borda
+     * continuam aviso: o próprio tema FitMind vive perto do piso ali, e
+     * reprovar isso travaria o tema padrão da casa.
+     */
+    const { ignorar_contraste, ...tema } = data;
+    if (!ignorar_contraste) {
+      const { auditarContraste } = await import("./palette");
+      const ilegiveis = auditarContraste(tema).filter((p) => !p.ok && p.minimo >= 4.5);
+      if (ilegiveis.length > 0) {
+        const lista = ilegiveis
+          .map((p) => `${p.label} (${p.razao.toFixed(2)}:1, precisa de ${p.minimo})`)
+          .join("; ");
+        throw new Error(
+          `Texto ilegível em ${ilegiveis.length} combinação(ões): ${lista}. ` +
+            "Use \"Corrigir contraste\" ou confirme que quer salvar assim mesmo.",
+        );
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("brand_themes")
-      .upsert(data as never, { onConflict: "key" });
+      .upsert(tema as never, { onConflict: "key" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

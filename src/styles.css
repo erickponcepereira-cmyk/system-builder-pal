@@ -61,6 +61,7 @@
   --color-aca-muted: var(--aca-muted);
   --color-aca-fraco: var(--aca-fraco);
   --color-aca-acao: var(--aca-acao);
+  --color-aca-acao-ink: var(--aca-acao-ink);
   --color-aca-ok: var(--aca-ok);
   --color-aca-atencao: var(--aca-atencao);
   --color-aca-critico: var(--aca-critico);
@@ -170,11 +171,40 @@
    são o mesmo tom: quem separa os dois é a forma, não a cor.
 ---------------------------------------------------------------- */
 .painel-academia {
-  --aca-ground:#0E1113; --aca-surface:#161A1D; --aca-alto:#1E2429;
-  --aca-line:#272E34;   --aca-line-forte:#3A444C;
-  --aca-ink:#EAF0F2;    --aca-muted:#8E9BA3;  --aca-fraco:#5E6970;
-  --aca-acao:#E8483A;
+  /* NEUTROS E AÇÃO SEGUEM A MARCA. O painel herda do tema white label em vez
+     de repetir uma paleta própria: uma academia que pagou por identidade não
+     pode perdê-la justamente na tela onde a recepção passa o dia. Antes daqui
+     estes valores eram fixos, e o white label morria na porta do painel. */
+  --aca-ground: var(--background);
+  --aca-surface: var(--card);
+  --aca-alto: var(--muted);
+  --aca-line: var(--border);
+  --aca-ink: var(--foreground);
+  --aca-muted: var(--muted-foreground);
+  --aca-acao: var(--primary);
+  /* O texto de cima do botão vermelho também vem do tema. Fixo em branco, a
+     marca de primária amarela (Mutação Fit, #EFD405) escreveria branco sobre
+     amarelo. */
+  --aca-acao-ink: var(--primary-foreground);
+
+  /* Os dois degraus que o tema não tem: uma borda mais firme e um texto mais
+     apagado que o secundário. Derivados para acompanharem a marca em vez de
+     ficarem cinza-FitMind sobre fundo de outra cor. */
+  --aca-line-forte: color-mix(in srgb, var(--border) 60%, var(--foreground));
+  --aca-fraco: color-mix(in srgb, var(--muted-foreground) 62%, var(--card));
+
+  /* ESTADO NÃO SEGUE A MARCA, e isso é deliberado. Verde é em dia e vermelho é
+     bloqueado em qualquer academia; se a marca repintasse a tarja, a recepção
+     teria que reaprender a tela a cada unidade — e a régua de cor do restyle
+     deixaria de significar uma coisa só. */
   --aca-ok:#35A37B; --aca-atencao:#D9A22E; --aca-critico:#E8483A; --aca-neutro:#5E6970;
+}
+
+/* Os tons de estado nasceram para fundo escuro. Em tema claro o âmbar #D9A22E
+   como TEXTO fica em 2,2:1 contra branco — a pílula "Vence em breve" some.
+   Aqui eles escurecem o suficiente para passar. */
+.light .painel-academia {
+  --aca-ok:#1D6B4C; --aca-atencao:#8A5A0B; --aca-critico:#C2281B; --aca-neutro:#6B5F5A;
 }
 
 @layer base {

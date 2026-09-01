@@ -155,9 +155,25 @@ function AdminBranding() {
 
   const salvar = async () => {
     if (!edicao) return;
+
+    /*
+     * O servidor recusa tema com texto ilegível. Perguntar aqui antes evita que
+     * o admin descubra pelo toast de erro — e deixa explícito o que ele está
+     * aceitando, com os pares nomeados.
+     */
+    const ilegiveis = auditoria.filter((p) => !p.ok && p.minimo >= 4.5);
+    if (ilegiveis.length > 0) {
+      const lista = ilegiveis.map((p) => `• ${p.label}: ${p.razao.toFixed(2)}:1`).join("\n");
+      const segue = window.confirm(
+        `${ilegiveis.length} combinação(ões) com texto difícil de ler:\n\n${lista}\n\n` +
+          "Use \"Corrigir contraste\" para acertar automaticamente.\n\nSalvar assim mesmo?",
+      );
+      if (!segue) return;
+    }
+
     setSalvando(true);
     try {
-      await saveFn({ data: edicao });
+      await saveFn({ data: { ...edicao, ignorar_contraste: ilegiveis.length > 0 } });
       limparCacheTemas();
       toast.success("Tema salvo. Já vale para quem estiver vinculado.");
       setEdicao(null);

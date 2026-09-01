@@ -17,8 +17,8 @@ import { obterPacotesInstalacao } from "@/lib/academia-teste.functions";
 type Programa = "agente" | "conector";
 type Pacote = { versao: string; notas: string | null; arquivos: string[] } | null;
 
-const cartao = "rounded-xl border border-white/10 bg-white/5 p-3";
-const codigo = "rounded bg-black/40 px-1.5 py-0.5 font-mono text-[10px] text-white/80";
+const cartao = "rounded-xl border border-aca-line bg-aca-alto p-3";
+const codigo = "rounded bg-black/40 px-1.5 py-0.5 font-mono text-[10px] text-aca-ink";
 
 async function baixarArquivo(partnerId: string, programa: Programa, nome: string) {
   const { data } = await supabase.auth.getSession();
@@ -68,8 +68,8 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
   return (
     <div className="space-y-3">
       <div className={cartao}>
-        <p className="text-sm font-bold text-white">Instalar a FitMind num computador novo</p>
-        <p className="mt-1 text-[11px] text-white/60">
+        <p className="text-sm font-bold text-aca-ink">Instalar a FitMind num computador novo</p>
+        <p className="mt-1 text-[11px] text-aca-muted">
           Esta página é para quem vai montar o computador da recepção de uma academia.
           São dois programas, e eles rodam nesse computador — não na nuvem.
           Depois de instalados, eles se atualizam sozinhos: você não volta aqui a cada correção.
@@ -81,17 +81,17 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
       <PassoAPassoConector />
       <QuandoNaoSobe />
 
-      <div className={`${cartao} border-amber-500/30 bg-amber-500/5`}>
-        <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+      <div className={`${cartao} border-aca-atencao bg-aca-alto`}>
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-aca-atencao">
           <AlertTriangle className="h-3.5 w-3.5" /> O download abaixo não é o instalador completo
         </p>
-        <p className="mt-1.5 text-[11px] text-white/70">
-          Daqui sai <strong className="text-white">só o código</strong> — os mesmos arquivos que os
+        <p className="mt-1.5 text-[11px] text-aca-muted">
+          Daqui sai <strong className="text-aca-ink">só o código</strong> — os mesmos arquivos que os
           dois programas trocam sozinhos quando se atualizam. Não sai daqui, e continua vindo por
           cópia de uma instalação que já existe:
         </p>
-        <ul className="mt-1.5 list-inside list-disc space-y-1 text-[11px] text-white/60">
-          <li>o <strong className="text-white/80">Node</strong>, que é o motor que faz os dois rodarem;</li>
+        <ul className="mt-1.5 list-inside list-disc space-y-1 text-[11px] text-aca-muted">
+          <li>o <strong className="text-aca-ink">Node</strong>, que é o motor que faz os dois rodarem;</li>
           <li>a pasta <span className={codigo}>node_modules</span>, com as dependências;</li>
           <li>
             os programas de janela (<span className={codigo}>FitMindCatraca.exe</span>,{" "}
@@ -102,14 +102,14 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
             Windows do cliente.
           </li>
         </ul>
-        <p className="mt-1.5 text-[11px] text-white/70">
+        <p className="mt-1.5 text-[11px] text-aca-muted">
           Ou seja: peça a pasta base ao suporte uma vez, e use os downloads daqui para deixá-la
           na versão de hoje.
         </p>
       </div>
 
       {carregando ? (
-        <Loader2 className="mx-auto mt-6 h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="mx-auto mt-6 h-6 w-6 animate-spin text-aca-acao" />
       ) : (
         <>
           <PacoteParaBaixar
@@ -135,14 +135,14 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
 function OsDoisProgramas() {
   return (
     <div className={cartao}>
-      <p className="text-[11px] font-bold text-white">Os dois programas</p>
+      <p className="text-[11px] font-bold text-aca-ink">Os dois programas</p>
 
       <div className="mt-2 space-y-2">
-        <div className="rounded-lg border border-white/10 bg-black/20 p-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold text-white">
-            <Fingerprint className="h-3.5 w-3.5 text-primary" /> Controlador de acesso (catraca)
+        <div className="rounded-lg border border-aca-line bg-black/20 p-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold text-aca-ink">
+            <Fingerprint className="h-3.5 w-3.5 text-aca-acao" /> Controlador de acesso (catraca)
           </p>
-          <p className="mt-1 text-[11px] text-white/60">
+          <p className="mt-1 text-[11px] text-aca-muted">
             Conversa com o leitor facial e gira a catraca. Roda no computador da academia porque o
             cabo da catraca é físico — a nuvem não alcança a porta. Ele baixa quem pode entrar e
             sobe as entradas. Recebe só o identificador da pessoa no equipamento e a data até quando
@@ -150,11 +150,11 @@ function OsDoisProgramas() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/20 p-2.5">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold text-white">
-            <MessageCircle className="h-3.5 w-3.5 text-primary" /> Conector de WhatsApp
+        <div className="rounded-lg border border-aca-line bg-black/20 p-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold text-aca-ink">
+            <MessageCircle className="h-3.5 w-3.5 text-aca-acao" /> Conector de WhatsApp
           </p>
-          <p className="mt-1 text-[11px] text-white/60">
+          <p className="mt-1 text-[11px] text-aca-muted">
             Mantém o WhatsApp da academia ligado ao robô: é ele que faz as respostas automáticas e
             os avisos de vencimento saírem de verdade. Também roda aqui porque a sessão do WhatsApp
             precisa de um programa ligado o tempo todo, e cada academia usa o próprio número.
@@ -162,8 +162,8 @@ function OsDoisProgramas() {
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] text-white/50">
-        <strong className="text-white/70">Instale nesta ordem:</strong> primeiro o controlador de
+      <p className="mt-2 text-[11px] text-aca-muted">
+        <strong className="text-aca-muted">Instale nesta ordem:</strong> primeiro o controlador de
         acesso, que é o que faz a catraca funcionar; o conector depois, porque ele depende de um
         número já criado na aba Robô.
       </p>
@@ -174,15 +174,15 @@ function OsDoisProgramas() {
 function PassoAPassoAgente() {
   return (
     <div className={cartao}>
-      <p className="text-[11px] font-bold text-white">1. Controlador de acesso (catraca)</p>
-      <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] text-white/70">
+      <p className="text-[11px] font-bold text-aca-ink">1. Controlador de acesso (catraca)</p>
+      <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] text-aca-muted">
         <li>
           Copie a pasta base para o computador da recepção, em{" "}
           <span className={codigo}>C:\FitMind\Catraca</span>.
         </li>
         <li>
           Baixe os arquivos da lista lá embaixo e sobrescreva os de mesmo nome nessa pasta. Os que
-          começam com <span className={codigo}>lib/</span> vão <strong className="text-white">dentro</strong>{" "}
+          começam com <span className={codigo}>lib/</span> vão <strong className="text-aca-ink">dentro</strong>{" "}
           da subpasta <span className={codigo}>lib</span>, não soltos.
         </li>
         <li>
@@ -192,13 +192,13 @@ function PassoAPassoAgente() {
           junto dos outros arquivos.
         </li>
         <li>
-          Aqui no painel, aba <strong className="text-white">Agente da catraca</strong>, clique em{" "}
-          <strong className="text-white">Gerar código de instalação</strong>. Aparece um código de 8
+          Aqui no painel, aba <strong className="text-aca-ink">Agente da catraca</strong>, clique em{" "}
+          <strong className="text-aca-ink">Gerar código de instalação</strong>. Aparece um código de 8
           letras.
         </li>
         <li>
           Digite esse código no programa que acabou de abrir. Ele vale{" "}
-          <strong className="text-white">uma vez só e por 30 minutos</strong> — se passar disso,
+          <strong className="text-aca-ink">uma vez só e por 30 minutos</strong> — se passar disso,
           gere outro, não tem problema.
         </li>
         <li>
@@ -207,11 +207,11 @@ function PassoAPassoAgente() {
           dois números.
         </li>
         <li>
-          Volte à aba <strong className="text-white">Agente da catraca</strong>: o computador tem que
-          aparecer como <strong className="text-white">online</strong>. Se aparecer, acabou.
+          Volte à aba <strong className="text-aca-ink">Agente da catraca</strong>: o computador tem que
+          aparecer como <strong className="text-aca-ink">online</strong>. Se aparecer, acabou.
         </li>
       </ol>
-      <p className="mt-2 text-[11px] text-white/50">
+      <p className="mt-2 text-[11px] text-aca-muted">
         A partir daí ele se reergue sozinho se cair, guarda as entradas quando a internet some, e
         aplica versão nova na próxima sincronização.
       </p>
@@ -222,11 +222,11 @@ function PassoAPassoAgente() {
 function PassoAPassoConector() {
   return (
     <div className={cartao}>
-      <p className="text-[11px] font-bold text-white">2. Conector de WhatsApp</p>
-      <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] text-white/70">
+      <p className="text-[11px] font-bold text-aca-ink">2. Conector de WhatsApp</p>
+      <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] text-aca-muted">
         <li>
           Copie a pasta base para <span className={codigo}>C:\FitMind\Conector</span>.{" "}
-          <strong className="text-amber-300">
+          <strong className="text-aca-atencao">
             Se vier junto uma pasta chamada <span className={codigo}>sessao</span>, apague.
           </strong>{" "}
           Ela é o WhatsApp da outra academia — se ficar, este computador entra no número errado.
@@ -242,28 +242,28 @@ function PassoAPassoConector() {
           dependências — leva alguns minutos e precisa de internet.
         </li>
         <li>
-          Aqui no painel, aba <strong className="text-white">Robô</strong>, clique em{" "}
-          <strong className="text-white">Conectar número</strong>, dê um apelido (por exemplo,
+          Aqui no painel, aba <strong className="text-aca-ink">Robô</strong>, clique em{" "}
+          <strong className="text-aca-ink">Conectar número</strong>, dê um apelido (por exemplo,
           "recepção") e confirme. Depois clique em{" "}
-          <strong className="text-white">Dados do conector</strong>: aparecem três campos, cada um
+          <strong className="text-aca-ink">Dados do conector</strong>: aparecem três campos, cada um
           com botão de copiar.
         </li>
         <li>
-          No navegador <strong className="text-white">daquele computador</strong>, abra{" "}
+          No navegador <strong className="text-aca-ink">daquele computador</strong>, abra{" "}
           <span className={codigo}>http://localhost:3100</span>. Cole os três campos e clique{" "}
-          <strong className="text-white">Salvar</strong>.
+          <strong className="text-aca-ink">Salvar</strong>.
         </li>
         <li>
-          Clique <strong className="text-white">Testar ligação com a FitMind</strong>. A luz da nuvem
+          Clique <strong className="text-aca-ink">Testar ligação com a FitMind</strong>. A luz da nuvem
           tem que ficar verde.
         </li>
         <li>
           Aparece um QR na tela. No celular da academia:{" "}
-          <strong className="text-white">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>,
+          <strong className="text-aca-ink">WhatsApp → Aparelhos conectados → Conectar aparelho</strong>,
           e aponte para o QR.
         </li>
         <li>
-          A luz do WhatsApp fica verde. Na aba <strong className="text-white">Robô</strong> daqui, o
+          A luz do WhatsApp fica verde. Na aba <strong className="text-aca-ink">Robô</strong> daqui, o
           conector passa a aparecer como <em>online agora</em>.
         </li>
         <li>
@@ -272,7 +272,7 @@ function PassoAPassoConector() {
           <em>Executar como administrador</em>.
         </li>
       </ol>
-      <p className="mt-2 text-[11px] text-white/50">
+      <p className="mt-2 text-[11px] text-aca-muted">
         O segredo que você copia dá acesso a ler e enviar mensagens desse número. Não mande por
         grupo nem por e-mail.
       </p>
@@ -304,18 +304,18 @@ const PROBLEMAS: Array<[string, string]> = [
 function QuandoNaoSobe() {
   return (
     <div className={cartao}>
-      <p className="text-[11px] font-bold text-white">Quando alguma coisa não sobe</p>
+      <p className="text-[11px] font-bold text-aca-ink">Quando alguma coisa não sobe</p>
       <div className="mt-2 space-y-2">
         {PROBLEMAS.map(([sintoma, saida]) => (
           <div key={sintoma}>
-            <p className="text-[11px] font-semibold text-white/80">{sintoma}</p>
-            <p className="text-[11px] text-white/55">{saida}</p>
+            <p className="text-[11px] font-semibold text-aca-ink">{sintoma}</p>
+            <p className="text-[11px] text-aca-muted">{saida}</p>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-white/50">
+      <p className="mt-2 text-[11px] text-aca-muted">
         Se nada disso resolveu: no controlador de acesso, botão direito no ícone perto do relógio →{" "}
-        <strong className="text-white/70">Ver registro técnico</strong>. É o que o suporte vai pedir.
+        <strong className="text-aca-muted">Ver registro técnico</strong>. É o que o suporte vai pedir.
       </p>
     </div>
   );
@@ -333,8 +333,8 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
   if (!pacote) {
     return (
       <div className={cartao}>
-        <p className="text-[11px] font-bold text-white">{titulo}</p>
-        <p className="mt-1 text-[11px] text-amber-400">
+        <p className="text-[11px] font-bold text-aca-ink">{titulo}</p>
+        <p className="mt-1 text-[11px] text-aca-atencao">
           Nenhuma versão publicada ainda. Sem isso não há o que baixar — fale com o suporte.
         </p>
       </div>
@@ -343,17 +343,17 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
 
   return (
     <div className={cartao}>
-      <p className="text-[11px] font-bold text-white">{titulo}</p>
-      <p className="text-[11px] text-white/50">
+      <p className="text-[11px] font-bold text-aca-ink">{titulo}</p>
+      <p className="text-[11px] text-aca-muted">
         versão {pacote.versao} · {pacote.arquivos.length} arquivo(s) · salve em{" "}
         <span className={codigo}>{destino}</span>
       </p>
-      {pacote.notas && <p className="mt-1 text-[11px] text-white/40">{pacote.notas}</p>}
+      {pacote.notas && <p className="mt-1 text-[11px] text-aca-fraco">{pacote.notas}</p>}
 
       <div className="mt-2 space-y-1">
         {pacote.arquivos.map((nome) => (
           <div key={nome} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-2.5 py-1.5">
-            <span className="truncate font-mono text-[11px] text-white/70">{nome}</span>
+            <span className="truncate font-mono text-[11px] text-aca-muted">{nome}</span>
             <button
               type="button"
               disabled={baixando === nome}
@@ -363,7 +363,7 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
                 catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao baixar"); }
                 finally { setBaixando(null); }
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 hover:bg-white/5 disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-aca-line px-2.5 py-1 text-[10px] font-semibold text-aca-muted hover:bg-aca-alto disabled:opacity-50"
             >
               {baixando === nome
                 ? <Loader2 className="h-3 w-3 animate-spin" />
@@ -375,14 +375,14 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
       </div>
 
       {pacote.arquivos.some((n) => n.includes("/")) && (
-        <p className="mt-2 text-[11px] text-amber-300/80">
+        <p className="mt-2 text-[11px] text-aca-atencao">
           O navegador salva todos soltos na pasta de downloads, sem subpasta. Os que aparecem como{" "}
           <span className={codigo}>lib/…</span> precisam ir para dentro da subpasta{" "}
           <span className={codigo}>lib</span> — soltos, o programa não acha e não abre.
         </p>
       )}
 
-      <p className="mt-2 text-[11px] text-white/40">
+      <p className="mt-2 text-[11px] text-aca-fraco">
         Um arquivo por vez, de propósito: assim dá para conferir cada um no lugar certo, e não
         existe zip para alguém descompactar por cima da pasta errada.
       </p>

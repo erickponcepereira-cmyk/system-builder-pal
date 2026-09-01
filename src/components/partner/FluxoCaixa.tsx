@@ -456,7 +456,7 @@ function FormLancamento({ contas, categorias, aoFechar, aoSalvar }: {
         {TIPOS_LANCAMENTO.map((t) => (
           <button key={t.value} type="button" onClick={() => setTipo(t.value)}
             className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${FOCO} ${
-              tipo === t.value ? "bg-aca-acao text-white" : "bg-aca-alto text-aca-muted hover:text-aca-ink"
+              tipo === t.value ? "bg-aca-acao text-aca-acao-ink" : "bg-aca-alto text-aca-muted hover:text-aca-ink"
             }`}
             title={t.ajuda}>
             {t.label}

@@ -159,7 +159,7 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
             className="rounded-lg border border-aca-line bg-aca-surface px-2 py-1.5 text-xs text-aca-ink" />
         </label>
         <button type="button" onClick={() => carregar(de, ate, projecaoAte)} disabled={carregando}
-          className="rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50">
+          className="rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aca-acao disabled:opacity-50">
           {carregando ? "Carregando…" : "Ver"}
         </button>
       </div>

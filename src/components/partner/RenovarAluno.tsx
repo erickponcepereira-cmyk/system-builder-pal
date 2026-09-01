@@ -145,16 +145,16 @@ export function RenovarAluno({
   };
 
   return (
-    <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
-      <p className="text-[11px] text-white/60">
-        Lançando <strong className="text-white">{nome}</strong>. Os dias entram
-        <strong className="text-white/80"> a partir do vencimento atual</strong> quando ele ainda não passou
+    <div className="mt-3 space-y-3 border-t border-aca-line pt-3">
+      <p className="text-[11px] text-aca-muted">
+        Lançando <strong className="text-aca-ink">{nome}</strong>. Os dias entram
+        <strong className="text-aca-ink"> a partir do vencimento atual</strong> quando ele ainda não passou
         {vencimentoAtual ? ` (hoje vence ${formatDateOnlyBR(vencimentoAtual)})` : ""}.
       </p>
 
 
       <div>
-        <p className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Plano</p>
+        <p className="mb-1 text-[10px] uppercase tracking-wider text-aca-fraco">Plano</p>
         <div className="flex flex-wrap gap-1.5">
           {planos.map((p) => (
             <button
@@ -163,8 +163,8 @@ export function RenovarAluno({
               onClick={() => escolherPlano(p.id)}
               className={`rounded-lg px-2.5 py-1.5 text-left text-[11px] ${
                 p.id === planoId
-                  ? "bg-primary text-black"
-                  : "border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+                  ? "bg-aca-acao text-aca-acao-ink"
+                  : "border border-aca-line bg-aca-alto text-aca-ink hover:bg-aca-line"
               }`}
             >
               <span className="block font-bold">{p.nome}</span>
@@ -175,15 +175,15 @@ export function RenovarAluno({
       </div>
 
       <div>
-        <p className="mb-1 text-[10px] uppercase tracking-wider text-white/40">Válido até</p>
+        <p className="mb-1 text-[10px] uppercase tracking-wider text-aca-fraco">Válido até</p>
         <input
           value={validoAte}
           onChange={(e) => setValidoAte(e.target.value)}
           type="date"
           aria-label="Válido até"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white"
+          className="w-full rounded-lg border border-aca-line bg-aca-alto px-2.5 py-1.5 text-xs text-aca-ink"
         />
-        <p className="mt-1 text-[11px] text-white/50">
+        <p className="mt-1 text-[11px] text-aca-muted">
           Preenchido pelo plano ({plano ? `${plano.dias} dias` : "—"}); pode ajustar na mão.
         </p>
       </div>
@@ -192,11 +192,11 @@ export function RenovarAluno({
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-wider text-white/40">Como recebeu</p>
+          <p className="text-[10px] uppercase tracking-wider text-aca-fraco">Como recebeu</p>
           <button
             type="button"
             onClick={() => setPartes((a) => [...a, { forma: "dinheiro", valor: "" }])}
-            className="rounded px-2 py-0.5 text-[10px] font-bold text-primary hover:bg-white/10"
+            className="rounded px-2 py-0.5 text-[10px] font-bold text-aca-acao hover:bg-aca-line"
           >
             + dividir
           </button>
@@ -210,7 +210,7 @@ export function RenovarAluno({
                 onChange={(e) =>
                   setPartes((a) => a.map((x, j) => (j === i ? { ...x, forma: e.target.value as FormaPagamento } : x)))
                 }
-                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white"
+                className="flex-1 rounded-lg border border-aca-line bg-aca-alto px-2 py-1.5 text-xs text-aca-ink"
               >
                 {FORMAS_PAGAMENTO.map((f) => (
                   <option key={f.value} value={f.value}>{f.label}</option>
@@ -222,14 +222,14 @@ export function RenovarAluno({
                 inputMode="decimal"
                 placeholder="0,00"
                 aria-label="Valor recebido nesta forma"
-                className="w-24 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-white/30"
+                className="w-24 rounded-lg border border-aca-line bg-aca-alto px-2 py-1.5 text-xs text-aca-ink placeholder:text-aca-fraco"
               />
               {partes.length > 1 && (
                 <button
                   type="button"
                   onClick={() => setPartes((a) => a.filter((_, j) => j !== i))}
                   aria-label="Remover esta forma de pagamento"
-                  className="rounded px-2 text-white/40 hover:bg-white/10 hover:text-white"
+                  className="rounded px-2 text-aca-fraco hover:bg-aca-line hover:text-aca-ink"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -240,7 +240,7 @@ export function RenovarAluno({
 
         {/* Diferença é aviso, não bloqueio: desconto e acréscimo de balcão são
             legítimos, e o que vale é o que a recepção recebeu de fato. */}
-        <p className={`mt-1 text-[11px] ${difere ? "text-amber-300" : "text-white/50"}`}>
+        <p className={`mt-1 text-[11px] ${difere ? "text-aca-atencao" : "text-aca-muted"}`}>
           Total {brl(total)}{difere ? ` · tabela é ${brl(tabela)}` : ""}
         </p>
       </div>
@@ -249,10 +249,10 @@ export function RenovarAluno({
         value={obs}
         onChange={(e) => setObs(e.target.value)}
         placeholder="Observação (opcional)"
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder:text-white/40"
+        className="w-full rounded-lg border border-aca-line bg-aca-alto px-2.5 py-1.5 text-xs text-aca-ink placeholder:text-aca-fraco"
       />
 
-      <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2">
+      <label className="flex items-start gap-2 rounded-lg border border-aca-line bg-aca-alto p-2">
         <input
           type="checkbox"
           checked={cortesia}
@@ -260,8 +260,8 @@ export function RenovarAluno({
           onChange={(e) => setCortesiaManual(e.target.checked)}
           className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-primary"
         />
-        <span className="text-[11px] text-white/70">
-          <strong className="text-white">Cortesia — sem cobrança</strong>
+        <span className="text-[11px] text-aca-muted">
+          <strong className="text-aca-ink">Cortesia — sem cobrança</strong>
           {planoEhGratuito
             ? " · este plano é gratuito, então já entra assim"
             : " · lança com R$ 0,00 e libera o acesso igual"}
@@ -273,14 +273,14 @@ export function RenovarAluno({
           type="button"
           onClick={() => void confirmar()}
           disabled={salvando || (total <= 0 && !cortesia)}
-          className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
+          className="flex-1 rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink disabled:opacity-50"
         >
           {salvando ? "Registrando…" : "Confirmar renovação"}
         </button>
         <button
           type="button"
           onClick={aoCancelar}
-          className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70 hover:bg-white/10"
+          className="rounded-lg border border-aca-line px-3 py-2 text-xs text-aca-muted hover:bg-aca-line"
         >
           Voltar
         </button>

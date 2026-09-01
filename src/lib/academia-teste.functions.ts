@@ -2166,7 +2166,7 @@ export const obterConfigAcademia = createServerFn({ method: "POST" })
     const { admin } = await autorizar(context.userId, data.partnerId);
     const { data: cfg } = await admin
       .from("partner_acesso_config")
-      .select("dias_carencia, exige_senha_liberacao, regra_dayuse, timezone, modelo_catraca")
+      .select("dias_carencia, exige_senha_liberacao, regra_dayuse, timezone, modelo_catraca, regime_turma")
       .eq("partner_id", data.partnerId)
       .maybeSingle();
     const { data: taxas } = await admin
@@ -2176,13 +2176,14 @@ export const obterConfigAcademia = createServerFn({ method: "POST" })
     return {
       config: (cfg as null | {
         dias_carencia: number; exige_senha_liberacao: boolean; regra_dayuse: string;
-        timezone: string; modelo_catraca: string | null;
+        timezone: string; modelo_catraca: string | null; regime_turma: string;
       }) ?? {
         dias_carencia: 3,
         exige_senha_liberacao: false,
         regra_dayuse: "uma_vez_na_vida",
         timezone: "America/Sao_Paulo",
         modelo_catraca: null,
+        regime_turma: "livre",
       },
       taxas: (taxas ?? []) as Array<{ forma_pagamento: FormaPagamento; taxa_percentual: number; taxa_fixa: number }>,
     };
@@ -2193,10 +2194,18 @@ export const salvarConfigAcademia = createServerFn({ method: "POST" })
   .inputValidator((d: {
     partnerId: string; diasCarencia: number; exigeSenha: boolean;
     regraDayuse: string; timezone: string; modeloCatraca: string | null;
+    regimeTurma: string;
     taxas: Array<{ forma_pagamento: FormaPagamento; taxa_percentual: number; taxa_fixa: number }>;
   }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
+
+    // O regime decide se o aluno vê o botão de reservar, e se falta é aula
+    // perdida ou semana abaixo da meta. Valor fora da lista quebraria as duas
+    // pontas em silêncio, então a barreira é aqui e não só no CHECK do banco.
+    if (!["livre", "marcado", "reserva"].includes(data.regimeTurma)) {
+      throw new Error("Regime de turma inválido.");
+    }
 
     const { error } = await admin.from("partner_acesso_config").upsert(
       {
@@ -2206,6 +2215,7 @@ export const salvarConfigAcademia = createServerFn({ method: "POST" })
         regra_dayuse: data.regraDayuse,
         timezone: data.timezone,
         modelo_catraca: data.modeloCatraca,
+        regime_turma: data.regimeTurma,
       },
       { onConflict: "partner_id" },
     );

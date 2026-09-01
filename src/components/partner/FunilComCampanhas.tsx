@@ -23,10 +23,12 @@ const ROTULO_RECORTE: Record<RecorteFunil, string> = {
   sem_telefone: "sem telefone",
 };
 
+// O ponto ao lado da coluna do funil. Sai da paleta do painel, e não de cores
+// soltas: é a mesma tinta que a tarja de estado usa em toda a academia.
 const PONTO_TIPO: Record<string, string> = {
-  ganho: "bg-emerald-400",
-  perdido: "bg-red-400",
-  normal: "bg-white/30",
+  ganho: "bg-aca-ok",
+  perdido: "bg-aca-critico",
+  normal: "bg-aca-neutro",
 };
 
 /**
@@ -70,20 +72,20 @@ function ListaDoFunil({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+      className="painel-academia fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={`${coluna} — ${ROTULO_RECORTE[recorte]}`}
       onClick={aoFechar}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-white/10 bg-[#141414] sm:rounded-2xl"
+        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-aca-line bg-aca-surface sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2 border-b border-white/10 p-3">
+        <div className="flex items-start justify-between gap-2 border-b border-aca-line p-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">{coluna}</p>
-            <p className="text-[11px] text-white/50">
+            <p className="truncate text-sm font-bold text-aca-ink">{coluna}</p>
+            <p className="text-[11px] text-aca-muted">
               {carregando ? "carregando…" : `${pessoas.length} · ${ROTULO_RECORTE[recorte]}`}
             </p>
           </div>
@@ -91,29 +93,29 @@ function ListaDoFunil({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="shrink-0 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+            className="shrink-0 rounded-lg p-1.5 text-aca-muted hover:bg-aca-line hover:text-aca-ink"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {pessoas.length > 8 && (
-          <div className="relative border-b border-white/10 p-2">
-            <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
+          <div className="relative border-b border-aca-line p-2">
+            <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-aca-fraco" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Procurar por nome ou telefone"
-              className="w-full rounded-lg border border-white/10 bg-white/5 py-1.5 pl-8 pr-2 text-sm text-white placeholder:text-white/40"
+              className="w-full rounded-lg border border-aca-line bg-aca-alto py-1.5 pl-8 pr-2 text-sm text-aca-ink placeholder:text-aca-fraco"
             />
           </div>
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {carregando ? (
-            <Loader2 className="mx-auto my-10 h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="mx-auto my-10 h-5 w-5 animate-spin text-aca-acao" />
           ) : visiveis.length === 0 ? (
-            <p className="py-10 text-center text-sm text-white/50">
+            <p className="py-10 text-center text-sm text-aca-muted">
               {pessoas.length === 0 ? "Ninguém nesta situação." : "Ninguém com esse nome."}
             </p>
           ) : (
@@ -121,16 +123,16 @@ function ListaDoFunil({
               {visiveis.map((p) => (
                 <div
                   key={p.cartao_id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-2.5 py-2"
+                  className="flex items-center justify-between gap-2 rounded-lg bg-aca-alto px-2.5 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm text-white">{p.nome}</p>
-                    <p className="truncate text-[11px] text-white/50">
+                    <p className="truncate text-sm text-aca-ink">{p.nome}</p>
+                    <p className="truncate text-[11px] text-aca-muted">
                       {p.campanhas === 0
                         ? (p.telefone ? "nunca recebeu campanha" : "sem telefone")
                         : (
                           <>
-                            {p.ultima_automatica && <Bot className="mr-1 inline h-3 w-3 text-white/40" />}
+                            {p.ultima_automatica && <Bot className="mr-1 inline h-3 w-3 text-aca-fraco" />}
                             {p.ultima_campanha} · {dia(p.ultima_campanha_em)}
                             {p.campanhas > 1 && ` · ${p.campanhas} campanhas`}
                           </>
@@ -142,12 +144,12 @@ function ListaDoFunil({
                       type="button"
                       onClick={() => setEscrevendoPara(p)}
                       aria-label={`Mandar mensagem para ${p.nome}`}
-                      className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/25"
+                      className="flex shrink-0 items-center gap-1 rounded-lg bg-aca-alto px-2 py-1 text-[11px] font-bold text-aca-ok hover:bg-aca-line"
                     >
                       <MessageCircle className="h-3 w-3" /> Mensagem
                     </button>
                   ) : (
-                    <span className="shrink-0 text-[10px] text-white/30">sem telefone</span>
+                    <span className="shrink-0 text-[10px] text-aca-fraco">sem telefone</span>
                   )}
                 </div>
               ))}
@@ -220,20 +222,20 @@ function NovaCampanhaDaColuna({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+      className="painel-academia fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={`Nova campanha para ${coluna.coluna}`}
       onClick={aoFechar}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0B0B0B] p-4"
+        className="w-full max-w-md rounded-2xl border border-aca-line bg-aca-surface p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">Campanha para “{coluna.coluna}”</p>
-            <p className="text-[11px] text-white/50">
+            <p className="truncate text-sm font-bold text-aca-ink">Campanha para “{coluna.coluna}”</p>
+            <p className="text-[11px] text-aca-muted">
               {enviaveis} contato(s) com telefone nesta etapa
               {coluna.sem_telefone > 0 && ` · ${coluna.sem_telefone} sem telefone ficam de fora`}
             </p>
@@ -242,7 +244,7 @@ function NovaCampanhaDaColuna({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="shrink-0 rounded-lg p-1 text-white/50 hover:bg-white/10"
+            className="shrink-0 rounded-lg p-1 text-aca-muted hover:bg-aca-line"
           >
             <X className="h-4 w-4" />
           </button>
@@ -253,19 +255,19 @@ function NovaCampanhaDaColuna({
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Nome da campanha"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            className="w-full rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
           />
           <textarea
             value={mensagem}
             onChange={(e) => setMensagem(e.target.value)}
             rows={4}
-            className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            className="w-full resize-none rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink placeholder:text-aca-fraco"
             placeholder="Oi {nome}! …"
           />
-          <p className="text-[10px] text-white/40">
-            <span className="font-mono text-white/60">{"{nome}"}</span> vira o primeiro nome da pessoa.
+          <p className="text-[10px] text-aca-fraco">
+            <span className="font-mono text-aca-muted">{"{nome}"}</span> vira o primeiro nome da pessoa.
           </p>
-          <label className="flex flex-wrap items-center gap-2 text-[11px] text-white/50">
+          <label className="flex flex-wrap items-center gap-2 text-[11px] text-aca-muted">
             Uma mensagem a cada
             <input
               type="number"
@@ -273,22 +275,22 @@ function NovaCampanhaDaColuna({
               max={600}
               value={intervalo}
               onChange={(e) => setIntervalo(e.target.value)}
-              className="w-20 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white"
+              className="w-20 rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-sm text-aca-ink"
             />
             segundos
             {Number(intervalo) < 15 && (
-              <span className="text-amber-300">— abaixo de 15s o WhatsApp costuma reclamar</span>
+              <span className="text-aca-atencao">— abaixo de 15s o WhatsApp costuma reclamar</span>
             )}
           </label>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-white/40">Nasce em rascunho. Nada sai agora.</span>
+          <span className="text-[10px] text-aca-fraco">Nasce em rascunho. Nada sai agora.</span>
           <button
             type="button"
             onClick={() => void confirmar()}
             disabled={ocupado || !nome.trim() || !mensagem.trim() || enviaveis === 0}
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink disabled:opacity-50"
           >
             {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
             Criar com os contatos da etapa
@@ -312,10 +314,10 @@ function Numero({
       type="button"
       onClick={aoAbrir}
       disabled={valor === 0}
-      className="flex-1 rounded-xl bg-white/5 px-2 py-2 text-left transition enabled:hover:bg-white/10 disabled:opacity-40"
+      className="flex-1 rounded-xl bg-aca-alto px-2 py-2 text-left transition enabled:hover:bg-aca-line disabled:opacity-40"
     >
       <p className={`text-lg font-bold ${cor}`}>{valor}</p>
-      <p className="text-[10px] leading-tight text-white/50">{rotulo}</p>
+      <p className="text-[10px] leading-tight text-aca-muted">{rotulo}</p>
     </button>
   );
 }
@@ -358,11 +360,11 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
     nunca: colunas.reduce((s, c) => s + c.nunca, 0),
   }), [colunas]);
 
-  if (carregando) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-primary" />;
+  if (carregando) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
   if (!quadroId) {
     return (
-      <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-300">
+      <p className="rounded-xl border border-aca-atencao bg-aca-alto p-3 text-[11px] text-aca-atencao">
         Esta unidade ainda não tem funil no CRM. Crie um na aba CRM e volte aqui.
       </p>
     );
@@ -370,14 +372,14 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-        <p className="flex items-center gap-2 text-sm font-bold text-white">
-          <Megaphone className="h-4 w-4 text-primary" /> Funis de envio
+      <div className="rounded-2xl border border-aca-line bg-aca-alto p-3">
+        <p className="flex items-center gap-2 text-sm font-bold text-aca-ink">
+          <Megaphone className="h-4 w-4 text-aca-acao" /> Funis de envio
         </p>
-        <p className="text-[11px] text-white/50">
+        <p className="text-[11px] text-aca-muted">
           Cada etapa do funil com o que já saiu de campanha para ela.{" "}
           {totais.nunca > 0 && (
-            <strong className="text-white/80">
+            <strong className="text-aca-ink">
               {totais.nunca} de {totais.pessoas} nunca receberam nenhuma mensagem.
             </strong>
           )}
@@ -388,17 +390,17 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
         <select
           value={quadroId}
           onChange={(e) => void carregar(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+          className="w-full rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm text-aca-ink"
         >
           {quadros.map((q) => <option key={q.id} value={q.id}>{q.nome}</option>)}
         </select>
       )}
 
       {colunas.map((c) => (
-        <div key={c.coluna_id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <div key={c.coluna_id} className="rounded-2xl border border-aca-line bg-aca-alto p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-white">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-aca-ink">
                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${PONTO_TIPO[c.tipo] ?? PONTO_TIPO.normal}`} />
                 <span className="truncate">{c.coluna}</span>
               </p>
@@ -406,7 +408,7 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
                 type="button"
                 onClick={() => setLista({ coluna: c, recorte: "todos" })}
                 disabled={c.pessoas === 0}
-                className="text-[11px] text-white/50 underline-offset-2 enabled:hover:text-white enabled:hover:underline disabled:opacity-60"
+                className="text-[11px] text-aca-muted underline-offset-2 enabled:hover:text-aca-ink enabled:hover:underline disabled:opacity-60"
               >
                 {c.pessoas} pessoa(s) nesta etapa
               </button>
@@ -415,7 +417,7 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
               type="button"
               onClick={() => setNovaCampanha(c)}
               disabled={c.pessoas - c.sem_telefone === 0}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-aca-acao px-2.5 py-1.5 text-[11px] font-bold text-aca-acao-ink disabled:opacity-40"
             >
               <Megaphone className="h-3.5 w-3.5" /> Campanha
             </button>
@@ -429,19 +431,19 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
                 <Numero
                   valor={c.alcancados}
                   rotulo="já receberam"
-                  cor="text-emerald-400"
+                  cor="text-aca-ok"
                   aoAbrir={() => setLista({ coluna: c, recorte: "alcancados" })}
                 />
                 <Numero
                   valor={c.nunca}
                   rotulo="nunca receberam"
-                  cor="text-amber-400"
+                  cor="text-aca-atencao"
                   aoAbrir={() => setLista({ coluna: c, recorte: "nunca" })}
                 />
                 <Numero
                   valor={c.sem_telefone}
                   rotulo="sem telefone"
-                  cor="text-white/60"
+                  cor="text-aca-muted"
                   aoAbrir={() => setLista({ coluna: c, recorte: "sem_telefone" })}
                 />
               </div>
@@ -450,16 +452,16 @@ export function FunilComCampanhas({ partnerId }: { partnerId: string }) {
                 <button
                   type="button"
                   onClick={() => setLista({ coluna: c, recorte: "so_automatico" })}
-                  className="mt-1.5 flex items-center gap-1 text-[11px] text-white/50 underline-offset-2 hover:text-white hover:underline"
+                  className="mt-1.5 flex items-center gap-1 text-[11px] text-aca-muted underline-offset-2 hover:text-aca-ink hover:underline"
                 >
                   <Bot className="h-3 w-3" />
                   {c.so_automatico} receberam só o aviso automático
                 </button>
               )}
 
-              <p className="mt-1.5 truncate text-[11px] text-white/40">
+              <p className="mt-1.5 truncate text-[11px] text-aca-fraco">
                 {c.ultima_campanha
-                  ? <>Última: <span className="text-white/70">{c.ultima_campanha}</span> · {dia(c.ultima_campanha_em)}</>
+                  ? <>Última: <span className="text-aca-muted">{c.ultima_campanha}</span> · {dia(c.ultima_campanha_em)}</>
                   : "Nenhuma campanha saiu para esta etapa."}
               </p>
             </>

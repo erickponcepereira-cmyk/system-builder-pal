@@ -74,7 +74,7 @@ export const CAMPO = `rounded-xl border border-aca-line bg-aca-alto px-3 py-2 te
 export const CAMPO_MINI = `rounded-lg border border-aca-line bg-aca-alto px-2 py-1 text-[11px] text-aca-ink placeholder:text-aca-fraco ${FOCO}`;
 
 /** O botão que conclui. Vermelho porque é a ação principal da tela. */
-export const BOTAO_ACAO = `flex items-center justify-center gap-2 rounded-xl bg-aca-acao px-4 py-2.5 text-sm font-bold text-white ${FOCO} disabled:opacity-50`;
+export const BOTAO_ACAO = `flex items-center justify-center gap-2 rounded-xl bg-aca-acao px-4 py-2.5 text-sm font-bold text-aca-acao-ink ${FOCO} disabled:opacity-50`;
 
 /** Ação secundária: clicável, mas não é o desfecho — por isso não é vermelha. */
 export const BOTAO_NEUTRO = `flex items-center justify-center gap-2 rounded-xl border border-aca-line bg-aca-alto px-3 py-2 text-sm font-bold text-aca-ink hover:border-aca-line-forte ${FOCO} disabled:opacity-50`;
@@ -96,7 +96,7 @@ export const CODIGO = "rounded bg-aca-alto px-1.5 py-0.5 font-mono text-[10px] t
  */
 export const escolha = (ativo: boolean) =>
   ativo
-    ? `bg-aca-acao font-semibold text-white ${FOCO}`
+    ? `bg-aca-acao font-semibold text-aca-acao-ink ${FOCO}`
     : `border border-aca-line bg-aca-surface text-aca-muted hover:border-aca-line-forte hover:text-aca-ink ${FOCO}`;
 
 /**

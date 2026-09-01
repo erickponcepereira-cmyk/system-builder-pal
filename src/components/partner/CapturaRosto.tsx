@@ -148,20 +148,20 @@ export function CapturaRosto({ onPronta, onCancelar }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3" onClick={fechar}>
+    <div className="painel-academia fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3" onClick={fechar}>
       <div
-        className="w-full max-w-sm space-y-3 rounded-2xl border border-white/10 bg-[#12171C] p-4"
+        className="w-full max-w-sm space-y-3 rounded-2xl border border-aca-line bg-aca-surface p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-white">Foto para o leitor facial</p>
-          <button type="button" onClick={fechar} className="rounded p-1 text-white/60 hover:bg-white/10">
+          <p className="text-sm font-bold text-aca-ink">Foto para o leitor facial</p>
+          <button type="button" onClick={fechar} className="rounded p-1 text-aca-muted hover:bg-aca-line">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {estado === "erro" ? (
-          <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">{erro}</p>
+          <p className="rounded-xl border border-aca-critico bg-aca-alto p-3 text-sm text-aca-critico">{erro}</p>
         ) : (
           <div className="relative aspect-square overflow-hidden rounded-xl bg-black">
             {previa ? (
@@ -188,19 +188,19 @@ export function CapturaRosto({ onPronta, onCancelar }: {
         <canvas ref={canvas} className="hidden" />
 
         {estado === "revisando" && medida && (
-          <div className={`rounded-xl border p-2.5 ${medida.avisos.length ? "border-amber-500/30 bg-amber-500/10" : "border-green-500/30 bg-green-500/10"}`}>
+          <div className={`rounded-xl border p-2.5 ${medida.avisos.length ? "border-aca-atencao bg-aca-alto" : "border-aca-ok bg-aca-alto"}`}>
             {medida.avisos.length ? (
               <>
-                <p className="text-sm font-bold text-amber-400">{medida.avisos.join(" · ")}</p>
-                <p className="mt-0.5 text-[11px] text-white/60">
+                <p className="text-sm font-bold text-aca-atencao">{medida.avisos.join(" · ")}</p>
+                <p className="mt-0.5 text-[11px] text-aca-muted">
                   É só uma dica. Se a foto parecer boa para você, pode usar — quem
                   decide de verdade é o leitor.
                 </p>
               </>
             ) : (
-              <p className="text-sm font-bold text-green-400">Parece boa</p>
+              <p className="text-sm font-bold text-aca-ok">Parece boa</p>
             )}
-            <p className="mt-1 font-mono text-[11px] text-white/40">
+            <p className="mt-1 font-mono text-[11px] text-aca-fraco">
               nitidez {medida.nitidez.toFixed(1)} · luz {Math.round(medida.luz)}
               {medida.rosto === null ? " · rosto não verificado" : medida.rosto ? " · 1 rosto" : " · rosto não encontrado"}
             </p>
@@ -208,7 +208,7 @@ export function CapturaRosto({ onPronta, onCancelar }: {
         )}
 
         {estado === "pronto" && (
-          <p className="text-[11px] text-white/50">
+          <p className="text-[11px] text-aca-muted">
             Rosto de frente dentro do oval, boa luz, sem boné nem óculos escuros.
           </p>
         )}
@@ -218,13 +218,13 @@ export function CapturaRosto({ onPronta, onCancelar }: {
             <>
               <button
                 type="button" onClick={refazer}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-bold text-white hover:bg-white/15"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-aca-line px-3 py-2.5 text-sm font-bold text-aca-ink hover:bg-aca-line"
               >
                 <RefreshCw className="h-4 w-4" /> Repetir
               </button>
               <button
                 type="button" onClick={confirmar}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-aca-acao px-3 py-2.5 text-sm font-bold text-aca-acao-ink"
               >
                 <Check className="h-4 w-4" /> Usar esta
               </button>
@@ -232,7 +232,7 @@ export function CapturaRosto({ onPronta, onCancelar }: {
           ) : (
             <button
               type="button" onClick={() => void capturar()} disabled={estado !== "pronto"}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-aca-acao px-4 py-2.5 text-sm font-bold text-aca-acao-ink disabled:opacity-40"
             >
               <Camera className="h-4 w-4" /> Tirar foto
             </button>
