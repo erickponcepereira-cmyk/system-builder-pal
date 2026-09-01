@@ -41,51 +41,35 @@ export function origemDoProduto(origin: string, kind: string): OrigemDoProduto {
 }
 
 /**
- * TODAS as notas de uma vez.
+ * As notas dos produtos. Sem argumento: todas.
  *
- * Parece exagero e não é: a view só tem linha para produto que JÁ FOI
- * avaliado, então ela é uma fração minúscula dos 1911 do catálogo. O caminho
- * alternativo — mandar os ids dos produtos visíveis num `.in()` — montaria
- * uma URL com centenas de uuids e estouraria antes disso ser um problema de
- * volume.
+ * Uma função só, e isso é o ponto. Antes eram duas — a grade lia por
+ * `todasAsNotas` e o detalhe por `resumoDeNotas`. Concordavam porque saíam da
+ * mesma view, e iam divergir na primeira vez que uma ganhasse um filtro e a
+ * outra não. Duas portas para o mesmo dado é uma divergência esperando data.
  *
- * O teto de 5000 existe só como rede: no dia em que a loja tiver mais
- * avaliações que isso, o certo é paginar aqui, não na tela.
+ * Trazer TUDO não é exagero: a view só tem linha para produto que JÁ FOI
+ * avaliado, então ela é uma fração minúscula dos 1.911 do catálogo. Mandar os
+ * ids dos visíveis num `.in()` montaria uma URL com centenas de uuids e
+ * estouraria muito antes de isso virar problema de volume.
+ *
+ * O teto de 5000 é rede de segurança: no dia em que houver mais avaliações que
+ * isso, o certo é paginar aqui, não na tela.
  */
-export async function todasAsNotas(): Promise<Map<string, ResumoDeNotas>> {
+export async function notasDosProdutos(
+  produtoIds?: string[],
+): Promise<Map<string, ResumoDeNotas>> {
   const mapa = new Map<string, ResumoDeNotas>();
-  const { data, error } = await supabase
+  if (produtoIds && produtoIds.length === 0) return mapa;
+
+  let consulta = supabase
     .from("product_review_summary" as never)
     .select("product_origin,product_id,total,media,positivas" as never)
     .limit(5000);
 
-  if (error) {
-    console.warn("[avaliacoes] não foi possível ler as notas da vitrine", error);
-    return mapa;
-  }
-  for (const r of ((data as unknown as Array<Record<string, unknown>>) || [])) {
-    mapa.set(`${r.product_origin}:${r.product_id}`, {
-      total: Number(r.total ?? 0),
-      media: Number(r.media ?? 0),
-      positivas: Number(r.positivas ?? 0),
-    });
-  }
-  return mapa;
-}
+  if (produtoIds) consulta = consulta.in("product_id" as never, produtoIds as never);
 
-/** Notas de vários produtos de uma vez — a vitrine pede em lote, não um a um. */
-export async function resumoDeNotas(
-  chaves: Array<{ origem: OrigemDoProduto; produtoId: string }>,
-): Promise<Map<string, ResumoDeNotas>> {
-  const mapa = new Map<string, ResumoDeNotas>();
-  if (!chaves.length) return mapa;
-
-  const ids = Array.from(new Set(chaves.map((c) => c.produtoId)));
-  const { data, error } = await supabase
-    .from("product_review_summary" as never)
-    .select("product_origin,product_id,total,media,positivas" as never)
-    .in("product_id" as never, ids as never);
-
+  const { data, error } = await consulta;
   if (error) {
     console.warn("[avaliacoes] não foi possível ler as notas", error);
     return mapa;

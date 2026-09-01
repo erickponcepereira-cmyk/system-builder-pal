@@ -17,7 +17,7 @@ import { loadBanners, type StoreBanner as BannerRow } from "@/lib/store-banners"
 import { StoreOrders } from "@/components/store/StoreOrders";
 import { ProductReviews } from "@/components/store/ProductReviews";
 import { NotaCompacta } from "@/components/store/StarRating";
-import { origemDoProduto, todasAsNotas, type ResumoDeNotas } from "@/lib/store-reviews";
+import { notasDosProdutos, origemDoProduto, type ResumoDeNotas } from "@/lib/store-reviews";
 import { useFecharComEscape } from "@/hooks/use-fechar-com-escape";
 import { vendedorDoProduto } from "@/lib/store-seller";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
@@ -243,7 +243,7 @@ export function UnifiedStorePage({
     pode: (sourceId: string, origem: string) => indicacao.podeIndicar(sourceId, origem),
     compartilhar: (sourceId: string) => void indicacao.compartilhar(sourceId, indicacao.meuCodigo),
   }), [indicacao]);
-  useEffect(() => { void todasAsNotas().then(setNotas); }, []);
+  useEffect(() => { void notasDosProdutos().then(setNotas); }, []);
 
   /**
    * Quanto há de gratuito ao alcance desta pessoa, aqui.

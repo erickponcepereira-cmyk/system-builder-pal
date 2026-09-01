@@ -3,8 +3,8 @@ import { Loader2, MessageSquare } from "lucide-react";
 import { StarRating } from "@/components/store/StarRating";
 import {
   avaliacoesDoProduto,
+  notasDosProdutos,
   origemDoProduto,
-  resumoDeNotas,
   type Avaliacao,
   type ResumoDeNotas,
 } from "@/lib/store-reviews";
@@ -38,7 +38,7 @@ export function ProductReviews({
     let vivo = true;
     setCarregando(true);
     void Promise.all([
-      resumoDeNotas([{ origem, produtoId: sourceId }]),
+      notasDosProdutos([sourceId]),
       avaliacoesDoProduto(origem, sourceId),
     ]).then(([mapa, avs]) => {
       if (!vivo) return;
