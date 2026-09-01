@@ -89,6 +89,48 @@ export async function carregarReputacao(
   };
 }
 
+export type ProdutoDoVendedor = {
+  /** Id no formato do catálogo unificado — é o que abre o produto na vitrine. */
+  id: string;
+  titulo: string;
+  preco: number;
+  precoOriginal: number | null;
+  imagem: string | null;
+  gratuito: boolean;
+};
+
+/**
+ * Os produtos deste vendedor, e só eles.
+ *
+ * A primeira versão desta página chamava `loadUnifiedCatalog` — as cinco
+ * leituras paginadas, os 1.911 produtos, a resolução de nome de vendedor — para
+ * depois filtrar por `sellerId` no navegador e ficar com uma dúzia. A espera
+ * caía justamente sobre quem clicou no vendedor porque estava decidindo comprar.
+ */
+export async function carregarProdutosDoVendedor(
+  tipo: TipoDeVendedor,
+  id: string,
+): Promise<ProdutoDoVendedor[]> {
+  const { data, error } = await supabase.rpc("produtos_do_vendedor" as never, {
+    _tipo: tipo,
+    _id: id,
+  } as never);
+
+  if (error) {
+    console.error("[vendedor] não foi possível carregar os produtos", error);
+    return [];
+  }
+
+  return ((data as unknown as Array<Record<string, unknown>>) || []).map((r) => ({
+    id: String(r.id),
+    titulo: String(r.titulo || ""),
+    preco: Number(r.preco || 0),
+    precoOriginal: r.preco_original == null ? null : Number(r.preco_original),
+    imagem: (r.imagem as string) || null,
+    gratuito: r.gratuito === true,
+  }));
+}
+
 /** "vende há 8 meses" diz mais que uma data. */
 export function tempoDeCasa(desde: string): string {
   const inicio = new Date(desde).getTime();
