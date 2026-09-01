@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
 import { comAbsolutosReais, type ComissaoBruta, type GanhoReal } from "@/lib/store-earnings";
 import { computeFromCharge, DEFAULT_PARTNER_FEES, type CoachCommissionPct } from "@/lib/partnerFinance";
+import { garantirTaxasVigentes } from "@/lib/taxas-vigentes";
 
 /**
  * Camada de leitura da vitrine unificada (superfície de teste).
@@ -392,6 +393,15 @@ export type CatalogOptions = {
 
 export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<UnifiedCatalog> {
   const paraCoach = opts.paraCoach === true;
+
+  // A taxa vigente ANTES de calcular qualquer comissao.
+  //
+  // `comissaoDeVendedor` le `DEFAULT_PARTNER_FEES`, que e um objeto mutado por
+  // outra chamada assincrona. Sem esperar, o catalogo calculava a comissao com
+  // a taxa velha e a congelava no produto — o coach via um numero maior do que
+  // a venda paga. Esperar custa uma ida ao banco, ja em voo desde o __root, e
+  // a promessa e compartilhada.
+  if (paraCoach) await garantirTaxasVigentes();
 
   // Espelha `COLUNAS_FINANCEIRAS` de `StorePage.tsx:232`. Mesma lista, porque
   // é a mesma tabela e o mesmo cálculo do outro lado.

@@ -15,6 +15,26 @@ import { aplicarTaxasVigentes } from "@/lib/partnerFinance";
  * estao na tabela hoje. Uma tela que nao carrega a taxa e melhor do que uma
  * tela que nao carrega.
  */
+/**
+ * A leitura em voo, para quem precisa ESPERAR por ela.
+ *
+ * Sem isto havia uma corrida silenciosa: `carregarTaxasVigentes` sai do
+ * `useEffect` do __root e `loadUnifiedCatalog` sai da tela da loja, as duas ao
+ * mesmo tempo. Quando o catálogo chegava primeiro — e chega, porque a loja
+ * monta e busca de imediato — a comissão de cada produto de parceiro era
+ * calculada com a taxa VELHA e congelada no objeto. A mutação que chegava
+ * depois não corrigia nada, porque o número já tinha sido gravado.
+ *
+ * O coach via 2,08 numa venda de R$ 25 onde a verdade é 1,88: erro para mais,
+ * que é o pior lado para se errar uma promessa de comissão.
+ */
+let emVoo: Promise<boolean> | null = null;
+
+export function garantirTaxasVigentes(): Promise<boolean> {
+  if (!emVoo) emVoo = carregarTaxasVigentes();
+  return emVoo;
+}
+
 export async function carregarTaxasVigentes(): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc("taxa_vigente" as never, {} as never);
