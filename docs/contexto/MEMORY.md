@@ -59,16 +59,18 @@ volta a ficar preso numa máquina.
 - [Fiscal Spark API](fiscal-spark-api-projeto.md) — a vertical de NFS-e: reiniciada em
   `fiscal-engine`, por que Node em vez de workerd, e as datas de Cuiabá e VG
 
-## Se quiser isto como memória automática
+## Isto já é a memória do assistente
 
-Estes arquivos estão no formato de memória do Claude Code (com frontmatter). Para
-que o assistente os carregue sozinho **nesta** máquina, aponte a pasta de memória
-para cá com uma junção — o caminho da memória depende de onde o Claude Code foi
-aberto, então confira o seu antes:
+Os arquivos estão no formato de memória do Claude Code (com frontmatter). Na máquina
+do Erick a pasta de memória é uma **junção** para cá: editar aqui é editar a memória,
+uma cópia só, versionada. Para repetir numa máquina nova — o caminho depende de onde
+o Claude Code foi aberto, confira o slug antes:
 
 ```
+rmdir /S /Q "%USERPROFILE%\.claude\projects\<slug-do-cwd>\memory"
 mklink /J "%USERPROFILE%\.claude\projects\<slug-do-cwd>\memory" "C:\dev\fitmind-bugs\docs\contexto"
 ```
 
-Isso é opcional. Sem a junção, os arquivos continuam aqui e são lidos sob demanda,
-que é o suficiente — e não custa contexto em todo turno.
+Sem a junção também funciona: os arquivos continuam aqui e são lidos sob demanda.
+O que a junção resolve é a **divergência** — sem ela existem duas cópias do mesmo
+contexto, e elas se separam na primeira vez que alguém edita só uma.
