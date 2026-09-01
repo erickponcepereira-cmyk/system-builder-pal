@@ -457,6 +457,7 @@ export type Database = {
       academia_credenciais: {
         Row: {
           ativo: boolean
+          cpf: string | null
           created_at: string
           id: string
           importado_em: string | null
@@ -471,6 +472,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cpf?: string | null
           created_at?: string
           id?: string
           importado_em?: string | null
@@ -485,6 +487,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cpf?: string | null
           created_at?: string
           id?: string
           importado_em?: string | null
