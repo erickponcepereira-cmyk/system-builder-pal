@@ -81,6 +81,16 @@ CRM (`crm_quadros`/`crm_cartoes`), bot (`bot_fluxos`/`bot_disparos`),
   no Windows). Restaure depois e **nunca commite o arquivo alterado**. Só é preciso para
   regenerar `routeTree.gen.ts` — e não rode `git checkout` nesse arquivo depois do build,
   senão reverte o que acabou de gerar.
+- **`npm run dev` quebra pelo mesmo `mcpPlugin()`**, e mesmo comentando ele o SSR dá 500
+  em **qualquer** rota: `routeTree.gen.ts` importa tudo de forma ansiosa, e quatro pacotes
+  do `package.json` faltam no `node_modules` — os mesmos dos 15 erros da linha de base.
+  Para ver tela, crie stubs locais de `@lovable.dev/email-js`, `@lovable.dev/webhooks-js`,
+  `@react-email/render` e `@react-email/components`, **e apague no fim**: com eles a linha
+  de base deixa de ser 15 e o próximo turno se perde. O Vite cacheia o stub — trocar o
+  conteúdo exige matar o dev e `rm -rf node_modules/.vite`. Enquanto o dev viver ele
+  reescreve `routeTree.gen.ts`; restaurar o arquivo só cola depois de matar o processo.
+- **Tela atrás de login não dá para conferir assim.** O jeito é uma rota descartável em
+  `src/routes/` que monte o componente sem dados — e apagar depois.
 - **O Supabase do MCP não é o do app.** O app é `myqyjifvrlwvesrwubsg`. Para inspecionar
   produção, use a API REST com a chave anônima do `.env`: coluna inexistente → 400,
   tabela inexistente → 404 `PGRST205`, sem permissão → 401/`42501`.
