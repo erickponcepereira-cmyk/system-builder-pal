@@ -41,6 +41,7 @@ import {
   listarAlunosAcademia,
   aplicarModeloTreino,
   criarEventoAcademia,
+  desativarAgente,
   enviarFoto,
   enviarFotoCredencial,
   gerarCodigoAgente,
@@ -1475,6 +1476,7 @@ function CredenciaisSemVinculo({ partnerId, aoVincular }: { partnerId: string; a
 function AgenteAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterAgenteAcademia);
   const gerar = useServerFn(gerarCodigoAgente);
+  const desativar = useServerFn(desativarAgente);
   const vincular = useServerFn(vincularCredencial);
   const buscarAlunos = useServerFn(buscarAlunosParaMensalidade);
   const [loading, setLoading] = useState(true);
@@ -1505,8 +1507,38 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
 
   if (loading || !dados) return <Loader2 className="mx-auto mt-8 h-6 w-6 animate-spin text-aca-acao" />;
 
-  const pareados = dados.agentes.filter((a) => a.pareado_em);
-  const pendentes = dados.agentes.filter((a) => !a.pareado_em && a.codigo_pareamento);
+  // Desativado não é o mesmo que fora do ar. Sem separar, um computador
+  // aposentado aparece em vermelho por falta de contato — e vermelho nesta aba
+  // manda alguém andar até a recepção consertar o que já foi resolvido.
+  const pareados = dados.agentes.filter((a) => a.pareado_em && a.ativo);
+  const desativados = dados.agentes.filter((a) => a.pareado_em && !a.ativo);
+  // Código não usado vale 30 minutos. Sem conferir a validade, um código morto
+  // há semanas segue contando como "aguardando instalação" e faz a recepção
+  // procurar um computador que ninguém instalou.
+  const pendentes = dados.agentes.filter(
+    (a) => !a.pareado_em && a.codigo_pareamento && a.codigo_expira_em
+      && Date.parse(a.codigo_expira_em) > Date.now(),
+  );
+
+  /*
+   * Reinstalar o agente cria pareamento novo e o antigo continua com segredo
+   * válido, então a máquina trocada segue abrindo catraca. Já houve três "PC da
+   * recepcao" vivos ao mesmo tempo. Desligar isso exigia acesso ao banco, que o
+   * dono da academia não tem — por isso o botão.
+   */
+  const desativarEste = async (agenteId: string, nome: string) => {
+    const certeza = window.confirm(
+      `Desativar "${nome}"?\n\nO programa daquele computador perde o acesso na hora: para de baixar quem pode entrar e de subir as entradas.\n\nSe for a máquina em uso na recepção, a catraca para. Use quando o computador foi trocado ou saiu de operação.`,
+    );
+    if (!certeza) return;
+    try {
+      await desativar({ data: { partnerId, agenteId } });
+      toast.success("Computador desativado. O acesso dele foi cortado.");
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao desativar");
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -1574,9 +1606,23 @@ function AgenteAcademia({ partnerId }: { partnerId: string }) {
               </div>
               <Selo>{min === null ? "sem contato" : online ? "online" : `há ${min} min`}</Selo>
             </div>
+            <button
+              type="button"
+              onClick={() => void desativarEste(a.id, a.nome)}
+              className={`mt-1.5 ${BOTAO_TEXTO}`}
+            >
+              Desativar este computador
+            </button>
           </Bloco>
         );
       })}
+
+      {desativados.length > 0 && (
+        <p className={`border-l-2 border-aca-line pl-2 ${NOTA}`}>
+          {desativados.length} computador(es) desativado(s), sem acesso. Ficam no
+          histórico para responder desde quando cada máquina esteve pareada.
+        </p>
+      )}
 
       <CadastrarRostoPelaFoto partnerId={partnerId} />
 

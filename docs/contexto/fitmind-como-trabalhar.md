@@ -47,6 +47,19 @@ checklist de "quem importa este arquivo", as armadilhas de ambiente e as regras 
 **Não duplique essas regras no prompt** — elas já estão em contexto. Mantenha o arquivo
 enxuto: ele custa contexto em toda mensagem.
 
+**O Erick trabalha com duas contas ao mesmo tempo, então o remoto anda enquanto
+você trabalha.** Em 01/09 o `origin/main` ganhou 5 commits em pouco mais de uma
+hora, todos na loja, enquanto esta sessão mexia na vertical de acesso.
+
+**Why:** commitar sem olhar o remoto mistura trabalho de duas frentes e cria
+conflito onde não precisava haver nenhum.
+
+**How to apply:** `git fetch` e `git status -sb` **antes de commitar**, não
+depois. Se o remoto andou, veja em que arquivos (`git diff --name-only
+HEAD...origin/main`) e escolha uma frente que não encoste na outra conta —
+divergir em arquivos diferentes integra limpo; divergir no mesmo arquivo é
+conflito manual em produção.
+
 **Desde 01/09/2026 o contexto mora no repo**, em `docs/contexto/` — este arquivo
 inclusive. Antes ficava só na memória local do assistente, presa a uma máquina.
 Aprendeu algo que vale para a próxima sessão? Edite o arquivo da frente aqui e

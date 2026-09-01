@@ -79,3 +79,34 @@ resposta. Corrigido na 1.10.00.
 Ainda sem rodar no ferro: liberação manual, cadastro de rosto pela câmera do
 leitor (`remoteEnrollFace`), negativa em modo ativo, autostart depois de
 reiniciar o PC e o watchdog nesta máquina.
+
+## 01/09/2026 — desativar computador virou botão, e a aba parou de mentir
+
+O pareamento antigo continuava valendo depois de reinstalar o agente. Isso não
+era detalhe: as **onze** funções que o programa chama exigem
+`ativo AND segredo_hash = ...` (conferido uma a uma no `prosrc`), então o segredo
+de uma máquina aposentada abre catraca até alguém desligar a linha. Já houve três
+"PC da recepcao" vivos ao mesmo tempo, desligados direto no banco — caminho que o
+Erick não tem, porque não existe console do Supabase para ele.
+
+Agora há `desativarAgente` em `academia-teste.functions.ts` e um botão em cada
+computador pareado, com confirmação que diz o que acontece ("se for a máquina em
+uso, a catraca para"). O filtro do update leva `partner_id` além do `id`, então um
+id de agente de outra academia não é desativado por quem só tem acesso a esta —
+conferido com a consulta equivalente, que dá zero atravessando e um na própria.
+**Não apaga a linha**: o histórico é o que responde desde quando cada computador
+teve acesso.
+
+Junto saíram dois estados velhos que a aba mostrava como se fossem de agora:
+
+- **Computador desativado aparecia em vermelho**, porque a lista filtrava por
+  `pareado_em` e não por `ativo`, e sem contato recente o cartão vai para
+  `tom="critico"`. O comentário do próprio arquivo diz que vermelho ali é o único
+  estado que manda alguém andar até a recepção — ou seja, máquina aposentada
+  mandava gente correr à toa. Desativados agora saem numa linha discreta.
+- **Código de pareamento expirado contava como "aguardando instalação".** O
+  código vale 30 minutos; havia um de 15/08 ainda sendo anunciado em 01/09.
+
+Verificado: `tsc --noEmit` limpo, a guarda `ativo` conferida função a função, e o
+filtro por academia provado por consulta. **Não exercitei o botão no navegador** —
+o painel exige login e o dev server tem as armadilhas de sempre.

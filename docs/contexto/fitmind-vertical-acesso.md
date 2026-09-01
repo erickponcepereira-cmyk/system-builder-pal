@@ -256,6 +256,14 @@ pelo mesmo motivo: a pessoa não tem conta na FitMind. A tela
 primeira classe, então o que falta **não é tela nem régua: é conta**. Conciliar
 não abre a porta do Reino; só cadastro abre.
 
+**E ligar essas pessoas é trabalho da academia, não do sistema.** O Erick
+concilia na mão conforme cada uma se cadastra, igual ao que já se faz na Estação
+Funcional. Então o número alto de "sem candidato" **não é pendência de
+desenvolvimento** e não deve voltar como bloqueio a cada sessão: é a fila normal
+de uma operação que começou fora do app. O que cabe ao sistema é a régua ser
+confiável quando a pessoa finalmente aparecer — por isso o CPF entrou como
+desempate.
+
 **O CPF do Reino não salva a conciliação, e vale saber por quê.** Casa apenas
 **1** das 83 — não porque falte CPF na credencial (76 das ativas têm), mas
 porque `profiles.cpf` está preenchido em só **53 de 479** perfis (11%). Telefone

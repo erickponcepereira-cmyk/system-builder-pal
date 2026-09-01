@@ -1868,6 +1868,34 @@ export const gerarCodigoAgente = createServerFn({ method: "POST" })
   });
 
 /**
+ * Corta o acesso de um computador pareado.
+ *
+ * Reinstalar o agente cria pareamento novo e o antigo **continua valendo**: as
+ * onze funções que o programa chama exigem `ativo AND segredo_hash = ...`, então
+ * o segredo de uma máquina aposentada abre catraca até alguém desligar a linha.
+ * Já houve três "PC da recepcao" vivos ao mesmo tempo, desligados direto no
+ * banco — caminho que o dono da academia não tem.
+ *
+ * Não apaga a linha. O histórico é o que responde "desde quando aquele
+ * computador tinha acesso", e apagar destrói a resposta.
+ */
+export const desativarAgente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; agenteId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { error } = await admin
+      .from("academia_agentes")
+      .update({ ativo: false })
+      // O partner_id no filtro não é redundante com o autorizar: ele impede que
+      // um id de agente de OUTRA academia seja desativado por quem só tem acesso
+      // a esta.
+      .eq("id", data.agenteId)
+      .eq("partner_id", data.partnerId);
+    if (error) throw new Error(error.message);
+  });
+
+/**
  * O que existe publicado hoje dos dois programas do PC da academia.
  *
  * Devolve só nome de arquivo e versão — nunca o conteúdo. O conteúdo sai um
