@@ -18271,6 +18271,13 @@ export type Database = {
         Args: { _profile_id: string; _recalc?: boolean }
         Returns: Json
       }
+      wallet_statement_bulk: {
+        Args: { _profile_ids: string[] }
+        Returns: {
+          profile_id: string
+          statement: Json
+        }[]
+      }
       wallets_overview: { Args: never; Returns: Json }
     }
     Enums: {
