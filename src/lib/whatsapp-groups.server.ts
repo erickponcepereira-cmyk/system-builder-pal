@@ -1,5 +1,81 @@
 import { resolveGroupUrl } from "./whatsapp-groups.shared";
 import type { WhatsappGroup, NetworkWhatsappGroup } from "./whatsapp-groups.shared";
+import { COMMUNITY_POLICY_VERSION } from "./ugc.constants";
+
+const ALLOWED_WHATSAPP_HOSTNAMES = new Set([
+  "chat.whatsapp.com",
+  "wa.me",
+  "api.whatsapp.com",
+]);
+
+const URL_SCHEME_RE = /^[a-z][a-z\d+.-]*:/i;
+const PHONE_INPUT_RE = /^\+?[\d\s().-]+$/;
+
+export type NormalizedWhatsappTarget = {
+  inviteUrl: string | null;
+  phone: string | null;
+};
+
+/**
+ * Normaliza um link/número antes de persistir em `whatsapp_groups`.
+ *
+ * A comparação também é feita contra a autoridade original para não aceitar
+ * portas explícitas, credenciais, subdomínios parecidos ou hosts ofuscados que
+ * o parser de URL poderia normalizar silenciosamente.
+ */
+export function normalizeWhatsappTarget(rawTarget: string): NormalizedWhatsappTarget {
+  const target = rawTarget.trim();
+  const hasControlCharacter = [...target].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 0x1f || codePoint === 0x7f;
+  });
+  if (!target || hasControlCharacter) {
+    throw new Error("Informe um link válido do WhatsApp ou um número com DDD.");
+  }
+
+  const looksLikeUrl = URL_SCHEME_RE.test(target) || target.startsWith("//");
+  if (looksLikeUrl) {
+    let parsed: URL;
+    try {
+      parsed = new URL(target);
+    } catch {
+      throw new Error("Informe um link válido do WhatsApp.");
+    }
+
+    if (parsed.protocol !== "https:") {
+      throw new Error("O link do WhatsApp deve usar HTTPS.");
+    }
+    if (parsed.username || parsed.password) {
+      throw new Error("O link do WhatsApp não pode conter credenciais.");
+    }
+
+    const authority = target.slice(target.indexOf("//") + 2).split(/[/?#]/, 1)[0];
+    const normalizedAuthority = authority.toLowerCase();
+    const normalizedHostname = parsed.hostname.toLowerCase();
+
+    if (authority.includes(":") || parsed.port) {
+      throw new Error("O link do WhatsApp não pode informar uma porta.");
+    }
+    if (
+      !ALLOWED_WHATSAPP_HOSTNAMES.has(normalizedHostname)
+      || normalizedAuthority !== normalizedHostname
+    ) {
+      throw new Error("Use somente um link oficial do WhatsApp.");
+    }
+
+    parsed.hash = "";
+    return { inviteUrl: parsed.toString(), phone: null };
+  }
+
+  if (!PHONE_INPUT_RE.test(target)) {
+    throw new Error("Informe o número com DDD ou um link oficial do WhatsApp.");
+  }
+  const digits = target.replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 15) {
+    throw new Error("Informe o número com DDD ou o link do grupo.");
+  }
+  return { inviteUrl: null, phone: digits };
+}
 
 /** Verifica se o usuário é dono (ou equipe) do parceiro/profissional informado. */
 export async function assertGroupOwner(userId: string, ownerKind: string, ownerId: string) {
@@ -76,23 +152,19 @@ export async function writeOwnGroup(
     isActive: boolean;
   },
 ): Promise<WhatsappGroup> {
-  const { supabaseAdmin } = await assertGroupOwner(userId, input.ownerKind, input.ownerId);
+  const { supabaseAdmin, profileId } = await assertGroupOwner(userId, input.ownerKind, input.ownerId);
 
-  const alvo = input.target.trim();
-  let inviteUrl: string | null = null;
-  let phone: string | null = null;
-  if (/^https?:\/\//i.test(alvo)) {
-    if (!/chat\.whatsapp\.com|wa\.me|whatsapp\.com/i.test(alvo)) {
-      throw new Error("Informe um link de convite do WhatsApp (chat.whatsapp.com) ou um número.");
-    }
-    inviteUrl = alvo;
-  } else {
-    const digits = alvo.replace(/\D/g, "");
-    if (digits.length < 10 || digits.length > 15) {
-      throw new Error("Informe o número com DDD ou o link do grupo.");
-    }
-    phone = digits;
+  const { data: policyAcceptance } = await supabaseAdmin
+    .from("ugc_policy_acceptances" as never)
+    .select("id" as never)
+    .eq("profile_id" as never, profileId as never)
+    .eq("policy_version" as never, COMMUNITY_POLICY_VERSION as never)
+    .maybeSingle();
+  if (!policyAcceptance) {
+    throw new Error("Aceite as Diretrizes da Comunidade antes de publicar um grupo.");
   }
+
+  const { inviteUrl, phone } = normalizeWhatsappTarget(input.target);
 
   const payload: Record<string, unknown> = {
     owner_kind: input.ownerKind,
@@ -141,6 +213,16 @@ export async function readNetworkGroups(userId: string): Promise<NetworkWhatsapp
     .maybeSingle();
   const profileId = (profile as { id?: string } | null)?.id;
   if (!profileId) return [];
+
+  const { data: blockedRows } = await supabaseAdmin
+    .from("ugc_blocks" as never)
+    .select("blocked_whatsapp_group_id" as never)
+    .eq("blocker_profile_id" as never, profileId as never);
+  const blockedGroupIds = new Set(
+    ((blockedRows as unknown as Array<{ blocked_whatsapp_group_id: string | null }>) || [])
+      .map((row) => row.blocked_whatsapp_group_id)
+      .filter((id): id is string => !!id),
+  );
 
   const coachIds = new Set<string>();
   const partnerIds = new Set<string>();
@@ -192,7 +274,8 @@ export async function readNetworkGroups(userId: string): Promise<NetworkWhatsapp
     .eq("is_active", true)
     .or(filtros.join(","));
 
-  const lista = (rows as Array<Record<string, string | null>>) || [];
+  const lista = ((rows as Array<Record<string, string | null>>) || [])
+    .filter((row) => !blockedGroupIds.has(String(row["id"])));
   if (lista.length === 0) return [];
 
   const coachOwners = lista.map((r) => r["owner_coach_id"]).filter(Boolean) as string[];

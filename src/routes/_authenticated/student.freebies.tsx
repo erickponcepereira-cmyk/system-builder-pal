@@ -15,6 +15,7 @@ import { useFreebieUsage } from "@/lib/useFreebieUsage";
 import { getShareOrigin } from "@/lib/auth-redirects";
 import { loadPartnersById } from "@/lib/partner-public";
 import { InactiveCardModal } from "@/components/student/InactiveCardModal";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
 
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
@@ -93,7 +94,7 @@ type ProfessionalFreeProduct = {
   section_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
-  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null; bio?: string | null } | null } | null;
+  coaches: { specialty_key: string | null; profiles: { id: string; name: string | null; avatar_url: string | null; bio?: string | null } | null } | null;
 };
 
 type StoreSection = { id: string; name: string };
@@ -215,7 +216,7 @@ function StudentFreebies() {
         .order("created_at" as never, { ascending: false }),
       supabase
         .from("professional_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,coach_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,section_id,category_id,subcategory_id,coaches!professional_products_coach_id_fkey(specialty_key,profiles!coaches_profile_id_fkey(name,avatar_url,bio))" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,coach_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,section_id,category_id,subcategory_id,coaches!professional_products_coach_id_fkey(specialty_key,profiles!coaches_profile_id_fkey(id,name,avatar_url,bio))" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_professional" as never, true as never)
@@ -851,6 +852,16 @@ function StudentFreebies() {
                 <p className="text-base font-bold text-white truncate">{selectedPro.coaches?.profiles?.name || "Profissional"}</p>
                 {selectedPro.coaches?.specialty_key && <p className="text-xs text-primary">{selectedPro.coaches.specialty_key}</p>}
               </div>
+              {selectedPro.coaches?.profiles?.id && (
+                <UgcActionsMenu
+                  targetKind="profile"
+                  targetId={selectedPro.coaches.profiles.id}
+                  blockTarget={{ kind: "profile", id: selectedPro.coaches.profiles.id }}
+                  blockLabel={`Bloquear ${selectedPro.coaches.profiles.name || "profissional"}`}
+                  onBlocked={() => setSelectedPro(null)}
+                  className="text-white"
+                />
+              )}
               <button type="button" onClick={() => setSelectedPro(null)} className="text-white/60"><X className="h-5 w-5" /></button>
             </div>
             {selectedPro.coaches?.profiles?.bio && (

@@ -5,6 +5,8 @@ import { Loader2, MessageCircle, Save } from "lucide-react";
 import { getMyWhatsappGroup, saveMyWhatsappGroup } from "@/lib/whatsapp-groups.functions";
 import { resolveGroupUrl } from "@/lib/whatsapp-groups.shared";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { CommunityPolicyDialog } from "@/components/ugc/CommunityPolicyDialog";
+import { useCommunityPolicy } from "@/lib/ugc";
 
 type Props = {
   ownerKind: "partner" | "professional";
@@ -16,6 +18,7 @@ type Props = {
 export function WhatsappGroupSettings({ ownerKind, ownerId, ownerName }: Props) {
   const carregar = useServerFn(getMyWhatsappGroup);
   const salvar = useServerFn(saveMyWhatsappGroup);
+  const communityPolicy = useCommunityPolicy();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,7 @@ export function WhatsappGroupSettings({ ownerKind, ownerId, ownerName }: Props) 
     : resolveGroupUrl(null, alvo.trim());
 
   const onSalvar = async () => {
+    if (!communityPolicy.requireAccepted()) return;
     if (nome.trim().length < 2) { toast.error("Informe o nome do grupo."); return; }
     if (!alvo.trim()) { toast.error("Informe o link do grupo ou o número."); return; }
     setSaving(true);
@@ -147,6 +151,12 @@ export function WhatsappGroupSettings({ ownerKind, ownerId, ownerName }: Props) 
           />
         </div>
       )}
+      <CommunityPolicyDialog
+        open={communityPolicy.dialogOpen}
+        onOpenChange={communityPolicy.setDialogOpen}
+        onAccepted={communityPolicy.markAccepted}
+        unavailableReason={communityPolicy.checkError}
+      />
     </div>
   );
 }

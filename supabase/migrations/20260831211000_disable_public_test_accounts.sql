@@ -1,4 +1,4 @@
--- Conta de teste nunca pode ser criada por domínio arbitrário nem por visitante.
+-- Release batch: contas de teste nunca podem ser criadas por domínio arbitrário nem por visitante.
 CREATE OR REPLACE FUNCTION public.is_test_email(_email text)
 RETURNS boolean
 LANGUAGE sql

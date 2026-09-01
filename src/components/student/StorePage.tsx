@@ -591,6 +591,7 @@ function StorePageWeb({ coachMode = false, hasUpline = false, audience, requeste
       // Fallback: use profile.phone when no public whatsapp is set
       const { data: profPhone } = await supabase.from("profiles").select("phone").eq("id", coach.profile_id).maybeSingle();
       setDetailProfessional({
+        profileId: coach.profile_id,
         name: (profile as any).name || "Profissional",
         avatarUrl: (profile as any).avatar_url || null,
         headline: p.headline ?? null,

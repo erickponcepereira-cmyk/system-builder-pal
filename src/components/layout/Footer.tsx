@@ -14,6 +14,7 @@ export function Footer() {
           <a href="/termos" className="hover:text-foreground">Termos de Uso</a>
           <a href="/termos-compra" className="hover:text-foreground">Termos de Compra</a>
           <a href="/privacidade" className="hover:text-foreground">Privacidade</a>
+          <a href="/diretrizes-da-comunidade" className="hover:text-foreground">Comunidade</a>
         </div>
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} FitMind Club. Todos os direitos reservados.

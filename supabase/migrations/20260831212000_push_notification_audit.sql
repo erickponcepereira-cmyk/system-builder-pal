@@ -1,3 +1,4 @@
+-- Release batch: audited push delivery.
 CREATE TABLE IF NOT EXISTS public.push_notification_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_user_id UUID NOT NULL,

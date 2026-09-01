@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Save, Plus, Trash2, GripVertical, Loader2, Camera, Globe, Instagram } from "lucide-react";
 import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
+import { CommunityPolicyDialog } from "@/components/ugc/CommunityPolicyDialog";
+import { useCommunityPolicy } from "@/lib/ugc";
 
 
 interface Props { coachId: string; profileId: string }
@@ -35,6 +37,7 @@ const EMPTY_PROFILE: PublicProfile = {
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
+  const communityPolicy = useCommunityPolicy();
   const [tab, setTab] = useState<"profile" | "questions">("profile");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileBio, setProfileBio] = useState("");
@@ -84,6 +87,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
   }, [coachId, profileId]);
 
   const uploadAvatar = async (blob: Blob) => {
+    if (!communityPolicy.requireAccepted()) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
     const path = `${user.id}/${Date.now()}-avatar.jpg`;
@@ -99,6 +103,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
   };
 
   const uploadCover = async (blob: Blob) => {
+    if (!communityPolicy.requireAccepted()) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
     const path = `${user.id}/cover-${Date.now()}.jpg`;
@@ -112,6 +117,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
 
   const saveProfile = async () => {
+    if (!communityPolicy.requireAccepted()) return;
     setSaving(true);
     const { data: r1, error: e1 } = await supabase.from("profiles").update({ bio: profileBio.slice(0, 2000) }).eq("id", profileId).select("id").maybeSingle();
     const { data: r2, error: e2 } = await supabase
@@ -347,6 +353,12 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
       <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={uploadCover} />
+      <CommunityPolicyDialog
+        open={communityPolicy.dialogOpen}
+        onOpenChange={communityPolicy.setDialogOpen}
+        onAccepted={communityPolicy.markAccepted}
+        unavailableReason={communityPolicy.checkError}
+      />
     </>
   );
 }

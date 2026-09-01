@@ -6,7 +6,7 @@ Este documento descreve a implantação operacional do processador de exclusão 
 
 - Fila e estado de processamento: `account_deletion_requests`.
 - Auditoria sanitizada: `account_deletion_attempts`.
-- Migration: `20260829235900_account_deletion_processor.sql`.
+- Migration: `20260831215900_account_deletion_processor.sql`.
 - Worker: `src/lib/account-deletion-processor.server.ts`.
 - Endpoint privado: `POST /api/public/hooks/account-deletion`.
 - Congelamento/claim atômico de cobranças: funções `account_deletion_freeze_billing` e `account_deletion_claim_recurring_charge`.
@@ -16,10 +16,10 @@ O endpoint só aceita um bearer secret dedicado com pelo menos 32 caracteres. El
 ## Ordem obrigatória de implantação
 
 1. Criar backup verificável do banco e ensaiar a restauração.
-2. Confirmar que o histórico remoto de migrations corresponde ao repositório e aplicar, na ordem dos nomes, todas as migrations pendentes da `main` até `20260829033724_f5eff207-f726-4fd8-a7f7-1142cc68c862.sql`.
-3. Aplicar, também na ordem dos nomes, as migrations preparatórias desta release: `20260829230000_account_deletion_requests.sql`, `20260829231000_disable_public_test_accounts.sql`, `20260829232000_push_notification_audit.sql` e `20260829233000_secure_public_payment_links.sql`.
+2. Confirmar que o histórico remoto de migrations corresponde ao repositório e aplicar, na ordem dos nomes, todas as migrations pendentes da `main` até `20260831200000_reserva_de_aula_e_qr_da_mensalidade.sql`.
+3. Aplicar, também na ordem dos nomes, as migrations preparatórias desta release: `20260831210000_account_deletion_requests.sql`, `20260831211000_disable_public_test_accounts.sql`, `20260831212000_push_notification_audit.sql`, `20260831213000_secure_public_payment_links.sql` e `20260831214000_ugc_moderation.sql`.
 4. Pausar temporariamente o cron de recorrências e colocar criação/cancelamento de recorrências em manutenção.
-5. Aplicar `20260829235900_account_deletion_processor.sql` em staging. Todo o conjunto foi colocado depois da base Lovable atual para não ser tratado como migration retroativa. Ela torna as gravações de recorrência exclusivas do backend; por isso migration e backend devem entrar na mesma janela.
+5. Aplicar `20260831215900_account_deletion_processor.sql` em staging. Todo o conjunto foi colocado depois da base Lovable atual para não ser tratado como migration retroativa. Ela depende das tabelas UGC da etapa anterior e torna as gravações de recorrência exclusivas do backend; por isso migrations e backend devem entrar na mesma janela.
 6. Publicar imediatamente o backend que contém o worker e o claim atômico de recorrências.
 7. Configurar `ACCOUNT_DELETION_PROCESSOR_SECRET` e `INTERNAL_CRON_SECRET` diretamente no ambiente do backend.
 8. Guardar os mesmos valores no secret manager/Vault usado pelo agendador. Nunca inserir valores em migration, Git, log ou chat.
@@ -61,7 +61,7 @@ Antes de reprocessar, resolver o código registrado em `last_error_code`:
 - As recorrências são congeladas atomicamente antes de a identidade ser banida; o cron reserva cada cobrança com compare-and-set e não pode atravessar esse congelamento.
 - Preapprovals e cartões são confirmados como removidos no Mercado Pago antes do vínculo local.
 - O grant Google Calendar é revogado antes da remoção do token local.
-- O manifesto de arquivos é paginado; Storage é varrido e verificado antes e depois da remoção do Auth.
+- O manifesto de arquivos é paginado; Storage, inclusive evidências UGC privadas, é varrido e verificado antes e depois da remoção do Auth.
 - Dados de saúde, localização e mensagens do titular são apagados explicitamente.
 - Pedidos e totais financeiros são preservados sem nome, documento, e-mail, endereço, payload bruto ou vínculo com o Auth original.
 - Perfil, aluno, coach e parceiro viram registros-túmulo anonimizados para preservar chaves históricas sem manter acesso.
@@ -93,5 +93,8 @@ Antes de reprocessar, resolver o código registrado em `last_error_code`:
 20. Duas execuções simultâneas nunca processam a mesma lease; operações longas renovam o heartbeat.
 21. `account_deletion_attempts` não contém dados pessoais.
 22. Após aplicar a migration, recorrências, cartões e login Google continuam funcionando nos fluxos normais.
+23. Grupos de WhatsApp pertencentes ao parceiro/profissional excluído são removidos e deixam de expor telefone ou convite.
+24. Aceites, bloqueios e recursos UGC são eliminados; denúncias e ações preservadas ficam sem vínculo pessoal nem campos públicos do perfil.
+25. Arquivos em `ugc-evidence` vinculados ao titular aparecem no manifesto e são removidos antes da conclusão.
 
 Somente depois desse checklist o cron de produção deve ser ativado.

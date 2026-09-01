@@ -41,6 +41,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/subscriptions", label: "Mensalidades", icon: Repeat, perm: "payments" },
 
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
+  { to: "/admin/moderation", label: "Moderação", icon: ShieldCheck, perm: "reports" },
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
   { to: "/admin/banners", label: "Banners da loja", icon: Image, perm: "store" },
@@ -93,8 +94,6 @@ export function AdminShell() {
     let active = true;
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (typeof window !== "undefined") {
-      }
       if (!session?.user) {
         if (active) navigate({ to: "/login" });
         return;

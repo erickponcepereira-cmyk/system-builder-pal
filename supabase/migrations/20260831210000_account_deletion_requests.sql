@@ -1,3 +1,4 @@
+-- Release batch: account deletion request lifecycle.
 CREATE TABLE IF NOT EXISTS public.account_deletion_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,

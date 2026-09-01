@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { ModalShell } from "@/components/ui/ModalShell";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
 
 
 export interface ProductDetail {
@@ -57,6 +58,7 @@ const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export interface ProfessionalCard {
+  profileId: string;
   name: string;
   avatarUrl?: string | null;
   headline?: string | null;
@@ -386,9 +388,16 @@ export function ProductDetailModal({
 
           {professional && (
             <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Sobre o profissional
-              </p>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sobre o profissional</p>
+                <UgcActionsMenu
+                  targetKind="profile"
+                  targetId={professional.profileId}
+                  blockTarget={{ kind: "profile", id: professional.profileId }}
+                  blockLabel={`Bloquear ${professional.name}`}
+                  onBlocked={onClose}
+                />
+              </div>
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
                   {professional.avatarUrl ? (

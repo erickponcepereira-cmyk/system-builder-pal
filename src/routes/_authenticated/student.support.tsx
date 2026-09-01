@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, HelpCircle, MessageCircle } from "lucide-react";
+import { ChevronLeft, HelpCircle, MessageCircle, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappUrl } from "@/lib/whatsapp";
 
@@ -60,6 +60,14 @@ function StudentSupportPage() {
           </div>
         </div>
       </section>
+
+      <Link
+        to="/student/safety"
+        className="flex items-center gap-3 rounded-2xl border border-white/5 bg-[#1A1A1A] p-4"
+      >
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><ShieldCheck className="h-5 w-5 text-primary" /></div>
+        <div className="flex-1"><p className="text-sm font-bold text-white">Central de Segurança</p><p className="text-[11px] text-white/50">Denúncias, bloqueios, medidas e recursos</p></div>
+      </Link>
 
       <section className="grid gap-3">
         {admins.map((admin) => {

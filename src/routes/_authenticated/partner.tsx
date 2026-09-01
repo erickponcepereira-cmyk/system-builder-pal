@@ -48,6 +48,8 @@ import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanne
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
 import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
+import { CommunityPolicyDialog } from "@/components/ugc/CommunityPolicyDialog";
+import { useCommunityPolicy } from "@/lib/ugc";
 
 import { carregarUnidades, escolherUnidadeAtiva, lembrarUnidadeAtiva, pode, type Permissao, type Unidade } from "@/lib/unidades-parceiro";
 import { getShareOrigin } from "@/lib/auth-redirects";
@@ -1587,8 +1589,10 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
   const [caption, setCaption] = useState("");
   const [pending, setPending] = useState<string | null>(null);
   const { cropToBlob } = useImageCrop();
+  const communityPolicy = useCommunityPolicy();
 
   const upload = async (file: File) => {
+    if (!communityPolicy.requireAccepted()) return;
     const cropped = await cropToBlob(file, { title: "Ajustar imagem do post" });
     if (!cropped) return;
     setUploading(true);
@@ -1605,6 +1609,7 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
 
 
   const publish = async () => {
+    if (!communityPolicy.requireAccepted()) return;
     if (!pending) return;
     const { error } = await supabase.from("partner_posts" as never).insert({ partner_id: partner.id, image_url: pending, caption } as never);
     if (error) return toast.error(error.message);
@@ -1634,7 +1639,16 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
           <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
             {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
             <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
-            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} disabled={posts.length >= 30} />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onClick={(event) => {
+                if (!communityPolicy.requireAccepted()) event.preventDefault();
+              }}
+              onChange={e => e.target.files?.[0] && upload(e.target.files[0])}
+              disabled={posts.length >= 30}
+            />
           </label>
         )}
       </div>
@@ -1646,6 +1660,12 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
           </div>
         ))}
       </div>
+      <CommunityPolicyDialog
+        open={communityPolicy.dialogOpen}
+        onOpenChange={communityPolicy.setDialogOpen}
+        onAccepted={communityPolicy.markAccepted}
+        unavailableReason={communityPolicy.checkError}
+      />
     </div>
   );
 }

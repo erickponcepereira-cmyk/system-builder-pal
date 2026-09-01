@@ -68,6 +68,7 @@ function SecurityPage() {
             <li><Link to="/privacidade" className="text-primary hover:underline">Política de Privacidade</Link></li>
             <li><Link to="/termos" className="text-primary hover:underline">Termos de Uso</Link></li>
             <li><Link to="/termos-compra" className="text-primary hover:underline">Termos de Compra</Link></li>
+            <li><Link to="/diretrizes-da-comunidade" className="text-primary hover:underline">Diretrizes da Comunidade</Link></li>
           </ul>
         </Section>
 

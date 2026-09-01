@@ -1,9 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Send, Shield, Trash2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useImageCrop } from "@/components/ui/ImageCropProvider";
+import { CommunityPolicyDialog } from "@/components/ugc/CommunityPolicyDialog";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
+import { useCommunityPolicy } from "@/lib/ugc";
 
 
 export const Route = createFileRoute("/_authenticated/student/group")({
@@ -36,13 +39,14 @@ function GroupPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const { cropToBlob } = useImageCrop();
+  const communityPolicy = useCommunityPolicy();
 
 
   const canSend = useMemo(() => !!group && !!profile && !sending, [group, profile, sending]);
 
   const signMedia = async (rows: MessageRow[]) => {
     const signed = await Promise.all(rows.map(async (message) => {
-      if (!message.media_url) return { ...message, signedMediaUrl: null };
+      if (!message.media_url || message.is_deleted) return { ...message, signedMediaUrl: null };
       const { data } = await supabase.storage.from("group-media").createSignedUrl(message.media_url, 60 * 60);
       return { ...message, signedMediaUrl: data?.signedUrl || null };
     }));
@@ -50,9 +54,9 @@ function GroupPage() {
   };
 
   const hydrateMessages = async (rows: MessageRow[]) => {
-    const profileIds = [...new Set(rows.map((row) => row.sender_profile_id))];
-    const { data: profiles } = profileIds.length
-      ? await supabase.from("profiles").select("id,name,photo_url,role").in("id", profileIds)
+    const groupId = rows[0]?.group_id;
+    const { data: profiles } = groupId
+      ? await supabase.rpc("ugc_group_public_profiles" as never, { _group_id: groupId } as never)
       : { data: [] };
     const profileMap = new Map(((profiles as ProfileLite[]) || []).map((item) => [item.id, item]));
     const signed = await signMedia(rows);
@@ -94,8 +98,9 @@ function GroupPage() {
 
       const { data: memberships } = await supabase
         .from("group_members")
-        .select("group_id")
+        .select("group_id,is_banned")
         .eq("profile_id", profileData.id)
+        .eq("is_banned", false)
         .limit(1);
 
       let selectedGroupId = memberships?.[0]?.group_id as string | undefined;
@@ -141,6 +146,7 @@ function GroupPage() {
   }, [group?.id]);
 
   const sendMessage = async (mediaPath?: string, mediaType?: string) => {
+    if (!communityPolicy.requireAccepted()) return;
     if (!canSend || (!draft.trim() && !mediaPath) || !profile || !group) return;
     setSending(true);
     const content = draft.trim() || null;
@@ -153,10 +159,15 @@ function GroupPage() {
       media_type: mediaType || null,
     } as never);
     setSending(false);
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message.includes("community guidelines")
+        ? "Aceite as Diretrizes da Comunidade antes de publicar."
+        : error.message);
+    }
   };
 
   const uploadMedia = async (file: File) => {
+    if (!communityPolicy.requireAccepted()) return;
     if (!group || !profile) return;
     if (!file.type.startsWith("image/")) return toast.error("Envie uma imagem.");
     const cropped = await cropToBlob(file, { title: "Ajustar imagem" });
@@ -172,7 +183,12 @@ function GroupPage() {
 
 
   const deleteMessage = async (message: MessageView) => {
-    const { error } = await supabase.from("group_messages").update({ is_deleted: true, content: null } as never).eq("id", message.id);
+    const { error } = await supabase.from("group_messages").update({
+      is_deleted: true,
+      content: null,
+      media_url: null,
+      media_type: null,
+    } as never).eq("id", message.id);
     if (error) toast.error(error.message);
   };
 
@@ -197,6 +213,13 @@ function GroupPage() {
           <p className="truncate text-sm font-bold text-foreground">{group.name}</p>
           <p className="text-[11px] text-muted-foreground">{memberCount} participantes • mensagens ao vivo</p>
         </div>
+        <Link
+          to="/student/safety"
+          aria-label="Central de segurança"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+        >
+          <Shield className="h-5 w-5" />
+        </Link>
       </header>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
@@ -218,6 +241,15 @@ function GroupPage() {
                 <div className="mt-1 flex items-center justify-between gap-3">
                   <p className={`text-[9px] ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{message.created_at ? new Date(message.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
                   {isMine && !message.is_deleted && <button onClick={() => deleteMessage(message)} className="opacity-60 hover:opacity-100"><Trash2 className="h-3 w-3" /></button>}
+                  {!isMine && !message.is_deleted && (
+                    <UgcActionsMenu
+                      targetKind="group_message"
+                      targetId={message.id}
+                      blockTarget={{ kind: "profile", id: message.sender_profile_id }}
+                      blockLabel={`Bloquear ${message.sender?.name || "participante"}`}
+                      onBlocked={() => setMessages((current) => current.filter((item) => item.sender_profile_id !== message.sender_profile_id))}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -228,13 +260,22 @@ function GroupPage() {
       <div className="border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2 rounded-full bg-muted py-1.5 pl-4 pr-2">
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadMedia(e.target.files[0])} />
-          <button onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-foreground"><ImageIcon className="h-5 w-5" /></button>
+          <button
+            onClick={() => communityPolicy.requireAccepted() && fileInputRef.current?.click()}
+            className="text-muted-foreground hover:text-foreground"
+          ><ImageIcon className="h-5 w-5" /></button>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Mensagem..." className="flex-1 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground" />
           <button disabled={!draft.trim() || sending} onClick={() => sendMessage()} className="flex h-9 w-9 items-center justify-center rounded-full bg-primary disabled:opacity-50">
             {sending ? <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" /> : <Send className="h-4 w-4 text-primary-foreground" />}
           </button>
         </div>
       </div>
+      <CommunityPolicyDialog
+        open={communityPolicy.dialogOpen}
+        onOpenChange={communityPolicy.setDialogOpen}
+        onAccepted={communityPolicy.markAccepted}
+        unavailableReason={communityPolicy.checkError}
+      />
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag, Ticket, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CouponModal } from "@/components/student/CouponModal";
 import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
 
 
 export const Route = createFileRoute("/_authenticated/student/partners/$partnerId")({
@@ -33,6 +34,7 @@ function formatBenefitWindow(start?: string | null, end?: string | null) {
 
 function PartnerProfilePage() {
   const { partnerId } = Route.useParams();
+  const navigate = useNavigate();
   const [partner, setPartner] = useState<Partner | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -92,6 +94,14 @@ function PartnerProfilePage() {
           <h2 className="font-bold text-white truncate">{partner.fantasy_name}</h2>
           {(partner.city || partner.state) && <p className="text-[11px] text-white/40 flex items-center gap-1"><MapPin className="h-3 w-3" /> {[partner.city, partner.state].filter(Boolean).join(" / ")}</p>}
         </div>
+        <UgcActionsMenu
+          targetKind="partner"
+          targetId={partner.id}
+          blockTarget={{ kind: "partner", id: partner.id }}
+          blockLabel={`Bloquear ${partner.fantasy_name}`}
+          onBlocked={() => navigate({ to: "/student/partners" })}
+          className="text-white"
+        />
       </div>
 
       <div className="px-4 mt-3 flex gap-2 flex-wrap">
@@ -209,6 +219,14 @@ function PartnerProfilePage() {
               {posts.map((post) => (
                 <div key={post.id} className="aspect-square relative group">
                   <img src={post.image_url} alt={post.caption || ""} className="h-full w-full object-cover rounded" />
+                  <UgcActionsMenu
+                    targetKind="partner_post"
+                    targetId={post.id}
+                    blockTarget={{ kind: "partner", id: partner.id }}
+                    blockLabel={`Bloquear ${partner.fantasy_name}`}
+                    onBlocked={() => navigate({ to: "/student/partners" })}
+                    className="absolute right-1 top-1 z-20 text-white"
+                  />
                   {post.caption && (
                     <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition flex items-center justify-center p-2 rounded">
                       <p className="text-[10px] text-white text-center line-clamp-4"><ImageIcon className="h-3 w-3 inline mr-1" />{post.caption}</p>

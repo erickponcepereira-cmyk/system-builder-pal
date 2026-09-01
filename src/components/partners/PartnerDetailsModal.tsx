@@ -13,6 +13,7 @@ import {
   reviewPartnerProduct,
 } from "@/lib/partner-approvals.functions";
 import { maskDocumentSensitive } from "@/lib/masks";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
 
 type Tab = "overview" | "products" | "timeline" | "collaborators";
 const allTabs: Tab[] = ["overview", "products", "timeline", "collaborators"];
@@ -199,6 +200,14 @@ export function PartnerDetailsModal({
                       <Globe className="h-3.5 w-3.5" /> Site
                     </a>
                   )}
+                  <UgcActionsMenu
+                    targetKind="partner"
+                    targetId={partnerId}
+                    blockTarget={{ kind: "partner", id: partnerId }}
+                    blockLabel={`Bloquear ${data.partner.fantasy_name}`}
+                    onBlocked={onClose}
+                    className="ml-auto text-white"
+                  />
                 </div>
               )}
 
@@ -339,6 +348,16 @@ export function PartnerDetailsModal({
                       {posts.map((post) => (
                         <div key={post.id} className="relative aspect-square group">
                           <img src={post.image_url} alt={post.caption || ""} className="h-full w-full object-cover rounded" />
+                          {readOnly && (
+                            <UgcActionsMenu
+                              targetKind="partner_post"
+                              targetId={post.id}
+                              blockTarget={{ kind: "partner", id: partnerId }}
+                              blockLabel={`Bloquear ${data.partner.fantasy_name}`}
+                              onBlocked={onClose}
+                              className="absolute right-1 top-1 z-20 text-white"
+                            />
+                          )}
                           {post.caption && (
                             <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition flex items-center justify-center p-2 rounded">
                               <p className="text-[10px] text-white text-center line-clamp-4">{post.caption}</p>

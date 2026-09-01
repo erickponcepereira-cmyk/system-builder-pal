@@ -28,6 +28,8 @@ export function NetworkWhatsappGroups({ className }: { className?: string }) {
           title={g.name}
           description={g.description}
           badge={g.ownerName}
+          ugcGroupId={g.id}
+          onBlocked={() => setGrupos((current) => current.filter((item) => item.id !== g.id))}
         />
       ))}
     </div>

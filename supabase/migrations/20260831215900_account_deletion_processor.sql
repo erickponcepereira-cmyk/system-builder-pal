@@ -1,4 +1,4 @@
--- Safe, retryable account-deletion processor.
+-- Release batch: safe, retryable account-deletion processor.
 --
 -- The legacy admin_purge_user_dependents function is intentionally NOT used:
 -- it deletes required-FK rows generically and can remove financial history or
@@ -866,6 +866,7 @@ DECLARE
   v_user_id uuid;
   v_profile_id uuid;
   v_student_ids uuid[] := ARRAY[]::uuid[];
+  v_partner_ids uuid[] := ARRAY[]::uuid[];
 BEGIN
   IF auth.role() <> 'service_role' THEN
     RAISE EXCEPTION 'service_role required';
@@ -888,10 +889,15 @@ BEGIN
   FROM public.students s
   WHERE s.profile_id = v_profile_id;
 
+  SELECT COALESCE(array_agg(p.id), ARRAY[]::uuid[])
+  INTO v_partner_ids
+  FROM public.partners p
+  WHERE p.profile_id = v_profile_id;
+
   RETURN QUERY
   SELECT DISTINCT o.bucket_id::text, o.name::text
   FROM storage.objects o
-  WHERE o.bucket_id IN ('avatars', 'evolution-photos', 'food-photos', 'group-media')
+  WHERE o.bucket_id IN ('avatars', 'evolution-photos', 'food-photos', 'group-media', 'store-images', 'ugc-evidence')
     AND (
       o.owner = v_user_id
       OR (storage.foldername(o.name))[1] = v_user_id::text
@@ -914,6 +920,31 @@ BEGIN
       OR EXISTS (
         SELECT 1 FROM public.group_messages gm
         WHERE gm.sender_profile_id = v_profile_id AND gm.media_url = o.name
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.ugc_reports ur
+        WHERE ur.subject_profile_id = v_profile_id
+          AND ur.evidence_snapshot->>'media_path' = o.name
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM public.ugc_media_jobs uj
+        JOIN public.ugc_reports ur ON ur.id = uj.report_id
+        WHERE (
+            ur.subject_profile_id = v_profile_id
+            OR ur.subject_partner_id = ANY(v_partner_ids)
+          )
+          AND uj.evidence_bucket = o.bucket_id
+          AND uj.evidence_path = o.name
+      )
+      OR (
+        o.bucket_id = 'store-images'
+        AND (storage.foldername(o.name))[1] = 'partners'
+        AND EXISTS (
+          SELECT 1 FROM unnest(v_partner_ids) AS u(pid)
+          WHERE (storage.foldername(o.name))[2] = u.pid::text
+        )
+        AND (storage.foldername(o.name))[3] = 'posts'
       )
     )
   ORDER BY o.bucket_id, o.name
@@ -1045,6 +1076,79 @@ BEGIN
       is_deleted = true,
       deleted_by = NULL
   WHERE sender_profile_id = v_profile_id;
+
+  -- Community safety records: remove user preferences/acceptances, anonymize
+  -- identity links and free-form text, while retaining the minimum immutable
+  -- moderation evidence needed to investigate abuse and defend decisions.
+  DELETE FROM public.ugc_media_jobs
+  WHERE report_id IN (
+      SELECT ur.id FROM public.ugc_reports ur
+      WHERE ur.reporter_profile_id = v_profile_id
+         OR ur.subject_profile_id = v_profile_id
+         OR ur.subject_partner_id = ANY(v_partner_ids)
+    )
+     OR action_id IN (
+      SELECT ua.id FROM public.ugc_moderation_actions ua
+      WHERE ua.subject_profile_id = v_profile_id
+         OR ua.subject_partner_id = ANY(v_partner_ids)
+    );
+  DELETE FROM public.whatsapp_groups
+  WHERE owner_partner_id = ANY(v_partner_ids)
+     OR owner_coach_id = ANY(v_coach_ids);
+  DELETE FROM public.ugc_policy_acceptances
+  WHERE profile_id = v_profile_id;
+  DELETE FROM public.ugc_blocks
+  WHERE blocker_profile_id = v_profile_id
+     OR blocked_profile_id = v_profile_id
+     OR blocked_partner_id = ANY(v_partner_ids);
+  DELETE FROM public.ugc_appeals
+  WHERE appellant_profile_id = v_profile_id;
+
+  UPDATE public.ugc_reports
+  SET reporter_profile_id = NULL,
+      details = NULL,
+      updated_at = now()
+  WHERE reporter_profile_id = v_profile_id;
+
+  UPDATE public.ugc_reports
+  SET subject_profile_id = NULL,
+      subject_partner_id = CASE
+        WHEN subject_partner_id = ANY(v_partner_ids) THEN NULL
+        ELSE subject_partner_id
+      END,
+      evidence_snapshot = evidence_snapshot
+        - 'sender_profile_id'
+        - 'author_profile_id'
+        - 'name'
+        - 'photo_url'
+        - 'bio'
+        - 'role'
+        - 'headline'
+        - 'bio_long'
+        - 'services'
+        - 'instagram'
+        - 'website'
+        - 'social_links'
+        - 'fantasy_name'
+        - 'description'
+        - 'cover_url'
+        - 'city'
+        - 'state'
+        - 'invite_url'
+        - 'phone',
+      updated_at = now()
+  WHERE subject_profile_id = v_profile_id
+     OR subject_partner_id = ANY(v_partner_ids);
+
+  UPDATE public.ugc_moderation_actions
+  SET subject_profile_id = NULL,
+      subject_partner_id = CASE
+        WHEN subject_partner_id = ANY(v_partner_ids) THEN NULL
+        ELSE subject_partner_id
+      END
+  WHERE subject_profile_id = v_profile_id
+     OR subject_partner_id = ANY(v_partner_ids);
+
   DELETE FROM public.group_members WHERE profile_id = v_profile_id;
   DELETE FROM public.notifications WHERE profile_id = v_profile_id;
   DELETE FROM public.bot_conversas WHERE profile_id = v_profile_id;
