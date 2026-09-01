@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dedupePointLogs } from "@/lib/financial-dedupe";
+import { tzCurrentYearMonth, TZ_OFFSET } from "@/lib/timezone";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
 
 export type RewardPlan = {
   id: string;
@@ -42,16 +46,21 @@ async function resolveCoachId(userId: string): Promise<string | null> {
 }
 
 function windowForPlan(planType: string, durationMonths: number): { start: Date; end: Date } {
-  const now = new Date();
+  // Fronteiras no fuso do app (Cuiabá, UTC-4) — evita zerar o mês às 20h/21h
+  // locais só porque o servidor já virou o dia em UTC.
+  const { year, month } = tzCurrentYearMonth();
+  const monthStart = (y: number, m0: number) => {
+    const yy = y + Math.floor(m0 / 12);
+    const mm = ((m0 % 12) + 12) % 12;
+    return new Date(`${yy}-${pad(mm + 1)}-01T00:00:00${TZ_OFFSET}`);
+  };
   if (planType === "monthly_challenge") {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return { start, end };
+    return { start: monthStart(year, month), end: monthStart(year, month + 1) };
   }
-  const start = new Date(now);
-  start.setMonth(start.getMonth() - (durationMonths || 1));
-  return { start, end: now };
+  const n = durationMonths || 1;
+  return { start: monthStart(year, month - (n - 1)), end: monthStart(year, month + 1) };
 }
+
 
 export const getCoachRewards = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
