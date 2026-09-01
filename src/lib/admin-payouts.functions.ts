@@ -388,6 +388,8 @@ export interface PayoutPersonRow {
   blocked: number;
   totalEarned: number;
   totalWithdrawn: number;
+  /** Pago em saques acima do liberado — a compensar. */
+  overpaid?: number;
   pendingRequestId: string | null;
   pendingRequestAmount: number;
   pendingRequestStatus: string | null;
