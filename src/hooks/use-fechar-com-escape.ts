@@ -9,22 +9,24 @@ import { useEffect } from "react";
  * `overflow:hidden` e o cabeçalho nem sempre é fixo — não sobrava saída
  * nenhuma. Era o "modal que não fecha" que o dono relatou.
  *
- * Um hook em vez de seis cópias do mesmo `useEffect`: o empilhamento importa.
- * Com dois modais abertos, o de cima registra por último e o `keydown` chega
- * nos dois — por isso o `ativo`, que deixa quem está por baixo se desligar.
+ * Um hook em vez de sete cópias do mesmo `useEffect`.
+ *
+ * COM DOIS MODAIS ABERTOS, UM ESCAPE FECHA OS DOIS. Os dois escutam a mesma
+ * `window`, e `stopPropagation` não separa ouvintes irmãos. Isso é aceitável
+ * nos empilhamentos que a loja tem hoje — o carrinho abre sobre o detalhe, e
+ * fechar os dois é o que a pessoa quer — mas deixa de ser no dia em que um
+ * modal abrir uma confirmação por cima. Aí o certo é uma pilha compartilhada,
+ * onde só o topo responde; não um parâmetro que cada chamador tem de lembrar
+ * de passar.
  */
-export function useFecharComEscape(aoFechar: () => void, ativo = true): void {
+export function useFecharComEscape(aoFechar: () => void): void {
   useEffect(() => {
-    if (!ativo) return;
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        aoFechar();
-      }
+      if (e.key === "Escape") aoFechar();
     };
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
-  }, [aoFechar, ativo]);
+  }, [aoFechar]);
 }
 
 /**

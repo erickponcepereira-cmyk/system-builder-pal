@@ -146,8 +146,11 @@ export const subtotalDo = (cart: CartItem[]): number =>
  * `kind === "store"` continua valendo como rede de segurança: a loja física
  * é entregável por definição, mesmo que a coluna venha nula.
  */
-export const exigeEntrega = (cart: CartItem[]): boolean =>
-  cart.some((item) => item.isPhysical || item.kind === "store");
+export const exigeEntrega = (
+  cart: CartItem[],
+  ehFisico?: (item: CartItem) => boolean,
+): boolean =>
+  cart.some((item) => (ehFisico ? ehFisico(item) : item.isPhysical) || item.kind === "store");
 
 export type OrderStep = { key: string; label: string; items: CartItem[] };
 

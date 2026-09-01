@@ -479,7 +479,23 @@ export function UnifiedStorePage({
     }
   };
 
-  const precisaEntrega = exigeEntrega(carrinho.cart);
+  /*
+   * "E fisico?" pergunta ao CATALOGO, nao ao item salvo.
+   *
+   * O carrinho e persistido em localStorage, e `lerCarrinho` devolve o que foi
+   * gravado sem normalizar. Carrinho montado ANTES de `isPhysical` existir
+   * volta com o campo `undefined` — e a loja voltaria a nao pedir endereco,
+   * calada, que e exatamente o bug que 18 pedidos ja pagaram.
+   *
+   * O catalogo sabe a verdade de agora. O item salvo so guarda o id.
+   */
+  const precisaEntrega = useMemo(() => {
+    const porId = new Map(products.map((p) => [p.id, p]));
+    return exigeEntrega(carrinho.cart, (item) => {
+      const doCatalogo = porId.get(item.id);
+      return doCatalogo ? doCatalogo.isPhysical : item.isPhysical === true;
+    });
+  }, [carrinho.cart, products]);
 
   /**
    * Cria o próximo pedido do carrinho e abre o pagamento.

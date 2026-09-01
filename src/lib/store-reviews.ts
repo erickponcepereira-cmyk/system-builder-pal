@@ -126,9 +126,21 @@ export async function avaliacoesDoProduto(
 
 /** O que esta pessoa já avaliou, por compra. Alimenta o convite pós-compra. */
 export async function minhasAvaliacoes(): Promise<Map<string, Avaliacao>> {
+  // O filtro por autor e EXPLICITO de proposito.
+  //
+  // Deixar a RLS filtrar sozinha nao funciona aqui: a policy de SELECT
+  // "avaliacao visivel para todos" libera TODA avaliacao nao escondida — e o
+  // ponto dela e esse, para a vitrine poder mostrar. Sem o `eq`, esta funcao
+  // baixava a tabela inteira para o navegador so para achar as poucas linhas
+  // de quem esta olhando. Funcionava por acidente (a busca e por `order_id`,
+  // que so casa com pedido proprio) e ficava mais cara a cada avaliacao nova.
+  const profileId = await meuProfileId();
+  if (!profileId) return new Map();
+
   const { data, error } = await supabase
     .from("product_reviews" as never)
-    .select("id,product_origin,product_id,order_id,rating,comment,seller_reply,seller_replied_at,created_at,author_id" as never);
+    .select("id,product_origin,product_id,order_id,rating,comment,seller_reply,seller_replied_at,created_at,author_id" as never)
+    .eq("author_id" as never, profileId as never);
 
   if (error) {
     console.warn("[avaliacoes] não foi possível ler as minhas", error);
