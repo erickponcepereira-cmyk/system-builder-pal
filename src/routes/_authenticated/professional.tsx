@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2, KanbanSquare, BookOpen } from "lucide-react";
+import { SellerReviewsPanel } from "@/components/store/SellerReviewsPanel";
+import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2, KanbanSquare, BookOpen, Star } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { useServerFn } from "@tanstack/react-start";
 import { getCollabPendingCounts } from "@/lib/collab.functions";
@@ -76,6 +77,7 @@ type AssignmentRow = {
 
 const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   students: { label: "Meus Alunos", icon: Users },
+  avaliacoes: { label: "Avaliações", icon: Star },
   clients: { label: "Meus Clientes", icon: Users },
   diet: { label: "Dieta / Protocolo", icon: Utensils },
   anamnese: { label: "Anamnese", icon: ClipboardList },
@@ -211,7 +213,7 @@ function ProfessionalPanel() {
 
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
-  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collaborators", "collab", "run_challenges", "wa_group", "settings", "fitmind_calendar"];
+  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "avaliacoes", "store", "appointments", "collaborators", "collab", "run_challenges", "wa_group", "settings", "fitmind_calendar"];
   const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription", ...(crmQuadroId ? ["crm"] : [])])).filter((t) => t !== "network" && t !== "overview")];
 
 
@@ -331,6 +333,7 @@ function TabContent({ tab, info, assignments, crmQuadroId }: { tab: string; info
   if (tab === "crm" && crmQuadroId) return <CrmBoard quadroId={crmQuadroId} />;
   if (tab === "overview") return <OverviewTab coachId={info.coachId} profileId={info.profileId} coachName={info.name} />;
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
+  if (tab === "avaliacoes") return <SellerReviewsPanel />;
   if (tab === "wallet") return <ProfessionalWalletTab />;
   if (tab === "subscription") return <SubscriptionInvoicesTab walletSource="professional" />;
   if (tab === "store") return <StorePage coachMode audience="professional" />;

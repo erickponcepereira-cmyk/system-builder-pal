@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell, BookOpen } from "lucide-react";
+import { SellerReviewsPanel } from "@/components/store/SellerReviewsPanel";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell, BookOpen, Star } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CrmBoard } from "@/components/crm/CrmBoard";
 import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
+type Tab = "overview" | "avaliacoes" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
 
 
 interface Partner {
@@ -253,6 +254,7 @@ function PartnerPanel() {
   const PERMISSAO_DA_ABA: Record<Tab, Permissao> = {
     overview: "overview.ver",
     products: "products.editar",
+    avaliacoes: "products.editar",
     scanner: "scanner.usar",
     timeline: "timeline.editar",
     qrcode: "overview.ver",
@@ -276,6 +278,7 @@ function PartnerPanel() {
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
+    { key: "avaliacoes", label: "Avaliações", icon: Star },
     { key: "scanner", label: "Scanner", icon: QrCode },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
     { key: "qrcode", label: "QR", icon: QrCode },
@@ -430,6 +433,7 @@ function PartnerPanel() {
       <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
         {abaAtiva === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
         {abaAtiva === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
+        {abaAtiva === "avaliacoes" && <SellerReviewsPanel />}
         {abaAtiva === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
         {abaAtiva === "qrcode" && <QrCodePanel partner={partner} />}
         {abaAtiva === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
