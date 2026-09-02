@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { QrCode, Loader2, Check, X, Users, ChevronLeft, ChevronRight, Ban } from "lucide-react";
+import { QrCode, Loader2, Check, X, Users, ChevronLeft, ChevronRight, Ban, Search } from "lucide-react";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import {
   reservasDoDia, validarQr, fecharFaltas, cancelarReserva, definirCapacidade,
-  type AulaDoDia, type LeituraDoQr,
+  buscarNaRecepcao, registrarEntradaRecepcao,
+  type AulaDoDia, type LeituraDoQr, type PessoaNaRecepcao,
 } from "@/lib/academia-reservas.functions";
 import {
   BOTAO_ACAO, BOTAO_NEUTRO, BOTAO_TEXTO, CAMPO, CAMPO_MINI,
@@ -30,6 +31,8 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
   const fechar = useServerFn(fecharFaltas);
   const cancelar = useServerFn(cancelarReserva);
   const capacidade = useServerFn(definirCapacidade);
+  const buscar = useServerFn(buscarNaRecepcao);
+  const registrarEntrada = useServerFn(registrarEntradaRecepcao);
 
   const hoje = new Date().toISOString().slice(0, 10);
   const [dia, setDia] = useState(hoje);
@@ -39,6 +42,9 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
   const [codigo, setCodigo] = useState("");
   const [conferindo, setConferindo] = useState(false);
   const [ultima, setUltima] = useState<LeituraDoQr | null>(null);
+  const [termo, setTermo] = useState("");
+  const [achados, setAchados] = useState<PessoaNaRecepcao[]>([]);
+  const [registrando, setRegistrando] = useState<string | null>(null);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -74,6 +80,57 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [partnerId, carregar],
   );
+
+  /*
+   * A busca existe porque o QR só serve a quem já tem conta e credencial
+   * ligada. No Reino isso ainda é minoria, e sem catraca a recepção precisa de
+   * alguma forma de responder "esta pessoa está em dia?".
+   */
+  const procurar = useCallback(
+    (t: string) => {
+      if (t.trim().length < 3) { setAchados([]); return; }
+      buscar({ data: { partnerId, termo: t } })
+        .then((r) => setAchados(r as PessoaNaRecepcao[]))
+        .catch(() => setAchados([]));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [partnerId],
+  );
+
+  useEffect(() => {
+    const t = setTimeout(() => procurar(termo), 350);
+    return () => clearTimeout(t);
+  }, [termo, procurar]);
+
+  const registrar = async (p: PessoaNaRecepcao) => {
+    // Quem está devendo entra, mas ninguém libera sem ver o que está fazendo.
+    if (!p.liberado) {
+      const situacao = (EM_PORTUGUES[p.motivo] ?? p.motivo).toLowerCase();
+      const certeza = window.confirm(
+        `${p.nome} está com ${situacao}.\n\nRegistrar a entrada assim mesmo?\n\nFica gravado que a recepção liberou, e a entrada conta na frequência.`,
+      );
+      if (!certeza) return;
+    }
+    setRegistrando(p.credencial_id);
+    try {
+      const leitura = (await registrarEntrada({
+        data: { partnerId, credencialId: p.credencial_id },
+      })) as LeituraDoQr;
+      if (leitura.repetido) {
+        toast.info(`${leitura.nome} já tinha sido registrado nos últimos 5 minutos.`);
+      } else if (leitura.liberado) {
+        toast.success(`Entrada de ${leitura.nome} registrada.`);
+      } else {
+        toast.warning(`Entrada de ${leitura.nome} registrada — estava devendo.`);
+      }
+      procurar(termo);
+      carregar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para registrar");
+    } finally {
+      setRegistrando(null);
+    }
+  };
 
   const andarDia = (passo: number) => {
     const d = new Date(`${dia}T12:00:00`);
@@ -139,6 +196,57 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
             </div>
           </Bloco>
         )}
+      </div>
+
+      {/* ---------- achar sem o QR ---------- */}
+      <div className="rounded-xl border border-aca-line bg-aca-surface p-4">
+        <div className={`mb-1 ${EYEBROW}`}>Sem o QR</div>
+        <p className="mb-3 text-[12px] text-aca-muted">
+          Quem ainda não tem o aplicativo. Ache pelo nome ou pelo CPF.
+        </p>
+
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-aca-muted" />
+          <input
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            placeholder="nome ou CPF"
+            className={`${CAMPO} w-full pl-9`}
+          />
+        </div>
+
+        {termo.trim().length >= 3 && achados.length === 0 && (
+          <p className="mt-3 text-sm text-aca-muted">Ninguém com esse nome ou CPF nesta academia.</p>
+        )}
+
+        <div className="mt-3 space-y-2">
+          {achados.map((p) => (
+            <div key={p.credencial_id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-aca-line bg-aca-alto p-3">
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-aca-ink">{p.nome}</div>
+                <div className={`text-[12px] ${p.liberado ? "text-aca-muted" : "text-aca-critico"}`}>
+                  {EM_PORTUGUES[p.motivo] ?? p.motivo}
+                  {p.valido_ate && ` · vence ${diaBR(p.valido_ate)}`}
+                </div>
+              </div>
+              {p.entrou_hoje ? (
+                <Pilula>já entrou hoje</Pilula>
+              ) : (
+                <button
+                  type="button"
+                  disabled={registrando === p.credencial_id}
+                  onClick={() => void registrar(p)}
+                  className={`shrink-0 ${p.liberado ? BOTAO_ACAO : BOTAO_NEUTRO}`}
+                >
+                  {registrando === p.credencial_id
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : p.liberado ? "Registrar entrada" : "Entrar assim mesmo"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ---------- o dia ---------- */}

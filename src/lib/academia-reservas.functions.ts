@@ -29,6 +29,20 @@ export type AulaDoDia = {
   pessoas: PessoaNaAula[];
 };
 
+/** Uma pessoa achada pela busca da recepção, já com a situação dela. */
+export type PessoaNaRecepcao = {
+  credencial_id: string;
+  nome: string | null;
+  cpf: string | null;
+  referencia: string | null;
+  motivo: string;
+  valido_ate: string | null;
+  dias_restantes: number | null;
+  liberado: boolean;
+  /** Para a recepção não registrar duas vezes a mesma pessoa no mesmo dia. */
+  entrou_hoje: boolean;
+};
+
 export type LeituraDoQr = {
   ok: boolean;
   liberado: boolean;
@@ -77,6 +91,50 @@ export const validarQr = createServerFn({ method: "POST" })
     const { data: r, error } = await admin.rpc("academia_qr_validar" as never, {
       p_partner_id: data.partnerId,
       p_token: data.token.trim(),
+    } as never);
+    if (error) throw new Error(error.message);
+    return r as unknown as LeituraDoQr;
+  });
+
+/**
+ * A recepção de quem não tem catraca e nem todo mundo tem o aplicativo.
+ *
+ * O QR resolve para quem já tem conta e credencial ligada. No Reino Muay Thai
+ * isso é uma minoria por enquanto — as pessoas vieram do sistema antigo e vão
+ * criando conta aos poucos. Sem este caminho a recepção não consegue nem
+ * responder "esta pessoa está em dia?", que é o serviço principal do sistema
+ * numa academia onde a porta é humana.
+ */
+export const buscarNaRecepcao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; termo: string }) => d)
+  .handler(async ({ data, context }): Promise<PessoaNaRecepcao[]> => {
+    const admin = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_recepcao_buscar" as never, {
+      p_partner_id: data.partnerId,
+      p_termo: data.termo.trim(),
+    } as never);
+    if (error) throw new Error(error.message);
+    return (r ?? []) as unknown as PessoaNaRecepcao[];
+  });
+
+/**
+ * Registra a entrada escolhida na busca, com origem `manual`.
+ *
+ * Quem está devendo também entra, e isso é de propósito: sem catraca a porta é
+ * física, a recepção vai deixar passar de qualquer jeito, e um sistema que
+ * finge ter barrado produz relatório de frequência falso. A liberação fica
+ * gravada na observação da frequência e como ocorrência em
+ * `academia_acessos_negados`, com quem liberou.
+ */
+export const registrarEntradaRecepcao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; credencialId: string }) => d)
+  .handler(async ({ data, context }): Promise<LeituraDoQr> => {
+    const admin = await autorizar(context.userId, data.partnerId);
+    const { data: r, error } = await admin.rpc("academia_recepcao_entrada" as never, {
+      p_partner_id: data.partnerId,
+      p_credencial_id: data.credencialId,
     } as never);
     if (error) throw new Error(error.message);
     return r as unknown as LeituraDoQr;

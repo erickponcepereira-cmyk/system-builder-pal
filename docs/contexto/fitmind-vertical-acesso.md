@@ -318,3 +318,47 @@ humano recusar.
 **Estação medida antes e depois: 21 'alta', 3 'media', 5 'baixa' — idêntica.**
 Era o resultado esperado (0 CPF em 416 credenciais torna as regras de CPF
 inócuas lá), mas foi conferido, não presumido.
+
+### 01/09 noite — a recepção sem catraca, que era o que faltava para o Reino abrir
+
+O Reino não tem catraca e não vai ter tão cedo: a leitura de QR sai do **celular
+de quem estiver na recepção**. Um leitor iDFace fica para o futuro. Isso muda o
+que é pendência: fila de fotos, rota `/identificar` e a ponte iDFace → decisão →
+catraca **não valem nada aqui**.
+
+O que valia era um buraco que ninguém tinha visto. Só **duas** coisas escreviam
+`academia_frequencias`: `academia_agente_enviar` (a catraca, que o Reino não tem)
+e `academia_qr_validar` (que exige conta no app mais conciliação — hoje ~6 das 83
+ativas). Ou seja, a recepção não conseguia fazer as duas coisas que mais importam
+onde a porta é humana: **saber se a pessoa está em dia** e **registrar que ela
+entrou**. E a constraint da tabela já previa `origem = 'manual'` desde sempre,
+com nada escrevendo esse valor — a peça estava desenhada e nunca construída.
+
+Entraram `academia_recepcao_buscar` (nome ou CPF, mínimo três letras, devolve a
+situação avaliada e se a pessoa já entrou hoje) e `academia_recepcao_entrada`
+(grava a frequência com origem `manual`), mais a busca na tela `RecepcaoQR`.
+
+**Quem está devendo entra, e isso é decisão, não descuido.** Sem catraca a porta
+é física: a recepção vai deixar passar de qualquer jeito, e um sistema que finge
+ter barrado produz relatório de frequência falso. No Reino de hoje isso seria 62
+das 83 pessoas, ou seja o caso comum e não a exceção. Então a entrada é gravada,
+a observação da frequência diz que foi liberação de quem estava bloqueado, e a
+ocorrência vai para `academia_acessos_negados` com o nome de quem liberou. A tela
+pede confirmação antes, dizendo a situação em português.
+
+A janela de 5 minutos é a mesma do QR, pelo mesmo motivo: reconferir a mesma
+pessoa é a recepção checando, não alguém treinando duas vezes.
+
+**Provado em transação com ROLLBACK, contra os dados reais do Reino:** três
+chamadas (em dia, a mesma de novo, e uma bloqueada há 135 dias) produziram 2
+frequências e 1 ocorrência — a repetida devolveu `repetido: true` e não contou
+treino em dobro. O `ROLLBACK` devolveu o Reino a 0 e 0. `md5(prosrc)` das duas
+funções bate com o corpo da migration.
+
+`validacao_frequencia` do Reino era `'ambos'` (catraca e QR) numa academia sem
+catraca; virou `'qrcode'`. Vale saber que **essa chave não é lida por nenhuma
+função de decisão** — só pela tela de configuração. É rótulo, não trava; quem for
+mexer nela não está mudando comportamento nenhum.
+
+Não exercitei a tela no navegador — o painel exige login. O que foi exercitado de
+verdade foram as duas funções do banco, contra os dados reais.
