@@ -16681,6 +16681,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_payables_report: { Args: never; Returns: Json }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_reconcile_all_wallets: { Args: never; Returns: number }
       admin_release_user_subscription: {
@@ -17190,6 +17191,22 @@ export type Database = {
           de: string
           para: string
           valor: number
+        }[]
+      }
+      financial_ledger_events: {
+        Args: { _profile_id?: string }
+        Returns: {
+          amount: number
+          available_at: string
+          beneficiary_profile_id: string
+          description: string
+          ledger_key: string
+          occurred_at: string
+          reference_id: string
+          source_kind: string
+          source_type: string
+          state: string
+          wallet_owner_id: string
         }[]
       }
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
