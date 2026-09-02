@@ -156,16 +156,17 @@ async function buildSalesReportForRange(
   }
 
   // Store orders (paid)
-  type SO = { id: string; student_id: string; total_amount: number; updated_at: string };
+  type SO = { id: string; student_id: string; total_amount: number; paid_at: string | null; created_at: string };
   let orders: SO[] = [];
   if (studentIds.length) {
     const { data: orderData } = await supabaseAdmin
       .from("store_orders")
-      .select("id, student_id, total_amount, updated_at, status")
+      .select("id, student_id, total_amount, paid_at, created_at, status")
       .in("student_id", studentIds)
       .eq("status", "paid")
-      .gte("updated_at", fromIso)
-      .lte("updated_at", toIso);
+      .gte("paid_at", fromIso)
+      .lte("paid_at", toIso);
+
     orders = (orderData as SO[] | null) || [];
   }
   const orderIds = orders.map((o) => o.id);
@@ -350,7 +351,7 @@ async function buildSalesReportForRange(
       product_kind: "fitmind",
       quantity: totalQty,
       amount: Number(o.total_amount) || 0,
-      paid_at: o.updated_at,
+      paid_at: o.paid_at || o.created_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
       is_master_coach_sale: !!master && master.coach_id !== coachId,

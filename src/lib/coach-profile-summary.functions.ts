@@ -83,8 +83,9 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
       const { data: txs } = await txq;
       ((txs || []) as Array<{ gross_amount: number }>).forEach((t) => { totalSales += Number(t.gross_amount) || 0; });
       let oq = supabaseAdmin
-        .from("store_orders").select("total_amount,updated_at").in("student_id", studentIds).eq("status", "paid");
-      if (cutoff) oq = oq.gte("updated_at", cutoff);
+        .from("store_orders").select("total_amount,paid_at").in("student_id", studentIds).eq("status", "paid");
+      if (cutoff) oq = oq.gte("paid_at", cutoff);
+
       const { data: orders } = await oq;
       ((orders || []) as Array<{ total_amount: number }>).forEach((o) => { totalSales += Number(o.total_amount) || 0; });
 
