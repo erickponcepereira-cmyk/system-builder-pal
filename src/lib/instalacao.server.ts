@@ -1,3 +1,4 @@
+import { zipSync, strToU8 } from "fflate";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
@@ -57,4 +58,66 @@ export async function obterUltimaVersao(programa: Programa): Promise<VersaoPubli
     notas: data.notas,
     arquivos: data.arquivos as Record<string, string>,
   };
+}
+
+/** Onde o pacote base de cada programa mora, no bucket privado `instalacao`. */
+export const caminhoDoPacoteBase = (programa: Programa) => `${programa}/base.zip`;
+
+/**
+ * O código publicado inteiro num zip só, montado na hora.
+ *
+ * Antes a recepção clicava um arquivo por vez — cinco cliques para o agente, e
+ * errar um deixava a pasta pela metade sem avisar. São ~124 kB de texto, então
+ * montar isto dentro do Worker é barato.
+ */
+export function montarZipDoCodigo(publicada: VersaoPublicada): Uint8Array {
+  const entradas: Record<string, Uint8Array> = {};
+  for (const [caminho, conteudo] of Object.entries(publicada.arquivos)) {
+    entradas[caminho] = strToU8(conteudo);
+  }
+  return zipSync(entradas, { level: 6 });
+}
+
+/**
+ * O pacote base: Node, `node_modules`, os `.exe`, os `.bat` e os ícones.
+ *
+ * Não dá para montar aqui, e nem deveria. São dezenas de MB de binário, o
+ * Worker não tem memória para isso, e principalmente: esses arquivos ficam
+ * **fora** da lista branca da auto-atualização de propósito, para que uma
+ * atualização não consiga reescrever o que abre junto com o Windows do cliente.
+ * Então ele é um arquivo guardado, subido de vez em quando, e servido por URL
+ * assinada — o download nem passa pelo servidor da aplicação.
+ *
+ * Instalado o base, o programa se atualiza sozinho até a versão de hoje. É por
+ * isso que um pacote base "velho" continua servindo: ele é o ponto de partida,
+ * não a versão final.
+ */
+export async function estadoDoPacoteBase(
+  programa: Programa,
+): Promise<{ existe: boolean; bytes: number | null; atualizado_em: string | null }> {
+  const { data } = await supabaseAdmin.storage
+    .from("instalacao")
+    .list(programa, { search: "base.zip", limit: 1 });
+
+  const item = (data ?? []).find((o) => o.name === "base.zip");
+  if (!item) return { existe: false, bytes: null, atualizado_em: null };
+
+  const meta = item.metadata as { size?: number } | null;
+  return {
+    existe: true,
+    bytes: meta?.size ?? null,
+    atualizado_em: item.updated_at ?? item.created_at ?? null,
+  };
+}
+
+/** URL assinada e curta do pacote base, ou null se ninguém subiu ainda. */
+export async function urlDoPacoteBase(programa: Programa): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.storage
+    .from("instalacao")
+    .createSignedUrl(caminhoDoPacoteBase(programa), 300, {
+      download: `fitmind-${programa}.zip`,
+    });
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
 }

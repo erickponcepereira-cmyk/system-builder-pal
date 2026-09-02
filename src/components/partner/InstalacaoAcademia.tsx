@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Download, Loader2, Fingerprint, MessageCircle, AlertTriangle } from "lucide-react";
+import { Download, Loader2, Fingerprint, MessageCircle, AlertTriangle, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { obterPacotesInstalacao } from "@/lib/academia-teste.functions";
+import { obterPacotesInstalacao, gerarEnvioDoPacoteBase } from "@/lib/academia-teste.functions";
 
 /**
  * Manual de instalação da academia nova, escrito para a recepção.
@@ -16,6 +16,10 @@ import { obterPacotesInstalacao } from "@/lib/academia-teste.functions";
 
 type Programa = "agente" | "conector";
 type Pacote = { versao: string; notas: string | null; arquivos: string[] } | null;
+type EstadoBase = { existe: boolean; bytes: number | null; atualizado_em: string | null };
+
+const MB = (bytes: number | null) =>
+  bytes === null ? "" : `${(bytes / 1024 / 1024).toFixed(0)} MB`;
 
 const cartao = "rounded-xl border border-aca-line bg-aca-alto p-3";
 const codigo = "rounded bg-black/40 px-1.5 py-0.5 font-mono text-[10px] text-aca-ink";
@@ -51,19 +55,68 @@ async function baixarArquivo(partnerId: string, programa: Programa, nome: string
   setTimeout(() => URL.revokeObjectURL(endereco), 1000);
 }
 
+/**
+ * Os dois pacotes de uma vez, em vez de um arquivo por clique.
+ *
+ * `codigo` vem montado pelo servidor e chega como bytes. `base` não: são
+ * dezenas de MB de binário, então o servidor devolve uma URL assinada e o
+ * navegador busca direto no storage — o download nem passa pela aplicação.
+ */
+async function baixarPacote(partnerId: string, programa: Programa, tipo: "codigo" | "base") {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    toast.error("Sua sessão expirou. Entre de novo e tente outra vez.");
+    return;
+  }
+
+  const busca = new URLSearchParams({ partnerId, programa, tipo });
+  const resposta = await fetch(`/api/instalacao/pacote?${busca}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resposta.ok) {
+    toast.error(await resposta.text());
+    return;
+  }
+
+  if (tipo === "base") {
+    const { url } = (await resposta.json()) as { url: string };
+    window.location.href = url;
+    return;
+  }
+
+  const endereco = URL.createObjectURL(await resposta.blob());
+  const link = document.createElement("a");
+  link.href = endereco;
+  link.download = `fitmind-${programa}.zip`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(endereco), 1000);
+}
+
 export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
   const obter = useServerFn(obterPacotesInstalacao);
   const [carregando, setCarregando] = useState(true);
   const [agente, setAgente] = useState<Pacote>(null);
   const [conector, setConector] = useState<Pacote>(null);
+  const [base, setBase] = useState<{ agente: EstadoBase; conector: EstadoBase } | null>(null);
+  const [souSuporte, setSouSuporte] = useState(false);
 
-  useEffect(() => {
+  const carregar = () => {
     setCarregando(true);
     obter({ data: { partnerId } })
-      .then((r) => { setAgente(r.agente); setConector(r.conector); })
+      .then((r) => {
+        setAgente(r.agente);
+        setConector(r.conector);
+        setBase(r.base);
+        setSouSuporte(r.souSuporte);
+      })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setCarregando(false));
-  }, [partnerId]);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(carregar, [partnerId]);
 
   return (
     <div className="space-y-3">
@@ -81,6 +134,7 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
       <PassoAPassoConector />
       <QuandoNaoSobe />
 
+      {!carregando && !base?.agente.existe && !base?.conector.existe && (
       <div className={`${cartao} border-aca-atencao bg-aca-alto`}>
         <p className="flex items-center gap-1.5 text-[11px] font-bold text-aca-atencao">
           <AlertTriangle className="h-3.5 w-3.5" /> O download abaixo não é o instalador completo
@@ -107,6 +161,7 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
           na versão de hoje.
         </p>
       </div>
+      )}
 
       {carregando ? (
         <Loader2 className="mx-auto mt-6 h-6 w-6 animate-spin text-aca-acao" />
@@ -118,6 +173,9 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
             pacote={agente}
             programa="agente"
             partnerId={partnerId}
+            base={base?.agente}
+            souSuporte={souSuporte}
+            aoEnviar={carregar}
           />
           <PacoteParaBaixar
             titulo="Conector de WhatsApp"
@@ -125,6 +183,9 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
             pacote={conector}
             programa="conector"
             partnerId={partnerId}
+            base={base?.conector}
+            souSuporte={souSuporte}
+            aoEnviar={carregar}
           />
         </>
       )}
@@ -321,14 +382,36 @@ function QuandoNaoSobe() {
   );
 }
 
-function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
+function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId, base, souSuporte, aoEnviar }: {
   titulo: string;
   destino: string;
   pacote: Pacote;
   programa: Programa;
   partnerId: string;
+  base?: EstadoBase;
+  souSuporte: boolean;
+  aoEnviar: () => void;
 }) {
   const [baixando, setBaixando] = useState<string | null>(null);
+  const prepararEnvio = useServerFn(gerarEnvioDoPacoteBase);
+  const [enviando, setEnviando] = useState(false);
+
+  const enviarBase = async (arquivo: File) => {
+    setEnviando(true);
+    try {
+      const { token, caminho } = await prepararEnvio({ data: { programa } });
+      const { error } = await supabase.storage
+        .from("instalacao")
+        .uploadToSignedUrl(caminho, token, arquivo);
+      if (error) throw new Error(error.message);
+      toast.success("Pacote base enviado. A academia já pode baixar o sistema completo.");
+      aoEnviar();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para enviar");
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   if (!pacote) {
     return (
@@ -349,6 +432,76 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId }: {
         <span className={codigo}>{destino}</span>
       </p>
       {pacote.notas && <p className="mt-1 text-[11px] text-aca-fraco">{pacote.notas}</p>}
+
+      <div className="mt-2 flex flex-col gap-1.5 sm:flex-row">
+        {base?.existe && (
+          <button
+            type="button"
+            disabled={baixando === "base"}
+            onClick={async () => {
+              setBaixando("base");
+              try { await baixarPacote(partnerId, programa, "base"); }
+              catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao baixar"); }
+              finally { setBaixando(null); }
+            }}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-aca-acao px-3 py-2 text-[11px] font-bold text-aca-acao-ink disabled:opacity-50"
+          >
+            {baixando === "base"
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Download className="h-3.5 w-3.5" />}
+            Baixar o sistema completo {MB(base.bytes) && `(${MB(base.bytes)})`}
+          </button>
+        )}
+
+        <button
+          type="button"
+          disabled={baixando === "codigo"}
+          onClick={async () => {
+            setBaixando("codigo");
+            try { await baixarPacote(partnerId, programa, "codigo"); }
+            catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao baixar"); }
+            finally { setBaixando(null); }
+          }}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-aca-line px-3 py-2 text-[11px] font-semibold text-aca-ink hover:bg-aca-alto disabled:opacity-50"
+        >
+          {baixando === "codigo"
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Download className="h-3.5 w-3.5" />}
+          Só o código ({pacote.arquivos.length} arquivos, .zip)
+        </button>
+      </div>
+
+      {base?.existe
+        ? (
+          <p className="mt-1.5 text-[11px] text-aca-fraco">
+            O sistema completo já traz Node, dependências e os programas de janela. Depois de
+            instalado ele se atualiza sozinho — não precisa voltar aqui a cada correção.
+            {base.atualizado_em && ` Pacote de ${new Date(base.atualizado_em).toLocaleDateString("pt-BR")}.`}
+          </p>
+        )
+        : (
+          <p className="mt-1.5 text-[11px] text-aca-atencao">
+            O pacote completo deste programa ainda não foi enviado — por enquanto só sai o código.
+          </p>
+        )}
+
+      {souSuporte && (
+        <label className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-aca-line px-3 py-2 text-[10px] font-semibold text-aca-muted hover:bg-aca-alto">
+          {enviando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {base?.existe ? "Substituir o pacote base (suporte)" : "Enviar o pacote base (suporte)"}
+          <input
+            type="file"
+            accept=".zip,application/zip"
+            className="hidden"
+            disabled={enviando}
+            onChange={(e) => {
+              const arquivo = e.target.files?.[0];
+              e.target.value = "";
+              if (arquivo) void enviarBase(arquivo);
+            }}
+          />
+        </label>
+      )}
 
       <div className="mt-2 space-y-1">
         {pacote.arquivos.map((nome) => (

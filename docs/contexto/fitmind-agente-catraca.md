@@ -110,3 +110,51 @@ Junto saíram dois estados velhos que a aba mostrava como se fossem de agora:
 Verificado: `tsc --noEmit` limpo, a guarda `ativo` conferida função a função, e o
 filtro por academia provado por consulta. **Não exercitei o botão no navegador** —
 o painel exige login e o dev server tem as armadilhas de sempre.
+
+## 02/09/2026 — a aba de instalação passa a entregar pacote, não arquivo solto
+
+Antes a aba baixava **um arquivo por clique** — cinco para o agente — e errar um
+deixava a pasta pela metade sem avisar. E o texto da própria tela dizia que aquilo
+não era o instalador: o Node, o `node_modules`, os `.exe`, os `.bat` e os ícones
+"continuam vindo por cópia de uma instalação que já existe".
+
+Agora são dois downloads por programa, em `/api/instalacao/pacote`:
+
+- **`tipo=codigo`** monta o zip na hora, dentro do Worker, com `fflate`. São ~124
+  kB de texto na 1.27.00, então é barato. A view do fflate é recortada para um
+  `ArrayBuffer` exato antes de virar corpo da resposta — mandar a view inteira
+  entregaria bytes a mais no fim do arquivo.
+- **`tipo=base`** não devolve bytes: devolve **URL assinada de 5 minutos** para o
+  bucket privado `instalacao`. São dezenas de MB de binário e o Worker não tem
+  memória para isso; o storage serve sozinho e o download nem passa pela aplicação.
+
+**O pacote base é o sistema completo**, e é isso que fecha a aba: instalado, o
+programa se auto-atualiza até a versão de hoje. Um base "velho" continua servindo
+porque ele é o ponto de partida, não a versão final. Quem envia é o **suporte**
+(`profiles.is_master_admin`), por upload direto do navegador para o storage com
+URL assinada — o arquivo não atravessa o servidor. Enquanto ninguém enviar, a aba
+mostra o aviso antigo e só oferece o código; enviado, o aviso some sozinho.
+
+Os binários **não estão neste repositório nem em bucket nenhum** — moram em
+`C:\dev\fitmind-catraca` e no `C:\dev\fitmind-agente-catraca.zip`, no PC do Erick.
+Por isso a aba ficou pronta e vazia: falta subir o arquivo uma vez, por programa.
+
+Provado com os caminhos reais da 1.27.00 (`agente.mjs`, `lib/estado.mjs`,
+`lib/nuvem.mjs`, `lib/rosto.mjs`, `painel.html`): assinatura PK correta, os cinco
+voltam byte a byte na descompactação, a subpasta `lib/` se mantém, e o recorte do
+buffer bate com a view. `tsc --noEmit` limpo. A tela não foi exercitada no
+navegador.
+
+### Armadilha nova: o `vite build` estoura a memória
+
+Com `mcpPlugin()` comentado o build **anda, mas morre** em
+`FATAL ERROR: Ineffective mark-compacts near heap limit` — o heap padrão de 2 GB
+não dá conta deste projeto. O que salva: **`routeTree.gen.ts` é gerado antes do
+estouro**, e é só para isso que se roda o build. Ou seja, para registrar uma rota
+nova basta rodar, ignorar o erro no fim e conferir se a rota apareceu no arquivo.
+Se um dia precisar do build inteiro, aumentar o heap:
+`NODE_OPTIONS=--max-old-space-size=4096`.
+
+Continua valendo o resto da regra: restaurar o `vite.config.ts` depois, **nunca**
+commitá-lo alterado, e **não** rodar `git checkout` no `routeTree.gen.ts` depois
+do build, senão reverte o que acabou de ser gerado.
