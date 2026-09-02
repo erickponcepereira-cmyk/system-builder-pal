@@ -681,8 +681,6 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     ]);
     const plist = ((partnerRows as unknown as Array<{ id: string; status: string | null; created_at: string }>) || [])
       .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
-    const partnerRow = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
-    const partnerId = (partnerRow as unknown as { id?: string } | null)?.id ?? null;
     const partnerIdsForProfile = plist.map((row) => row.id);
     const coachIdsForProfile = ((coachRows as Array<{ id: string }>) || []).map((row) => row.id);
     const coachId = coachIdsForProfile[0] || null;
@@ -1102,19 +1100,27 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const totalEarned = commissions.reduce((s, c) => s + c.amount, 0);
     const blocked = commissionsPending;
 
+    const partnerWalletTotals = ((pw as unknown as Array<Record<string, number>>) || []).reduce((sum, wallet) => ({
+      available: sum.available + n(wallet.available_balance),
+      withdrawn: sum.withdrawn + n(wallet.total_withdrawn),
+    }), { available: 0, withdrawn: 0 });
+    const professionalWalletTotals = ((profw as unknown as Array<Record<string, number>>) || []).reduce((sum, wallet) => ({
+      available: sum.available + n(wallet.available_balance),
+      withdrawn: sum.withdrawn + n(wallet.total_withdrawn),
+    }), { available: 0, withdrawn: 0 });
     const available = cutoff
       ? commissionsAvailable + productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0)
       : data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.available_balance)
       : n((w as Record<string, number> | null)?.available_balance)
-        + n((pw as Record<string, number> | null)?.available_balance)
-        + n((profw as Record<string, number> | null)?.available_balance)
+        + partnerWalletTotals.available
+        + professionalWalletTotals.available
         + n((nw as Record<string, number> | null)?.available_balance);
     const totalWithdrawn = data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.total_withdrawn)
       : n((w as Record<string, number> | null)?.total_withdrawn)
-        + n((pw as Record<string, number> | null)?.total_withdrawn)
-        + n((profw as Record<string, number> | null)?.total_withdrawn)
+        + partnerWalletTotals.withdrawn
+        + professionalWalletTotals.withdrawn
         + n((nw as Record<string, number> | null)?.total_withdrawn);
     const productEarningsAvailable = productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0);
     const productEarningsPending = productEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
