@@ -362,3 +362,18 @@ mexer nela não está mudando comportamento nenhum.
 
 Não exercitei a tela no navegador — o painel exige login. O que foi exercitado de
 verdade foram as duas funções do banco, contra os dados reais.
+
+### 01/09 — o Reino trabalha por reserva, e a agenda some onde não há grade
+
+Corrigido: o Reino estava em `regime_turma = 'livre'` e **trabalha por reserva**.
+Isso não era só rótulo — `academia_minhas_academias` só oferece o botão de
+reservar quando o regime é `reserva`, então com `livre` o aluno nunca veria a
+reserva no aplicativo. Agora é `reserva`, com 7 turmas de Muay Thai: 06, 07, 08,
+17, 18, 19 e 20 horas, de uma hora cada. **Dias assumidos: segunda a sexta**, pelo
+mesmo padrão da Estação — o Erick não disse os dias, e muda na aba Frequência.
+
+Na recepção, a agenda de aulas agora só aparece se a academia tiver grade
+(`academia_temGrade` conta as turmas ativas). Sem isso o bloco repetia "cadastre a
+grade" para sempre e ocupava meia tela de celular numa academia de treino livre.
+A contagem é da grade inteira e não das aulas de hoje, senão num sábado a
+academia perderia a navegação para segunda.

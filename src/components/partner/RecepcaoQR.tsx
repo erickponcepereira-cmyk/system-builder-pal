@@ -5,7 +5,7 @@ import { QrCode, Loader2, Check, X, Users, ChevronLeft, ChevronRight, Ban, Searc
 import { QRScannerModal } from "@/components/QRScannerModal";
 import {
   reservasDoDia, validarQr, fecharFaltas, cancelarReserva, definirCapacidade,
-  buscarNaRecepcao, registrarEntradaRecepcao,
+  buscarNaRecepcao, registrarEntradaRecepcao, academiaTemGrade,
   type AulaDoDia, type LeituraDoQr, type PessoaNaRecepcao,
 } from "@/lib/academia-reservas.functions";
 import {
@@ -33,6 +33,7 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
   const capacidade = useServerFn(definirCapacidade);
   const buscar = useServerFn(buscarNaRecepcao);
   const registrarEntrada = useServerFn(registrarEntradaRecepcao);
+  const temGradeFn = useServerFn(academiaTemGrade);
 
   const hoje = new Date().toISOString().slice(0, 10);
   const [dia, setDia] = useState(hoje);
@@ -45,6 +46,9 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
   const [termo, setTermo] = useState("");
   const [achados, setAchados] = useState<PessoaNaRecepcao[]>([]);
   const [registrando, setRegistrando] = useState<string | null>(null);
+  // Academia sem grade não vê agenda: numa academia de treino livre o bloco
+  // repetiria "cadastre a grade" para sempre, ocupando meia tela de celular.
+  const [temGrade, setTemGrade] = useState(false);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -101,6 +105,13 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
     const t = setTimeout(() => procurar(termo), 350);
     return () => clearTimeout(t);
   }, [termo, procurar]);
+
+  useEffect(() => {
+    temGradeFn({ data: { partnerId } })
+      .then((r) => setTemGrade(r as boolean))
+      .catch(() => setTemGrade(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerId]);
 
   const registrar = async (p: PessoaNaRecepcao) => {
     // Quem está devendo entra, mas ninguém libera sem ver o que está fazendo.
@@ -250,6 +261,7 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
       </div>
 
       {/* ---------- o dia ---------- */}
+      {temGrade && (
       <div className="rounded-xl border border-aca-line bg-aca-surface p-4">
         <div className="flex items-center justify-between gap-2">
           <button type="button" onClick={() => andarDia(-1)}
@@ -271,8 +283,9 @@ export function RecepcaoQR({ partnerId }: { partnerId: string }) {
           </button>
         </div>
       </div>
+      )}
 
-      {carregando ? (
+      {!temGrade ? null : carregando ? (
         <div className="flex items-center justify-center gap-2 py-10 text-sm text-aca-muted">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando as aulas...
         </div>

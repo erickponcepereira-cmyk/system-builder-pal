@@ -80,6 +80,28 @@ export const reservasDoDia = createServerFn({ method: "POST" })
   });
 
 /**
+ * A recepção só mostra a agenda de aulas quando a academia tem grade.
+ *
+ * Sem turma nenhuma o bloco vira peso morto na tela do celular: repete
+ * "cadastre a grade" para sempre, num lugar que nem é onde se cadastra. Conta a
+ * grade inteira, não as aulas de hoje — senão num sábado a academia perderia a
+ * navegação para segunda.
+ */
+export const academiaTemGrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) => d)
+  .handler(async ({ data, context }): Promise<boolean> => {
+    const admin = await autorizar(context.userId, data.partnerId);
+    const { count, error } = await admin
+      .from("academia_turmas")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_id", data.partnerId)
+      .eq("ativo", true);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0;
+  });
+
+/**
  * A leitura do QR. É esta chamada que deixa a pessoa entrar — e ela grava a
  * passagem, então nunca deve ser chamada "só para conferir".
  */
