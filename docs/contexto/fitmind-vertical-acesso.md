@@ -377,3 +377,52 @@ Na recepção, a agenda de aulas agora só aparece se a academia tiver grade
 grade" para sempre e ocupava meia tela de celular numa academia de treino livre.
 A contagem é da grade inteira e não das aulas de hoje, senão num sábado a
 academia perderia a navegação para segunda.
+
+### 01/09 — CRM e disparos do Reino: o funil cabe nos avisos, não nas colunas
+
+O funil pedido tem 9 etapas: vencimento próximo (3 dias), dia do vencimento, 2
+dias depois do último dia de entrada, 7, 30, 60 e 90 dias, e a lista fria de quem
+não voltou. **Descoberta que muda o desenho:** `academia_crm_sincronizar` casa
+`gatilho = motivo` de `acesso_avaliar_academia`, e os motivos são só cinco. Quem
+venceu há 2 dias e quem venceu há 200 têm o **mesmo motivo**. Ou seja, as etapas
+de 7, 30, 60, 90 e fria **não existem como gatilho** e não dá para configurá-las
+— só construindo faixas por `dias_restantes`, o que ainda não foi feito.
+
+O que salva o funil é que a régua fina já mora do outro lado.
+`academia_avisos_modelos` tem `referencia` (vencimento ou bloqueio) e `quando`
+(dias, negativo = depois), `marco` é texto livre — não tem CHECK — e
+`academia_avisos_preparar` lê os modelos genericamente. Então a cadência inteira é
+**configuração pura**, inclusive um marco que não existia.
+
+Criados para o Reino (`af6dd958`), que estava com **zero** modelos:
+
+| marco | referência | quando | o que é |
+|---|---|---|---|
+| `d3` | vencimento | +3 | faltam 3 dias |
+| `d0` | vencimento | 0 | vence hoje |
+| `pos_bloqueio_2` | bloqueio | −2 | dois dias sem acesso |
+| `retorno_7` | bloqueio | −7 | chamando de volta |
+| `retorno_30` | bloqueio | −30 | remarketing |
+| `retorno_60` | bloqueio | −60 | remarketing — **marco novo**, não existia |
+| `retorno_90` | bloqueio | −90 | última chamada |
+
+E o quadro `Renovação — Reino Muay Thai`, que também não existia, com as 9 colunas
+pedidas mais `Renovou` (tipo `ganho`) — esta eu acrescentei, porque funil sem
+coluna de vitória não fecha.
+
+**Só três colunas têm régua automática**, que são os gatilhos que existem:
+`vencimento_proximo` → Vencimento próximo, `em_carencia` → Último dia de entrada,
+`vencido_bloqueado` → 2 dias sem acesso. "Vence hoje" não tem gatilho próprio (d0
+cai dentro de vencimento_proximo), e das etapas de retorno em diante **quem move o
+cartão é a recepção**. Isso é coerente com o desenho original: a automação larga o
+cartão assim que alguém o move. **As mensagens de 7, 30, 60 e 90 saem sozinhas
+pelos avisos** — a coluna é onde a equipe trabalha, não o que dispara.
+
+Provado em transação com ROLLBACK: a sincronização criaria **62 cartões** em "2
+dias sem acesso" — exatamente os 62 bloqueados — e zero nas outras duas, porque
+hoje ninguém está a vencer nem em carência. O quadro segue vazio de propósito;
+quem popula é o botão de sincronizar no painel.
+
+**Ainda desligado:** `avisos_automaticos` e `avisos_envio_automatico` do Reino
+seguem `false`, e é o certo até o chip do WhatsApp estar configurado. Ligar antes
+enfileiraria disparo sem por onde sair. É o último interruptor, depois do número.
