@@ -672,24 +672,26 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const cutoff = await getServerCutoffIso();
     const fromDate = cutoff && (!data.fromDate || cutoff > data.fromDate) ? cutoff : data.fromDate;
 
-    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRows }, { data: coachRow }] = await Promise.all([
+    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRows }, { data: coachRows }] = await Promise.all([
       supabaseAdmin.from("wallets").select("available_balance,total_withdrawn").eq("profile_id", data.profileId).maybeSingle(),
       supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle(),
       sid ? supabaseAdmin.from("student_wallets").select("available_balance,total_withdrawn").eq("student_id", sid).maybeSingle() : Promise.resolve({ data: null }),
       supabaseAdmin.from("partners" as never).select("id,status,created_at" as never).eq("profile_id" as never, data.profileId as never),
-      supabaseAdmin.from("coaches").select("id").eq("profile_id", data.profileId).maybeSingle(),
+      supabaseAdmin.from("coaches").select("id").eq("profile_id", data.profileId),
     ]);
     const plist = ((partnerRows as unknown as Array<{ id: string; status: string | null; created_at: string }>) || [])
       .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
     const partnerRow = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
     const partnerId = (partnerRow as unknown as { id?: string } | null)?.id ?? null;
-    const coachId = (coachRow as { id?: string } | null)?.id ?? null;
+    const partnerIdsForProfile = plist.map((row) => row.id);
+    const coachIdsForProfile = ((coachRows as Array<{ id: string }>) || []).map((row) => row.id);
+    const coachId = coachIdsForProfile[0] || null;
     const [{ data: pw }, { data: profw }] = await Promise.all([
-      partnerId
-        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,total_withdrawn" as never).eq("partner_id" as never, partnerId as never).maybeSingle()
+      partnerIdsForProfile.length
+        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIdsForProfile as never)
         : Promise.resolve({ data: null as unknown }),
-      coachId
-        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,total_withdrawn" as never).eq("professional_coach_id" as never, coachId as never).maybeSingle()
+      coachIdsForProfile.length
+        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIdsForProfile as never)
         : Promise.resolve({ data: null as unknown }),
     ]);
 
@@ -739,9 +741,9 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       partnerOrderRows.push(...(((rows as unknown as typeof partnerOrderRows) || [])));
     };
     await Promise.all([
-      addPartnerOrders("partner_id", partnerId),
-      addPartnerOrders("professional_coach_id", coachId),
-      addPartnerOrders("selling_coach_id", coachId),
+      ...partnerIdsForProfile.map((id) => addPartnerOrders("partner_id", id)),
+      ...coachIdsForProfile.map((id) => addPartnerOrders("professional_coach_id", id)),
+      ...coachIdsForProfile.map((id) => addPartnerOrders("selling_coach_id", id)),
     ]);
     const partnerOrdersById = new Map<string, typeof partnerOrderRows[number]>();
     const upsertPartnerOrder = (r: typeof partnerOrderRows[number]) => {
@@ -900,8 +902,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     // ===== Co-produção: pedidos em que a pessoa é co-produtora + índice de repasses =====
     const collabFilters = [
-      partnerId ? `and(collaborator_type.eq.partner,collaborator_id.eq.${partnerId})` : null,
-      coachId ? `and(collaborator_type.eq.professional,collaborator_id.eq.${coachId})` : null,
+      ...partnerIdsForProfile.map((id) => `and(collaborator_type.eq.partner,collaborator_id.eq.${id})`),
+      ...coachIdsForProfile.map((id) => `and(collaborator_type.eq.professional,collaborator_id.eq.${id})`),
     ].filter(Boolean).join(",");
     if (collabFilters) {
       const { data: cc } = await supabaseAdmin
@@ -923,8 +925,10 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     }
     const coprodIdx = await fetchCoprodIndex(Array.from(partnerOrdersById.keys()));
     const myCoprodCredits = new Map<string, { amount: number; pct: number | null }>();
-    for (const key of [partnerId ? `partner:${partnerId}` : null, coachId ? `professional:${coachId}` : null]) {
-      if (!key) continue;
+    for (const key of [
+      ...partnerIdsForProfile.map((id) => `partner:${id}`),
+      ...coachIdsForProfile.map((id) => `professional:${id}`),
+    ]) {
       for (const [oid, entry] of (coprodIdx.credit.get(key) || new Map())) {
         const prev = myCoprodCredits.get(oid);
         myCoprodCredits.set(oid, { amount: (prev?.amount || 0) + entry.amount, pct: entry.pct ?? prev?.pct ?? null });
@@ -934,12 +938,13 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     // (partnerId null) casaria com todo pedido de produto de profissional (partner_id null)
     // e apareceria como "criador" de produto alheio.
     const isCreatorOrder = (o: { partner_id: string | null; professional_coach_id: string | null }) =>
-      (partnerId != null && o.partner_id === partnerId) || (coachId != null && o.professional_coach_id === coachId);
+      (o.partner_id != null && partnerIdsForProfile.includes(o.partner_id))
+      || (o.professional_coach_id != null && coachIdsForProfile.includes(o.professional_coach_id));
     const myCoprodDeduction = (o: { id: string; partner_id: string | null; professional_coach_id: string | null }) =>
       coprodDeduction(
         coprodIdx,
-        partnerId != null && o.partner_id === partnerId ? partnerId : null,
-        coachId != null && o.professional_coach_id === coachId ? coachId : null,
+        o.partner_id != null && partnerIdsForProfile.includes(o.partner_id) ? o.partner_id : null,
+        o.professional_coach_id != null && coachIdsForProfile.includes(o.professional_coach_id) ? o.professional_coach_id : null,
         o.id,
       );
 
