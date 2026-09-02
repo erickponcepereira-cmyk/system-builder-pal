@@ -3,7 +3,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const n = (v: unknown) => Number(v || 0);
-const r2 = (v: number) => Math.round(v * 100) / 100;
 
 async function getAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
@@ -77,22 +76,6 @@ export interface PayablesReport {
   projection: PayableProjectionRow[];
   withdrawals: PayableWithdrawalRow[];
   lastAudit: WalletAuditRun | null;
-}
-
-async function nameIndex(profileIds: string[]) {
-  const supabaseAdmin = await getAdmin();
-  const map = new Map<string, { name: string; email: string | null }>();
-  const unique = Array.from(new Set(profileIds.filter(Boolean)));
-  for (let i = 0; i < unique.length; i += 300) {
-    const { data } = await supabaseAdmin
-      .from("profiles")
-      .select("id,name,email")
-      .in("id", unique.slice(i, i + 300));
-    for (const p of (data as Array<{ id: string; name: string | null; email: string | null }>) || []) {
-      map.set(p.id, { name: p.name || "—", email: p.email });
-    }
-  }
-  return map;
 }
 
 async function loadLastAudit(): Promise<WalletAuditRun | null> {
