@@ -117,11 +117,6 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
 /** Extrato consolidado (fonte única de verdade) para um perfil. Recalcula antes de ler. */
 export async function loadWalletStatement(profileId: string): Promise<WalletStatement> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  try {
-    await supabaseAdmin.rpc("recalc_wallet_for_profile" as never, { _profile_id: profileId } as never);
-  } catch (e) {
-    console.error("recalc_wallet_for_profile failed", e);
-  }
   const { data, error } = await supabaseAdmin.rpc("wallet_statement" as never, { _profile_id: profileId } as never);
   if (error) throw new Error(error.message);
   return mapStatement((data as Record<string, any>) || {});
