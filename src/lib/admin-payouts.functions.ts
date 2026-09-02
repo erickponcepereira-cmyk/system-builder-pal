@@ -247,7 +247,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const partnerWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
     ((partnerWalletsRaw as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = partnerProfileById.get(w.partner_id);
-      if (pid) partnerWalletByProfile.set(pid, w);
+      if (!pid) return;
+      const current = partnerWalletByProfile.get(pid) || { available_balance: 0, total_withdrawn: 0 };
+      partnerWalletByProfile.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: coachRows } = await supabaseAdmin
       .from("coaches" as never).select("id,profile_id" as never)
@@ -260,7 +265,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const profWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
     ((profWalletsRaw as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = coachProfileById.get(w.professional_coach_id);
-      if (pid) profWalletByProfile.set(pid, w);
+      if (!pid) return;
+      const current = profWalletByProfile.get(pid) || { available_balance: 0, total_withdrawn: 0 };
+      profWalletByProfile.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
@@ -473,7 +483,14 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const pwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
     ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = partnerProfileById.get(w.partner_id);
-      if (pid) pwMap.set(pid, w);
+      if (!pid) return;
+      const current = pwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
+      pwMap.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        pending_balance: n(current.pending_balance) + n(w.pending_balance),
+        total_earned: n(current.total_earned) + n(w.total_earned),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: coachRows2 } = await supabaseAdmin
       .from("coaches" as never).select("id,profile_id" as never)
@@ -486,7 +503,14 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const profwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
     ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = coachProfileById2.get(w.professional_coach_id);
-      if (pid) profwMap.set(pid, w);
+      if (!pid) return;
+      const current = profwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
+      profwMap.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        pending_balance: n(current.pending_balance) + n(w.pending_balance),
+        total_earned: n(current.total_earned) + n(w.total_earned),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
 
 
