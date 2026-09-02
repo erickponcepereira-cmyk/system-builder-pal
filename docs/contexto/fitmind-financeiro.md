@@ -31,3 +31,9 @@
 - As funções canônicas são internas e executáveis apenas por `service_role`; telas chamam funções de servidor autenticadas.
 - Mudanças em comissões, pedidos e co-produções precisam terminar em recálculo idempotente do perfil afetado.
 - Após qualquer alteração estrutural, comparar painel, extrato consolidado e carteiras materializadas, além de conferir múltiplos IDs para o mesmo perfil.
+
+## Data da venda nos relatórios
+
+- A data canônica de uma venda da loja é `store_orders.paid_at` (com `created_at` como último recurso). **Nunca use `updated_at`**: qualquer correção administrativa no pedido reescreve esse campo e joga a venda para o dia da correção.
+- Bug histórico: 02/09/2026, o backfill de forma de pagamento tocou 16 pedidos e a adesão da Katyerly (FM-8298F056, paga em 31/08) passou a aparecer como venda de 02/09 no relatório da coach Suellyn. Carteira, comissões e pontos estavam corretos — só a data do relatório mentia.
+- `paid_at` foi backfilled em todos os 177 pedidos pagos e agora é preenchido automaticamente pelo gatilho `trg_set_store_order_paid_at`.
