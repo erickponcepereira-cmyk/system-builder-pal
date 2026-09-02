@@ -16403,6 +16403,24 @@ export type Database = {
           pessoas: number
         }[]
       }
+      academia_recepcao_buscar: {
+        Args: { p_partner_id: string; p_termo: string }
+        Returns: {
+          cpf: string
+          credencial_id: string
+          dias_restantes: number
+          entrou_hoje: boolean
+          liberado: boolean
+          motivo: string
+          nome: string
+          referencia: string
+          valido_ate: string
+        }[]
+      }
+      academia_recepcao_entrada: {
+        Args: { p_credencial_id: string; p_partner_id: string }
+        Returns: Json
+      }
       academia_relatorio: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: Json
@@ -16721,6 +16739,37 @@ export type Database = {
           rating: number
           seller_replied_at: string
           seller_reply: string
+        }[]
+      }
+      avaliacoes_dos_meus_produtos: {
+        Args: never
+        Returns: {
+          autor: string
+          comment: string
+          created_at: string
+          id: string
+          product_id: string
+          produto: string
+          rating: number
+          seller_replied_at: string
+          seller_reply: string
+        }[]
+      }
+      avaliacoes_para_moderar: {
+        Args: { _incluir_escondidas?: boolean }
+        Returns: {
+          autor: string
+          comment: string
+          created_at: string
+          hidden_at: string
+          hidden_reason: string
+          id: string
+          product_id: string
+          product_origin: string
+          produto: string
+          rating: number
+          seller_reply: string
+          vendedor_id: string
         }[]
       }
       backfill_career_points: { Args: never; Returns: Json }
@@ -17383,6 +17432,10 @@ export type Database = {
           tem_academia: boolean
         }[]
       }
+      moderar_avaliacao: {
+        Args: { _esconder: boolean; _id: string; _motivo?: string }
+        Returns: undefined
+      }
       moeda_br: { Args: { v: number }; Returns: string }
       move_to_dlq: {
         Args: {
@@ -17672,6 +17725,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      produtos_do_vendedor: {
+        Args: { _id: string; _tipo: string }
+        Returns: {
+          gratuito: boolean
+          id: string
+          imagem: string
+          preco: number
+          preco_original: number
+          secao_id: string
+          source_id: string
+          titulo: string
+        }[]
+      }
       professional_can_view_student: {
         Args: { _student_id: string }
         Returns: boolean
@@ -17948,6 +18014,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      responder_avaliacao: {
+        Args: { _id: string; _resposta: string }
+        Returns: undefined
       }
       revert_subscription_invoice_payment: {
         Args: { _invoice_id: string; _performed_by: string }
@@ -18425,12 +18495,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18454,11 +18524,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18479,11 +18549,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18504,11 +18574,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18521,11 +18591,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
