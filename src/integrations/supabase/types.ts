@@ -18199,6 +18199,10 @@ export type Database = {
         Args: { _student_id: string }
         Returns: undefined
       }
+      sync_source_payment_method_from_mp: {
+        Args: { _id: string; _kind: string }
+        Returns: undefined
+      }
       taxa_vigente: {
         Args: { _data?: string }
         Returns: {

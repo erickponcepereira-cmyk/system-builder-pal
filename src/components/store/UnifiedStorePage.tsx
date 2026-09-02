@@ -141,7 +141,10 @@ export function UnifiedStorePage({
   // item. Quem montou o carrinho lá encontra ele aqui, e vice-versa.
   const carrinho = useCarrinho(audience);
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  // A forma de pagamento real é a que a pessoa escolhe na tela de pagamento e
+  // é confirmada pelo gateway; o pedido nasce apenas com um valor inicial.
+  const paymentMethod: PaymentMethod = "pix";
+
   const [shipping, setShipping] = useState<ShippingForm>(SHIPPING_VAZIO);
   const [aceitouPrazo, setAceitouPrazo] = useState(false);
   const [aceitouEndereco, setAceitouEndereco] = useState(false);
@@ -1183,9 +1186,8 @@ export function UnifiedStorePage({
           onRemover={carrinho.remover}
           onClose={() => setCarrinhoAberto(false)}
           checkout={{
-            paymentMethod,
-            onPaymentMethod: setPaymentMethod,
             precisaEntrega,
+
             shipping,
             onShipping: (patch) => setShipping((atual) => ({ ...atual, ...patch })),
             aceitouPrazo,
@@ -1894,8 +1896,7 @@ function BlocoDeComissao({ ganhos, hasUpline }: { ganhos: Ganhos; hasUpline: boo
  * depois de a pessoa já ter decidido.
  */
 type CheckoutProps = {
-  paymentMethod: PaymentMethod;
-  onPaymentMethod: (method: PaymentMethod) => void;
+
   precisaEntrega: boolean;
   shipping: ShippingForm;
   onShipping: (patch: Partial<ShippingForm>) => void;
@@ -2074,23 +2075,7 @@ function CartSheet({
 
         {cart.length > 0 && (
           <>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {(["pix", "credit_card", "debit_card"] as PaymentMethod[]).map((metodo) => (
-                <button
-                  key={metodo}
-                  type="button"
-                  onClick={() => checkout.onPaymentMethod(metodo)}
-                  aria-pressed={checkout.paymentMethod === metodo}
-                  className={`rounded-xl px-2 py-2 text-xs font-bold transition ${
-                    checkout.paymentMethod === metodo
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {metodo === "pix" ? "PIX" : metodo === "credit_card" ? "Crédito" : "Débito"}
-                </button>
-              ))}
-            </div>
+
 
             {/* Venda do coach não coleta endereço: `create_coach_sale` não
                 recebe entrega. Mostrar o formulário aqui seria pedir um dado
