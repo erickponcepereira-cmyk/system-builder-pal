@@ -720,6 +720,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      available_at: string | null; release_days: number | null; released_early: boolean | null; released_early_at: string | null;
       master_coach_cross_beneficiary_coach_id?: string | null;
       student?: { profile?: { name: string | null; email: string | null } | null } | null;
       partner_product?: { name: string | null } | null;
@@ -729,7 +730,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!value) return;
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .eq(column as never, value as never)
         .order("created_at" as never, { ascending: false })
         .limit(200);
@@ -771,7 +772,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (commissionPartnerOrderIds.length) {
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .in("id" as never, commissionPartnerOrderIds as never);
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -913,7 +914,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (ids.length) {
         let q = supabaseAdmin
           .from("partner_product_orders" as never)
-          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
           .in("id" as never, ids as never);
         if (fromDate) q = (q as any).gte("created_at", fromDate);
         if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -1011,7 +1012,14 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const nowMs = Date.now();
     const paidOrders = Array.from(partnerOrdersById.values()).filter((o) => o.status === "paid");
     const releaseInfo = (o: typeof partnerOrderRows[number]) => {
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      const paidAt = new Date(o.paid_at || o.created_at || Date.now()).getTime();
+      const configuredRelease = o.available_at ? new Date(o.available_at).getTime() : NaN;
+      const earlyRelease = o.released_early_at ? new Date(o.released_early_at).getTime() : nowMs;
+      const availableAt = o.released_early
+        ? earlyRelease
+        : Number.isFinite(configuredRelease)
+          ? configuredRelease
+          : paidAt + n(o.release_days || 7) * 24 * 60 * 60 * 1000;
       return { availableAt, released: availableAt <= nowMs };
     };
     const productEarnings = [
