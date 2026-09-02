@@ -73,7 +73,7 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
     });
     const { data: orders } = await supabaseAdmin
       .from("store_orders").select("id,total_amount")
-      .in("student_id", ids).eq("status", "paid").gte("updated_at", effectiveSince);
+      .in("student_id", ids).eq("status", "paid").gte("paid_at", effectiveSince);
     ((orders as { id: string; total_amount: number }[] | null) || []).forEach((o) => {
       if (linkedOrderIds.has(o.id)) return;
       total += Number(o.total_amount) || 0;

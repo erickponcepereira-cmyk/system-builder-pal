@@ -301,7 +301,7 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   const [txRes, storeRes, partnerRes] = await Promise.all([
     // exclui transações espelho de store_orders (senão a venda conta duas vezes)
     supabaseAdmin.from("transactions").select("student_id,gross_amount,metadata").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
-    supabaseAdmin.from("store_orders").select("student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("updated_at", fromIso).lte("updated_at", toIso),
+    supabaseAdmin.from("store_orders").select("student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("paid_at", fromIso).lte("paid_at", toIso),
     supabaseAdmin.from("partner_product_orders").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
   ]);
   const add = (studentId: string, amount: number) => {
