@@ -19,6 +19,13 @@
 - Fitcoin permanece separado do dinheiro sacável.
 - Saques abertos, pagamentos internos e adiantamentos reduzem o disponível consolidado apenas uma vez.
 
+## Forma de pagamento
+
+- A forma de pagamento canônica é a do pagamento **aprovado** no gateway (`mercadopago_payments.payment_method`), nunca a escolhida antes do checkout.
+- `store_orders.payment_method` / `partner_product_orders.payment_method` são sincronizados por gatilho (`sync_source_payment_method_from_mp`) assim que o pagamento fica `approved`, antes do processamento financeiro.
+- A taxa da maquininha (Pix ~0,99% x cartão ~4,98%) sai desse campo; se ele mentir, todo o líquido e todas as comissões saem inflados. O carrinho não pergunta mais a forma de pagamento por causa disso.
+- Bug histórico: 02/09/2026, pedido FM-D77E7F0E (R$ 1.280,00) pago no cartão e processado como Pix. Reprocessado; 15 pedidos anteriores tiveram apenas o registro do método corrigido.
+
 ## Segurança e operação
 
 - As funções canônicas são internas e executáveis apenas por `service_role`; telas chamam funções de servidor autenticadas.
