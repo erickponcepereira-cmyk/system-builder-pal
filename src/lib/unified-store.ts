@@ -122,6 +122,15 @@ export type UnifiedProduct = {
   sellerWords: string[];
   /** Palavras do índice inteiro: descrição, seção, categoria, cidade, tipo. */
   haystackWords: string[];
+  /**
+   * Nomes da taxonomia do mais específico ao mais genérico
+   * ("Ressonância Magnética > Imagem > Medicina").
+   *
+   * Existe para o produto sem foto poder desenhar a arte certa: o card só tem
+   * o produto em mãos, e os IDs sozinhos não dizem de que tipo de coisa se
+   * trata. Ver `arteDaTaxonomia`.
+   */
+  taxonomyPath: string;
 };
 
 
@@ -757,14 +766,22 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     partner_company: "parceiro academia estudio servico",
   };
 
-  type ProdutoCru = Omit<UnifiedProduct, "haystack" | "titleWords" | "sellerWords" | "haystackWords">;
+  type ProdutoCru = Omit<
+    UnifiedProduct,
+    "haystack" | "titleWords" | "sellerWords" | "haystackWords" | "taxonomyPath"
+  >;
 
   const products: UnifiedProduct[] = [];
   const push = (p: ProdutoCru) => {
-    const taxonomia = [
-      p.sectionId ? nomeSecao.get(p.sectionId) : "",
-      p.categoryId ? nomeCategoria.get(p.categoryId) : "",
+    // Do mais específico ao mais genérico: é nessa ordem que `arteDaTaxonomia`
+    // espera receber, e é a ordem em que a pessoa lê a trilha na tela.
+    const taxonomyPath = [
       p.subcategoryId ? nomeSubcategoria.get(p.subcategoryId) : "",
+      p.categoryId ? nomeCategoria.get(p.categoryId) : "",
+      p.sectionId ? nomeSecao.get(p.sectionId) : "",
+    ].filter(Boolean).join(" > ");
+    const taxonomia = [
+      taxonomyPath,
       p.sellerCity || "",
       ROTULO_KIND[p.kind],
       p.isFreebie ? "gratuito gratis brinde beneficio" : "",
@@ -772,6 +789,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     const haystack = expand(`${p.title} ${p.sellerName} ${p.description || ""} ${taxonomia}`);
     products.push({
       ...p,
+      taxonomyPath,
       haystack,
       titleWords: palavras(p.title),
       sellerWords: palavras(p.sellerName),

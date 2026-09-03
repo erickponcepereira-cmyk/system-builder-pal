@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { PurchaseSuccessModal, type PurchasedItem } from "@/components/store/PurchaseSuccessModal";
+import { ArteDoProduto } from "@/components/store/ArteDoProduto";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
@@ -1111,8 +1112,8 @@ export function UnifiedStorePage({
                     {s.imageUrl ? (
                       <img src={s.imageUrl} alt="" className="h-24 w-full object-cover" loading="lazy" />
                     ) : (
-                      <div className="flex h-24 w-full items-center justify-center bg-muted">
-                        <ShoppingBag className="h-6 w-6 text-muted-foreground opacity-50" />
+                      <div className="h-24 w-full">
+                        <ArteDoProduto titulo={s.name} className="h-6 w-6" />
                       </div>
                     )}
                     <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
@@ -1339,7 +1340,7 @@ function Card({
         {product.imageUrl ? (
           <img src={product.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <ShoppingBag className="h-7 w-7 text-muted-foreground opacity-50" />
+          <ArteDoProduto taxonomia={product.taxonomyPath} titulo={product.title} className="h-8 w-8" />
         )}
         {flag && (
           <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
@@ -1626,6 +1627,12 @@ function DetailSheet({
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
+
+        {product.imageUrls.length === 0 && (
+          <div className="mb-3 h-40 overflow-hidden rounded-xl">
+            <ArteDoProduto taxonomia={product.taxonomyPath} titulo={product.title} className="h-12 w-12" />
+          </div>
+        )}
 
         {product.imageUrls.length > 0 && (
           <div className="mb-3">
@@ -2025,7 +2032,7 @@ function CartSheet({
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
                   ) : (
-                    <ShoppingBag className="h-4 w-4 text-muted-foreground opacity-50" />
+                    <ArteDoProduto titulo={item.title} className="h-4 w-4" />
                   )}
                 </div>
 
