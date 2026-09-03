@@ -92,7 +92,30 @@ export function WalletStatementCard({
         ))}
       </div>
 
+      {statement.networkByMonth.length > 0 && (
+        <div className="mt-3 rounded-xl bg-white/5 p-3">
+          <p className="text-[11px] font-bold text-white/70">Rede por mês</p>
+          <p className="text-[10px] text-white/35 mb-1.5">Rede só vira disponível quando a meta do mês é batida.</p>
+          <div className="space-y-1">
+            {statement.networkByMonth.map((m) => (
+              <div key={m.period} className="flex items-center justify-between gap-2 text-[10px]">
+                <span className="text-white/60">
+                  {m.period}{" "}
+                  <span className={m.goalMet ? "text-emerald-400" : "text-amber-400"}>
+                    {m.goalMet ? "meta batida" : "meta não batida"}
+                  </span>
+                </span>
+                <span className="font-mono text-white/70">
+                  liberado {fmt(m.released)} · carência {fmt(m.hold)} · bloqueado {fmt(m.blocked)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 rounded-xl bg-white/5 p-3">
+
         <p className="text-[11px] font-bold text-white/70">Carteira de indicação (Fitcoin) — separada</p>
         <p className="text-[10px] text-white/35 mb-1.5">Não entra no saldo de comissões nem no limite de saque.</p>
         <div className="grid grid-cols-3 gap-2 text-[10px] text-white/40">
