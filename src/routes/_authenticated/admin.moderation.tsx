@@ -31,6 +31,23 @@ type AppealRow = {
   created_at: string;
 };
 
+type MediaJobCounts = {
+  processed: number;
+  failed: number;
+  remaining: number;
+  dead: number;
+};
+
+const mediaJobCounts = (result: unknown): MediaJobCounts => {
+  const value = result as Partial<MediaJobCounts> | null;
+  return {
+    processed: Number(value?.processed || 0),
+    failed: Number(value?.failed || 0),
+    remaining: Number(value?.remaining || 0),
+    dead: Number(value?.dead || 0),
+  };
+};
+
 const actionOptions = [
   ["warning", "Advertência"],
   ["hide_content", "Ocultar conteúdo"],
@@ -84,10 +101,13 @@ function AdminModerationPage() {
 
   const resolve = async (decision: "actioned" | "dismissed") => {
     if (!selected || reason.trim().length < 3) return toast.error("Informe uma justificativa pública com pelo menos 3 caracteres.");
-    setSaving(true);
-    const expirable = ["group_mute", "suspend_posting"].includes(actionType);
+    const expirable = decision === "actioned" && ["group_mute", "suspend_posting"].includes(actionType);
     const days = Number(expiresInDays);
-    const expiresAt = expirable && Number.isFinite(days) && days > 0
+    if (expirable && (!Number.isInteger(days) || days < 1 || days > 365)) {
+      return toast.error("A duração deve ser de 1 a 365 dias.");
+    }
+    setSaving(true);
+    const expiresAt = expirable
       ? new Date(Date.now() + days * 86_400_000).toISOString()
       : null;
     const { error } = await supabase.rpc("admin_resolve_ugc_report" as never, {
@@ -102,18 +122,23 @@ function AdminModerationPage() {
       setSaving(false);
       return toast.error(error.message);
     }
-    let mediaFailed = false;
+    let mediaResult: MediaJobCounts | null = null;
+    let mediaRequestFailed = false;
     if (decision === "actioned") {
       try {
         const result = await processMediaJobs({ data: { reportId: selected.id, limit: 10 } });
-        mediaFailed = result.failed > 0;
+        mediaResult = mediaJobCounts(result);
       } catch {
-        mediaFailed = true;
+        mediaRequestFailed = true;
       }
     }
     setSaving(false);
-    if (mediaFailed) {
+    if (mediaRequestFailed) {
       toast.warning("Medida aplicada, mas a mídia ficou na fila de remoção. Tente processar novamente.");
+    } else if (mediaResult?.dead) {
+      toast.error(`Medida aplicada, mas ${mediaResult.dead} tarefa(s) de mídia esgotaram as tentativas e exigem intervenção.`);
+    } else if (mediaResult && (mediaResult.failed > 0 || mediaResult.remaining > 0)) {
+      toast.warning(`Medida aplicada; ${mediaResult.remaining} tarefa(s) de mídia permanecem na fila (${mediaResult.failed} falha(s) nesta execução).`);
     } else {
       toast.success(decision === "dismissed" ? "Denúncia encerrada." : "Medida aplicada e registrada.");
     }
@@ -134,26 +159,31 @@ function AdminModerationPage() {
       setSaving(false);
       return toast.error(error.message);
     }
-    let mediaFailed = false;
+    let mediaResult: MediaJobCounts | null = null;
+    let mediaRequestFailed = false;
     if (accepted) {
       try {
         const result = await processMediaJobs({ data: { appealId: appeal.id, limit: 10 } });
-        mediaFailed = result.failed > 0;
+        mediaResult = mediaJobCounts(result);
       } catch {
-        mediaFailed = true;
+        mediaRequestFailed = true;
       }
     }
     setSaving(false);
-    if (mediaFailed) toast.warning("Recurso aceito; a restauração da mídia continua pendente.");
+    if (mediaRequestFailed) toast.warning("Recurso aceito; a restauração da mídia continua pendente.");
+    else if (mediaResult?.dead) toast.error(`Recurso aceito, mas ${mediaResult.dead} tarefa(s) de restauração esgotaram as tentativas e exigem intervenção.`);
+    else if (mediaResult && (mediaResult.failed > 0 || mediaResult.remaining > 0)) toast.warning(`Recurso aceito; ${mediaResult.remaining} tarefa(s) de restauração permanecem na fila (${mediaResult.failed} falha(s) nesta execução).`);
     else toast.success(accepted ? "Recurso aceito e medida revogada." : "Recurso negado.");
     await load();
   };
 
   const refreshAndRetryMedia = async () => {
     try {
-      const result = await processMediaJobs({ data: { limit: 20 } });
+      const result = mediaJobCounts(await processMediaJobs({ data: { limit: 20 } }));
       if (result.processed > 0) toast.success(`${result.processed} tarefa(s) de mídia processada(s).`);
-      if (result.failed > 0) toast.warning(`${result.failed} tarefa(s) de mídia ainda precisam de atenção.`);
+      if (result.dead > 0) toast.error(`${result.dead} tarefa(s) de mídia esgotaram as tentativas e exigem intervenção.`);
+      else if (result.failed > 0 || result.remaining > 0) toast.warning(`${result.remaining} tarefa(s) permanecem na fila; ${result.failed} falharam nesta execução.`);
+      else if (result.processed === 0) toast.info("A fila de mídia está em dia.");
     } catch {
       toast.warning("Não foi possível processar a fila de mídia agora.");
     }

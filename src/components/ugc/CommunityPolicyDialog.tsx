@@ -12,11 +12,14 @@ export function CommunityPolicyDialog({
   onOpenChange,
   onAccepted,
   unavailableReason,
+  elevated = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAccepted: () => void;
   unavailableReason?: string | null;
+  /** Usa uma camada acima dos modais manuais da loja. */
+  elevated?: boolean;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,7 +41,7 @@ export function CommunityPolicyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className={`${elevated ? "z-[100]" : ""} max-w-md`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />

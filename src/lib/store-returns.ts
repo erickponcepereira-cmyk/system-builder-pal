@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { PurchaseSource } from "@/lib/student-purchases.functions";
 
 /**
  * Pedido de estorno, do lado de quem compra.
@@ -7,8 +6,8 @@ import type { PurchaseSource } from "@/lib/student-purchases.functions";
  * A tabela `return_requests` existe desde julho, com RLS completa, e nunca
  * teve uma tela. Isto liga os fios: o aluno pede, acompanha e pode desistir
  * enquanto ninguém decidiu. Quem aprova, rejeita ou marca como estornado é o
- * admin — e é o banco que garante isso, não este arquivo (a policy de UPDATE
- * só aceita `status = 'cancelled'`).
+ * admin — e o banco garante isso por RPCs estreitas, sem INSERT/UPDATE direto
+ * para o papel `authenticated`.
  *
  * Não escreve `refund_amount` de propósito. O valor a devolver é decisão de
  * quem analisa, não do formulário: pode ter havido entrega parcial, uso, ou
@@ -18,6 +17,16 @@ import type { PurchaseSource } from "@/lib/student-purchases.functions";
 
 export const ESTORNO_ABERTO = ["requested", "under_review", "approved"] as const;
 
+export type StoreOrderType =
+  | "store_order"
+  | "partner_product_order"
+  | "transaction"
+  | "subscription_invoice";
+
+/** UUIDs só são únicos dentro da tabela de origem. */
+export const chaveDoEstorno = (orderType: StoreOrderType, orderId: string): string =>
+  `${orderType}:${orderId}`;
+
 export type StatusEstorno =
   | "requested" | "under_review" | "approved"
   | "rejected" | "refunded" | "cancelled";
@@ -25,7 +34,7 @@ export type StatusEstorno =
 export type PedidoDeEstorno = {
   id: string;
   order_id: string;
-  order_type: string;
+  order_type: StoreOrderType;
   reason: string;
   description: string | null;
   status: StatusEstorno;
@@ -63,23 +72,7 @@ export const ROTULO_STATUS: Record<StatusEstorno, string> = {
   cancelled: "Cancelado por você",
 };
 
-/** A compra e o pedido de estorno vivem em tabelas diferentes por origem. */
-export const tipoDoPedido = (source: PurchaseSource): string =>
-  source === "partner" || source === "professional" ? "partner_product_order" : "store_order";
-
-async function meuProfileId(): Promise<string | null> {
-  const { data: sessao } = await supabase.auth.getUser();
-  const userId = sessao?.user?.id;
-  if (!userId) return null;
-  const { data } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return (data?.id as string) ?? null;
-}
-
-/** Os pedidos de estorno desta pessoa, indexados pelo id da compra. */
+/** Pedidos desta pessoa, indexados por origem + id da compra. */
 export async function meusEstornos(): Promise<Map<string, PedidoDeEstorno>> {
   const { data, error } = await supabase
     .from("return_requests" as never)
@@ -96,42 +89,34 @@ export async function meusEstornos(): Promise<Map<string, PedidoDeEstorno>> {
     // O mais recente manda: a consulta já vem ordenada, então o primeiro de
     // cada compra é o que vale, e os anteriores (cancelados, recusados) ficam
     // como histórico que a tela não precisa mostrar.
-    if (!mapa.has(linha.order_id)) mapa.set(linha.order_id, linha);
+    const chave = chaveDoEstorno(linha.order_type, linha.order_id);
+    if (!mapa.has(chave)) mapa.set(chave, linha);
   }
   return mapa;
 }
 
 export async function pedirEstorno(entrada: {
   orderId: string;
-  source: PurchaseSource;
+  orderType: StoreOrderType;
   motivo: string;
   detalhe: string;
-  valorDaCompra: number;
   nomeDoProduto: string;
 }): Promise<{ ok: true } | { ok: false; erro: string }> {
-  const profileId = await meuProfileId();
-  if (!profileId) return { ok: false, erro: "Não consegui identificar sua conta. Entre de novo e tente." };
-
-  const { error } = await supabase.from("return_requests" as never).insert({
-    order_id: entrada.orderId,
-    order_type: tipoDoPedido(entrada.source),
-    requested_by: profileId,
-    reason: entrada.motivo,
-    description: entrada.detalhe.trim() || null,
-    status: "requested",
-    // Trava o repasse enquanto o pedido está de pé: dinheiro que já saiu para
-    // a rede não volta. É a mesma razão de existir da coluna.
-    blocks_settlement: true,
-    metadata: {
-      valor_da_compra: entrada.valorDaCompra,
-      produto: entrada.nomeDoProduto,
-      origem: entrada.source,
-    },
+  const produto = entrada.nomeDoProduto.trim().slice(0, 300);
+  const { error } = await supabase.rpc("create_return_request" as never, {
+    _order_type: entrada.orderType,
+    _order_id: entrada.orderId,
+    _reason: entrada.motivo,
+    _description: entrada.detalhe.trim() || null,
+    _metadata: produto ? { produto } : {},
   } as never);
 
   if (error) {
     // 23505 = o índice parcial que garante um pedido aberto por compra.
     if ((error as { code?: string }).code === "23505") {
+      if ((error as { message?: string }).message?.includes("já possui estorno confirmado")) {
+        return { ok: false, erro: "Esta compra já foi estornada." };
+      }
       return { ok: false, erro: "Já existe um pedido de estorno em andamento para esta compra." };
     }
     console.error("[estorno] falha ao abrir o pedido", error);
@@ -141,10 +126,9 @@ export async function pedirEstorno(entrada: {
 }
 
 export async function cancelarEstorno(id: string): Promise<{ ok: boolean; erro?: string }> {
-  const { error } = await supabase
-    .from("return_requests" as never)
-    .update({ status: "cancelled", blocks_settlement: false } as never)
-    .eq("id" as never, id as never);
+  const { error } = await supabase.rpc("cancel_return_request" as never, {
+    _request_id: id,
+  } as never);
 
   if (error) {
     console.error("[estorno] falha ao cancelar", error);

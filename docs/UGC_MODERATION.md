@@ -6,6 +6,7 @@ Este runbook cobre o sistema de conteúdo gerado por usuário (UGC) do FitMind C
 
 - Mensagens e imagens dos grupos de desafio.
 - Posts da timeline de parceiros.
+- Avaliações de produtos feitas por compradores e respostas de vendedores.
 - Perfis públicos de participantes e profissionais.
 - Parceiros e seus itens de catálogo.
 - Grupos externos do WhatsApp publicados por parceiros/profissionais.
@@ -33,10 +34,13 @@ O aplicativo exige o aceite da versão vigente das Diretrizes da Comunidade ante
 | `ugc_moderation_actions` | Trilha imutável; revogação é registrada em vez de apagar a ação. |
 | `ugc_appeals` | Um recurso por ação, em até 90 dias, analisado por outro moderador. |
 | `ugc_media_jobs` | Quarentena/restauração/expurgo via Storage API, com retry e sem DML do cliente. |
+| `product_reviews` | Compra paga e produto são validados no banco; avaliação e resposta usam RPCs estreitas e autoria imutável. |
 
 Evidências e notas internas não possuem `SELECT` direto para usuários. A fila administrativa usa `admin_list_ugc_reports`, que exige administrador master ou `admin_permissions.reports = true`. Ações e recursos usam a mesma permissão no banco; esconder o menu no React não é considerado controle de acesso.
 
 Mensagens só podem ser inseridas pelo próprio remetente, no grupo ativo em que ele não esteja banido/silenciado e conforme `send_permission`. A única atualização comum permitida é a exclusão lógica da própria mensagem. Posts registram o autor real no banco e protegem campos de autoria/moderação contra alteração.
+
+Avaliações não aceitam DML direto de `authenticated`. O RPC deriva o perfil, exige aceite vigente, valida pedido pago e confirma que origem/produto pertencem à compra. Na edição, somente nota e comentário podem mudar. Respostas registram o perfil do vendedor e só podem ser gravadas por quem administra o parceiro/produto profissional ou pela operação autorizada da FitMind. Avaliação e resposta são alvos de denúncia separados para que uma resposta abusiva nunca seja atribuída ao comprador.
 
 Grupos do WhatsApp não aceitam DML direto de `authenticated`. O servidor valida proprietário/equipe, aceite vigente, tamanho e destino. Só são aceitos HTTPS e os hosts exatos `chat.whatsapp.com`, `wa.me` e `api.whatsapp.com`, ou telefone com 10 a 15 dígitos.
 
@@ -53,6 +57,8 @@ Posts de parceiro usam o bucket público `store-images`. Ao aplicar `hide_conten
 5. o original público é removido pela API oficial do Storage.
 
 Em recurso aceito, a mídia é restaurada antes de o post voltar a `visible`. O botão **Atualizar e processar mídia** tenta novamente jobs pendentes/falhos. Não apagar linhas diretamente de `storage.objects`, pois isso pode deixar o arquivo físico órfão.
+
+O worker usa lease de dez minutos para recuperar jobs interrompidos e encerra em `dead` após dez tentativas. Caminhos são decodificados repetidamente e validados contra o bucket, parceiro/grupo, prefixo e nome de arquivo esperados. Uma restauração só torna o post visível pela RPC service-role serializada; uma ocultação posterior sempre vence. Se outro post referencia o mesmo objeto, a quarentena preserva o original compartilhado.
 
 ## Ordem obrigatória de homologação
 
@@ -78,10 +84,11 @@ A migration altera RLS, ACL, gatilhos e funções existentes. Não fazer rollbac
 - Recurso: até 90 dias após a ação.
 - Evidência bruta sugerida: 180 dias depois da resolução.
 - Auditoria mínima (alvo, resultado, horários e ação) pode permanecer sem conteúdo bruto.
+- Na exclusão de conta, avaliações do titular são removidas, respostas dele são limpas e snapshots associados perdem texto, nota e identificadores pessoais imediatamente; permanece apenas contexto não pessoal da decisão.
 - Executar periodicamente `ugc_purge_expired_report_evidence(180)` com `service_role`.
 - Depois do purge, abrir a fila administrativa e usar **Atualizar e processar mídia**, ou processar os jobs com o mesmo backend autenticado.
 - Nunca registrar `evidence_snapshot`, relato livre, URL assinada ou chave de serviço em logs.
-- Alertar quando houver job `failed`, dez tentativas, fila com atraso acima de 15 minutos ou denúncia aberta acima do SLA definido pelo negócio.
+- Alertar quando houver job `failed`/`dead`, lease recuperada, fila com atraso acima de 15 minutos ou denúncia aberta acima do SLA definido pelo negócio. Job `dead` exige investigação e não deve ser reiniciado às cegas.
 
 ## Matriz de testes de staging
 
@@ -143,13 +150,35 @@ A migration altera RLS, ACL, gatilhos e funções existentes. Não fazer rollbac
 ### Privacidade, exclusão e regressão
 
 41. `anon` não lê e-mail, telefone, nascimento, endereço, permissões administrativas ou CPF de `profiles`.
-42. Exclusão da conta remove grupos WhatsApp, aceites, bloqueios, recursos e arquivos de evidência do titular.
-43. Denúncias/auditoria preservadas ficam sem IDs pessoais, perfil público, convite ou telefone do titular.
+42. Exclusão da conta remove grupos WhatsApp, aceites, bloqueios, recursos, avaliações do autor e arquivos de evidência do titular; respostas feitas pelo vendedor são limpas sem apagar a avaliação do comprador.
+43. Denúncias/auditoria preservadas ficam sem IDs pessoais, perfil público, convite, telefone, nota, comentário ou resposta do titular e registram que o conteúdo foi redigido por exclusão de conta.
 44. Manifesto inclui `store-images/partners/<id>/posts`, `group-media` e `ugc-evidence`.
 45. Catálogo, chat, timeline, perfis e WhatsApp continuam funcionando para usuários não bloqueados.
 46. Navegação Android abre Diretrizes, Central de Segurança e Moderação sem tela em branco.
 47. Typecheck, testes, build web/mobile e teste em aparelho real terminam sem erro.
 
+### Avaliações e respostas de vendedores
+
+48. Sem aceite vigente, criar/editar avaliação e criar/editar resposta de vendedor são recusados no banco.
+49. `authenticated` não consegue fazer `SELECT`, `INSERT`, `UPDATE` ou `DELETE` direto em `product_reviews`; somente as RPCs concedidas funcionam.
+50. Pedido alheio, pendente, cancelado, estornado ou inexistente não cria avaliação.
+51. `transaction`, `store_order` e `partner_product_order` só aceitam a origem e o produto realmente vinculados à compra; tipo inventado é recusado.
+52. Pedido com vários itens mantém uma avaliação independente por `(tipo, pedido, origem, produto)` e a tela abre o item correto.
+53. Autor consegue mudar apenas nota/comentário e não altera pedido, produto, autoria, moderação nem resposta do vendedor.
+54. Só a equipe do parceiro, o profissional dono ou a operação FitMind autorizada responde; `seller_reply_by_profile_id` registra quem escreveu.
+55. Listagem pública não expõe `order_id`/`order_type`; a RPC de avaliações próprias devolve somente linhas do perfil autenticado.
+56. Bloquear o autor remove sua avaliação da lista e do resumo de notas nos dois sentidos definidos para perfis.
+57. Bloquear parceiro/profissional remove vendedor, catálogo e reputação correspondentes e não deixa a resposta reaparecer por RPC `SECURITY DEFINER`.
+58. Denunciar a avaliação captura nota/comentário no servidor e atribui o sujeito ao comprador correto.
+59. Denunciar a resposta captura somente a resposta e atribui o sujeito ao vendedor/perfil que respondeu, não ao comprador.
+60. Ocultar avaliação remove a unidade completa; ocultar resposta preserva a avaliação. Recurso aceito restaura apenas o alvo correto e nunca desfaz ação posterior ativa.
+61. Caminhos com separador codificado, dupla codificação, `%` residual, `..`, barra invertida, query, fragmento ou caractere de controle são recusados.
+62. Job `processing` recente mantém o lease; job abandonado há mais de dez minutos volta para retry e, na décima falha, termina explicitamente em `dead`.
+63. Quarentena copia a evidência privada, mas não remove um objeto ainda referenciado por outro post.
+64. Se uma nova ocultação for aplicada enquanto a restauração antiga está em andamento, o post permanece oculto e o objeto recriado por aquela tentativa não fica público.
+65. O purge de mensagem de grupo mantém o snapshot até o job de remoção de `group-media` concluir; somente a execução posterior redige a evidência.
+66. Avaliação/resposta com denúncia aberta não pode ser editada; resposta ocultada não pode ser republicada enquanto a ação estiver ativa, e o recurso nunca sobrescreve texto posterior.
+
 ## Evidências para o dossiê da Play
 
-Guardar capturas datadas (sem PII) do aceite, menu de denúncia/bloqueio, Central de Segurança, fila administrativa, decisão, recurso por segundo moderador e remoção de mídia. Registrar versão do app, hash Git, migrations aplicadas e resultado dos 47 casos. Isso demonstra o fluxo, mas não substitui monitoramento contínuo e resposta humana às denúncias.
+Guardar capturas datadas (sem PII) do aceite, menus de denúncia/bloqueio em mensagens, avaliações e respostas, Central de Segurança, fila administrativa, decisão, recurso por segundo moderador e remoção de mídia. Registrar versão do app, hash Git, migrations aplicadas e resultado dos 66 casos. Isso demonstra o fluxo, mas não substitui monitoramento contínuo e resposta humana às denúncias.

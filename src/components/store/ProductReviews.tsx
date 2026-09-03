@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { StarRating } from "@/components/store/StarRating";
+import { UgcActionsMenu } from "@/components/ugc/UgcActionsMenu";
 import {
   avaliacoesDoProduto,
-  notasDosProdutos,
   origemDoProduto,
-  type Avaliacao,
+  resumoDeNotas,
+  type AvaliacaoPublica,
   type ResumoDeNotas,
 } from "@/lib/store-reviews";
 
@@ -30,24 +31,39 @@ export function ProductReviews({
 }) {
   const origem = origemDoProduto(origin, kind);
   const [resumo, setResumo] = useState<ResumoDeNotas | null>(null);
-  const [lista, setLista] = useState<Avaliacao[]>([]);
+  const [lista, setLista] = useState<AvaliacaoPublica[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [mostrarTudo, setMostrarTudo] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const [mapa, avs] = await Promise.all([
+      resumoDeNotas([{ origem, produtoId: sourceId }]),
+      avaliacoesDoProduto(origem, sourceId),
+    ]);
+    return {
+      resumo: mapa.get(`${origem}:${sourceId}`) ?? null,
+      avaliacoes: avs,
+    };
+  }, [origem, sourceId]);
+
+  const sincronizarDepoisDoBloqueio = useCallback(() => {
+    void carregar().then((resultado) => {
+      setResumo(resultado.resumo);
+      setLista(resultado.avaliacoes);
+    });
+  }, [carregar]);
 
   useEffect(() => {
     let vivo = true;
     setCarregando(true);
-    void Promise.all([
-      notasDosProdutos([sourceId]),
-      avaliacoesDoProduto(origem, sourceId),
-    ]).then(([mapa, avs]) => {
+    void carregar().then((resultado) => {
       if (!vivo) return;
-      setResumo(mapa.get(`${origem}:${sourceId}`) ?? null);
-      setLista(avs);
+      setResumo(resultado.resumo);
+      setLista(resultado.avaliacoes);
       setCarregando(false);
     });
     return () => { vivo = false; };
-  }, [origem, sourceId]);
+  }, [carregar]);
 
   if (carregando) {
     return (
@@ -87,12 +103,30 @@ export function ProductReviews({
       <ul className="mt-3 flex flex-col gap-3">
         {visiveis.map((a) => (
           <li key={a.id} className="border-t border-white/5 pt-3 first:border-0 first:pt-0">
-            <div className="flex items-center gap-2">
-              <StarRating nota={a.rating} />
-              <span className="text-[11px] font-bold text-foreground">
-                {a.autor || "Cliente"}
-              </span>
-              <span className="text-[11px] text-muted-foreground">{quando(a.created_at)}</span>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <StarRating nota={a.rating} />
+                <span className="text-[11px] font-bold text-foreground">
+                  {a.autor || "Cliente"}
+                </span>
+                <span className="text-[11px] text-muted-foreground">{quando(a.created_at)}</span>
+              </div>
+              {a.can_report && (
+                <UgcActionsMenu
+                  targetKind="product_review"
+                  targetId={a.id}
+                  blockTarget={a.can_block_author
+                    ? { kind: "product_review", id: a.id }
+                    : undefined}
+                  blockLabel={`Bloquear ${a.autor || "autor da avaliação"}`}
+                  onBlocked={() => {
+                    setLista((atual) => atual.filter((item) => item.id !== a.id));
+                    sincronizarDepoisDoBloqueio();
+                  }}
+                  elevated
+                  className="shrink-0 text-muted-foreground"
+                />
+              )}
             </div>
             {a.comment && (
               <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-muted-foreground">
@@ -101,9 +135,29 @@ export function ProductReviews({
             )}
             {a.seller_reply && (
               <div className="mt-2 rounded-lg border-l-2 border-primary/40 bg-muted/20 py-2 pl-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
-                  Resposta do vendedor
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="pt-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Resposta do vendedor
+                  </p>
+                  {a.can_report_seller_reply && (
+                    <UgcActionsMenu
+                      targetKind="product_review_reply"
+                      targetId={a.id}
+                      blockTarget={a.can_block_seller
+                        ? { kind: "product_review_reply", id: a.id }
+                        : undefined}
+                      blockLabel="Bloquear vendedor"
+                      onBlocked={() => {
+                        setLista((atual) => atual.map((item) => item.id === a.id
+                          ? { ...item, seller_reply: null, seller_replied_at: null }
+                          : item));
+                        sincronizarDepoisDoBloqueio();
+                      }}
+                      elevated
+                      className="shrink-0 text-muted-foreground"
+                    />
+                  )}
+                </div>
                 <p className="mt-0.5 whitespace-pre-wrap text-[12px] leading-relaxed text-muted-foreground">
                   {a.seller_reply}
                 </p>

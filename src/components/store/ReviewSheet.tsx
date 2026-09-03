@@ -4,6 +4,8 @@ import { ModalShell } from "@/components/ui/ModalShell";
 import { useFecharComEscape, Z_MODAL_DA_LOJA } from "@/hooks/use-fechar-com-escape";
 import { StarRating } from "@/components/store/StarRating";
 import { avaliar, type Avaliacao, type OrigemDoProduto } from "@/lib/store-reviews";
+import { CommunityPolicyDialog } from "@/components/ugc/CommunityPolicyDialog";
+import { useCommunityPolicy } from "@/lib/ugc";
 
 const LEGENDA: Record<number, string> = {
   1: "Muito ruim",
@@ -43,10 +45,12 @@ export function ReviewSheet({
   const [texto, setTexto] = useState(existente?.comment ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const policy = useCommunityPolicy();
+  const moderada = !!existente?.hidden_at;
 
   useFecharComEscape(onFechar);
 
-  const enviar = async () => {
+  const salvar = async () => {
     if (nota < 1 || salvando) return;
     setSalvando(true);
     setErro(null);
@@ -59,6 +63,12 @@ export function ReviewSheet({
     if (!r.ok) { setErro(r.erro); return; }
     onMudou();
     onFechar();
+  };
+
+  const enviar = () => {
+    if (moderada) return;
+    if (!policy.requireAccepted()) return;
+    void salvar();
   };
 
   return (
@@ -88,11 +98,17 @@ export function ReviewSheet({
           <button
             type="button"
             onClick={enviar}
-            disabled={nota < 1 || salvando}
+            disabled={nota < 1 || salvando || moderada || policy.checking}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-40"
           >
             {salvando && <Loader2 className="h-4 w-4 animate-spin" />}
-            {salvando ? "Salvando..." : existente ? "Salvar alteração" : "Publicar avaliação"}
+            {salvando
+              ? "Salvando..."
+              : moderada
+                ? "Avaliação ocultada pela moderação"
+                : existente
+                  ? "Salvar alteração"
+                  : "Publicar avaliação"}
           </button>
         }
       >
@@ -120,7 +136,22 @@ export function ReviewSheet({
         </div>
 
         {erro && <p className="mt-2 text-[12px] font-semibold text-destructive">{erro}</p>}
+        {moderada && (
+          <p className="mt-2 text-[12px] font-semibold text-amber-500">
+            Esta avaliação não está pública. Consulte a área Segurança para ver a justificativa e recorrer dentro do prazo.
+          </p>
+        )}
       </ModalShell>
+      <CommunityPolicyDialog
+        open={policy.dialogOpen}
+        onOpenChange={policy.setDialogOpen}
+        unavailableReason={policy.checkError}
+        elevated
+        onAccepted={() => {
+          policy.markAccepted();
+          void salvar();
+        }}
+      />
     </>
   );
 }

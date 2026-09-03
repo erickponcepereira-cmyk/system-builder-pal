@@ -9,6 +9,7 @@ import {
   ROTULO_MOTIVO,
   ROTULO_STATUS,
   cancelarEstorno,
+  type StoreOrderType,
 } from "@/lib/store-returns";
 import type { PurchaseSource } from "@/lib/student-purchases.functions";
 
@@ -18,6 +19,7 @@ const quando = (d: string | null) =>
 
 export type CompraParaEstorno = {
   id: string;
+  orderType: StoreOrderType;
   source: PurchaseSource;
   produto: string;
   valor: number;
@@ -63,10 +65,9 @@ export function RefundRequestSheet({
     setErro(null);
     const r = await pedirEstorno({
       orderId: compra.id,
-      source: compra.source,
+      orderType: compra.orderType,
       motivo,
       detalhe,
-      valorDaCompra: compra.valor,
       nomeDoProduto: compra.produto,
     });
     setEnviando(false);
@@ -177,7 +178,8 @@ export function RefundRequestSheet({
 
             {emAndamento && (
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Enquanto o pedido estiver em análise, o repasse desta venda fica retido.
+                A compra está sinalizada para análise pela FitMind. A devolução só é confirmada
+                depois da operação no meio de pagamento.
               </p>
             )}
             {erro && <p className="text-[12px] font-semibold text-destructive">{erro}</p>}
@@ -257,8 +259,8 @@ export function RefundRequestSheet({
           <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              O pedido vai para análise da FitMind. Enquanto ele estiver aberto, o repasse desta venda
-              fica retido — inclusive a parte do coach e da rede. Você pode desistir enquanto ninguém
+              O pedido vai para análise da FitMind e sinaliza a compra para a equipe financeira.
+              Esta solicitação não executa um estorno automático. Você pode desistir enquanto ninguém
               tiver decidido.
             </p>
           </div>

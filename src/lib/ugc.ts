@@ -21,11 +21,18 @@ export const UGC_REPORT_REASONS = [
 export type UgcTargetKind =
   | "group_message"
   | "partner_post"
+  | "product_review"
+  | "product_review_reply"
   | "profile"
   | "partner"
   | "whatsapp_group";
 
-export type UgcBlockTargetKind = "profile" | "partner" | "whatsapp_group";
+export type UgcBlockTargetKind =
+  | "profile"
+  | "partner"
+  | "whatsapp_group"
+  | "product_review"
+  | "product_review_reply";
 
 export function useCommunityPolicy() {
   const [accepted, setAccepted] = useState<boolean | null>(null);

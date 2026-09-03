@@ -26,7 +26,8 @@ function CommunityGuidelinesPage() {
 
         <p className="mb-8 text-sm leading-6 text-muted-foreground">
           O FitMind Club reúne alunos, coaches, profissionais e parceiros. Estas regras se aplicam a mensagens,
-          imagens, perfis, timelines, grupos externos divulgados no app e qualquer outro conteúdo publicado por usuários.
+          imagens, perfis, timelines, avaliações de produtos, respostas de vendedores, grupos externos divulgados no app
+          e qualquer outro conteúdo publicado por usuários.
         </p>
 
         <Section icon={<HeartHandshake />} title="Convivência esperada">
@@ -45,20 +46,30 @@ function CommunityGuidelinesPage() {
           </ul>
         </Section>
 
+        <Section icon={<HeartHandshake />} title="Avaliações e respostas de vendedores">
+          <p>
+            Avaliações devem relatar uma experiência real de compra, sem recompensa condicionada, manipulação de nota,
+            spam ou ataques pessoais. Vendedores podem responder para esclarecer ou resolver a experiência, sempre com
+            respeito e sem divulgar dados do comprador. Tanto a avaliação quanto a resposta podem ser denunciadas,
+            bloqueadas quando houver uma pessoa ou empresa responsável e removidas após análise.
+          </p>
+        </Section>
+
         <Section icon={<Flag />} title="Denunciar e bloquear">
           <p>
-            Use o menu de segurança ao lado de uma mensagem, publicação, perfil ou grupo para denunciar. A denúncia é
-            confidencial e cria uma cópia controlada do conteúdo para análise. Você também pode bloquear participantes,
-            parceiros ou grupos; o conteúdo bloqueado deixa de aparecer para sua conta. Consulte e reverta seus bloqueios
-            na Central de Segurança do app.
+            Use o menu de segurança ao lado de uma mensagem, publicação, avaliação, resposta de vendedor, perfil ou grupo
+            para denunciar. A denúncia é confidencial e cria uma cópia controlada do conteúdo para análise. Você também
+            pode bloquear participantes, profissionais, parceiros ou grupos; o conteúdo bloqueado deixa de aparecer para
+            sua conta. Consulte e reverta seus bloqueios na Central de Segurança do app.
           </p>
         </Section>
 
         <Section icon={<Scale />} title="Análise, medidas e recurso">
           <p>
-            A equipe pode advertir, ocultar conteúdo, silenciar ou banir de grupos, suspender publicações, desativar grupos
-            e bloquear parceiros. Consideramos contexto, gravidade e reincidência. A pessoa afetada verá a medida em sua
-            Central de Segurança e poderá apresentar um recurso. Quando aceito, a medida é revogada e a decisão fica registrada.
+            A equipe pode advertir, ocultar mensagens, publicações ou avaliações, remover respostas de vendedores,
+            silenciar ou banir de grupos, suspender publicações, desativar grupos e bloquear parceiros. Consideramos
+            contexto, gravidade e reincidência. A pessoa afetada verá a medida em sua Central de Segurança e poderá
+            apresentar um recurso. Quando aceito, a medida é revogada e a decisão fica registrada.
           </p>
         </Section>
 

@@ -1077,6 +1077,42 @@ BEGIN
       deleted_by = NULL
   WHERE sender_profile_id = v_profile_id;
 
+  -- Product reviews are public UGC. Remove the deleted person's reviews
+  -- instead of leaving their free-form text attached to an account tombstone.
+  DELETE FROM public.product_reviews
+  WHERE author_id = v_profile_id;
+
+  -- A seller reply may belong directly to the deleted profile or, for legacy
+  -- replies created before reply authorship was recorded, to a partner/coach
+  -- owned by the account. Keep the buyer's review and remove only the reply.
+  UPDATE public.product_reviews review
+  SET seller_reply = NULL,
+      seller_replied_at = NULL,
+      seller_reply_by_profile_id = NULL,
+      updated_at = now()
+  WHERE review.seller_reply IS NOT NULL
+    AND (
+      review.seller_reply_by_profile_id = v_profile_id
+      OR (
+        review.product_origin = 'partner'
+        AND EXISTS (
+          SELECT 1
+          FROM public.partner_products product
+          WHERE product.id = review.product_id
+            AND product.partner_id = ANY(v_partner_ids)
+        )
+      )
+      OR (
+        review.product_origin = 'professional'
+        AND EXISTS (
+          SELECT 1
+          FROM public.professional_products product
+          WHERE product.id = review.product_id
+            AND product.coach_id = ANY(v_coach_ids)
+        )
+      )
+    );
+
   -- Community safety records: remove user preferences/acceptances, anonymize
   -- identity links and free-form text, while retaining the minimum immutable
   -- moderation evidence needed to investigate abuse and defend decisions.
@@ -1110,6 +1146,39 @@ BEGIN
       updated_at = now()
   WHERE reporter_profile_id = v_profile_id;
 
+  -- Retain only non-personal audit context for review/reply reports whose
+  -- subject is being deleted. Raw rating/comment/reply text must not outlive
+  -- the public content merely because it was copied into moderation evidence.
+  UPDATE public.ugc_reports
+  SET details = NULL,
+      evidence_snapshot = CASE
+        WHEN target_kind = 'product_review' THEN
+          (
+            evidence_snapshot
+              - 'author_id'
+              - 'rating'
+              - 'comment'
+          ) || jsonb_build_object(
+            'content_redacted', true,
+            'redaction_reason', 'account_deleted'
+          )
+        ELSE
+          (
+            evidence_snapshot
+              - 'seller_reply'
+              - 'seller_reply_by_profile_id'
+          ) || jsonb_build_object(
+            'content_redacted', true,
+            'redaction_reason', 'account_deleted'
+          )
+      END,
+      updated_at = now()
+  WHERE target_kind IN ('product_review', 'product_review_reply')
+    AND (
+      subject_profile_id = v_profile_id
+      OR subject_partner_id = ANY(v_partner_ids)
+    );
+
   UPDATE public.ugc_reports
   SET subject_profile_id = NULL,
       subject_partner_id = CASE
@@ -1135,7 +1204,9 @@ BEGIN
         - 'city'
         - 'state'
         - 'invite_url'
-        - 'phone',
+        - 'phone'
+        - 'author_id'
+        - 'seller_reply_by_profile_id',
       updated_at = now()
   WHERE subject_profile_id = v_profile_id
      OR subject_partner_id = ANY(v_partner_ids);

@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShoppingBag, Store, Stethoscope, Handshake, CreditCard, Ticket, IdCard } from "lucide-react";
-import { getStudentPurchaseHistory, type StudentPurchaseRow } from "@/lib/student-purchases.functions";
+import {
+  getStudentPurchaseHistory,
+  type PurchaseReviewTarget,
+  type StudentPurchaseRow,
+} from "@/lib/student-purchases.functions";
 import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 import { RefundRequestSheet, type CompraParaEstorno } from "@/components/store/RefundRequestSheet";
-import { meusEstornos, ROTULO_STATUS, tipoDoPedido, type PedidoDeEstorno } from "@/lib/store-returns";
+import {
+  chaveDoEstorno,
+  meusEstornos,
+  ROTULO_STATUS,
+  type PedidoDeEstorno,
+} from "@/lib/store-returns";
 import { ReviewSheet } from "@/components/store/ReviewSheet";
 import { StarRating } from "@/components/store/StarRating";
-import { minhasAvaliacoes, type Avaliacao, type OrigemDoProduto } from "@/lib/store-reviews";
+import {
+  chaveDaAvaliacao,
+  minhasAvaliacoes,
+  type MinhaAvaliacao,
+} from "@/lib/store-reviews";
 
 const fmt = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -16,16 +29,11 @@ const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 type StatusFilter = "all" | "paid" | "pending" | "cancelled";
 const normalize = (s: string): StatusFilter => {
   const v = (s || "").toLowerCase();
-  if (v === "paid" || v === "pago" || v === "approved" || v === "completed") return "paid";
+  // Na loja física o mesmo campo passa a acompanhar a logística depois do
+  // pagamento. Preparando/enviado/entregue continuam sendo compras pagas.
+  if (["paid", "pago", "preparing", "shipped", "delivered"].includes(v)) return "paid";
   if (v === "cancelled" || v === "canceled" || v === "cancelado" || v === "refused" || v === "failed" || v === "rejected") return "cancelled";
   return "pending";
-};
-
-/** A origem da compra, no vocabulário de `product_reviews`. */
-const origemDaCompra = (s: StudentPurchaseRow["source"]): OrigemDoProduto => {
-  if (s === "partner") return "partner";
-  if (s === "professional") return "professional";
-  return "fitmind";
 };
 
 const sourceIcon = (s: StudentPurchaseRow["source"]) => {
@@ -66,8 +74,11 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
    * pedido não é de quem escreve. Convidar na vitrine seria oferecer o que vai
    * ser recusado.
    */
-  const [avaliacoes, setAvaliacoes] = useState<Map<string, Avaliacao>>(new Map());
-  const [avaliando, setAvaliando] = useState<StudentPurchaseRow | null>(null);
+  const [avaliacoes, setAvaliacoes] = useState<Map<string, MinhaAvaliacao>>(new Map());
+  const [avaliando, setAvaliando] = useState<{
+    compra: StudentPurchaseRow;
+    alvo: PurchaseReviewTarget;
+  } | null>(null);
 
   const recarregarAvaliacoes = useCallback(() => {
     void minhasAvaliacoes().then(setAvaliacoes);
@@ -82,7 +93,7 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
     setLoading(true);
     fetchHistory({ data: { studentId } })
       .then((data) => { if (!cancel) setRows(data || []); })
-      .catch((e: any) => { console.error("[StudentPurchaseHistory]", e); })
+      .catch((e: unknown) => { console.error("[StudentPurchaseHistory]", e); })
       .finally(() => { if (!cancel) setLoading(false); });
     return () => { cancel = true; };
   }, [studentId, fetchHistory]);
@@ -181,29 +192,37 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
                 {/* Estorno. Só faz sentido em compra paga: o que não foi pago
                     não tem o que devolver. */}
                 {st === "paid" && !somenteLeitura && (() => {
-                  const pedido = estornos.get(r.id) ?? null;
-                  const nota = avaliacoes.get(r.id) ?? null;
+                  const pedido = estornos.get(
+                    chaveDoEstorno(r.source_order_type, r.source_order_id),
+                  ) ?? null;
                   return (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {/* Avaliar só faz sentido com o produto identificado: sem
-                          product_id não há o que pontuar. */}
-                      {r.product_id && (
-                        <button
-                          type="button"
-                          onClick={() => setAvaliando(r)}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-bold text-white/70"
-                        >
-                          {nota ? (
-                            <>
-                              <StarRating nota={nota.rating} /> <span>Sua avaliação</span>
-                            </>
-                          ) : "Avaliar"}
-                        </button>
-                      )}
+                      {r.review_targets.map((alvo) => {
+                        const key = chaveDaAvaliacao({
+                          orderType: r.source_order_type,
+                          orderId: r.source_order_id,
+                          origem: alvo.product_origin,
+                          produtoId: alvo.product_id,
+                        });
+                        const nota = avaliacoes.get(key) ?? null;
+                        const multiplo = r.review_targets.length > 1;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setAvaliando({ compra: r, alvo })}
+                            className="flex min-w-[9rem] flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-[11px] font-bold text-white/70"
+                          >
+                            {nota ? <StarRating nota={nota.rating} /> : null}
+                            <span>{nota ? "Sua avaliação" : "Avaliar"}{multiplo ? `: ${alvo.product_name}` : ""}</span>
+                          </button>
+                        );
+                      })}
                       <button
                         type="button"
                         onClick={() => setPedindoPara({
-                          id: r.id,
+                          id: r.source_order_id,
+                          orderType: r.source_order_type,
                           source: r.source,
                           produto: r.product_name,
                           valor: r.amount,
@@ -226,14 +245,19 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
         </div>
       )}
 
-      {!somenteLeitura && avaliando?.product_id && (
+      {!somenteLeitura && avaliando && (
         <ReviewSheet
-          produto={avaliando.product_name}
-          origem={origemDaCompra(avaliando.source)}
-          produtoId={avaliando.product_id}
-          orderId={avaliando.id}
-          orderType={tipoDoPedido(avaliando.source)}
-          existente={avaliacoes.get(avaliando.id) ?? null}
+          produto={avaliando.alvo.product_name}
+          origem={avaliando.alvo.product_origin}
+          produtoId={avaliando.alvo.product_id}
+          orderId={avaliando.compra.source_order_id}
+          orderType={avaliando.compra.source_order_type}
+          existente={avaliacoes.get(chaveDaAvaliacao({
+            orderType: avaliando.compra.source_order_type,
+            orderId: avaliando.compra.source_order_id,
+            origem: avaliando.alvo.product_origin,
+            produtoId: avaliando.alvo.product_id,
+          })) ?? null}
           onFechar={() => setAvaliando(null)}
           onMudou={recarregarAvaliacoes}
         />
@@ -242,7 +266,9 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
       {!somenteLeitura && pedindoPara && (
         <RefundRequestSheet
           compra={pedindoPara}
-          existente={estornos.get(pedindoPara.id) ?? null}
+          existente={estornos.get(
+            chaveDoEstorno(pedindoPara.orderType, pedindoPara.id),
+          ) ?? null}
           onFechar={() => setPedindoPara(null)}
           onMudou={recarregarEstornos}
         />

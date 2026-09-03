@@ -17,6 +17,7 @@ export function UgcActionsMenu({
   blockLabel = "Bloquear",
   onBlocked,
   className = "",
+  elevated = false,
 }: {
   targetKind: UgcTargetKind;
   targetId: string;
@@ -24,6 +25,8 @@ export function UgcActionsMenu({
   blockLabel?: string;
   onBlocked?: () => void;
   className?: string;
+  /** Coloca o diálogo acima dos modais manuais da loja (z-index 80). */
+  elevated?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -107,7 +110,7 @@ export function UgcActionsMenu({
       </div>
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={`${elevated ? "z-[100]" : ""} max-w-md`}>
           <DialogHeader>
             <DialogTitle>Denunciar conteúdo</DialogTitle>
             <DialogDescription>

@@ -10,22 +10,48 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type OrigemDoProduto = "fitmind" | "partner" | "professional" | "course";
 
-export type Avaliacao = {
+export type AvaliacaoPublica = {
   id: string;
-  product_origin: OrigemDoProduto;
-  product_id: string;
-  order_id: string;
   rating: number;
   comment: string | null;
   seller_reply: string | null;
   seller_replied_at: string | null;
   created_at: string;
-  author_id?: string;
-  /** Nome abreviado de quem escreveu, como a RPC devolve. */
-  autor?: string | null;
+  autor: string;
+  can_report: boolean;
+  can_block_author: boolean;
+  can_block_seller: boolean;
+  can_report_seller_reply: boolean;
 };
 
+export type MinhaAvaliacao = {
+  id: string;
+  product_origin: OrigemDoProduto;
+  product_id: string;
+  order_id: string;
+  order_type: "transaction" | "store_order" | "partner_product_order";
+  rating: number;
+  comment: string | null;
+  seller_reply: string | null;
+  seller_replied_at: string | null;
+  created_at: string;
+  hidden_at: string | null;
+  hidden_reason: string | null;
+};
+
+/** Compatibilidade do formulário de edição: ele recebe sempre a avaliação da própria conta. */
+export type Avaliacao = MinhaAvaliacao;
+
 export type ResumoDeNotas = { total: number; media: number; positivas: number };
+
+export function chaveDaAvaliacao(input: {
+  orderType: string;
+  orderId: string;
+  origem: OrigemDoProduto;
+  produtoId: string;
+}): string {
+  return `${input.orderType}:${input.orderId}:${input.origem}:${input.produtoId}`;
+}
 
 /**
  * A origem, no vocabulário do catálogo unificado.
@@ -59,17 +85,28 @@ export function origemDoProduto(origin: string, kind: string): OrigemDoProduto {
 export async function notasDosProdutos(
   produtoIds?: string[],
 ): Promise<Map<string, ResumoDeNotas>> {
+  if (produtoIds?.length === 0) return new Map();
+  return carregarResumo(produtoIds ?? null);
+}
+
+/** Notas de vários produtos de uma vez — a vitrine pede em lote, não um a um. */
+export async function resumoDeNotas(
+  chaves: Array<{ origem: OrigemDoProduto; produtoId: string }>,
+): Promise<Map<string, ResumoDeNotas>> {
+  if (!chaves.length) return new Map();
+
+  const ids = Array.from(new Set(chaves.map((c) => c.produtoId)));
+  const resumo = await carregarResumo(ids);
+  const permitidas = new Set(chaves.map((c) => `${c.origem}:${c.produtoId}`));
+  return new Map(Array.from(resumo).filter(([chave]) => permitidas.has(chave)));
+}
+
+async function carregarResumo(produtoIds: string[] | null): Promise<Map<string, ResumoDeNotas>> {
   const mapa = new Map<string, ResumoDeNotas>();
-  if (produtoIds && produtoIds.length === 0) return mapa;
+  const { data, error } = await supabase.rpc("resumo_avaliacoes" as never, {
+    _product_ids: produtoIds,
+  } as never);
 
-  let consulta = supabase
-    .from("product_review_summary" as never)
-    .select("product_origin,product_id,total,media,positivas" as never)
-    .limit(5000);
-
-  if (produtoIds) consulta = consulta.in("product_id" as never, produtoIds as never);
-
-  const { data, error } = await consulta;
   if (error) {
     console.warn("[avaliacoes] não foi possível ler as notas", error);
     return mapa;
@@ -90,7 +127,7 @@ export async function avaliacoesDoProduto(
   origem: OrigemDoProduto,
   produtoId: string,
   limite = 20,
-): Promise<Avaliacao[]> {
+): Promise<AvaliacaoPublica[]> {
   // Por RPC, e nao por embed. A policy "profiles_public_basic_select" exige
   // que o perfil seja de um coach aprovado — o de um ALUNO comum nao e legivel
   // por outro aluno, entao o embed devolveria null e toda avaliacao apareceria
@@ -105,42 +142,27 @@ export async function avaliacoesDoProduto(
     console.warn("[avaliacoes] não foi possível ler", error);
     return [];
   }
-  return ((data as unknown as Avaliacao[]) || []);
+  return ((data as unknown as AvaliacaoPublica[]) || []);
 }
 
 /** O que esta pessoa já avaliou, por compra. Alimenta o convite pós-compra. */
-export async function minhasAvaliacoes(): Promise<Map<string, Avaliacao>> {
-  // O filtro por autor e EXPLICITO de proposito.
-  //
-  // Deixar a RLS filtrar sozinha nao funciona aqui: a policy de SELECT
-  // "avaliacao visivel para todos" libera TODA avaliacao nao escondida — e o
-  // ponto dela e esse, para a vitrine poder mostrar. Sem o `eq`, esta funcao
-  // baixava a tabela inteira para o navegador so para achar as poucas linhas
-  // de quem esta olhando. Funcionava por acidente (a busca e por `order_id`,
-  // que so casa com pedido proprio) e ficava mais cara a cada avaliacao nova.
-  const profileId = await meuProfileId();
-  if (!profileId) return new Map();
-
-  const { data, error } = await supabase
-    .from("product_reviews" as never)
-    .select("id,product_origin,product_id,order_id,rating,comment,seller_reply,seller_replied_at,created_at,author_id" as never)
-    .eq("author_id" as never, profileId as never);
+export async function minhasAvaliacoes(): Promise<Map<string, MinhaAvaliacao>> {
+  const { data, error } = await supabase.rpc("minhas_avaliacoes" as never);
 
   if (error) {
     console.warn("[avaliacoes] não foi possível ler as minhas", error);
     return new Map();
   }
-  const mapa = new Map<string, Avaliacao>();
-  for (const a of ((data as unknown as Avaliacao[]) || [])) mapa.set(a.order_id, a);
+  const mapa = new Map<string, MinhaAvaliacao>();
+  for (const a of ((data as unknown as MinhaAvaliacao[]) || [])) {
+    mapa.set(chaveDaAvaliacao({
+      orderType: a.order_type,
+      orderId: a.order_id,
+      origem: a.product_origin,
+      produtoId: a.product_id,
+    }), a);
+  }
   return mapa;
-}
-
-async function meuProfileId(): Promise<string | null> {
-  const { data: sessao } = await supabase.auth.getUser();
-  const userId = sessao?.user?.id;
-  if (!userId) return null;
-  const { data } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
-  return (data?.id as string) ?? null;
 }
 
 export async function avaliar(entrada: {
@@ -157,10 +179,15 @@ export async function avaliar(entrada: {
   }
 
   if (entrada.idExistente) {
-    const { error } = await supabase
-      .from("product_reviews" as never)
-      .update({ rating: entrada.nota, comment: entrada.comentario.trim() || null } as never)
-      .eq("id" as never, entrada.idExistente as never);
+    const { error } = await supabase.rpc("avaliar_produto" as never, {
+      _review_id: entrada.idExistente,
+      _product_origin: entrada.origem,
+      _product_id: entrada.produtoId,
+      _order_id: entrada.orderId,
+      _order_type: entrada.orderType,
+      _rating: entrada.nota,
+      _comment: entrada.comentario.trim() || null,
+    } as never);
     if (error) {
       console.error("[avaliacoes] falha ao corrigir", error);
       return { ok: false, erro: "Não consegui salvar a alteração." };
@@ -168,17 +195,14 @@ export async function avaliar(entrada: {
     return { ok: true };
   }
 
-  const profileId = await meuProfileId();
-  if (!profileId) return { ok: false, erro: "Não consegui identificar sua conta. Entre de novo." };
-
-  const { error } = await supabase.from("product_reviews" as never).insert({
-    product_origin: entrada.origem,
-    product_id: entrada.produtoId,
-    order_id: entrada.orderId,
-    order_type: entrada.orderType,
-    author_id: profileId,
-    rating: entrada.nota,
-    comment: entrada.comentario.trim() || null,
+  const { error } = await supabase.rpc("avaliar_produto" as never, {
+    _review_id: null,
+    _product_origin: entrada.origem,
+    _product_id: entrada.produtoId,
+    _order_id: entrada.orderId,
+    _order_type: entrada.orderType,
+    _rating: entrada.nota,
+    _comment: entrada.comentario.trim() || null,
   } as never);
 
   if (error) {

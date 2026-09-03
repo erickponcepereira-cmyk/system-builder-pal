@@ -29,7 +29,7 @@ END;
 $profile_anon_acl$;
 REVOKE SELECT ON public.profiles FROM PUBLIC, anon;
 GRANT SELECT (
-  id, user_id, name, avatar_url, photo_url, role,
+  id, name, avatar_url, photo_url, role,
   city, state, bio, instagram, patent, created_at
 ) ON public.profiles TO anon;
 
@@ -67,6 +67,28 @@ ALTER TABLE public.whatsapp_groups
     char_length(btrim(name)) BETWEEN 2 AND 120
     AND (description IS NULL OR char_length(description) <= 1000)
   ) NOT VALID;
+
+-- Product reviews arrived on main after the first publication hardening pass.
+-- Record who authored a seller reply and make the purchase identity explicit;
+-- all untrusted writes are moved to narrow RPCs below.
+ALTER TABLE public.product_reviews
+  ADD COLUMN IF NOT EXISTS seller_reply_by_profile_id uuid
+    REFERENCES public.profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.product_reviews
+  DROP CONSTRAINT IF EXISTS product_reviews_order_type_ck;
+ALTER TABLE public.product_reviews
+  ADD CONSTRAINT product_reviews_order_type_ck
+  CHECK (order_type IN ('transaction', 'store_order', 'partner_product_order')) NOT VALID;
+-- Existing rows were created by the two known purchase flows. Validate them
+-- now so an unknown legacy value cannot remain readable but impossible to
+-- update. Staging must stop here if historical data needs an explicit repair.
+ALTER TABLE public.product_reviews
+  VALIDATE CONSTRAINT product_reviews_order_type_ck;
+ALTER TABLE public.product_reviews
+  DROP CONSTRAINT IF EXISTS product_reviews_uma_por_compra;
+ALTER TABLE public.product_reviews
+  ADD CONSTRAINT product_reviews_uma_por_compra
+  UNIQUE (order_id, order_type, product_origin, product_id);
 
 -- ---------------------------------------------------------------------------
 -- 2. Moderation data model.
@@ -113,7 +135,8 @@ CREATE TABLE public.ugc_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_profile_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   target_kind text NOT NULL CHECK (target_kind IN (
-    'group_message', 'partner_post', 'profile', 'partner', 'whatsapp_group'
+    'group_message', 'partner_post', 'product_review', 'product_review_reply',
+    'profile', 'partner', 'whatsapp_group'
   )),
   target_id uuid NOT NULL,
   subject_profile_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -218,7 +241,7 @@ CREATE TABLE public.ugc_media_jobs (
   evidence_bucket text NOT NULL DEFAULT 'ugc-evidence',
   evidence_path text,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN (
-    'pending', 'processing', 'completed', 'failed'
+    'pending', 'processing', 'completed', 'failed', 'dead'
   )),
   attempts integer NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 20),
   last_error text,
@@ -465,6 +488,157 @@ AS $$
   ) END
 $$;
 
+CREATE OR REPLACE FUNCTION public.ugc_review_product_is_public(
+  _product_origin text,
+  _product_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  SELECT CASE _product_origin
+    WHEN 'fitmind' THEN
+      EXISTS (
+        SELECT 1 FROM public.products p
+        WHERE p.id = _product_id
+          AND (p.status = 'active' OR COALESCE(p.is_active, false))
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.store_products sp
+        WHERE sp.id = _product_id AND sp.status = 'active'
+      )
+    WHEN 'course' THEN EXISTS (
+      SELECT 1 FROM public.digital_products dp
+      WHERE dp.id = _product_id AND dp.status = 'active'
+    )
+    WHEN 'partner' THEN EXISTS (
+      SELECT 1
+      FROM public.partner_products pp
+      JOIN public.partners pa ON pa.id = pp.partner_id
+      WHERE pp.id = _product_id
+        AND pp.status = 'approved'
+        AND pp.is_active_by_partner
+        AND pp.is_ready_for_sale
+        AND pp.deleted_at IS NULL
+        AND pa.status = 'approved'
+        AND pa.blocked_at IS NULL
+    )
+    WHEN 'professional' THEN EXISTS (
+      SELECT 1
+      FROM public.professional_products fp
+      JOIN public.coaches c ON c.id = fp.coach_id
+      JOIN public.profiles pr ON pr.id = c.profile_id
+      WHERE fp.id = _product_id
+        AND fp.status = 'approved'
+        AND fp.is_active_by_professional
+        AND fp.is_ready_for_sale
+        AND COALESCE(pr.status, 'active') = 'active'
+    )
+    ELSE false
+  END
+$$;
+
+CREATE OR REPLACE FUNCTION public.ugc_current_user_blocks_review_product(
+  _product_origin text,
+  _product_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  SELECT CASE _product_origin
+    WHEN 'partner' THEN EXISTS (
+      SELECT 1 FROM public.partner_products pp
+      WHERE pp.id = _product_id
+        AND public.ugc_current_user_blocks_partner(pp.partner_id)
+    )
+    WHEN 'professional' THEN EXISTS (
+      SELECT 1 FROM public.professional_products fp
+      WHERE fp.id = _product_id
+        AND public.ugc_current_user_blocks_coach(fp.coach_id)
+    )
+    ELSE false
+  END
+$$;
+
+CREATE OR REPLACE FUNCTION public.ugc_review_seller_profile(
+  _product_origin text,
+  _product_id uuid
+)
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  SELECT CASE _product_origin
+    WHEN 'partner' THEN (
+      SELECT pa.profile_id
+      FROM public.partner_products pp
+      JOIN public.partners pa ON pa.id = pp.partner_id
+      WHERE pp.id = _product_id
+    )
+    WHEN 'professional' THEN (
+      SELECT c.profile_id
+      FROM public.professional_products fp
+      JOIN public.coaches c ON c.id = fp.coach_id
+      WHERE fp.id = _product_id
+    )
+    ELSE NULL::uuid
+  END
+$$;
+
+CREATE OR REPLACE FUNCTION public.ugc_review_seller_partner(
+  _product_origin text,
+  _product_id uuid
+)
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  SELECT CASE WHEN _product_origin = 'partner' THEN (
+    SELECT pp.partner_id FROM public.partner_products pp WHERE pp.id = _product_id
+  ) ELSE NULL::uuid END
+$$;
+
+CREATE OR REPLACE FUNCTION public.ugc_review_seller_can_manage(
+  _product_origin text,
+  _product_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  SELECT public.is_admin(auth.uid()) OR CASE _product_origin
+    WHEN 'partner' THEN EXISTS (
+      SELECT 1 FROM public.partner_products pp
+      WHERE pp.id = _product_id
+        AND public.partner_pode(pp.partner_id, 'products.editar')
+    )
+    WHEN 'professional' THEN EXISTS (
+      SELECT 1
+      FROM public.professional_products fp
+      JOIN public.coaches c ON c.id = fp.coach_id
+      WHERE fp.id = _product_id
+        AND c.profile_id = public.current_profile_id()
+    )
+    ELSE false
+  END
+$$;
+
 CREATE OR REPLACE FUNCTION public.ugc_profile_can_post(_profile_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -500,12 +674,47 @@ SET row_security = off
 AS $$
 DECLARE
   v_profile_id uuid := public.current_profile_id();
+  v_review public.product_reviews%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL OR v_profile_id IS NULL THEN
     RAISE EXCEPTION 'authentication required';
   END IF;
-  IF _target_id IS NULL OR _target_kind NOT IN ('profile', 'partner', 'whatsapp_group') THEN
+  IF _target_id IS NULL OR _target_kind NOT IN (
+    'profile', 'partner', 'whatsapp_group', 'product_review', 'product_review_reply'
+  ) THEN
     RAISE EXCEPTION 'invalid block target';
+  END IF;
+
+  -- Content-derived block targets keep profile/partner UUIDs out of the
+  -- public review RPC. The server resolves the author or seller internally.
+  IF _target_kind IN ('product_review', 'product_review_reply') THEN
+    SELECT * INTO v_review
+    FROM public.product_reviews r
+    WHERE r.id = _target_id
+      AND r.hidden_at IS NULL;
+    IF NOT FOUND THEN RAISE EXCEPTION 'review is not available'; END IF;
+
+    IF _target_kind = 'product_review' THEN
+      _target_kind := 'profile';
+      _target_id := v_review.author_id;
+    ELSE
+      IF NULLIF(btrim(v_review.seller_reply), '') IS NULL THEN
+        RAISE EXCEPTION 'seller reply is not available';
+      END IF;
+      IF v_review.product_origin = 'partner' THEN
+        _target_kind := 'partner';
+        _target_id := public.ugc_review_seller_partner(
+          v_review.product_origin, v_review.product_id
+        );
+      ELSIF v_review.product_origin = 'professional' THEN
+        _target_kind := 'profile';
+        _target_id := public.ugc_review_seller_profile(
+          v_review.product_origin, v_review.product_id
+        );
+      ELSE
+        RAISE EXCEPTION 'seller cannot be blocked for this review';
+      END IF;
+    END IF;
   END IF;
 
   IF _target_kind = 'profile' THEN
@@ -577,6 +786,372 @@ BEGIN
 END;
 $$;
 
+-- Rebuild the purchase guard from main. Ownership alone is insufficient: the
+-- order must be paid and the exact product/origin must belong to that order.
+CREATE OR REPLACE FUNCTION public.avaliacao_exige_compra_propria()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE
+  v_owner uuid;
+BEGIN
+  IF auth.role() = 'service_role' THEN RETURN NEW; END IF;
+  IF auth.uid() IS NULL OR public.current_profile_id() IS NULL THEN
+    RAISE EXCEPTION 'authentication required';
+  END IF;
+  IF NEW.author_id IS DISTINCT FROM public.current_profile_id() THEN
+    RAISE EXCEPTION 'Esta compra nao e sua: so quem comprou avalia.';
+  END IF;
+
+  IF NEW.order_type = 'transaction' THEN
+    SELECT s.profile_id INTO v_owner
+    FROM public.transactions t
+    JOIN public.students s ON s.id = t.student_id
+    WHERE t.id = NEW.order_id
+      AND t.status = 'paid'
+      AND NULLIF(t.metadata->>'store_order_id', '') IS NULL
+      AND (
+        (NEW.product_origin = 'course' AND t.digital_product_id = NEW.product_id)
+        OR
+        (NEW.product_origin = 'fitmind' AND (
+          t.store_product_id = NEW.product_id
+          OR (
+            t.store_product_id IS NULL
+            AND t.digital_product_id IS NULL
+            AND t.product_id = NEW.product_id
+          )
+        ))
+      );
+  ELSIF NEW.order_type = 'store_order' THEN
+    SELECT s.profile_id INTO v_owner
+    FROM public.store_orders o
+    JOIN public.students s ON s.id = o.student_id
+    WHERE o.id = NEW.order_id
+      AND o.status = 'paid'
+      AND EXISTS (
+        SELECT 1 FROM public.store_order_items i
+        WHERE i.order_id = o.id
+          AND (
+            (NEW.product_origin = 'course' AND i.digital_product_id = NEW.product_id)
+            OR
+            (NEW.product_origin = 'fitmind' AND (
+              i.product_id = NEW.product_id OR i.store_product_id = NEW.product_id
+            ))
+          )
+      );
+  ELSIF NEW.order_type = 'partner_product_order' THEN
+    SELECT s.profile_id INTO v_owner
+    FROM public.partner_product_orders o
+    JOIN public.students s ON s.id = o.student_id
+    WHERE o.id = NEW.order_id
+      AND o.status = 'paid'
+      AND (
+        (NEW.product_origin = 'partner' AND o.partner_product_id = NEW.product_id)
+        OR
+        (NEW.product_origin = 'professional' AND o.professional_product_id = NEW.product_id)
+      );
+  ELSE
+    RAISE EXCEPTION 'Tipo de pedido invalido para avaliacao.';
+  END IF;
+
+  IF v_owner IS NULL THEN
+    RAISE EXCEPTION 'Pedido pago e produto correspondente nao encontrados.';
+  END IF;
+  IF v_owner IS DISTINCT FROM NEW.author_id THEN
+    RAISE EXCEPTION 'Esta compra nao e sua: so quem comprou avalia.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS product_reviews_exige_compra ON public.product_reviews;
+CREATE TRIGGER product_reviews_exige_compra
+  BEFORE INSERT OR UPDATE OF order_id, order_type, author_id, product_origin, product_id
+  ON public.product_reviews
+  FOR EACH ROW EXECUTE FUNCTION public.avaliacao_exige_compra_propria();
+
+CREATE OR REPLACE FUNCTION public.avaliar_produto(
+  _review_id uuid,
+  _product_origin text,
+  _product_id uuid,
+  _order_id uuid,
+  _order_type text,
+  _rating integer,
+  _comment text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE
+  v_author uuid := public.current_profile_id();
+  v_id uuid;
+BEGIN
+  IF auth.uid() IS NULL OR v_author IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  IF NOT public.ugc_has_current_policy() THEN RAISE EXCEPTION 'community policy acceptance required'; END IF;
+  IF NOT public.ugc_profile_can_post(v_author) THEN RAISE EXCEPTION 'posting is suspended'; END IF;
+  IF _product_origin NOT IN ('fitmind', 'partner', 'professional', 'course') THEN
+    RAISE EXCEPTION 'invalid product origin';
+  END IF;
+  IF _order_type NOT IN ('transaction', 'store_order', 'partner_product_order') THEN
+    RAISE EXCEPTION 'invalid order type';
+  END IF;
+  IF _rating NOT BETWEEN 1 AND 5 THEN RAISE EXCEPTION 'rating must be between 1 and 5'; END IF;
+  _comment := NULLIF(btrim(_comment), '');
+  IF _comment IS NOT NULL AND char_length(_comment) > 2000 THEN
+    RAISE EXCEPTION 'review comment is too long';
+  END IF;
+
+  IF _review_id IS NULL THEN
+    INSERT INTO public.product_reviews(
+      product_origin, product_id, order_id, order_type, author_id, rating, comment
+    ) VALUES (
+      _product_origin, _product_id, _order_id, _order_type, v_author, _rating::smallint, _comment
+    ) RETURNING id INTO v_id;
+  ELSE
+    UPDATE public.product_reviews r
+    SET rating = _rating::smallint, comment = _comment, updated_at = now()
+    WHERE r.id = _review_id
+      AND r.author_id = v_author
+      AND r.product_origin = _product_origin
+      AND r.product_id = _product_id
+      AND r.order_id = _order_id
+      AND r.order_type = _order_type
+      AND r.hidden_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM public.ugc_reports report
+        WHERE report.target_kind = 'product_review'
+          AND report.target_id = r.id
+          AND report.status IN ('open', 'reviewing')
+      )
+    RETURNING r.id INTO v_id;
+    IF v_id IS NULL THEN RAISE EXCEPTION 'review is not editable by this account'; END IF;
+  END IF;
+  RETURN v_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.minhas_avaliacoes()
+RETURNS TABLE (
+  id uuid,
+  product_origin text,
+  product_id uuid,
+  order_id uuid,
+  order_type text,
+  rating smallint,
+  comment text,
+  seller_reply text,
+  seller_replied_at timestamptz,
+  created_at timestamptz,
+  hidden_at timestamptz,
+  hidden_reason text
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE v_profile_id uuid := public.current_profile_id();
+BEGIN
+  IF auth.uid() IS NULL OR v_profile_id IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  RETURN QUERY
+  SELECT r.id, r.product_origin, r.product_id, r.order_id, r.order_type,
+         r.rating, r.comment, r.seller_reply, r.seller_replied_at,
+         r.created_at, r.hidden_at, r.hidden_reason
+  FROM public.product_reviews r
+  WHERE r.author_id = v_profile_id
+  ORDER BY r.created_at DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.resumo_avaliacoes(_product_ids uuid[] DEFAULT NULL)
+RETURNS TABLE (
+  product_origin text,
+  product_id uuid,
+  total integer,
+  media numeric,
+  positivas integer
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  RETURN QUERY
+  SELECT r.product_origin,
+         r.product_id,
+         count(*)::integer,
+         round(avg(r.rating)::numeric, 2),
+         count(*) FILTER (WHERE r.rating >= 4)::integer
+  FROM public.product_reviews r
+  WHERE r.hidden_at IS NULL
+    AND (_product_ids IS NULL OR r.product_id = ANY(_product_ids))
+    AND public.ugc_review_product_is_public(r.product_origin, r.product_id)
+    AND NOT public.ugc_profiles_block_each_other(r.author_id)
+    AND NOT public.ugc_current_user_blocks_review_product(r.product_origin, r.product_id)
+  GROUP BY r.product_origin, r.product_id
+  ORDER BY r.product_origin, r.product_id
+  LIMIT 5000;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.avaliacoes_do_produto(text, uuid, integer);
+CREATE FUNCTION public.avaliacoes_do_produto(
+  _origem text,
+  _produto_id uuid,
+  _limite integer DEFAULT 20
+)
+RETURNS TABLE (
+  id uuid,
+  rating smallint,
+  comment text,
+  seller_reply text,
+  seller_replied_at timestamptz,
+  created_at timestamptz,
+  autor text,
+  can_report boolean,
+  can_block_author boolean,
+  can_block_seller boolean,
+  can_report_seller_reply boolean
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE v_profile_id uuid := public.current_profile_id();
+BEGIN
+  IF auth.uid() IS NULL OR v_profile_id IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  IF NOT public.ugc_review_product_is_public(_origem, _produto_id)
+     OR public.ugc_current_user_blocks_review_product(_origem, _produto_id) THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT r.id, r.rating, r.comment, r.seller_reply, r.seller_replied_at,
+         r.created_at,
+         CASE
+           WHEN COALESCE(btrim(p.name), '') = '' THEN 'Cliente'
+           WHEN position(' ' IN btrim(p.name)) = 0 THEN split_part(btrim(p.name), ' ', 1)
+           ELSE split_part(btrim(p.name), ' ', 1) || ' ' ||
+                left(split_part(btrim(p.name), ' ', 2), 1) || '.'
+         END::text,
+         (r.author_id <> v_profile_id),
+         (r.author_id <> v_profile_id),
+         (
+           r.seller_reply IS NOT NULL
+           AND r.product_origin IN ('partner', 'professional')
+           AND NOT public.ugc_review_seller_can_manage(
+             r.product_origin, r.product_id
+           )
+         ),
+         (
+           r.seller_reply IS NOT NULL
+           AND COALESCE(
+             r.seller_reply_by_profile_id,
+             public.ugc_review_seller_profile(r.product_origin, r.product_id)
+           ) IS DISTINCT FROM v_profile_id
+         )
+  FROM public.product_reviews r
+  LEFT JOIN public.profiles p ON p.id = r.author_id
+  WHERE r.product_origin = _origem
+    AND r.product_id = _produto_id
+    AND r.hidden_at IS NULL
+    AND NOT public.ugc_profiles_block_each_other(r.author_id)
+  ORDER BY r.created_at DESC
+  LIMIT LEAST(100, GREATEST(1, COALESCE(_limite, 20)));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.responder_avaliacao(_review_id uuid, _reply text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE
+  v_profile_id uuid := public.current_profile_id();
+  v_review public.product_reviews%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR v_profile_id IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('ugc:review-reply:' || _review_id::text, 0)
+  );
+  SELECT * INTO v_review FROM public.product_reviews WHERE id = _review_id FOR UPDATE;
+  IF NOT FOUND OR v_review.hidden_at IS NOT NULL THEN RAISE EXCEPTION 'review is not available'; END IF;
+  IF NOT public.ugc_review_seller_can_manage(v_review.product_origin, v_review.product_id) THEN
+    RAISE EXCEPTION 'seller permission required';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.ugc_moderation_actions a
+    WHERE a.action_type = 'hide_content'
+      AND a.target_kind = 'product_review_reply'
+      AND a.target_id = _review_id
+      AND a.revoked_at IS NULL
+      AND (a.expires_at IS NULL OR a.expires_at > now())
+  ) THEN
+    RAISE EXCEPTION 'seller reply is hidden by moderation';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.ugc_reports report
+    WHERE report.target_kind = 'product_review_reply'
+      AND report.target_id = _review_id
+      AND report.status IN ('open', 'reviewing')
+  ) THEN
+    RAISE EXCEPTION 'seller reply has an open moderation report';
+  END IF;
+  _reply := NULLIF(btrim(_reply), '');
+  IF _reply IS NOT NULL THEN
+    IF NOT public.ugc_has_current_policy() THEN RAISE EXCEPTION 'community policy acceptance required'; END IF;
+    IF NOT public.ugc_profile_can_post(v_profile_id) THEN RAISE EXCEPTION 'posting is suspended'; END IF;
+    IF char_length(_reply) > 2000 THEN RAISE EXCEPTION 'seller reply is too long'; END IF;
+  END IF;
+  UPDATE public.product_reviews
+  SET seller_reply = _reply,
+      seller_replied_at = CASE WHEN _reply IS NULL THEN NULL ELSE now() END,
+      seller_reply_by_profile_id = CASE WHEN _reply IS NULL THEN NULL ELSE v_profile_id END,
+      updated_at = now()
+  WHERE id = _review_id;
+  RETURN true;
+END;
+$$;
+
+-- No client may read order identifiers or mutate moderation/seller fields
+-- directly. Public list, private list, summaries and writes all use RPCs.
+REVOKE ALL ON public.product_reviews FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.product_reviews TO service_role;
+REVOKE ALL ON public.product_review_summary FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.product_review_summary TO service_role;
+
+REVOKE ALL ON FUNCTION public.avaliacao_exige_compra_propria() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ugc_review_product_is_public(text, uuid),
+  public.ugc_current_user_blocks_review_product(text, uuid),
+  public.ugc_review_seller_profile(text, uuid),
+  public.ugc_review_seller_partner(text, uuid),
+  public.ugc_review_seller_can_manage(text, uuid)
+FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.avaliar_produto(uuid, text, uuid, uuid, text, integer, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.minhas_avaliacoes() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.resumo_avaliacoes(uuid[]) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.avaliacoes_do_produto(text, uuid, integer) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.responder_avaliacao(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.avaliar_produto(uuid, text, uuid, uuid, text, integer, text),
+  public.minhas_avaliacoes(), public.resumo_avaliacoes(uuid[]),
+  public.avaliacoes_do_produto(text, uuid, integer),
+  public.responder_avaliacao(uuid, text)
+TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.ugc_report(
   _target_kind text,
   _target_id uuid,
@@ -598,6 +1173,7 @@ DECLARE
   v_snapshot jsonb := '{}'::jsonb;
   v_message public.group_messages%ROWTYPE;
   v_post public.partner_posts%ROWTYPE;
+  v_review public.product_reviews%ROWTYPE;
   v_profile public.profiles%ROWTYPE;
   v_partner public.partners%ROWTYPE;
   v_whatsapp public.whatsapp_groups%ROWTYPE;
@@ -605,7 +1181,10 @@ BEGIN
   IF auth.uid() IS NULL OR v_reporter IS NULL THEN
     RAISE EXCEPTION 'authentication required';
   END IF;
-  IF _target_kind NOT IN ('group_message', 'partner_post', 'profile', 'partner', 'whatsapp_group') THEN
+  IF _target_kind NOT IN (
+    'group_message', 'partner_post', 'product_review', 'product_review_reply',
+    'profile', 'partner', 'whatsapp_group'
+  ) THEN
     RAISE EXCEPTION 'invalid report target';
   END IF;
   IF _reason_code NOT IN (
@@ -651,7 +1230,7 @@ BEGIN
       'group_id', v_message.group_id, 'sender_profile_id', v_message.sender_profile_id
     );
   ELSIF _target_kind = 'partner_post' THEN
-    SELECT * INTO v_post FROM public.partner_posts WHERE id = _target_id;
+    SELECT * INTO v_post FROM public.partner_posts WHERE id = _target_id FOR SHARE;
     IF NOT FOUND
        OR v_post.moderation_status <> 'visible'
        OR NOT EXISTS (
@@ -672,6 +1251,56 @@ BEGIN
       'created_at', v_post.created_at, 'partner_id', v_post.partner_id,
       'author_profile_id', v_post.author_profile_id
     );
+  ELSIF _target_kind IN ('product_review', 'product_review_reply') THEN
+    SELECT * INTO v_review
+    FROM public.product_reviews
+    WHERE id = _target_id
+    FOR SHARE;
+    IF NOT FOUND
+       OR v_review.hidden_at IS NOT NULL
+       OR NOT public.ugc_review_product_is_public(v_review.product_origin, v_review.product_id)
+       OR public.ugc_current_user_blocks_review_product(v_review.product_origin, v_review.product_id) THEN
+      RAISE EXCEPTION 'report target is not visible';
+    END IF;
+
+    IF _target_kind = 'product_review' THEN
+      IF v_review.author_id = v_reporter
+         OR public.ugc_profiles_block_each_other(v_review.author_id) THEN
+        RAISE EXCEPTION 'cannot report own or unavailable content';
+      END IF;
+      v_subject_profile := v_review.author_id;
+      v_snapshot := jsonb_build_object(
+        'review_id', v_review.id,
+        'product_origin', v_review.product_origin,
+        'product_id', v_review.product_id,
+        'rating', v_review.rating,
+        'comment', v_review.comment,
+        'author_id', v_review.author_id,
+        'created_at', v_review.created_at
+      );
+    ELSE
+      IF NULLIF(btrim(v_review.seller_reply), '') IS NULL THEN
+        RAISE EXCEPTION 'seller reply is not visible';
+      END IF;
+      v_subject_profile := COALESCE(
+        v_review.seller_reply_by_profile_id,
+        public.ugc_review_seller_profile(v_review.product_origin, v_review.product_id)
+      );
+      v_subject_partner := public.ugc_review_seller_partner(
+        v_review.product_origin, v_review.product_id
+      );
+      IF v_subject_profile = v_reporter THEN
+        RAISE EXCEPTION 'cannot report own content';
+      END IF;
+      v_snapshot := jsonb_build_object(
+        'review_id', v_review.id,
+        'product_origin', v_review.product_origin,
+        'product_id', v_review.product_id,
+        'seller_reply', v_review.seller_reply,
+        'seller_replied_at', v_review.seller_replied_at,
+        'seller_reply_by_profile_id', v_review.seller_reply_by_profile_id
+      );
+    END IF;
   ELSIF _target_kind = 'profile' THEN
     SELECT * INTO v_profile FROM public.profiles WHERE id = _target_id;
     IF NOT FOUND OR v_profile.id = v_reporter OR NOT (
@@ -921,6 +1550,15 @@ BEGIN
     NEW.moderated_by_profile_id := NULL;
     NEW.moderation_reason := NULL;
   ELSE
+    IF OLD.moderation_status <> 'visible'
+       OR EXISTS (
+         SELECT 1 FROM public.ugc_reports report
+         WHERE report.target_kind = 'partner_post'
+           AND report.target_id = OLD.id
+           AND report.status IN ('open', 'reviewing')
+       ) THEN
+      RAISE EXCEPTION 'post under moderation review cannot be edited';
+    END IF;
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.partner_id IS DISTINCT FROM OLD.partner_id
        OR NEW.author_profile_id IS DISTINCT FROM OLD.author_profile_id
@@ -1184,6 +1822,122 @@ $$;
 REVOKE ALL ON FUNCTION public.profissionais_publicos(uuid[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.profissionais_publicos(uuid[]) TO anon, authenticated, service_role;
 
+CREATE OR REPLACE FUNCTION public.vendedor_publico(_tipo text, _id uuid)
+RETURNS TABLE (
+  id uuid,
+  tipo text,
+  nome text,
+  descricao text,
+  foto text,
+  capa text,
+  cidade text,
+  uf text,
+  ramo text,
+  especialidade text,
+  instagram text,
+  site text,
+  desde timestamptz,
+  aprovado boolean
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  IF _tipo = 'partner' AND NOT public.ugc_current_user_blocks_partner(_id) THEN
+    RETURN QUERY
+    SELECT pa.id, 'partner'::text,
+           COALESCE(NULLIF(btrim(pa.fantasy_name), ''), 'Parceiro')::text,
+           pa.description, pa.photo_url, pa.cover_url, pa.city::text,
+           pa.state::text, pa.business_area, pa.specialty, pa.instagram,
+           pa.website, COALESCE(pa.approved_at, pa.created_at), true
+    FROM public.partners pa
+    WHERE pa.id = _id AND pa.status = 'approved' AND pa.blocked_at IS NULL;
+  ELSIF _tipo = 'professional' AND NOT public.ugc_current_user_blocks_coach(_id) THEN
+    RETURN QUERY
+    SELECT c.id, 'professional'::text,
+           COALESCE(NULLIF(btrim(pr.name), ''), 'Profissional')::text,
+           NULL::text, pr.avatar_url, NULL::text, pr.city::text, pr.state::text,
+           NULL::text, c.specialty_key::text, NULL::text, NULL::text,
+           c.created_at, true
+    FROM public.coaches c
+    JOIN public.profiles pr ON pr.id = c.profile_id
+    WHERE c.id = _id AND COALESCE(pr.status, 'active') = 'active';
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reputacao_do_vendedor(_tipo text, _id uuid)
+RETURNS TABLE (produtos integer, avaliacoes integer, nota numeric, vendas integer)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+  WITH allowed AS (
+    SELECT auth.uid() IS NOT NULL AND CASE _tipo
+      WHEN 'partner' THEN
+        NOT public.ugc_current_user_blocks_partner(_id)
+        AND EXISTS (
+          SELECT 1 FROM public.partners pa
+          WHERE pa.id = _id
+            AND pa.status = 'approved'
+            AND pa.blocked_at IS NULL
+        )
+      WHEN 'professional' THEN
+        NOT public.ugc_current_user_blocks_coach(_id)
+        AND EXISTS (
+          SELECT 1
+          FROM public.coaches c
+          JOIN public.profiles pr ON pr.id = c.profile_id
+          WHERE c.id = _id
+            AND COALESCE(pr.status, 'active') = 'active'
+        )
+      ELSE false
+    END AS ok
+  ), ids(product_origin, id) AS (
+    SELECT 'partner'::text, pp.id
+    FROM public.partner_products pp, allowed a
+    WHERE a.ok AND _tipo = 'partner' AND pp.partner_id = _id
+      AND pp.status = 'approved' AND pp.is_active_by_partner
+      AND pp.is_ready_for_sale AND pp.deleted_at IS NULL
+    UNION ALL
+    SELECT 'professional'::text, fp.id
+    FROM public.professional_products fp, allowed a
+    WHERE a.ok AND _tipo = 'professional' AND fp.coach_id = _id
+      AND fp.status = 'approved' AND fp.is_active_by_professional
+      AND fp.is_ready_for_sale
+  ), visible_reviews AS (
+    SELECT r.rating
+    FROM public.product_reviews r
+    JOIN ids i ON i.product_origin = r.product_origin AND i.id = r.product_id
+    WHERE r.hidden_at IS NULL
+      AND NOT public.ugc_profiles_block_each_other(r.author_id)
+  )
+  SELECT (SELECT count(*) FROM ids)::integer,
+         (SELECT count(*) FROM visible_reviews)::integer,
+         (SELECT round(avg(vr.rating)::numeric, 2) FROM visible_reviews vr),
+         COALESCE((
+           SELECT count(*) FROM public.partner_product_orders o
+           WHERE o.status = 'paid'
+             AND (
+               o.partner_product_id IN (SELECT id FROM ids WHERE product_origin = 'partner')
+               OR o.professional_product_id IN (SELECT id FROM ids WHERE product_origin = 'professional')
+             )
+         ), 0)::integer
+  FROM allowed a
+  WHERE a.ok;
+$$;
+
+REVOKE ALL ON FUNCTION public.vendedor_publico(text, uuid),
+  public.reputacao_do_vendedor(text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.vendedor_publico(text, uuid),
+  public.reputacao_do_vendedor(text, uuid) TO authenticated, service_role;
+
 -- ---------------------------------------------------------------------------
 -- 5. Admin moderation and appeal RPCs.
 -- ---------------------------------------------------------------------------
@@ -1282,12 +2036,28 @@ BEGIN
         moderation_reason = _public_reason
       WHERE id = v_report.target_id;
     ELSIF v_report.target_kind = 'partner_post' THEN
+      PERFORM pg_advisory_xact_lock(
+        hashtextextended('ugc:partner-post:' || v_report.target_id::text, 0)
+      );
       UPDATE public.partner_posts SET moderation_status = 'hidden',
         moderated_at = now(), moderated_by_profile_id = v_admin,
         moderation_reason = _public_reason
       WHERE id = v_report.target_id;
+    ELSIF v_report.target_kind = 'product_review' THEN
+      UPDATE public.product_reviews
+      SET hidden_at = now(), hidden_by = v_admin, hidden_reason = _public_reason,
+          updated_at = now()
+      WHERE id = v_report.target_id;
+    ELSIF v_report.target_kind = 'product_review_reply' THEN
+      PERFORM pg_advisory_xact_lock(
+        hashtextextended('ugc:review-reply:' || v_report.target_id::text, 0)
+      );
+      UPDATE public.product_reviews
+      SET seller_reply = NULL, seller_replied_at = NULL,
+          seller_reply_by_profile_id = NULL, updated_at = now()
+      WHERE id = v_report.target_id;
     ELSE
-      RAISE EXCEPTION 'hide_content only applies to a message or post';
+      RAISE EXCEPTION 'hide_content only applies to supported community content';
     END IF;
   ELSIF _action_type = 'group_mute' THEN
     IF v_report.subject_profile_id IS NULL OR v_report.group_id IS NULL THEN RAISE EXCEPTION 'group subject required'; END IF;
@@ -1489,6 +2259,44 @@ BEGIN
             AND active.revoked_at IS NULL
             AND (active.expires_at IS NULL OR active.expires_at > now())
         );
+    ELSIF v_action.action_type = 'hide_content' AND v_action.target_kind = 'product_review' THEN
+      UPDATE public.product_reviews r
+      SET hidden_at = NULL, hidden_by = NULL, hidden_reason = _decision,
+          updated_at = now()
+      WHERE r.id = v_action.target_id
+        AND NOT EXISTS (
+          SELECT 1 FROM public.ugc_moderation_actions active
+          WHERE active.id <> v_action.id
+            AND active.action_type = 'hide_content'
+            AND active.target_kind = v_action.target_kind
+            AND active.target_id = v_action.target_id
+            AND active.revoked_at IS NULL
+            AND (active.expires_at IS NULL OR active.expires_at > now())
+        );
+    ELSIF v_action.action_type = 'hide_content' AND v_action.target_kind = 'product_review_reply' THEN
+      PERFORM pg_advisory_xact_lock(
+        hashtextextended('ugc:review-reply:' || v_action.target_id::text, 0)
+      );
+      UPDATE public.product_reviews review
+      SET seller_reply = NULLIF(report.evidence_snapshot->>'seller_reply', ''),
+          seller_replied_at = NULLIF(report.evidence_snapshot->>'seller_replied_at', '')::timestamptz,
+          seller_reply_by_profile_id = NULLIF(
+            report.evidence_snapshot->>'seller_reply_by_profile_id', ''
+          )::uuid,
+          updated_at = now()
+      FROM public.ugc_reports report
+      WHERE review.id = v_action.target_id
+        AND review.seller_reply IS NULL
+        AND report.id = v_action.report_id
+        AND NOT EXISTS (
+          SELECT 1 FROM public.ugc_moderation_actions active
+          WHERE active.id <> v_action.id
+            AND active.action_type = 'hide_content'
+            AND active.target_kind = v_action.target_kind
+            AND active.target_id = v_action.target_id
+            AND active.revoked_at IS NULL
+            AND (active.expires_at IS NULL OR active.expires_at > now())
+        );
     ELSIF v_action.action_type = 'block_partner' THEN
       UPDATE public.partners SET status = COALESCE(v_action.metadata->>'previous_status', 'approved')
       WHERE id = v_action.subject_partner_id
@@ -1544,6 +2352,56 @@ BEGIN
   RETURN _accepted;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.ugc_finalize_partner_post_restore(_action_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+SET row_security = off
+AS $$
+DECLARE
+  v_action public.ugc_moderation_actions%ROWTYPE;
+  v_restored boolean := false;
+BEGIN
+  IF auth.role() <> 'service_role' THEN RAISE EXCEPTION 'service_role required'; END IF;
+  SELECT * INTO v_action
+  FROM public.ugc_moderation_actions
+  WHERE id = _action_id
+  FOR UPDATE;
+  IF NOT FOUND
+     OR v_action.action_type <> 'hide_content'
+     OR v_action.target_kind <> 'partner_post'
+     OR v_action.revoked_at IS NULL THEN
+    RAISE EXCEPTION 'action is not ready for restore';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('ugc:partner-post:' || v_action.target_id::text, 0)
+  );
+  UPDATE public.partner_posts p
+  SET moderation_status = 'visible',
+      moderated_at = now(),
+      moderation_reason = 'Recurso aceito; conteúdo restaurado.'
+  WHERE p.id = v_action.target_id
+    AND p.moderation_status = 'hidden'
+    AND NOT EXISTS (
+      SELECT 1 FROM public.ugc_moderation_actions active
+      WHERE active.id <> v_action.id
+        AND active.action_type = 'hide_content'
+        AND active.target_kind = 'partner_post'
+        AND active.target_id = v_action.target_id
+        AND active.revoked_at IS NULL
+        AND (active.expires_at IS NULL OR active.expires_at > now())
+    );
+  v_restored := FOUND;
+  RETURN v_restored;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.ugc_finalize_partner_post_restore(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.ugc_finalize_partner_post_restore(uuid)
+  TO service_role;
 
 -- Operational privacy control. Run this RPC periodically with service_role;
 -- keep the audit row and outcome, but remove raw evidence after the retention
@@ -1622,6 +2480,16 @@ BEGIN
   WHERE r.status IN ('actioned', 'dismissed')
     AND r.resolved_at < now() - make_interval(days => _retention_days)
     AND r.evidence_snapshot->>'purged' IS DISTINCT FROM 'true'
+    AND (
+      r.target_kind <> 'group_message'
+      OR NOT EXISTS (
+        SELECT 1 FROM public.ugc_media_jobs j
+        WHERE j.report_id = r.id
+          AND j.operation = 'delete'
+          AND j.source_bucket = 'group-media'
+          AND j.status <> 'completed'
+      )
+    )
     AND NOT EXISTS (
       SELECT 1
       FROM public.ugc_moderation_actions a

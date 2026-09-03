@@ -3,7 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ROTULO_MOTIVO, ROTULO_STATUS, type StatusEstorno } from "@/lib/store-returns";
+import {
+  ROTULO_MOTIVO,
+  ROTULO_STATUS,
+  type StatusEstorno,
+  type StoreOrderType,
+} from "@/lib/store-returns";
 
 export const Route = createFileRoute("/_authenticated/admin/estornos")({ component: AdminEstornos });
 
@@ -14,7 +19,7 @@ const quando = (d: string | null) =>
 type Linha = {
   id: string;
   order_id: string;
-  order_type: string;
+  order_type: StoreOrderType;
   reason: string;
   description: string | null;
   status: StatusEstorno;
@@ -23,11 +28,21 @@ type Linha = {
   refund_amount: number | null;
   admin_notes: string | null;
   blocks_settlement: boolean;
-  metadata: { valor_da_compra?: number; produto?: string; origem?: string } | null;
+  metadata: {
+    valor_da_compra?: number;
+    produto?: string;
+    origem?: StoreOrderType;
+    is_test?: boolean;
+  } | null;
   profiles: { name: string | null; email: string | null } | null;
 };
 
 const ABERTOS: StatusEstorno[] = ["requested", "under_review", "approved"];
+const PROXIMOS: Partial<Record<StatusEstorno, StatusEstorno[]>> = {
+  requested: ["under_review", "approved", "rejected"],
+  under_review: ["approved", "rejected"],
+  approved: ["refunded"],
+};
 
 /**
  * Pedidos de estorno, do lado de quem decide.
@@ -66,34 +81,48 @@ function AdminEstornos() {
 
   const decidir = async (l: Linha, novo: StatusEstorno) => {
     const r = rascunho[l.id] ?? { valor: "", nota: "" };
-    const valor = r.valor.trim() ? Number(r.valor.replace(",", ".")) : null;
+    const temValorInformado = r.valor.trim().length > 0;
+    const valorInformado = temValorInformado ? Number(r.valor.replace(",", ".")) : null;
+    const valorEfetivo = valorInformado ?? l.refund_amount;
 
-    if (novo === "refunded" && (valor == null || !Number.isFinite(valor) || valor <= 0)) {
-      toast.error("Informe o valor devolvido antes de marcar como estornado.");
+    if (temValorInformado && (
+      valorInformado == null || !Number.isFinite(valorInformado) || valorInformado <= 0
+    )) {
+      toast.error("Informe um valor de estorno válido.");
+      return;
+    }
+    if (["approved", "refunded"].includes(novo) && (
+      valorEfetivo == null || !Number.isFinite(valorEfetivo) || valorEfetivo <= 0
+    )) {
+      toast.error("Informe o valor a devolver antes de aprovar o estorno.");
+      return;
+    }
+    const valorDaCompra = l.metadata?.valor_da_compra;
+    if (valorEfetivo != null && valorDaCompra != null && valorEfetivo > Number(valorDaCompra)) {
+      toast.error("O estorno não pode ser maior que o valor da compra.");
       return;
     }
     if (novo === "rejected" && !r.nota.trim()) {
       toast.error("Escreva o motivo da recusa — o aluno vê essa resposta.");
       return;
     }
+    if (novo === "refunded" && !r.nota.trim()) {
+      toast.error("Registre a confirmação do estorno já executado no gateway.");
+      return;
+    }
 
     setSalvando(l.id);
-    const { error } = await supabase
-      .from("return_requests" as never)
-      .update({
-        status: novo,
-        admin_notes: r.nota.trim() || l.admin_notes,
-        refund_amount: valor ?? l.refund_amount,
-        resolved_at: novo === "under_review" ? null : new Date().toISOString(),
-        // Decisão final destrava o repasse; enquanto está em análise, segura.
-        blocks_settlement: novo === "requested" || novo === "under_review" || novo === "approved",
-      } as never)
-      .eq("id" as never, l.id as never);
+    const { error } = await supabase.rpc("admin_decide_return_request" as never, {
+      _request_id: l.id,
+      _new_status: novo,
+      _refund_amount: valorInformado,
+      _admin_notes: r.nota.trim() || null,
+    } as never);
     setSalvando(null);
 
     if (error) {
       console.error("[admin-estornos] decidir", error);
-      toast.error("Não consegui salvar. Tente de novo.");
+      toast.error(error.message || "Não consegui salvar. Tente de novo.");
       return;
     }
     toast.success(`Pedido marcado como "${ROTULO_STATUS[novo]}".`);
@@ -111,7 +140,7 @@ function AdminEstornos() {
             <Undo2 className="h-5 w-5 text-primary" /> Pedidos de estorno
           </h1>
           <p className="text-xs text-muted-foreground">
-            {abertos} em aberto. Enquanto um pedido está de pé, o repasse da venda fica retido.
+            {abertos} em aberto. Não confirme “Estornado” antes de concluir a operação no gateway.
           </p>
         </div>
         <button
@@ -136,6 +165,7 @@ function AdminEstornos() {
             const set = (campo: "valor" | "nota", v: string) =>
               setRascunho((d) => ({ ...d, [l.id]: { ...r, [campo]: v } }));
             const aberto = ABERTOS.includes(l.status);
+            const proximos = PROXIMOS[l.status] ?? [];
 
             return (
               <article key={l.id} className="rounded-2xl border border-white/10 bg-card p-4">
@@ -150,6 +180,7 @@ function AdminEstornos() {
                     <p className="mt-1 text-[11px] text-muted-foreground">
                       Pedido {quando(l.requested_at)} · {l.order_type}
                       {l.metadata?.valor_da_compra != null && <> · compra de {dinheiro(Number(l.metadata.valor_da_compra))}</>}
+                      {l.metadata?.is_test && <> · <strong className="text-amber-300">ambiente de teste</strong></>}
                     </p>
                   </div>
                   <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${
@@ -180,20 +211,25 @@ function AdminEstornos() {
                       <input
                         value={r.nota}
                         onChange={(e) => set("nota", e.target.value)}
-                        placeholder="Resposta ao aluno (ele vê isto)"
+                        maxLength={3000}
+                        placeholder="Resposta / confirmação do gateway (o aluno vê)"
                         className="min-w-[12rem] flex-1 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-foreground"
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(["under_review", "approved", "refunded", "rejected"] as StatusEstorno[]).map((s) => (
+                      {proximos.map((s) => (
                         <button
                           key={s}
                           type="button"
-                          disabled={salvando === l.id || l.status === s}
+                          disabled={salvando === l.id}
                           onClick={() => decidir(l, s)}
                           className="rounded-lg border border-white/15 bg-background px-3 py-2 text-[11px] font-bold text-foreground disabled:opacity-40"
                         >
-                          {salvando === l.id ? "..." : ROTULO_STATUS[s]}
+                          {salvando === l.id
+                            ? "..."
+                            : s === "refunded"
+                              ? "Confirmar estorno executado"
+                              : ROTULO_STATUS[s]}
                         </button>
                       ))}
                     </div>
