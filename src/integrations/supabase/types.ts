@@ -13092,6 +13092,47 @@ export type Database = {
           },
         ]
       }
+      store_product_visibility_audit: {
+        Row: {
+          actor_profile_id: string | null
+          changed_at: string
+          id: string
+          new_visible: boolean
+          previous_visible: boolean
+          product_id: string
+          product_name: string
+          product_source: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          changed_at?: string
+          id?: string
+          new_visible: boolean
+          previous_visible: boolean
+          product_id: string
+          product_name: string
+          product_source: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          changed_at?: string
+          id?: string
+          new_visible?: boolean
+          previous_visible?: boolean
+          product_id?: string
+          product_name?: string
+          product_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_product_visibility_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_products: {
         Row: {
           category: string | null
@@ -18169,6 +18210,10 @@ export type Database = {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
         }
         Returns: string
+      }
+      store_admin_set_product_visibility: {
+        Args: { _product_id: string; _source: string; _visible: boolean }
+        Returns: undefined
       }
       store_admin_shelf_report: { Args: never; Returns: Json }
       store_hidden_for_viewer: {
