@@ -466,6 +466,7 @@ export type Database = {
           partner_id: string
           qr_token: string | null
           referencia: string
+          rosto_em: string | null
           student_id: string | null
           telefone: string | null
           tipo: string
@@ -481,6 +482,7 @@ export type Database = {
           partner_id: string
           qr_token?: string | null
           referencia: string
+          rosto_em?: string | null
           student_id?: string | null
           telefone?: string | null
           tipo?: string
@@ -496,6 +498,7 @@ export type Database = {
           partner_id?: string
           qr_token?: string | null
           referencia?: string
+          rosto_em?: string | null
           student_id?: string | null
           telefone?: string | null
           tipo?: string
@@ -15728,6 +15731,26 @@ export type Database = {
           referencia: string
         }[]
       }
+      academia_agente_credencial_desligar: {
+        Args: {
+          p_agente_id: string
+          p_forcar?: boolean
+          p_referencia: string
+          p_segredo: string
+        }
+        Returns: Json
+      }
+      academia_agente_credencial_editar: {
+        Args: {
+          p_agente_id: string
+          p_nascimento?: string
+          p_nome?: string
+          p_referencia: string
+          p_segredo: string
+          p_telefone?: string
+        }
+        Returns: Json
+      }
       academia_agente_enviar: {
         Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
         Returns: number
@@ -15775,12 +15798,32 @@ export type Database = {
           expira_em: string
         }[]
       }
+      academia_agente_marcar_rostos: {
+        Args: { p_agente_id: string; p_com_rosto: Json; p_segredo: string }
+        Returns: Json
+      }
       academia_agente_parear: {
         Args: { p_codigo: string; p_versao: string }
         Returns: {
           agente_id: string
           partner_id: string
           segredo: string
+        }[]
+      }
+      academia_agente_pessoas: {
+        Args: { p_agente_id: string; p_busca?: string; p_segredo: string }
+        Returns: {
+          ativo: boolean
+          entradas: number
+          motivo: string
+          nascimento: string
+          no_leitor: boolean
+          nome: string
+          plano: string
+          referencia: string
+          telefone: string
+          ultima_entrada: string
+          valido_ate: string
         }[]
       }
       academia_agente_retrato: {
@@ -18105,6 +18148,7 @@ export type Database = {
           state: string
         }[]
       }
+      sem_acento: { Args: { p_texto: string }; Returns: string }
       set_partner_product_schedules: {
         Args: { _product_id: string; _schedules: Json }
         Returns: undefined
