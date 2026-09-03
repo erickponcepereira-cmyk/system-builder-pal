@@ -928,24 +928,38 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
     (rows || []).filter((r) => sel[r.id]).reduce((s, r) => s + r.amount, 0) +
     (orders || []).filter((o) => selOrders[o.id]).reduce((s, o) => s + o.amount, 0);
 
+  const selectedNetworkPending = (rows || []).filter((r) => sel[r.id] && r.isNetwork && !r.goalMet);
+
   const submit = async () => {
     if (!selectedIds.length && !selectedOrderIds.length) return toast.error("Selecione ao menos um item");
-    if (!window.confirm(`Antecipar a liberação de ${fmt(total)}? O valor passa a contar como disponível na carteira.`)) return;
+    const aviso = selectedNetworkPending.length
+      ? `\n\nATENÇÃO: ${selectedNetworkPending.length} lançamento(s) são de rede de mês SEM meta batida (${fmt(selectedNetworkPending.reduce((s, r) => s + r.amount, 0))}). Liberar é uma exceção.`
+      : "";
+    if (!window.confirm(`Antecipar a liberação de ${fmt(total)}? O valor passa a contar como disponível na carteira.${aviso}`)) return;
     setBusy(true);
     try {
+      let aplicado = 0;
       if (selectedIds.length) {
-        await advance({ data: { profileId, commissionIds: selectedIds, reason: reason || undefined } });
+        const r = await advance({ data: { profileId, commissionIds: selectedIds, reason: reason || undefined } });
+        aplicado += Number((r as { total?: number } | null)?.total || 0);
       }
       if (selectedOrderIds.length) {
-        await advanceOrders({ data: { profileId, orderIds: selectedOrderIds, reason: reason || undefined } });
+        const r = await advanceOrders({ data: { profileId, orderIds: selectedOrderIds, reason: reason || undefined } });
+        aplicado += Number((r as { total?: number } | null)?.total || 0);
       }
-      toast.success("Liberação antecipada registrada");
+      const faltou = Math.round((total - aplicado) * 100) / 100;
+      toast.success(
+        faltou > 0.009
+          ? `Liberado ${fmt(aplicado)} de ${fmt(total)} — ${fmt(faltou)} não pôde ser liberado (rede sem meta ou já liberado).`
+          : `Liberação antecipada registrada: ${fmt(aplicado)}`,
+      );
       setSel({}); setSelOrders({}); setReason("");
       await load();
       onChanged();
     } catch (e: any) { toast.error(e?.message || "Erro ao antecipar"); }
     finally { setBusy(false); }
   };
+
 
 
   return (
@@ -977,10 +991,21 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
                     checked={!!sel[r.id]}
                     onChange={(e) => setSel((s) => ({ ...s, [r.id]: e.target.checked }))}
                   />
-                  <span className="flex-1 text-white/80">{r.slotLabel || "Comissão"}{r.isNetwork ? " · rede" : ""}</span>
-                  <span className="text-white/40">
-                    {r.availableAt ? `libera ${new Date(r.availableAt).toLocaleDateString("pt-BR")}` : "—"}
+                  <span className="flex-1 text-white/80">
+                    {r.slotLabel || "Comissão"}
+                    {r.isNetwork && (
+                      <span className={r.goalMet ? "text-emerald-400" : "text-amber-400"}>
+                        {" "}· rede {r.periodKey || ""} {r.goalMet ? "(meta batida)" : "(meta não batida)"}
+                      </span>
+                    )}
+                    {!r.isNetwork && r.state === "hold" ? <span className="text-white/40"> · venda direta</span> : null}
                   </span>
+                  <span className="text-white/40">
+                    {r.state === "network_blocked"
+                      ? "prazo vencido"
+                      : r.availableAt ? `libera ${new Date(r.availableAt).toLocaleDateString("pt-BR")}` : "—"}
+                  </span>
+
                   <span className="font-bold text-white">{fmt(r.amount)}</span>
                 </label>
               ))}

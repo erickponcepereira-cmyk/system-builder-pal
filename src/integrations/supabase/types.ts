@@ -4958,6 +4958,45 @@ export type Database = {
           },
         ]
       }
+      commission_duplicates_removed: {
+        Row: {
+          amount: number
+          commission_id: string
+          id: string
+          original_created_at: string | null
+          partner_order_id: string | null
+          profile_id: string | null
+          removed_at: string
+          slot_label: string | null
+          status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number
+          commission_id: string
+          id?: string
+          original_created_at?: string | null
+          partner_order_id?: string | null
+          profile_id?: string | null
+          removed_at?: string
+          slot_label?: string | null
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          commission_id?: string
+          id?: string
+          original_created_at?: string | null
+          partner_order_id?: string | null
+          profile_id?: string | null
+          removed_at?: string
+          slot_label?: string | null
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       commission_release_advances: {
         Row: {
           admin_user_id: string | null
@@ -16760,6 +16799,20 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_blocked_commissions: {
+        Args: { _admin_user_id: string; _profile_id: string }
+        Returns: {
+          amount: number
+          available_at: string
+          commission_id: string
+          created_at: string
+          goal_met: boolean
+          is_network: boolean
+          period_key: string
+          slot_label: string
+          state: string
+        }[]
+      }
       admin_change_student_coach: {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
@@ -17309,8 +17362,10 @@ export type Database = {
           available_at: string
           beneficiary_profile_id: string
           description: string
+          is_network: boolean
           ledger_key: string
           occurred_at: string
+          period_key: string
           reference_id: string
           source_kind: string
           source_type: string
