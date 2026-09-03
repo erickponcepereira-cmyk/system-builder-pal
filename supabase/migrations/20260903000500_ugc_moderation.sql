@@ -1,4 +1,4 @@
--- Release batch: Google Play UGC readiness, community policy acceptance, reports, blocks,
+-- Release batch after the latest Lovable migrations: Google Play UGC readiness, community policy acceptance, reports, blocks,
 -- moderation actions/appeals, server-side enforcement and profile privacy fixes.
 
 -- ---------------------------------------------------------------------------
@@ -830,7 +830,9 @@ BEGIN
     FROM public.store_orders o
     JOIN public.students s ON s.id = o.student_id
     WHERE o.id = NEW.order_id
-      AND o.status = 'paid'
+      -- O pedido continua pago enquanto avança na logística. Sem estes
+      -- estados, justamente a compra entregue seria recusada pelo gatilho.
+      AND o.status IN ('paid', 'preparing', 'shipped', 'delivered')
       AND EXISTS (
         SELECT 1 FROM public.store_order_items i
         WHERE i.order_id = o.id
@@ -1073,7 +1075,11 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.responder_avaliacao(_review_id uuid, _reply text)
+-- Main already defines this signature returning void. PostgreSQL cannot change
+-- a function return type through CREATE OR REPLACE, so remove that legacy
+-- implementation before installing the moderated boolean-returning version.
+DROP FUNCTION IF EXISTS public.responder_avaliacao(uuid, text);
+CREATE FUNCTION public.responder_avaliacao(_id uuid, _resposta text)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -1086,9 +1092,9 @@ DECLARE
 BEGIN
   IF auth.uid() IS NULL OR v_profile_id IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
   PERFORM pg_advisory_xact_lock(
-    hashtextextended('ugc:review-reply:' || _review_id::text, 0)
+    hashtextextended('ugc:review-reply:' || _id::text, 0)
   );
-  SELECT * INTO v_review FROM public.product_reviews WHERE id = _review_id FOR UPDATE;
+  SELECT * INTO v_review FROM public.product_reviews WHERE id = _id FOR UPDATE;
   IF NOT FOUND OR v_review.hidden_at IS NOT NULL THEN RAISE EXCEPTION 'review is not available'; END IF;
   IF NOT public.ugc_review_seller_can_manage(v_review.product_origin, v_review.product_id) THEN
     RAISE EXCEPTION 'seller permission required';
@@ -1097,7 +1103,7 @@ BEGIN
     SELECT 1 FROM public.ugc_moderation_actions a
     WHERE a.action_type = 'hide_content'
       AND a.target_kind = 'product_review_reply'
-      AND a.target_id = _review_id
+      AND a.target_id = _id
       AND a.revoked_at IS NULL
       AND (a.expires_at IS NULL OR a.expires_at > now())
   ) THEN
@@ -1106,23 +1112,23 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM public.ugc_reports report
     WHERE report.target_kind = 'product_review_reply'
-      AND report.target_id = _review_id
+      AND report.target_id = _id
       AND report.status IN ('open', 'reviewing')
   ) THEN
     RAISE EXCEPTION 'seller reply has an open moderation report';
   END IF;
-  _reply := NULLIF(btrim(_reply), '');
-  IF _reply IS NOT NULL THEN
+  _resposta := NULLIF(btrim(_resposta), '');
+  IF _resposta IS NOT NULL THEN
     IF NOT public.ugc_has_current_policy() THEN RAISE EXCEPTION 'community policy acceptance required'; END IF;
     IF NOT public.ugc_profile_can_post(v_profile_id) THEN RAISE EXCEPTION 'posting is suspended'; END IF;
-    IF char_length(_reply) > 2000 THEN RAISE EXCEPTION 'seller reply is too long'; END IF;
+    IF char_length(_resposta) > 2000 THEN RAISE EXCEPTION 'seller reply is too long'; END IF;
   END IF;
   UPDATE public.product_reviews
-  SET seller_reply = _reply,
-      seller_replied_at = CASE WHEN _reply IS NULL THEN NULL ELSE now() END,
-      seller_reply_by_profile_id = CASE WHEN _reply IS NULL THEN NULL ELSE v_profile_id END,
+  SET seller_reply = _resposta,
+      seller_replied_at = CASE WHEN _resposta IS NULL THEN NULL ELSE now() END,
+      seller_reply_by_profile_id = CASE WHEN _resposta IS NULL THEN NULL ELSE v_profile_id END,
       updated_at = now()
-  WHERE id = _review_id;
+  WHERE id = _id;
   RETURN true;
 END;
 $$;
@@ -1151,6 +1157,17 @@ GRANT EXECUTE ON FUNCTION public.avaliar_produto(uuid, text, uuid, uuid, text, i
   public.avaliacoes_do_produto(text, uuid, integer),
   public.responder_avaliacao(uuid, text)
 TO authenticated, service_role;
+
+-- Legacy review administration from main may read the queue and let sellers
+-- answer, but it must not bypass the report/action/appeal audit trail by
+-- hiding or republishing content directly.
+REVOKE ALL ON FUNCTION public.avaliacoes_para_moderar(boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.avaliacoes_para_moderar(boolean) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.avaliacoes_dos_meus_produtos() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.avaliacoes_dos_meus_produtos() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.moderar_avaliacao(uuid, boolean, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.moderar_avaliacao(uuid, boolean, text) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.ugc_report(
   _target_kind text,

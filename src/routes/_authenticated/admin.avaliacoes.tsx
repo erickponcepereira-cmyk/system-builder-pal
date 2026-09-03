@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { EyeOff, Eye, Loader2, MessageSquare, Star } from "lucide-react";
+import { Loader2, MessageSquare, ShieldCheck, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StarRating } from "@/components/store/StarRating";
@@ -33,19 +33,14 @@ type Linha = {
 /**
  * Moderar avaliação.
  *
- * `product_reviews` nasceu com `hidden_at`, `hidden_by` e `hidden_reason` e
- * nenhuma tela para nenhum dos três. Enquanto ficasse assim, a primeira
- * avaliação ofensiva só sairia do ar por SQL.
- *
- * Esconder exige escrever o motivo — o banco recusa sem ele. Uma decisão de
- * moderação sem motivo vira um booleano sem memória, e daqui a seis meses
- * ninguém sabe por que aquela avaliação sumiu.
+ * Esta tela continua sendo a visão editorial e o lugar para responder. Ações
+ * de remoção ficam na fila unificada de denúncias, onde geram histórico,
+ * recurso e restauração controlada.
  */
 function AdminAvaliacoes() {
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState<string | null>(null);
-  const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [respostas, setRespostas] = useState<Record<string, string>>({});
 
   const carregar = useCallback(() => {
@@ -63,22 +58,6 @@ function AdminAvaliacoes() {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
-
-  const moderar = async (l: Linha, esconder: boolean) => {
-    const motivo = (motivos[l.id] || "").trim();
-    if (esconder && !motivo) {
-      toast.error("Escreva o motivo antes de esconder — é o que explica a decisão depois.");
-      return;
-    }
-    setSalvando(l.id);
-    const { error } = await supabase.rpc("moderar_avaliacao" as never, {
-      _id: l.id, _esconder: esconder, _motivo: motivo || null,
-    } as never);
-    setSalvando(null);
-    if (error) { toast.error(error.message); return; }
-    toast.success(esconder ? "Avaliação escondida da vitrine." : "Avaliação de volta ao ar.");
-    carregar();
-  };
 
   const responder = async (l: Linha) => {
     const texto = (respostas[l.id] || "").trim();
@@ -98,14 +77,21 @@ function AdminAvaliacoes() {
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-10 lg:p-8">
-      <header>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-foreground">
-          <Star className="h-5 w-5 text-primary" /> Avaliações
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          {linhas.length} no total{escondidas > 0 ? `, ${escondidas} escondida${escondidas > 1 ? "s" : ""} da vitrine` : ""}.
-          Esconder exige motivo.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Star className="h-5 w-5 text-primary" /> Avaliações
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {linhas.length} no total{escondidas > 0 ? `, ${escondidas} escondida${escondidas > 1 ? "s" : ""} da vitrine` : ""}.
+          </p>
+        </div>
+        <Link
+          to="/admin/moderation"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-card px-3 py-2 text-[11px] font-bold text-foreground"
+        >
+          <ShieldCheck className="h-3.5 w-3.5" /> Denúncias e recursos
+        </Link>
       </header>
 
       {carregando ? (
@@ -150,52 +136,26 @@ function AdminAvaliacoes() {
                 </div>
               )}
 
-              <div className="mt-3 flex flex-col gap-2">
-                {!l.hidden_at ? (
+              {!l.hidden_at && (
+                <div className="mt-3 flex flex-col gap-2">
                   <div className="flex flex-wrap gap-2">
                     <input
-                      value={motivos[l.id] || ""}
-                      onChange={(e) => setMotivos((d) => ({ ...d, [l.id]: e.target.value }))}
-                      placeholder="Motivo para esconder"
+                      value={respostas[l.id] || ""}
+                      onChange={(e) => setRespostas((d) => ({ ...d, [l.id]: e.target.value }))}
+                      placeholder={l.seller_reply ? "Corrigir a resposta do vendedor" : "Responder como o vendedor"}
                       className="min-w-[12rem] flex-1 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-foreground"
                     />
                     <button
                       type="button"
                       disabled={salvando === l.id}
-                      onClick={() => moderar(l, true)}
+                      onClick={() => responder(l)}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-background px-3 py-2 text-[11px] font-bold text-foreground disabled:opacity-40"
                     >
-                      <EyeOff className="h-3.5 w-3.5" /> Esconder
+                      <MessageSquare className="h-3.5 w-3.5" /> Publicar
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={salvando === l.id}
-                    onClick={() => moderar(l, false)}
-                    className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-white/15 bg-background px-3 py-2 text-[11px] font-bold text-foreground disabled:opacity-40"
-                  >
-                    <Eye className="h-3.5 w-3.5" /> Voltar para a vitrine
-                  </button>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    value={respostas[l.id] || ""}
-                    onChange={(e) => setRespostas((d) => ({ ...d, [l.id]: e.target.value }))}
-                    placeholder={l.seller_reply ? "Corrigir a resposta do vendedor" : "Responder como o vendedor"}
-                    className="min-w-[12rem] flex-1 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-foreground"
-                  />
-                  <button
-                    type="button"
-                    disabled={salvando === l.id}
-                    onClick={() => responder(l)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-background px-3 py-2 text-[11px] font-bold text-foreground disabled:opacity-40"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" /> Publicar
-                  </button>
                 </div>
-              </div>
+              )}
             </article>
           ))}
         </div>

@@ -1,4 +1,5 @@
 -- Release batch: contas de teste nunca podem ser criadas por domínio arbitrário nem por visitante.
+-- Aplicada depois das migrations mais recentes da Lovable.
 CREATE OR REPLACE FUNCTION public.is_test_email(_email text)
 RETURNS boolean
 LANGUAGE sql

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Estornos: toda escrita passa por RPCs estreitas.
+-- Estornos: toda escrita passa por RPCs estreitas, após as migrations atuais da Lovable.
 --
 -- Antes desta migration, uma pessoa autenticada podia apontar o INSERT para o
 -- UUID de uma compra alheia. O trigger de return_requests então marcava o

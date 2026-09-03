@@ -15,14 +15,15 @@ O aplicativo exige o aceite da versão vigente das Diretrizes da Comunidade ante
 
 ## Componentes
 
-- Migration principal: `20260831214000_ugc_moderation.sql`.
+- Migration principal: `20260903000500_ugc_moderation.sql`.
 - Versão da política no cliente: `src/lib/ugc.constants.ts`.
 - Fluxos compartilhados: `src/lib/ugc.ts` e `src/components/ugc/`.
 - Diretrizes públicas: `/diretrizes-da-comunidade`.
 - Central do aluno: `/student/safety`.
 - Fila administrativa: `/admin/moderation`.
+- A tela editorial `/admin/avaliacoes` apenas lista e responde; ocultar, republicar e analisar recursos acontece exclusivamente na fila unificada para preservar a trilha de auditoria.
 - Processador seguro de mídia: `src/lib/ugc-media-jobs.server.ts` e `src/lib/ugc-moderation.functions.ts`.
-- Processador de exclusão dependente: `20260831215900_account_deletion_processor.sql`.
+- Processador de exclusão dependente: `20260903000600_account_deletion_processor.sql`.
 
 ## Modelo e garantias
 
@@ -63,14 +64,15 @@ O worker usa lease de dez minutos para recuperar jobs interrompidos e encerra em
 ## Ordem obrigatória de homologação
 
 1. Criar backup e testar restauração em staging.
-2. Sincronizar a branch com a `main` e confirmar que não surgiu migration posterior a `20260831200000` sem nova renumeração do lote.
+2. Sincronizar a branch com a `main` e confirmar que não surgiu migration posterior a `20260902182324_818d996d-82b3-44ed-9095-fbeada6b51e1.sql`. Se surgir uma migration da `main` com nome igual ou posterior ao primeiro arquivo deste lote, renumerar o lote inteiro antes da homologação.
 3. Aplicar, nesta ordem:
-   - `20260831210000_account_deletion_requests.sql`;
-   - `20260831211000_disable_public_test_accounts.sql`;
-   - `20260831212000_push_notification_audit.sql`;
-   - `20260831213000_secure_public_payment_links.sql`;
-   - `20260831214000_ugc_moderation.sql`;
-   - `20260831215900_account_deletion_processor.sql`.
+   - `20260903000100_account_deletion_requests.sql`;
+   - `20260903000200_disable_public_test_accounts.sql`;
+   - `20260903000300_push_notification_audit.sql`;
+   - `20260903000400_secure_public_payment_links.sql`;
+   - `20260903000500_ugc_moderation.sql`;
+   - `20260903000600_account_deletion_processor.sql`;
+   - `20260903000700_secure_return_requests.sql`.
 4. Publicar o backend da mesma revisão, com `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor.
 5. Regenerar `src/integrations/supabase/types.ts` a partir do Supabase de staging depois de todas as migrations.
 6. Rodar o checklist abaixo em staging com contas separadas de aluno, profissional, parceiro, moderador A e moderador B.
@@ -162,23 +164,24 @@ A migration altera RLS, ACL, gatilhos e funções existentes. Não fazer rollbac
 48. Sem aceite vigente, criar/editar avaliação e criar/editar resposta de vendedor são recusados no banco.
 49. `authenticated` não consegue fazer `SELECT`, `INSERT`, `UPDATE` ou `DELETE` direto em `product_reviews`; somente as RPCs concedidas funcionam.
 50. Pedido alheio, pendente, cancelado, estornado ou inexistente não cria avaliação.
-51. `transaction`, `store_order` e `partner_product_order` só aceitam a origem e o produto realmente vinculados à compra; tipo inventado é recusado.
-52. Pedido com vários itens mantém uma avaliação independente por `(tipo, pedido, origem, produto)` e a tela abre o item correto.
-53. Autor consegue mudar apenas nota/comentário e não altera pedido, produto, autoria, moderação nem resposta do vendedor.
-54. Só a equipe do parceiro, o profissional dono ou a operação FitMind autorizada responde; `seller_reply_by_profile_id` registra quem escreveu.
-55. Listagem pública não expõe `order_id`/`order_type`; a RPC de avaliações próprias devolve somente linhas do perfil autenticado.
-56. Bloquear o autor remove sua avaliação da lista e do resumo de notas nos dois sentidos definidos para perfis.
-57. Bloquear parceiro/profissional remove vendedor, catálogo e reputação correspondentes e não deixa a resposta reaparecer por RPC `SECURITY DEFINER`.
-58. Denunciar a avaliação captura nota/comentário no servidor e atribui o sujeito ao comprador correto.
-59. Denunciar a resposta captura somente a resposta e atribui o sujeito ao vendedor/perfil que respondeu, não ao comprador.
-60. Ocultar avaliação remove a unidade completa; ocultar resposta preserva a avaliação. Recurso aceito restaura apenas o alvo correto e nunca desfaz ação posterior ativa.
-61. Caminhos com separador codificado, dupla codificação, `%` residual, `..`, barra invertida, query, fragmento ou caractere de controle são recusados.
-62. Job `processing` recente mantém o lease; job abandonado há mais de dez minutos volta para retry e, na décima falha, termina explicitamente em `dead`.
-63. Quarentena copia a evidência privada, mas não remove um objeto ainda referenciado por outro post.
-64. Se uma nova ocultação for aplicada enquanto a restauração antiga está em andamento, o post permanece oculto e o objeto recriado por aquela tentativa não fica público.
-65. O purge de mensagem de grupo mantém o snapshot até o job de remoção de `group-media` concluir; somente a execução posterior redige a evidência.
-66. Avaliação/resposta com denúncia aberta não pode ser editada; resposta ocultada não pode ser republicada enquanto a ação estiver ativa, e o recurso nunca sobrescreve texto posterior.
+51. `store_order` em `paid`, `preparing`, `shipped` ou `delivered` continua elegível; a evolução logística não faz a compra deixar de estar paga.
+52. `transaction`, `store_order` e `partner_product_order` só aceitam a origem e o produto realmente vinculados à compra; tipo inventado é recusado.
+53. Pedido com vários itens mantém uma avaliação independente por `(tipo, pedido, origem, produto)` e a tela abre o item correto.
+54. Autor consegue mudar apenas nota/comentário e não altera pedido, produto, autoria, moderação nem resposta do vendedor.
+55. Só a equipe do parceiro, o profissional dono ou a operação FitMind autorizada responde; `seller_reply_by_profile_id` registra quem escreveu.
+56. Listagem pública não expõe `order_id`/`order_type`; a RPC de avaliações próprias devolve somente linhas do perfil autenticado.
+57. Bloquear o autor remove sua avaliação da lista e do resumo de notas nos dois sentidos definidos para perfis.
+58. Bloquear parceiro/profissional remove vendedor, catálogo e reputação correspondentes e não deixa a resposta reaparecer por RPC `SECURITY DEFINER`.
+59. Denunciar a avaliação captura nota/comentário no servidor e atribui o sujeito ao comprador correto.
+60. Denunciar a resposta captura somente a resposta e atribui o sujeito ao vendedor/perfil que respondeu, não ao comprador.
+61. Ocultar avaliação remove a unidade completa; ocultar resposta preserva a avaliação. Recurso aceito restaura apenas o alvo correto e nunca desfaz ação posterior ativa.
+62. Caminhos com separador codificado, dupla codificação, `%` residual, `..`, barra invertida, query, fragmento ou caractere de controle são recusados.
+63. Job `processing` recente mantém o lease; job abandonado há mais de dez minutos volta para retry e, na décima falha, termina explicitamente em `dead`.
+64. Quarentena copia a evidência privada, mas não remove um objeto ainda referenciado por outro post.
+65. Se uma nova ocultação for aplicada enquanto a restauração antiga está em andamento, o post permanece oculto e o objeto recriado por aquela tentativa não fica público.
+66. O purge de mensagem de grupo mantém o snapshot até o job de remoção de `group-media` concluir; somente a execução posterior redige a evidência.
+67. Avaliação/resposta com denúncia aberta não pode ser editada; resposta ocultada não pode ser republicada enquanto a ação estiver ativa, e o recurso nunca sobrescreve texto posterior.
 
 ## Evidências para o dossiê da Play
 
-Guardar capturas datadas (sem PII) do aceite, menus de denúncia/bloqueio em mensagens, avaliações e respostas, Central de Segurança, fila administrativa, decisão, recurso por segundo moderador e remoção de mídia. Registrar versão do app, hash Git, migrations aplicadas e resultado dos 66 casos. Isso demonstra o fluxo, mas não substitui monitoramento contínuo e resposta humana às denúncias.
+Guardar capturas datadas (sem PII) do aceite, menus de denúncia/bloqueio em mensagens, avaliações e respostas, Central de Segurança, fila administrativa, decisão, recurso por segundo moderador e remoção de mídia. Registrar versão do app, hash Git, migrations aplicadas e resultado dos 67 casos. Isso demonstra o fluxo, mas não substitui monitoramento contínuo e resposta humana às denúncias.
