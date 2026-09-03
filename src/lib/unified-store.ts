@@ -161,15 +161,82 @@ const SYNONYMS: Record<string, string> = {
   personal: "personal trainer treinador",
   nutricao: "nutricionista dieta alimentar",
   medicina: "medico consulta clinica exame",
+
+  // Vocabulário médico. O catálogo do Augustus usa a sigla do laudo ("RM -
+  // CRANIO ENCEFALO", "USG - ABDOME TOTAL"); o cliente digita a palavra
+  // ("ressonância", "ultrassom"). Sem isto a busca não devolve nada para o
+  // termo que a pessoa realmente usa.
+  rm: "ressonancia magnetica",
+  angiorm: "angiorressonancia ressonancia magnetica",
+  tc: "tomografia computadorizada",
+  angiotc: "angiotomografia tomografia",
+  rx: "raio x radiografia",
+  us: "ultrassom ultrassonografia ecografia",
+  usg: "ultrassom ultrassonografia ecografia",
+  ecg: "eletrocardiograma coracao",
+  eeg: "eletroencefalograma cerebro",
+  cco: "papanicolau preventivo citologia colo utero",
+  eas: "urina rotina",
+  psa: "prostata",
+  tsh: "tireoide",
+  t3: "tireoide",
+  t4: "tireoide",
+  hdl: "colesterol",
+  ldl: "colesterol",
+  vldl: "colesterol",
+  lipidograma: "colesterol triglicerides",
+  baar: "tuberculose bacilo",
+  vdrl: "sifilis",
+  fan: "fator antinuclear",
+  vhs: "hemossedimentacao",
+  tgo: "figado hepatico transaminase",
+  tgp: "figado hepatico transaminase",
+  ige: "alergia alergico alergeno",
+  hpv: "papilomavirus",
+  hiv: "aids",
+  hcg: "gravidez gestacao",
+  obstetrica: "gravidez gestacao pre natal bebe",
+  hemograma: "sangue",
+  glicose: "diabetes acucar glicemia",
+  glicemia: "diabetes acucar glicose",
+  endoscopia: "digestiva estomago",
+  colonoscopia: "intestino colon",
+  mamografia: "mama",
+  densitometria: "osso osteoporose",
+  odontologia: "dentista dente dental",
+  fisioterapia: "fisioterapeuta reabilitacao",
+  psicologia: "psicologo terapia",
+  psiquiatra: "psiquiatria saude mental",
+  cardiologia: "cardiologista coracao",
+  laboratorio: "exame laboratorial analises clinicas",
 };
 
-function expand(text: string): string {
+/**
+ * Acrescenta os sinônimos ao texto do produto.
+ *
+ * A chave casa por **palavra**, não por pedaço de palavra. Isso importa desde
+ * que o dicionário passou a ter siglas de duas letras: com `includes`, "us"
+ * casaria dentro de "uso" e "rm" dentro de "dermatológico", e todo produto do
+ * catálogo viraria um exame de imagem.
+ *
+ * Chave de 4 letras ou mais ainda casa por prefixo, para que "suplementos"
+ * continue achando o sinônimo cadastrado como "suplemento". Abaixo disso a
+ * palavra tem que bater inteira — "us" não pode casar "usar".
+ */
+export function expand(text: string): string {
   const base = foldText(text);
-  const extra = Object.keys(SYNONYMS)
-    .filter((k) => base.includes(k))
-    .map((k) => SYNONYMS[k])
-    .join(" ");
-  return extra ? `${base} ${extra}` : base;
+  const tokens = base.replace(/[^a-z0-9]+/g, " ").split(" ").filter(Boolean);
+  const exatos = new Set(tokens);
+  const extra: string[] = [];
+  for (const chave of Object.keys(SYNONYMS)) {
+    const casa = chave.includes(" ")
+      ? base.includes(chave)
+      : chave.length >= 4
+        ? tokens.some((t) => t.startsWith(chave))
+        : exatos.has(chave);
+    if (casa) extra.push(SYNONYMS[chave]);
+  }
+  return extra.length ? `${base} ${extra.join(" ")}` : base;
 }
 
 /** Quebra em palavras já normalizadas, sem pontuação e sem vazio. */
@@ -527,6 +594,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     storeRes,
     sectionsRes,
     categoriesRes,
+    subcategoriesRes,
     partnerRes,
     professionalRes,
   ] = await Promise.all([
@@ -561,6 +629,11 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
       .select("id,section_id,name,image_url")
       .eq("is_active", true)
       .order("sort_order"),
+    supabase
+      .from("store_subcategories")
+      .select("id,category_id,name")
+      .eq("is_active", true)
+      .order("sort_order"),
     lerPaginado(
       "partner_products",
       "id,name,description,image_url,image_urls,price,original_price,kind,section_id,category_id,perk_card_days_override,perk_challenge_tickets_override,partner_id,restrict_to_networks,allowed_coach_ids,is_physical,estimated_value,discount_percent,redemption_mode,coach_commission_percentage",
@@ -589,6 +662,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   note("loja física", storeRes.error);
   note("seções", sectionsRes.error);
   note("categorias", categoriesRes.error);
+  note("subcategorias", subcategoriesRes.error);
   note("produtos de parceiros", partnerRes.error);
   note("produtos de profissionais", professionalRes.error);
 
@@ -669,6 +743,10 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
   for (const c of (categoriesRes.data as Array<Record<string, unknown>>) || []) {
     nomeCategoria.set(String(c.id), String(c.name || ""));
   }
+  const nomeSubcategoria = new Map<string, string>();
+  for (const s of (subcategoriesRes.data as Array<Record<string, unknown>>) || []) {
+    nomeSubcategoria.set(String(s.id), String(s.name || ""));
+  }
 
   const ROTULO_KIND: Record<UnifiedKind, string> = {
     challenge: "desafio plano protocolo fitmind",
@@ -686,6 +764,7 @@ export async function loadUnifiedCatalog(opts: CatalogOptions = {}): Promise<Uni
     const taxonomia = [
       p.sectionId ? nomeSecao.get(p.sectionId) : "",
       p.categoryId ? nomeCategoria.get(p.categoryId) : "",
+      p.subcategoryId ? nomeSubcategoria.get(p.subcategoryId) : "",
       p.sellerCity || "",
       ROTULO_KIND[p.kind],
       p.isFreebie ? "gratuito gratis brinde beneficio" : "",
