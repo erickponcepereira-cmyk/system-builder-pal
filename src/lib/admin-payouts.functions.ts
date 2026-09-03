@@ -1370,7 +1370,14 @@ export interface BlockedCommissionRow {
   createdAt: string | null;
   availableAt: string | null;
   isNetwork: boolean;
+  /** Mês de referência (YYYY-MM) — usado para a meta da rede. */
+  periodKey: string | null;
+  /** `hold` = ainda em carência; `network_blocked` = venceu, mas espera a meta do mês. */
+  state: "hold" | "network_blocked";
+  /** Meta da rede daquele mês foi batida? */
+  goalMet: boolean;
 }
+
 
 const isNetworkCommission = (level: number | null, slotLabel: string | null, isNetwork?: boolean | null) =>
   isNetworkCommissionRow(level, slotLabel, typeof isNetwork === "boolean" ? isNetwork : undefined);
@@ -1381,42 +1388,30 @@ export const listBlockedCommissions = createServerFn({ method: "POST" })
   .inputValidator((data: { profileId: string }) => data)
   .handler(async ({ context, data }): Promise<BlockedCommissionRow[]> => {
     await assertAdmin(context.userId);
-    const { data: rows, error } = await supabaseAdmin
-      .from("commissions")
-      .select("id, amount, status, slot_label, level, is_network, created_at, available_at, is_referral, force_released")
-      .eq("beneficiary_profile_id", data.profileId)
-      .in("status", ["pending", "available"])
-      .order("created_at", { ascending: false });
+    // Fonte única: extrato canônico já deduplicado (sem linhas repetidas da mesma venda).
+    const { data: rows, error } = await supabaseAdmin.rpc("admin_blocked_commissions" as never, {
+      _profile_id: data.profileId,
+      _admin_user_id: context.userId,
+    } as never);
     if (error) throw new Error(error.message);
-
-    const now = Date.now();
     return ((rows as unknown as Array<{
-      id: string; amount: number; status: string | null; slot_label: string | null; level: number | null;
-      is_network: boolean | null;
-      created_at: string | null; available_at: string | null; is_referral: boolean | null; force_released: boolean | null;
-    }>) || [])
-      .filter((r) => {
-        if (r.force_released) return false;
-        if (r.is_referral) return false;
-        if (/^(sistema|admin|nutri)/i.test(r.slot_label || "")) return false;
-        const released = r.status === "available"
-          ? true
-          : !!r.available_at && new Date(r.available_at).getTime() <= now;
-        // Rede só entra no disponível quando a missão do mês está batida —
-        // por isso continua elegível a adiantamento mesmo já vencida.
-        return !released || isNetworkCommission(r.level, r.slot_label, r.is_network);
-      })
-      .map((r) => ({
-        id: r.id,
-        amount: n(r.amount),
-        status: r.status,
-        slotLabel: r.slot_label,
-        level: r.level,
-        createdAt: r.created_at,
-        availableAt: r.available_at,
-        isNetwork: isNetworkCommission(r.level, r.slot_label),
-      }));
+      commission_id: string; amount: number; slot_label: string | null; is_network: boolean;
+      period_key: string | null; state: string; available_at: string | null; created_at: string | null; goal_met: boolean;
+    }>) || []).map((r) => ({
+      id: r.commission_id,
+      amount: n(r.amount),
+      status: r.state === "network_blocked" ? "available" : "pending",
+      slotLabel: r.slot_label,
+      level: null,
+      createdAt: r.created_at,
+      availableAt: r.available_at,
+      isNetwork: !!r.is_network,
+      periodKey: r.period_key,
+      state: r.state === "network_blocked" ? "network_blocked" : "hold",
+      goalMet: !!r.goal_met,
+    }));
   });
+
 
 /** Libera antecipadamente as comissões escolhidas (registra auditoria e recalcula a carteira). */
 export const advanceCommissionRelease = createServerFn({ method: "POST" })
