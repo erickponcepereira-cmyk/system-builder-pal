@@ -20,8 +20,15 @@ export type WalletStatement = {
   releasedTotal: number;
   /** Em carência (a liberar): coach + parceiro + profissional. NÃO inclui rede bloqueada. */
   hold: number;
+  /** Parte da carência que é venda direta/produto (não depende de meta). */
+  holdDirect: number;
+  /** Parte da carência que é rede (depois da carência ainda depende da meta do mês). */
+  holdNetwork: number;
+  /** Rede por mês: quanto está em carência/bloqueado/liberado e se a meta do mês foi batida. */
+  networkByMonth: Array<{ period: string; hold: number; blocked: number; released: number; goalMet: boolean }>;
   /** Rede liberada por prazo, porém bloqueada até bater a missão do mês. */
   networkBlocked: number;
+
   /** Pendente total = carência (hold) + rede bloqueada. */
   pendingTotal: number;
   /** Saques solicitados/aprovados aguardando pagamento. */
