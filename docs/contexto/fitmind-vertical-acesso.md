@@ -426,3 +426,38 @@ quem popula é o botão de sincronizar no painel.
 **Ainda desligado:** `avisos_automaticos` e `avisos_envio_automatico` do Reino
 seguem `false`, e é o certo até o chip do WhatsApp estar configurado. Ligar antes
 enfileiraria disparo sem por onde sair. É o último interruptor, depois do número.
+
+### 02/09 — o funil anda sozinho, e quem paga sai dele
+
+Dois defeitos do mesmo desenho, e o segundo só aparece depois de corrigir o
+primeiro.
+
+**Todo mundo bloqueado caía numa coluna só.** A sincronização casava
+`gatilho = motivo`, e os motivos são cinco: quem venceu há 2 dias e quem venceu há
+200 eram indistinguíveis. Agora `academia_crm_regras` tem `dias_min`/`dias_max`,
+contados do **último dia de entrada** (vencimento + carência), e a mesma regra
+`vencido_bloqueado` se divide em quantas faixas a academia quiser. **As faixas são
+dado, não código** — mudar a cadência é `UPDATE`, não migration.
+
+**Quem pagava só voltava se ninguém tivesse mexido no cartão.** O passo que
+arquiva exigia a coluna *exata* da regra. Cartão movido para "60 dias" e pessoa
+pagando: ficava preso para sempre. Medido antes de corrigir — das duas pessoas que
+pagaram no teste, só voltou a que ninguém tinha movido. E isso seria fatal agora:
+com o funil andando, **todo** cartão sai da coluna de origem, então nenhum
+pagamento resolveria nada. Agora o arquivamento vale para qualquer coluna
+governada pela automação; coluna fora dela continua sendo da equipe.
+
+Faixas do Reino (`vencido_bloqueado`): 2–7, 7–30, 30–60, 60–90, 90–120 e 120+.
+**O 120 é inferência minha** — o Erick pediu "90 dias, depois lista fria", e eu
+mantive a cadência de 30 dias da faixa anterior. É uma linha de `UPDATE` mudar.
+
+Medido nos 62 bloqueados do Reino: 6 em "Chamando de volta", 6 em "Remarketing",
+2 em "60 dias", 1 em "90 dias" e **47 na lista fria** — o que faz sentido para uma
+academia que importou lista antiga de clientes. Antes: 62 numa coluna só.
+
+Provado em transação com ROLLBACK: pessoa com cartão em coluna da automação paga →
+sai do funil; pessoa cujo cartão a equipe levou para "Renovou" paga → fica, porque
+o cartão é da equipe. `md5(prosrc)` das duas funções bate com o corpo da migration.
+
+A Estação **não muda**: as quatro regras dela seguem sem faixa, e regra sem faixa
+se comporta exatamente como antes.
