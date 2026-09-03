@@ -552,3 +552,20 @@ Nota de manutenção: `src/integrations/supabase/types.ts` é gerado, e foi edit
 mão para conhecer a coluna nova (Row, Insert e Update). Quando a Lovable
 regenerar, a coluna volta sozinha — se sumir antes disso, é regeneração feita
 antes desta migration rodar.
+
+### 03/09 — os interruptores do Reino ligados antes do chip
+
+`avisos_automaticos` e `avisos_envio_automatico` do Reino foram para `true`, com o
+WhatsApp dele ainda **desconectado e sem número**. Foi de propósito: o Erick pediu
+que nada dependa de alguém lembrar, então no minuto em que o chip conectar tudo
+começa sozinho, sem mais nenhum passo no painel.
+
+O custo disso é conhecido e pequeno: até o chip conectar, `academia_avisos_preparar`
+monta campanha em rascunho que não sai — e a própria função limpa o rascunho de
+outro dia na rodada seguinte, então nada acumula. Ninguém é marcado como tendo
+recebido, porque `academia_avisos.enviado_em` só é preenchido no envio: a fila de
+quem deve receber fica intacta esperando o número.
+
+Estado das conexões em 03/09: Estação `conectado`, número `65993251805`, limite 50
+por dia. Reino com conexão criada ("WhatsApp 1"), `desconectado` e sem número — é
+o que o Erick vai configurar na academia.
