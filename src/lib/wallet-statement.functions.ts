@@ -69,7 +69,17 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     overpaid: n(raw?.overpaid),
     releasedTotal: n(raw?.released_total),
     hold: n(raw?.hold),
+    holdDirect: n(raw?.hold_direct),
+    holdNetwork: n(raw?.hold_network),
+    networkByMonth: (Array.isArray(raw?.network_by_month) ? raw.network_by_month : []).map((m: Record<string, any>) => ({
+      period: String(m?.period || ""),
+      hold: n(m?.hold),
+      blocked: n(m?.blocked),
+      released: n(m?.released),
+      goalMet: !!m?.goal_met,
+    })),
     networkBlocked: n(raw?.network_blocked),
+
     pendingTotal: n(raw?.pending_total),
     withdrawOpen: n(raw?.withdraw_open),
     withdrawnPaid: n(raw?.withdrawn_paid),
