@@ -70,8 +70,9 @@ foram consolidadas em SQL.
 **Nada envia sozinho.** `academia_avisos_preparar` monta `bot_disparos` em
 rascunho; o envio é o `dispararCampanha` da aba Robô, onde ficam limite diário do
 chip, intervalo e deduplicação. `academia_avisos` registra que o aviso foi
-*gerado*; entrega é `bot_disparo_alvos.status`. O `pg_cron` **não** foi agendado
-ainda, de propósito.
+*gerado*; entrega é `bot_disparo_alvos.status`. ~~O `pg_cron` não foi agendado
+ainda, de propósito.~~ **Desatualizado: em 02/09/2026 havia três jobs ativos —
+ver a seção de 02/09 no fim deste arquivo.**
 
 Armadilha: o robô substitui `{nome}` no envio, mas **não** `{data}` — a data é
 resolvida na montagem da campanha.
@@ -461,3 +462,45 @@ o cartão é da equipe. `md5(prosrc)` das duas funções bate com o corpo da mig
 
 A Estação **não muda**: as quatro regras dela seguem sem faixa, e regra sem faixa
 se comporta exatamente como antes.
+
+### 02/09 — feliz aniversário automático, e o cron já estava agendado
+
+**A memória estava desatualizada num ponto que muda decisão:** o `pg_cron` **já
+está agendado** para a academia, e há tempo. São três jobs ativos —
+`academia-crm-sincronizar` às 10h e 22h, `academia-avisos-preparar` às 12h e
+`academia-avisos-automaticos` de hora em hora. A anotação de 12/08 dizia "o
+`pg_cron` não foi agendado ainda, de propósito"; não vale mais. O funil e os
+avisos já andam sozinhos — o que faltava era o funil **ter para onde andar**.
+
+O aniversário entrou como um **eixo novo**. Os avisos existentes contam dias a
+partir do vencimento ou do bloqueio; aniversário não tem relação com mensalidade.
+Virou uma terceira `referencia` em `academia_avisos_modelos` e uma segunda fonte
+dentro de `academia_avisos_pendentes` — todo o resto do encanamento (montar
+campanha, deduplicar telefone, marcar enviado) é genérico e não mudou.
+
+Duas decisões que valem manter:
+
+- **Quem recebe é toda credencial ativa, pagando ou não.** Cobrança tem a regra de
+  `dias_sumido` para não mandar "seu plano venceu" a quem já foi embora, mas
+  parabéns não é cobrança — é justamente para quem sumiu que ele tem mais chance
+  de trazer de volta.
+- **`posicao = 0`, então parabéns ganha de cobrança no mesmo dia.** `pendentes` já
+  garante um aviso por pessoa por dia e desempata pela menor posição. Mandar "sua
+  mensalidade vence" no aniversário é pior do que atrasar a cobrança em um dia.
+
+`valido_ate` do aniversário é a data do aniversário **deste ano**, o que faz a
+deduplicação existente valer por ano sem código novo. E 29/02 tem tratamento
+próprio em `academia_aniversario_no_ano`: em ano comum cai em 28/02, senão a
+pessoa simplesmente nunca receberia.
+
+**Armadilha que custou uma tentativa:** `academia_avisos_modelos` tinha **duas**
+constraints de `referencia`, com nomes diferentes — a original
+`academia_aviso_referencia_check` e uma no padrão do Postgres. Derrubar só uma
+deixa a outra barrando o valor novo. A migration derruba as duas pelo nome.
+
+**O dado é o gargalo, não o código.** Data de nascimento existe em 8 das 417
+credenciais ativas da Estação e em **0 das 83** do Reino — quase todo mundo veio
+de importação, e a importação não trouxe nascimento. `profiles.birthdate` está
+vazio para essa gente. Telefone, ao contrário, tem em 416 e 83. Ou seja: o canal
+funciona e a mensagem sai sozinha, mas hoje ela alcança **8 pessoas**. A cobertura
+cresce conforme a recepção editar os cadastros.
