@@ -586,6 +586,8 @@ export type Database = {
         Row: {
           ativo: boolean
           coluna_id: string
+          dias_max: number | null
+          dias_min: number | null
           gatilho: string
           id: string
           partner_id: string
@@ -595,6 +597,8 @@ export type Database = {
         Insert: {
           ativo?: boolean
           coluna_id: string
+          dias_max?: number | null
+          dias_min?: number | null
           gatilho: string
           id?: string
           partner_id: string
@@ -604,6 +608,8 @@ export type Database = {
         Update: {
           ativo?: boolean
           coluna_id?: string
+          dias_max?: number | null
+          dias_min?: number | null
           gatilho?: string
           id?: string
           partner_id?: string
@@ -15889,6 +15895,10 @@ export type Database = {
           student_id: string
         }[]
       }
+      academia_aniversario_no_ano: {
+        Args: { p_ano: number; p_nascimento: string }
+        Returns: string
+      }
       academia_aulas_disponiveis: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: {
@@ -16107,6 +16117,21 @@ export type Database = {
           funis: number
           nome: string
           quadros: string
+        }[]
+      }
+      academia_crm_encaixa: {
+        Args: {
+          p_carencia: number
+          p_dias_max: number
+          p_dias_min: number
+          p_gatilho: string
+          p_partner_id: string
+        }
+        Returns: {
+          credencial_id: string
+          dias_restantes: number
+          student_id: string
+          valido_ate: string
         }[]
       }
       academia_crm_sincronizar: {
