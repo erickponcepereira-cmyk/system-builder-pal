@@ -589,6 +589,8 @@ export type Database = {
         Row: {
           ativo: boolean
           coluna_id: string
+          dias_max: number | null
+          dias_min: number | null
           gatilho: string
           id: string
           partner_id: string
@@ -598,6 +600,8 @@ export type Database = {
         Insert: {
           ativo?: boolean
           coluna_id: string
+          dias_max?: number | null
+          dias_min?: number | null
           gatilho: string
           id?: string
           partner_id: string
@@ -607,6 +611,8 @@ export type Database = {
         Update: {
           ativo?: boolean
           coluna_id?: string
+          dias_max?: number | null
+          dias_min?: number | null
           gatilho?: string
           id?: string
           partner_id?: string
@@ -4954,6 +4960,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      commission_duplicates_removed: {
+        Row: {
+          amount: number
+          commission_id: string
+          id: string
+          original_created_at: string | null
+          partner_order_id: string | null
+          profile_id: string | null
+          removed_at: string
+          slot_label: string | null
+          status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number
+          commission_id: string
+          id?: string
+          original_created_at?: string | null
+          partner_order_id?: string | null
+          profile_id?: string | null
+          removed_at?: string
+          slot_label?: string | null
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          commission_id?: string
+          id?: string
+          original_created_at?: string | null
+          partner_order_id?: string | null
+          profile_id?: string | null
+          removed_at?: string
+          slot_label?: string | null
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: []
       }
       commission_release_advances: {
         Row: {
@@ -15892,6 +15937,10 @@ export type Database = {
           student_id: string
         }[]
       }
+      academia_aniversario_no_ano: {
+        Args: { p_ano: number; p_nascimento: string }
+        Returns: string
+      }
       academia_aulas_disponiveis: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: {
@@ -16110,6 +16159,21 @@ export type Database = {
           funis: number
           nome: string
           quadros: string
+        }[]
+      }
+      academia_crm_encaixa: {
+        Args: {
+          p_carencia: number
+          p_dias_max: number
+          p_dias_min: number
+          p_gatilho: string
+          p_partner_id: string
+        }
+        Returns: {
+          credencial_id: string
+          dias_restantes: number
+          student_id: string
+          valido_ate: string
         }[]
       }
       academia_crm_sincronizar: {
@@ -16738,6 +16802,20 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_blocked_commissions: {
+        Args: { _admin_user_id: string; _profile_id: string }
+        Returns: {
+          amount: number
+          available_at: string
+          commission_id: string
+          created_at: string
+          goal_met: boolean
+          is_network: boolean
+          period_key: string
+          slot_label: string
+          state: string
+        }[]
+      }
       admin_change_student_coach: {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
@@ -17287,8 +17365,10 @@ export type Database = {
           available_at: string
           beneficiary_profile_id: string
           description: string
+          is_network: boolean
           ledger_key: string
           occurred_at: string
+          period_key: string
           reference_id: string
           source_kind: string
           source_type: string

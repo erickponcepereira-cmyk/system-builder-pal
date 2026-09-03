@@ -20,8 +20,15 @@ export type WalletStatement = {
   releasedTotal: number;
   /** Em carência (a liberar): coach + parceiro + profissional. NÃO inclui rede bloqueada. */
   hold: number;
+  /** Parte da carência que é venda direta/produto (não depende de meta). */
+  holdDirect: number;
+  /** Parte da carência que é rede (depois da carência ainda depende da meta do mês). */
+  holdNetwork: number;
+  /** Rede por mês: quanto está em carência/bloqueado/liberado e se a meta do mês foi batida. */
+  networkByMonth: Array<{ period: string; hold: number; blocked: number; released: number; goalMet: boolean }>;
   /** Rede liberada por prazo, porém bloqueada até bater a missão do mês. */
   networkBlocked: number;
+
   /** Pendente total = carência (hold) + rede bloqueada. */
   pendingTotal: number;
   /** Saques solicitados/aprovados aguardando pagamento. */
@@ -62,7 +69,17 @@ function mapStatement(raw: Record<string, any>): WalletStatement {
     overpaid: n(raw?.overpaid),
     releasedTotal: n(raw?.released_total),
     hold: n(raw?.hold),
+    holdDirect: n(raw?.hold_direct),
+    holdNetwork: n(raw?.hold_network),
+    networkByMonth: (Array.isArray(raw?.network_by_month) ? raw.network_by_month : []).map((m: Record<string, any>) => ({
+      period: String(m?.period || ""),
+      hold: n(m?.hold),
+      blocked: n(m?.blocked),
+      released: n(m?.released),
+      goalMet: !!m?.goal_met,
+    })),
     networkBlocked: n(raw?.network_blocked),
+
     pendingTotal: n(raw?.pending_total),
     withdrawOpen: n(raw?.withdraw_open),
     withdrawnPaid: n(raw?.withdrawn_paid),

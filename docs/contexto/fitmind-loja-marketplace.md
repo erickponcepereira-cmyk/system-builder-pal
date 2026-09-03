@@ -21,3 +21,37 @@ A "loja nova" do FitMind é `src/components/store/UnifiedStorePage.tsx` (~2300 l
 Taxas e rateio em [[fitmind-sistema-de-taxas]]. Método de trabalho em [[fitmind-como-trabalhar]].
 
 **Visibilidade canônica (03/09/2026):** um produto de parceiro/profissional só entra na busca depois de passar pelos critérios da própria origem: aprovado, publicado pelo vendedor, pronto para venda, não arquivado e com responsável válido. Não remova esses filtros para “fazer aparecer”. `store_admin_shelf_report()` espelha esses bloqueios e deve ser a primeira consulta em incidentes de catálogo. Mudanças em `is_active_by_partner` e `is_active_by_professional` são auditadas em `store_product_visibility_audit`; ocultar um produto aprovado exige confirmação na interface.
+
+**Catálogo do Augustus (03/09/2026).** Os 1548 produtos da seção Medicina foram
+**desativados, não apagados** (`is_active_by_professional=false`, `is_ready_for_sale=false`)
+— há pedidos passados apontando para eles. Snapshot em `auditoria.medicina_antes_20260903`.
+No lugar entraram **3.785 procedimentos** de um vendedor só, o Augustus, que revende 41
+prestadores via 33Doctor. O que distingue esses produtos: `skip_tax = true` — é por esse
+campo que se separa o catálogo novo do antigo nas consultas.
+
+Modo de preço `receive`: a planilha dá o **Vlr. Cliente**, que é o que o prestador tem que
+receber no fim da cascata inteira, então `professional_net_amount` é o dado de entrada e
+`price` é derivado. Taxa de sistema por faixa, gravada em `system_fee_pct_override`:
+**R$ 0–100 → 15%, R$ 101–999 → 10%, R$ 1000+ → 7%.** Sem imposto, 10% de comissão do coach,
+rede 10/5/3 em override por produto. Conferido nos três tiers: a cascata devolve o valor da
+planilha ao centavo (só em item abaixo de R$ 10 sobra 1 centavo de arredondamento, a favor
+do prestador).
+
+**Duas armadilhas de dados da planilha**, ambas já tratadas — se reimportar, trate de novo:
+128 linhas perderam a vírgula decimal e vieram exatamente **1500× maiores** (ÁCIDO FÓLICO
+como R$ 24.705 em vez de R$ 24,71); e 10 nomes da CANTAROZ vieram corrompidos por OCR
+(`Pelve sim les`, `Drenagem de Seroma Parede øbdomem`) e ficaram de fora. As 157 linhas
+"sem nome" são cabeçalhos de bloco da planilha, não perda de dado.
+
+**A busca precisou aprender medicina.** Os exames se chamam como no laudo ("RM - CRANIO
+ENCEFALO", "USG - ABDOME TOTAL") e o cliente digita "ressonância", "ultrassom". Além do
+dicionário de siglas em `SYNONYMS`, duas coisas: a **subcategoria** passou a entrar no
+índice (só seção e categoria entravam, então "Hormônios" não achava nada), e o `expand`
+passou a casar a chave **por palavra**. Isso último não é detalhe: com `includes`, a sigla
+`us` casa dentro de "uso" e `rm` dentro de "dermatológico", e a loja inteira vira exame de
+imagem. Chave de 4+ letras ainda casa por prefixo, senão "suplementos" perde o sinônimo
+cadastrado como "suplemento".
+
+Produto médico não tem foto e não vai ter. `arteDaTaxonomia` (`src/lib/store-arte-padrao.ts`)
+escolhe ícone e paleta pela trilha da taxonomia — sem isso são 3.785 sacolas de compras
+idênticas na prateleira.
