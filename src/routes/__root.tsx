@@ -1,7 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { carregarTaxasVigentes } from "@/lib/taxas-vigentes";
+import { garantirTaxasVigentes } from "@/lib/taxas-vigentes";
 import "../styles.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -115,7 +115,7 @@ function RootComponent() {
     // Alinha os percentuais do front com a tabela taxas_vigentes do banco.
     // Sem isto, partnerFinance.ts fica com uma copia propria dos numeros e a
     // tela pode mostrar um valor enquanto a venda cobra outro.
-    void carregarTaxasVigentes().then((mudou) => {
+    void garantirTaxasVigentes().then((mudou) => {
       // Mutar as constantes nao dispara re-render. Se a taxa chegou depois de a
       // tela ja ter desenhado, ela continuaria exibindo o percentual velho.
       if (mudou) void router.invalidate();

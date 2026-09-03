@@ -466,6 +466,7 @@ export type Database = {
           partner_id: string
           qr_token: string | null
           referencia: string
+          rosto_em: string | null
           student_id: string | null
           telefone: string | null
           tipo: string
@@ -481,6 +482,7 @@ export type Database = {
           partner_id: string
           qr_token?: string | null
           referencia: string
+          rosto_em?: string | null
           student_id?: string | null
           telefone?: string | null
           tipo?: string
@@ -496,6 +498,7 @@ export type Database = {
           partner_id?: string
           qr_token?: string | null
           referencia?: string
+          rosto_em?: string | null
           student_id?: string | null
           telefone?: string | null
           tipo?: string
@@ -13089,6 +13092,47 @@ export type Database = {
           },
         ]
       }
+      store_product_visibility_audit: {
+        Row: {
+          actor_profile_id: string | null
+          changed_at: string
+          id: string
+          new_visible: boolean
+          previous_visible: boolean
+          product_id: string
+          product_name: string
+          product_source: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          changed_at?: string
+          id?: string
+          new_visible: boolean
+          previous_visible: boolean
+          product_id: string
+          product_name: string
+          product_source: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          changed_at?: string
+          id?: string
+          new_visible?: boolean
+          previous_visible?: boolean
+          product_id?: string
+          product_name?: string
+          product_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_product_visibility_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_products: {
         Row: {
           category: string | null
@@ -15728,6 +15772,26 @@ export type Database = {
           referencia: string
         }[]
       }
+      academia_agente_credencial_desligar: {
+        Args: {
+          p_agente_id: string
+          p_forcar?: boolean
+          p_referencia: string
+          p_segredo: string
+        }
+        Returns: Json
+      }
+      academia_agente_credencial_editar: {
+        Args: {
+          p_agente_id: string
+          p_nascimento?: string
+          p_nome?: string
+          p_referencia: string
+          p_segredo: string
+          p_telefone?: string
+        }
+        Returns: Json
+      }
       academia_agente_enviar: {
         Args: { p_agente_id: string; p_eventos: Json; p_segredo: string }
         Returns: number
@@ -15775,12 +15839,32 @@ export type Database = {
           expira_em: string
         }[]
       }
+      academia_agente_marcar_rostos: {
+        Args: { p_agente_id: string; p_com_rosto: Json; p_segredo: string }
+        Returns: Json
+      }
       academia_agente_parear: {
         Args: { p_codigo: string; p_versao: string }
         Returns: {
           agente_id: string
           partner_id: string
           segredo: string
+        }[]
+      }
+      academia_agente_pessoas: {
+        Args: { p_agente_id: string; p_busca?: string; p_segredo: string }
+        Returns: {
+          ativo: boolean
+          entradas: number
+          motivo: string
+          nascimento: string
+          no_leitor: boolean
+          nome: string
+          plano: string
+          referencia: string
+          telefone: string
+          ultima_entrada: string
+          valido_ate: string
         }[]
       }
       academia_agente_retrato: {
@@ -16403,6 +16487,24 @@ export type Database = {
           pessoas: number
         }[]
       }
+      academia_recepcao_buscar: {
+        Args: { p_partner_id: string; p_termo: string }
+        Returns: {
+          cpf: string
+          credencial_id: string
+          dias_restantes: number
+          entrou_hoje: boolean
+          liberado: boolean
+          motivo: string
+          nome: string
+          referencia: string
+          valido_ate: string
+        }[]
+      }
+      academia_recepcao_entrada: {
+        Args: { p_credencial_id: string; p_partner_id: string }
+        Returns: Json
+      }
       academia_relatorio: {
         Args: { p_ate?: string; p_de?: string; p_partner_id: string }
         Returns: Json
@@ -16663,6 +16765,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_payables_report: { Args: never; Returns: Json }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_reconcile_all_wallets: { Args: never; Returns: number }
       admin_release_user_subscription: {
@@ -16721,6 +16824,37 @@ export type Database = {
           rating: number
           seller_replied_at: string
           seller_reply: string
+        }[]
+      }
+      avaliacoes_dos_meus_produtos: {
+        Args: never
+        Returns: {
+          autor: string
+          comment: string
+          created_at: string
+          id: string
+          product_id: string
+          produto: string
+          rating: number
+          seller_replied_at: string
+          seller_reply: string
+        }[]
+      }
+      avaliacoes_para_moderar: {
+        Args: { _incluir_escondidas?: boolean }
+        Returns: {
+          autor: string
+          comment: string
+          created_at: string
+          hidden_at: string
+          hidden_reason: string
+          id: string
+          product_id: string
+          product_origin: string
+          produto: string
+          rating: number
+          seller_reply: string
+          vendedor_id: string
         }[]
       }
       backfill_career_points: { Args: never; Returns: Json }
@@ -17143,6 +17277,22 @@ export type Database = {
           valor: number
         }[]
       }
+      financial_ledger_events: {
+        Args: { _profile_id?: string }
+        Returns: {
+          amount: number
+          available_at: string
+          beneficiary_profile_id: string
+          description: string
+          ledger_key: string
+          occurred_at: string
+          reference_id: string
+          source_kind: string
+          source_type: string
+          state: string
+          wallet_owner_id: string
+        }[]
+      }
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_nutritionist_for: { Args: { _coach_id: string }; Returns: string }
@@ -17382,6 +17532,10 @@ export type Database = {
           status: string
           tem_academia: boolean
         }[]
+      }
+      moderar_avaliacao: {
+        Args: { _esconder: boolean; _id: string; _motivo?: string }
+        Returns: undefined
       }
       moeda_br: { Args: { v: number }; Returns: string }
       move_to_dlq: {
@@ -17672,6 +17826,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      produtos_do_vendedor: {
+        Args: { _id: string; _tipo: string }
+        Returns: {
+          gratuito: boolean
+          id: string
+          imagem: string
+          preco: number
+          preco_original: number
+          secao_id: string
+          source_id: string
+          titulo: string
+        }[]
+      }
       professional_can_view_student: {
         Args: { _student_id: string }
         Returns: boolean
@@ -17949,6 +18116,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      responder_avaliacao: {
+        Args: { _id: string; _resposta: string }
+        Returns: undefined
+      }
       revert_subscription_invoice_payment: {
         Args: { _invoice_id: string; _performed_by: string }
         Returns: {
@@ -18018,6 +18189,7 @@ export type Database = {
           state: string
         }[]
       }
+      sem_acento: { Args: { p_texto: string }; Returns: string }
       set_partner_product_schedules: {
         Args: { _product_id: string; _schedules: Json }
         Returns: undefined
@@ -18038,6 +18210,10 @@ export type Database = {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
         }
         Returns: string
+      }
+      store_admin_set_product_visibility: {
+        Args: { _product_id: string; _source: string; _visible: boolean }
+        Returns: undefined
       }
       store_admin_shelf_report: { Args: never; Returns: Json }
       store_hidden_for_viewer: {
@@ -18110,6 +18286,10 @@ export type Database = {
       }
       sync_coach_evaluation_client_for_student: {
         Args: { _student_id: string }
+        Returns: undefined
+      }
+      sync_source_payment_method_from_mp: {
+        Args: { _id: string; _kind: string }
         Returns: undefined
       }
       taxa_vigente: {
@@ -18425,12 +18605,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18454,11 +18634,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18479,11 +18659,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18504,11 +18684,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -18521,11 +18701,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

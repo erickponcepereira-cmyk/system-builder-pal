@@ -4,10 +4,9 @@ import {
   ArrowLeft, BadgeCheck, Instagram, Globe, Loader2, MapPin, PackageOpen, Star,
 } from "lucide-react";
 import {
-  carregarReputacao, carregarVendedor, tempoDeCasa,
-  type Reputacao, type TipoDeVendedor, type Vendedor,
+  carregarProdutosDoVendedor, carregarReputacao, carregarVendedor, tempoDeCasa,
+  type ProdutoDoVendedor, type Reputacao, type TipoDeVendedor, type Vendedor,
 } from "@/lib/store-seller";
-import { loadUnifiedCatalog, type UnifiedProduct } from "@/lib/unified-store";
 import { StarRating } from "@/components/store/StarRating";
 
 export const Route = createFileRoute("/_authenticated/student/vendedor/$tipo/$id")({
@@ -34,7 +33,7 @@ function PaginaDoVendedor() {
 
   const [vendedor, setVendedor] = useState<Vendedor | null>(null);
   const [reputacao, setReputacao] = useState<Reputacao | null>(null);
-  const [produtos, setProdutos] = useState<UnifiedProduct[]>([]);
+  const [produtos, setProdutos] = useState<ProdutoDoVendedor[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const tipoValido: TipoDeVendedor | null =
@@ -48,12 +47,12 @@ function PaginaDoVendedor() {
     void Promise.all([
       carregarVendedor(tipoValido, id),
       carregarReputacao(tipoValido, id),
-      loadUnifiedCatalog({}),
-    ]).then(([v, r, catalogo]) => {
+      carregarProdutosDoVendedor(tipoValido, id),
+    ]).then(([v, r, lista]) => {
       if (!vivo) return;
       setVendedor(v);
       setReputacao(r);
-      setProdutos((catalogo?.products ?? []).filter((p) => p.sellerId === id));
+      setProdutos(lista);
       setCarregando(false);
     }).catch((e: unknown) => {
       console.error("[vendedor]", e);
@@ -63,7 +62,7 @@ function PaginaDoVendedor() {
     return () => { vivo = false; };
   }, [tipoValido, id]);
 
-  const gratuitos = useMemo(() => produtos.filter((p) => p.isFreebie).length, [produtos]);
+  const gratuitos = useMemo(() => produtos.filter((p) => p.gratuito).length, [produtos]);
 
   if (carregando) {
     return (
@@ -220,17 +219,17 @@ function PaginaDoVendedor() {
                   onClick={() => navigate({ to: "/student/store", search: { produto: p.id } as never })}
                   className="overflow-hidden rounded-2xl border border-white/10 bg-card text-left"
                 >
-                  {p.imageUrl ? (
-                    <img src={p.imageUrl} alt="" className="aspect-square w-full object-cover" />
+                  {p.imagem ? (
+                    <img src={p.imagem} alt="" className="aspect-square w-full object-cover" />
                   ) : (
                     <div className="aspect-square w-full bg-muted/30" />
                   )}
                   <div className="p-2">
                     <p className="line-clamp-2 text-[12px] font-bold leading-snug text-foreground">
-                      {p.title}
+                      {p.titulo}
                     </p>
                     <p className="mt-1 text-[12px] font-bold text-primary">
-                      {p.isFreebie ? "Gratuito" : dinheiro(p.price)}
+                      {p.gratuito ? "Gratuito" : dinheiro(p.preco)}
                     </p>
                   </div>
                 </button>

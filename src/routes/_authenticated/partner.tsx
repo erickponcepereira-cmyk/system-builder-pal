@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell, BookOpen } from "lucide-react";
+import { SellerReviewsPanel } from "@/components/store/SellerReviewsPanel";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard, Eye, ShieldCheck, KanbanSquare, Bot, Dumbbell, BookOpen, Star } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CrmBoard } from "@/components/crm/CrmBoard";
 import { PartnerRoboPanel } from "@/components/partner/PartnerRoboPanel";
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
+type Tab = "overview" | "avaliacoes" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab" | "members" | "crm" | "robo" | "wa_group";
 
 
 interface Partner {
@@ -253,6 +254,7 @@ function PartnerPanel() {
   const PERMISSAO_DA_ABA: Record<Tab, Permissao> = {
     overview: "overview.ver",
     products: "products.editar",
+    avaliacoes: "products.editar",
     scanner: "scanner.usar",
     timeline: "timeline.editar",
     qrcode: "overview.ver",
@@ -276,6 +278,7 @@ function PartnerPanel() {
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
+    { key: "avaliacoes", label: "Avaliações", icon: Star },
     { key: "scanner", label: "Scanner", icon: QrCode },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
     { key: "qrcode", label: "QR", icon: QrCode },
@@ -430,6 +433,7 @@ function PartnerPanel() {
       <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
         {abaAtiva === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
         {abaAtiva === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
+        {abaAtiva === "avaliacoes" && <SellerReviewsPanel />}
         {abaAtiva === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
         {abaAtiva === "qrcode" && <QrCodePanel partner={partner} />}
         {abaAtiva === "freebies" && hasActiveFree && <CoachBenefitsTab forceActive />}
@@ -841,7 +845,10 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     }
 
     const jaAprovado = !!editing.id && (editing.status as string | undefined) === "approved";
-    toast.success(jaAprovado ? "Alterações salvas. O produto continua ativo na loja." : "Salvo. Aguardando aprovação do admin.");
+    const estaVisivel = editing.is_active_by_partner !== false;
+    toast.success(jaAprovado
+      ? `Alterações salvas. O produto está ${estaVisivel ? "visível" : "oculto"} na loja.`
+      : "Salvo. Aguardando aprovação do admin.");
     setEditing(null); onReload();
   };
 
@@ -865,8 +872,13 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   };
 
   const toggleActive = async (p: Product) => {
+    if (p.is_active_by_partner) {
+      const confirmed = confirm(`Ocultar “${p.name}”? Ele deixará de aparecer na loja e nas buscas para todos os alunos.`);
+      if (!confirmed) return;
+    }
     const { error } = await supabase.from("partner_products" as never).update({ is_active_by_partner: !p.is_active_by_partner } as never).eq("id" as never, p.id);
     if (error) return toast.error(error.message);
+    toast.success(p.is_active_by_partner ? "Produto ocultado da loja." : "Produto reativado na loja.");
     onReload();
   };
 
@@ -1006,6 +1018,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </p>
               ) : null}
               <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${p.is_active_by_partner ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>
+                  {p.is_active_by_partner ? "Visível na loja" : "Oculto da loja"}
+                </span>
                 {recurrenceLabel(p as never) && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-semibold">{recurrenceLabel(p as never)}</span>
                 )}
@@ -1029,7 +1044,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                     <button onClick={() => moveProduct(p, 1)} disabled={idx === arr.length - 1} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para baixo">↓</button>
                   </>
                 )}
-                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
+                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Retirar da loja para todos os alunos" : "Reativar na loja"}>{p.is_active_by_partner ? "Retirar da loja" : "Reativar na loja"}</button>
                 <button onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "partner" })} className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"><Users className="h-3 w-3" /> Compradores</button>
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>

@@ -247,7 +247,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const partnerWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
     ((partnerWalletsRaw as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = partnerProfileById.get(w.partner_id);
-      if (pid) partnerWalletByProfile.set(pid, w);
+      if (!pid) return;
+      const current = partnerWalletByProfile.get(pid) || { available_balance: 0, total_withdrawn: 0 };
+      partnerWalletByProfile.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: coachRows } = await supabaseAdmin
       .from("coaches" as never).select("id,profile_id" as never)
@@ -260,7 +265,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const profWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
     ((profWalletsRaw as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = coachProfileById.get(w.professional_coach_id);
-      if (pid) profWalletByProfile.set(pid, w);
+      if (!pid) return;
+      const current = profWalletByProfile.get(pid) || { available_balance: 0, total_withdrawn: 0 };
+      profWalletByProfile.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
@@ -473,7 +483,14 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const pwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
     ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = partnerProfileById.get(w.partner_id);
-      if (pid) pwMap.set(pid, w);
+      if (!pid) return;
+      const current = pwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
+      pwMap.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        pending_balance: n(current.pending_balance) + n(w.pending_balance),
+        total_earned: n(current.total_earned) + n(w.total_earned),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
     const { data: coachRows2 } = await supabaseAdmin
       .from("coaches" as never).select("id,profile_id" as never)
@@ -486,7 +503,14 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const profwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
     ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = coachProfileById2.get(w.professional_coach_id);
-      if (pid) profwMap.set(pid, w);
+      if (!pid) return;
+      const current = profwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
+      profwMap.set(pid, {
+        available_balance: n(current.available_balance) + n(w.available_balance),
+        pending_balance: n(current.pending_balance) + n(w.pending_balance),
+        total_earned: n(current.total_earned) + n(w.total_earned),
+        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
+      });
     });
 
 
@@ -648,24 +672,24 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const cutoff = await getServerCutoffIso();
     const fromDate = cutoff && (!data.fromDate || cutoff > data.fromDate) ? cutoff : data.fromDate;
 
-    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRows }, { data: coachRow }] = await Promise.all([
+    const [{ data: w }, { data: nw }, { data: sw }, { data: partnerRows }, { data: coachRows }] = await Promise.all([
       supabaseAdmin.from("wallets").select("available_balance,total_withdrawn").eq("profile_id", data.profileId).maybeSingle(),
       supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle(),
       sid ? supabaseAdmin.from("student_wallets").select("available_balance,total_withdrawn").eq("student_id", sid).maybeSingle() : Promise.resolve({ data: null }),
       supabaseAdmin.from("partners" as never).select("id,status,created_at" as never).eq("profile_id" as never, data.profileId as never),
-      supabaseAdmin.from("coaches").select("id").eq("profile_id", data.profileId).maybeSingle(),
+      supabaseAdmin.from("coaches").select("id").eq("profile_id", data.profileId),
     ]);
     const plist = ((partnerRows as unknown as Array<{ id: string; status: string | null; created_at: string }>) || [])
       .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
-    const partnerRow = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
-    const partnerId = (partnerRow as unknown as { id?: string } | null)?.id ?? null;
-    const coachId = (coachRow as { id?: string } | null)?.id ?? null;
+    const partnerIdsForProfile = plist.map((row) => row.id);
+    const coachIdsForProfile = ((coachRows as Array<{ id: string }>) || []).map((row) => row.id);
+    const coachId = coachIdsForProfile[0] || null;
     const [{ data: pw }, { data: profw }] = await Promise.all([
-      partnerId
-        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,total_withdrawn" as never).eq("partner_id" as never, partnerId as never).maybeSingle()
+      partnerIdsForProfile.length
+        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIdsForProfile as never)
         : Promise.resolve({ data: null as unknown }),
-      coachId
-        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,total_withdrawn" as never).eq("professional_coach_id" as never, coachId as never).maybeSingle()
+      coachIdsForProfile.length
+        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIdsForProfile as never)
         : Promise.resolve({ data: null as unknown }),
     ]);
 
@@ -696,6 +720,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      available_at: string | null; release_days: number | null; released_early: boolean | null; released_early_at: string | null;
       master_coach_cross_beneficiary_coach_id?: string | null;
       student?: { profile?: { name: string | null; email: string | null } | null } | null;
       partner_product?: { name: string | null } | null;
@@ -705,7 +730,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!value) return;
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .eq(column as never, value as never)
         .order("created_at" as never, { ascending: false })
         .limit(200);
@@ -715,9 +740,9 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       partnerOrderRows.push(...(((rows as unknown as typeof partnerOrderRows) || [])));
     };
     await Promise.all([
-      addPartnerOrders("partner_id", partnerId),
-      addPartnerOrders("professional_coach_id", coachId),
-      addPartnerOrders("selling_coach_id", coachId),
+      ...partnerIdsForProfile.map((id) => addPartnerOrders("partner_id", id)),
+      ...coachIdsForProfile.map((id) => addPartnerOrders("professional_coach_id", id)),
+      ...coachIdsForProfile.map((id) => addPartnerOrders("selling_coach_id", id)),
     ]);
     const partnerOrdersById = new Map<string, typeof partnerOrderRows[number]>();
     const upsertPartnerOrder = (r: typeof partnerOrderRows[number]) => {
@@ -747,7 +772,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (commissionPartnerOrderIds.length) {
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .in("id" as never, commissionPartnerOrderIds as never);
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -876,8 +901,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     // ===== Co-produção: pedidos em que a pessoa é co-produtora + índice de repasses =====
     const collabFilters = [
-      partnerId ? `and(collaborator_type.eq.partner,collaborator_id.eq.${partnerId})` : null,
-      coachId ? `and(collaborator_type.eq.professional,collaborator_id.eq.${coachId})` : null,
+      ...partnerIdsForProfile.map((id) => `and(collaborator_type.eq.partner,collaborator_id.eq.${id})`),
+      ...coachIdsForProfile.map((id) => `and(collaborator_type.eq.professional,collaborator_id.eq.${id})`),
     ].filter(Boolean).join(",");
     if (collabFilters) {
       const { data: cc } = await supabaseAdmin
@@ -889,7 +914,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (ids.length) {
         let q = supabaseAdmin
           .from("partner_product_orders" as never)
-          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+          .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,available_at,release_days,released_early,released_early_at,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
           .in("id" as never, ids as never);
         if (fromDate) q = (q as any).gte("created_at", fromDate);
         if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -899,8 +924,10 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     }
     const coprodIdx = await fetchCoprodIndex(Array.from(partnerOrdersById.keys()));
     const myCoprodCredits = new Map<string, { amount: number; pct: number | null }>();
-    for (const key of [partnerId ? `partner:${partnerId}` : null, coachId ? `professional:${coachId}` : null]) {
-      if (!key) continue;
+    for (const key of [
+      ...partnerIdsForProfile.map((id) => `partner:${id}`),
+      ...coachIdsForProfile.map((id) => `professional:${id}`),
+    ]) {
       for (const [oid, entry] of (coprodIdx.credit.get(key) || new Map())) {
         const prev = myCoprodCredits.get(oid);
         myCoprodCredits.set(oid, { amount: (prev?.amount || 0) + entry.amount, pct: entry.pct ?? prev?.pct ?? null });
@@ -910,12 +937,13 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     // (partnerId null) casaria com todo pedido de produto de profissional (partner_id null)
     // e apareceria como "criador" de produto alheio.
     const isCreatorOrder = (o: { partner_id: string | null; professional_coach_id: string | null }) =>
-      (partnerId != null && o.partner_id === partnerId) || (coachId != null && o.professional_coach_id === coachId);
+      (o.partner_id != null && partnerIdsForProfile.includes(o.partner_id))
+      || (o.professional_coach_id != null && coachIdsForProfile.includes(o.professional_coach_id));
     const myCoprodDeduction = (o: { id: string; partner_id: string | null; professional_coach_id: string | null }) =>
       coprodDeduction(
         coprodIdx,
-        partnerId != null && o.partner_id === partnerId ? partnerId : null,
-        coachId != null && o.professional_coach_id === coachId ? coachId : null,
+        o.partner_id != null && partnerIdsForProfile.includes(o.partner_id) ? o.partner_id : null,
+        o.professional_coach_id != null && coachIdsForProfile.includes(o.professional_coach_id) ? o.professional_coach_id : null,
         o.id,
       );
 
@@ -984,7 +1012,14 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const nowMs = Date.now();
     const paidOrders = Array.from(partnerOrdersById.values()).filter((o) => o.status === "paid");
     const releaseInfo = (o: typeof partnerOrderRows[number]) => {
-      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      const paidAt = new Date(o.paid_at || o.created_at || Date.now()).getTime();
+      const configuredRelease = o.available_at ? new Date(o.available_at).getTime() : NaN;
+      const earlyRelease = o.released_early_at ? new Date(o.released_early_at).getTime() : nowMs;
+      const availableAt = o.released_early
+        ? earlyRelease
+        : Number.isFinite(configuredRelease)
+          ? configuredRelease
+          : paidAt + n(o.release_days || 7) * 24 * 60 * 60 * 1000;
       return { availableAt, released: availableAt <= nowMs };
     };
     const productEarnings = [
@@ -1073,19 +1108,27 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const totalEarned = commissions.reduce((s, c) => s + c.amount, 0);
     const blocked = commissionsPending;
 
+    const partnerWalletTotals = ((pw as unknown as Array<Record<string, number>>) || []).reduce((sum, wallet) => ({
+      available: sum.available + n(wallet.available_balance),
+      withdrawn: sum.withdrawn + n(wallet.total_withdrawn),
+    }), { available: 0, withdrawn: 0 });
+    const professionalWalletTotals = ((profw as unknown as Array<Record<string, number>>) || []).reduce((sum, wallet) => ({
+      available: sum.available + n(wallet.available_balance),
+      withdrawn: sum.withdrawn + n(wallet.total_withdrawn),
+    }), { available: 0, withdrawn: 0 });
     const available = cutoff
       ? commissionsAvailable + productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0)
       : data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.available_balance)
       : n((w as Record<string, number> | null)?.available_balance)
-        + n((pw as Record<string, number> | null)?.available_balance)
-        + n((profw as Record<string, number> | null)?.available_balance)
+        + partnerWalletTotals.available
+        + professionalWalletTotals.available
         + n((nw as Record<string, number> | null)?.available_balance);
     const totalWithdrawn = data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.total_withdrawn)
       : n((w as Record<string, number> | null)?.total_withdrawn)
-        + n((pw as Record<string, number> | null)?.total_withdrawn)
-        + n((profw as Record<string, number> | null)?.total_withdrawn)
+        + partnerWalletTotals.withdrawn
+        + professionalWalletTotals.withdrawn
         + n((nw as Record<string, number> | null)?.total_withdrawn);
     const productEarningsAvailable = productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0);
     const productEarningsPending = productEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);

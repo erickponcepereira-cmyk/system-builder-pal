@@ -85,10 +85,11 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
         .order("paid_at", { ascending: false }),
       supabaseAdmin
         .from("store_orders")
-        .select("student_id, updated_at, created_at, status")
+        .select("student_id, paid_at, created_at, status")
         .in("student_id", studentIds)
         .eq("status", "paid")
-        .order("updated_at", { ascending: false }),
+        .order("paid_at", { ascending: false }),
+
     ]);
 
     // last sign-ins via auth admin (paginate users we need)
@@ -117,7 +118,7 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
     type Log = { student_id: string; log_date: string; attended: boolean | null };
     type Visit = { student_id: string; visited_at: string };
     type Tx = { student_id: string; paid_at: string; status: string };
-    type SOrder = { student_id: string; updated_at: string; created_at: string; status: string };
+    type SOrder = { student_id: string; paid_at: string | null; created_at: string; status: string };
 
     const logRows = (logs as Log[] | null) || [];
     const visitRows = (visits as Visit[] | null) || [];
@@ -150,7 +151,7 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
       }
 
       const lastTxPaid = sTxs[0]?.paid_at || null;
-      const lastStorePaid = sStoreOrders[0]?.updated_at || sStoreOrders[0]?.created_at || null;
+      const lastStorePaid = sStoreOrders[0]?.paid_at || sStoreOrders[0]?.created_at || null;
       const lastPurchase = [lastTxPaid, lastStorePaid].filter(Boolean).sort().at(-1) || null;
       const authLastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
       const profileLastLogin = s.profiles?.last_app_login_at ?? null;
@@ -280,10 +281,11 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
         .limit(50),
       supabaseAdmin
         .from("store_orders")
-        .select("id, updated_at, total_amount, payment_method, order_number")
+        .select("id, paid_at, created_at, total_amount, payment_method, order_number")
         .eq("student_id", data.studentId)
         .eq("status", "paid")
-        .order("updated_at", { ascending: false })
+        .order("paid_at", { ascending: false })
+
         .limit(50),
     ]);
 
@@ -323,9 +325,10 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
         label: t.products?.name || "Compra",
         method: t.payment_method,
       })),
-      ...((storeOrders as { id: string; updated_at: string; total_amount: number; payment_method: string | null; order_number: string }[]) || []).map((o) => ({
+      ...((storeOrders as { id: string; paid_at: string | null; created_at: string; total_amount: number; payment_method: string | null; order_number: string }[]) || []).map((o) => ({
         id: `order-${o.id}`,
-        at: o.updated_at,
+        at: o.paid_at || o.created_at,
+
         amount: Number(o.total_amount || 0),
         label: `Loja · ${o.order_number}`,
         method: o.payment_method,

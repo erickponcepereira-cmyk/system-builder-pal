@@ -148,10 +148,27 @@ export function useIndicacao(audience: "student" | "coach") {
 
   /** Este produto pode ser indicado por quem está olhando? */
   const podeIndicar = useCallback(
-    (sourceId: string) => {
+    (sourceId: string, origem?: string) => {
       if (!ctx.meuCodigo) return false;
-      // Coach divulga tudo; aluno só o que o financeiro liberou.
       if (audience === "coach") return true;
+
+      /*
+       * Produto de parceiro e de profissional SEMPRE paga indicação.
+       *
+       * Isso não é regra nova: o backend já faz. Um pedido desses gera a
+       * comissão com o rótulo "Fitcoin de Indicação (Venda de Parceiro)" e o
+       * gatilho de `commissions` credita o fitcoin — a divisão é metade para
+       * quem indicou e metade para o coach, sobre o que sobra depois da rede.
+       * Há pedidos assim pagos em produção.
+       *
+       * `product_referral_rules` é a régua do catálogo FITMIND, onde cada
+       * produto tem fatias próprias e o financeiro decide caso a caso. Ela
+       * nunca teve linha para parceiro. Enquanto o botão dependia dela, o
+       * dinheiro estava lá e ninguém tinha como buscá-lo: o aluno via o
+       * produto, indicaria, e a tela não oferecia.
+       */
+      if (origem === "partner" || origem === "professional") return true;
+
       return ctx.indicaveis.has(sourceId);
     },
     [ctx, audience],

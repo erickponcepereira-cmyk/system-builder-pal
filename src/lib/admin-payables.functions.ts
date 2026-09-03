@@ -3,7 +3,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const n = (v: unknown) => Number(v || 0);
-const r2 = (v: number) => Math.round(v * 100) / 100;
 
 async function getAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
@@ -79,22 +78,6 @@ export interface PayablesReport {
   lastAudit: WalletAuditRun | null;
 }
 
-async function nameIndex(profileIds: string[]) {
-  const supabaseAdmin = await getAdmin();
-  const map = new Map<string, { name: string; email: string | null }>();
-  const unique = Array.from(new Set(profileIds.filter(Boolean)));
-  for (let i = 0; i < unique.length; i += 300) {
-    const { data } = await supabaseAdmin
-      .from("profiles")
-      .select("id,name,email")
-      .in("id", unique.slice(i, i + 300));
-    for (const p of (data as Array<{ id: string; name: string | null; email: string | null }>) || []) {
-      map.set(p.id, { name: p.name || "—", email: p.email });
-    }
-  }
-  return map;
-}
-
 async function loadLastAudit(): Promise<WalletAuditRun | null> {
   const supabaseAdmin = await getAdmin();
   const { data: run } = await supabaseAdmin
@@ -141,177 +124,10 @@ export const getPayablesReport = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Acesso negado");
     const supabaseAdmin = await getAdmin();
-
-    const people: PayablePersonRow[] = [];
-
-    // ---- carteira de coach ----
-    const { data: coachWallets } = await supabaseAdmin
-      .from("wallets")
-      .select("profile_id,available_balance,pending_balance,total_withdrawn,is_test");
-    // ---- carteira de parceiro ----
-    const { data: partnerWallets } = await supabaseAdmin
-      .from("partner_wallets")
-      .select("partner_id,available_balance,pending_balance,total_withdrawn,partners!inner(profile_id)");
-    // ---- carteira de profissional ----
-    const { data: proWallets } = await supabaseAdmin
-      .from("professional_wallets")
-      .select("professional_coach_id,available_balance,pending_balance,total_withdrawn,coaches!inner(profile_id)");
-    // ---- carteira de aluno ----
-    const { data: studentWallets } = await supabaseAdmin
-      .from("student_wallets")
-      .select("student_id,available_balance,pending_balance,total_withdrawn,is_test,students!inner(profile_id)");
-
-    const push = (
-      profileId: string | null | undefined,
-      kind: PayableWalletKind,
-      available: unknown,
-      pending: unknown,
-      withdrawn: unknown,
-    ) => {
-      if (!profileId) return;
-      const a = r2(n(available));
-      const p = r2(n(pending));
-      const w = r2(n(withdrawn));
-      if (a === 0 && p === 0 && w === 0) return;
-      people.push({
-        profileId, kind, name: "—", email: null,
-        available: a, pending: p, withdrawn: w, requested: 0, nextReleaseAt: null,
-      });
-    };
-
-    for (const w of (coachWallets as Array<Record<string, unknown>>) || []) {
-      if (w['is_test']) continue;
-      push(w['profile_id'] as string, "coach", w['available_balance'], w['pending_balance'], w['total_withdrawn']);
-    }
-    for (const w of (partnerWallets as Array<Record<string, unknown>>) || []) {
-      const prof = (w['partners'] as { profile_id?: string } | null)?.profile_id;
-      push(prof, "partner", w['available_balance'], w['pending_balance'], w['total_withdrawn']);
-    }
-    for (const w of (proWallets as Array<Record<string, unknown>>) || []) {
-      const prof = (w['coaches'] as { profile_id?: string } | null)?.profile_id;
-      push(prof, "professional", w['available_balance'], w['pending_balance'], w['total_withdrawn']);
-    }
-    for (const w of (studentWallets as Array<Record<string, unknown>>) || []) {
-      if (w['is_test']) continue;
-      const prof = (w['students'] as { profile_id?: string } | null)?.profile_id;
-      push(prof, "student", w['available_balance'], w['pending_balance'], w['total_withdrawn']);
-    }
-
-    const names = await nameIndex(people.map((p) => p.profileId));
-    for (const p of people) {
-      const info = names.get(p.profileId);
-      p.name = info?.name || "—";
-      p.email = info?.email ?? null;
-    }
-
-    // ---- saques ----
-    const { data: wr } = await supabaseAdmin
-      .from("withdrawal_requests")
-      .select("id,profile_id,amount,status,requested_at,paid_at")
-      .order("requested_at", { ascending: false })
-      .limit(1000);
-    const { data: swr } = await supabaseAdmin
-      .from("student_withdrawal_requests" as never)
-      .select("id,student_id,amount,status,requested_at,paid_at" as never)
-      .order("requested_at" as never, { ascending: false })
-      .limit(1000);
-
-    const studentRows = ((swr as unknown as Array<{ id: string; student_id: string; amount: number; status: string; requested_at: string | null; paid_at: string | null }>) || []);
-    const studentIds = studentRows.map((s) => s.student_id).filter(Boolean);
-    const studentProfile = new Map<string, string>();
-    for (let i = 0; i < studentIds.length; i += 300) {
-      const { data } = await supabaseAdmin.from("students").select("id,profile_id").in("id", studentIds.slice(i, i + 300));
-      for (const s of (data as Array<{ id: string; profile_id: string }>) || []) studentProfile.set(s.id, s.profile_id);
-    }
-
-    const allProfileIds = [
-      ...(((wr as Array<{ profile_id: string }>) || []).map((x) => x.profile_id)),
-      ...Array.from(studentProfile.values()),
-    ];
-    const wrNames = await nameIndex(allProfileIds);
-
-    const withdrawals: PayableWithdrawalRow[] = [
-      ...(((wr as Array<{ id: string; profile_id: string; amount: number; status: string; requested_at: string | null; paid_at: string | null }>) || []).map((x) => ({
-        id: x.id,
-        profileId: x.profile_id,
-        name: wrNames.get(x.profile_id)?.name || names.get(x.profile_id)?.name || "—",
-        kind: (people.find((p) => p.profileId === x.profile_id)?.kind || "coach") as PayableWalletKind,
-        amount: n(x.amount),
-        status: x.status,
-        requestedAt: x.requested_at,
-        paidAt: x.paid_at,
-      }))),
-      ...studentRows.map((x) => {
-        const pid = studentProfile.get(x.student_id) || null;
-        return {
-          id: x.id,
-          profileId: pid,
-          name: (pid && (wrNames.get(pid)?.name || names.get(pid)?.name)) || "—",
-          kind: "student" as PayableWalletKind,
-          amount: n(x.amount),
-          status: x.status,
-          requestedAt: x.requested_at,
-          paidAt: x.paid_at,
-        };
-      }),
-    ].sort((a, b) => (b.requestedAt || "").localeCompare(a.requestedAt || ""));
-
-    const openStatuses = new Set(["requested", "approved", "processing"]);
-    for (const w of withdrawals) {
-      if (!openStatuses.has(w.status) || !w.profileId) continue;
-      const target = people.find((p) => p.profileId === w.profileId);
-      if (target) target.requested = r2(target.requested + w.amount);
-    }
-
-    // ---- projeção: comissões pendentes com data de liberação ----
-    const { data: pend } = await supabaseAdmin
-      .from("commissions")
-      .select("amount,available_at,beneficiary_profile_id,is_test,is_referral,slot_label,status")
-      .eq("status", "pending")
-      .limit(5000);
-    const byMonth = new Map<string, { amount: number; count: number }>();
-    const nextByProfile = new Map<string, string>();
-    for (const c of (pend as Array<Record<string, unknown>>) || []) {
-      if (c['is_test']) continue;
-      if (/^(sistema|admin|nutri)/i.test(String(c['slot_label'] || ""))) continue;
-      const iso = c['available_at'] ? String(c['available_at']) : null;
-      const key = iso ? iso.slice(0, 7) : "sem_data";
-      const cur = byMonth.get(key) || { amount: 0, count: 0 };
-      cur.amount = r2(cur.amount + n(c['amount']));
-      cur.count += 1;
-      byMonth.set(key, cur);
-      const pid = c['beneficiary_profile_id'] as string | null;
-      if (pid && iso) {
-        const prev = nextByProfile.get(pid);
-        if (!prev || iso < prev) nextByProfile.set(pid, iso);
-      }
-    }
-    for (const p of people) p.nextReleaseAt = nextByProfile.get(p.profileId) || null;
-
-    const projection: PayableProjectionRow[] = Array.from(byMonth.entries())
-      .map(([month, v]) => ({ month, amount: v.amount, count: v.count }))
-      .sort((a, b) => a.month.localeCompare(b.month));
-
-    const monthPrefix = new Date().toISOString().slice(0, 7);
-    const summary = {
-      available: r2(people.reduce((s, p) => s + p.available, 0)),
-      pending: r2(people.reduce((s, p) => s + p.pending, 0)),
-      requestedOpen: r2(withdrawals.filter((w) => openStatuses.has(w.status)).reduce((s, w) => s + w.amount, 0)),
-      paidThisMonth: r2(withdrawals.filter((w) => w.status === "paid" && (w.paidAt || "").startsWith(monthPrefix)).reduce((s, w) => s + w.amount, 0)),
-      paidTotal: r2(withdrawals.filter((w) => w.status === "paid").reduce((s, w) => s + w.amount, 0)),
-      peopleWithBalance: people.filter((p) => p.available > 0 || p.pending > 0).length,
-    };
-
-    people.sort((a, b) => b.available + b.pending - (a.available + a.pending));
-
-    return {
-      generatedAt: new Date().toISOString(),
-      summary,
-      people,
-      projection,
-      withdrawals,
-      lastAudit: await loadLastAudit(),
-    };
+    const { data, error } = await supabaseAdmin.rpc("admin_payables_report" as never, {} as never);
+    if (error) throw new Error(error.message);
+    const report = (data || {}) as unknown as Omit<PayablesReport, "lastAudit">;
+    return { ...report, lastAudit: await loadLastAudit() };
   });
 
 /** Roda o recálculo oficial de todas as carteiras e grava o que mudou (auditoria). */

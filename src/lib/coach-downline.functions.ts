@@ -133,8 +133,9 @@ export const getCoachDownlineReport = createServerFn({ method: "POST" })
         .select("student_id, total_amount")
         .in("student_id", allStudentIds)
         .eq("status", "paid")
-        .gte("updated_at", fromIso)
-        .lte("updated_at", toIso);
+        .gte("paid_at", fromIso)
+        .lte("paid_at", toIso);
+
       ((orders as { student_id: string; total_amount: number }[] | null) || []).forEach((o) => {
         const coachId = studentToCoach.get(o.student_id);
         if (!coachId) return;

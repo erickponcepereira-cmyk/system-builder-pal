@@ -56,6 +56,7 @@ import { Route as AuthenticatedAdminAcademiasRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminAchievementsRouteImport } from './routes/_authenticated/admin.achievements'
 import { Route as AuthenticatedAdminAdminWalletRouteImport } from './routes/_authenticated/admin.admin-wallet'
 import { Route as AuthenticatedAdminAssessmentDeletionsRouteImport } from './routes/_authenticated/admin.assessment-deletions'
+import { Route as AuthenticatedAdminAvaliacoesRouteImport } from './routes/_authenticated/admin.avaliacoes'
 import { Route as AuthenticatedAdminBannersRouteImport } from './routes/_authenticated/admin.banners'
 import { Route as AuthenticatedAdminBrandingRouteImport } from './routes/_authenticated/admin.branding'
 import { Route as AuthenticatedAdminCalendarsRouteImport } from './routes/_authenticated/admin.calendars'
@@ -418,6 +419,12 @@ const AuthenticatedAdminAssessmentDeletionsRoute =
   AuthenticatedAdminAssessmentDeletionsRouteImport.update({
     id: '/assessment-deletions',
     path: '/assessment-deletions',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAvaliacoesRoute =
+  AuthenticatedAdminAvaliacoesRouteImport.update({
+    id: '/avaliacoes',
+    path: '/avaliacoes',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminBannersRoute =
@@ -1169,6 +1176,7 @@ export interface FileRoutesByFullPath {
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
+  '/admin/avaliacoes': typeof AuthenticatedAdminAvaliacoesRoute
   '/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
@@ -1335,6 +1343,7 @@ export interface FileRoutesByTo {
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
+  '/admin/avaliacoes': typeof AuthenticatedAdminAvaliacoesRoute
   '/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
@@ -1505,6 +1514,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/_authenticated/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/_authenticated/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
+  '/_authenticated/admin/avaliacoes': typeof AuthenticatedAdminAvaliacoesRoute
   '/_authenticated/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/_authenticated/admin/branding': typeof AuthenticatedAdminBrandingRoute
   '/_authenticated/admin/calendars': typeof AuthenticatedAdminCalendarsRoute
@@ -1675,6 +1685,7 @@ export interface FileRouteTypes {
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
+    | '/admin/avaliacoes'
     | '/admin/banners'
     | '/admin/branding'
     | '/admin/calendars'
@@ -1841,6 +1852,7 @@ export interface FileRouteTypes {
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
+    | '/admin/avaliacoes'
     | '/admin/banners'
     | '/admin/branding'
     | '/admin/calendars'
@@ -2010,6 +2022,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/achievements'
     | '/_authenticated/admin/admin-wallet'
     | '/_authenticated/admin/assessment-deletions'
+    | '/_authenticated/admin/avaliacoes'
     | '/_authenticated/admin/banners'
     | '/_authenticated/admin/branding'
     | '/_authenticated/admin/calendars'
@@ -2519,6 +2532,13 @@ declare module '@tanstack/react-router' {
       path: '/assessment-deletions'
       fullPath: '/admin/assessment-deletions'
       preLoaderRoute: typeof AuthenticatedAdminAssessmentDeletionsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/avaliacoes': {
+      id: '/_authenticated/admin/avaliacoes'
+      path: '/avaliacoes'
+      fullPath: '/admin/avaliacoes'
+      preLoaderRoute: typeof AuthenticatedAdminAvaliacoesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/banners': {
@@ -3384,6 +3404,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAchievementsRoute: typeof AuthenticatedAdminAchievementsRoute
   AuthenticatedAdminAdminWalletRoute: typeof AuthenticatedAdminAdminWalletRoute
   AuthenticatedAdminAssessmentDeletionsRoute: typeof AuthenticatedAdminAssessmentDeletionsRoute
+  AuthenticatedAdminAvaliacoesRoute: typeof AuthenticatedAdminAvaliacoesRoute
   AuthenticatedAdminBannersRoute: typeof AuthenticatedAdminBannersRoute
   AuthenticatedAdminBrandingRoute: typeof AuthenticatedAdminBrandingRoute
   AuthenticatedAdminCalendarsRoute: typeof AuthenticatedAdminCalendarsRoute
@@ -3450,6 +3471,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAdminWalletRoute: AuthenticatedAdminAdminWalletRoute,
   AuthenticatedAdminAssessmentDeletionsRoute:
     AuthenticatedAdminAssessmentDeletionsRoute,
+  AuthenticatedAdminAvaliacoesRoute: AuthenticatedAdminAvaliacoesRoute,
   AuthenticatedAdminBannersRoute: AuthenticatedAdminBannersRoute,
   AuthenticatedAdminBrandingRoute: AuthenticatedAdminBrandingRoute,
   AuthenticatedAdminCalendarsRoute: AuthenticatedAdminCalendarsRoute,
