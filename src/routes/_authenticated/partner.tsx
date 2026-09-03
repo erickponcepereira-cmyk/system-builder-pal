@@ -845,7 +845,10 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     }
 
     const jaAprovado = !!editing.id && (editing.status as string | undefined) === "approved";
-    toast.success(jaAprovado ? "Alterações salvas. O produto continua ativo na loja." : "Salvo. Aguardando aprovação do admin.");
+    const estaVisivel = editing.is_active_by_partner !== false;
+    toast.success(jaAprovado
+      ? `Alterações salvas. O produto está ${estaVisivel ? "visível" : "oculto"} na loja.`
+      : "Salvo. Aguardando aprovação do admin.");
     setEditing(null); onReload();
   };
 
@@ -869,8 +872,13 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   };
 
   const toggleActive = async (p: Product) => {
+    if (p.is_active_by_partner) {
+      const confirmed = confirm(`Ocultar “${p.name}”? Ele deixará de aparecer na loja e nas buscas para todos os alunos.`);
+      if (!confirmed) return;
+    }
     const { error } = await supabase.from("partner_products" as never).update({ is_active_by_partner: !p.is_active_by_partner } as never).eq("id" as never, p.id);
     if (error) return toast.error(error.message);
+    toast.success(p.is_active_by_partner ? "Produto ocultado da loja." : "Produto reativado na loja.");
     onReload();
   };
 
@@ -1010,6 +1018,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </p>
               ) : null}
               <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${p.is_active_by_partner ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>
+                  {p.is_active_by_partner ? "Visível na loja" : "Oculto da loja"}
+                </span>
                 {recurrenceLabel(p as never) && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-semibold">{recurrenceLabel(p as never)}</span>
                 )}
@@ -1033,7 +1044,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                     <button onClick={() => moveProduct(p, 1)} disabled={idx === arr.length - 1} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para baixo">↓</button>
                   </>
                 )}
-                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
+                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Retirar da loja para todos os alunos" : "Reativar na loja"}>{p.is_active_by_partner ? "Retirar da loja" : "Reativar na loja"}</button>
                 <button onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "partner" })} className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"><Users className="h-3 w-3" /> Compradores</button>
                 {!p.is_mirrored && (
                   <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>

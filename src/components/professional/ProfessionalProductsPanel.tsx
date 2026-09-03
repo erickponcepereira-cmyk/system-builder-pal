@@ -325,11 +325,16 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   };
 
   const toggleActive = async (p: ProProduct) => {
+    if (p.is_active_by_professional) {
+      const confirmed = confirm(`Ocultar “${p.name}”? Ele deixará de aparecer na loja e nas buscas para todos os alunos.`);
+      if (!confirmed) return;
+    }
     const { error } = await supabase
       .from("professional_products" as never)
       .update({ is_active_by_professional: !p.is_active_by_professional } as never)
       .eq("id" as never, p.id);
     if (error) return toast.error(error.message);
+    toast.success(p.is_active_by_professional ? "Produto ocultado da loja." : "Produto reativado na loja.");
     load();
   };
 
@@ -451,6 +456,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 {!p.is_active_by_professional && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/60">Oculto</span>
                 )}
+                {p.is_active_by_professional && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">Visível na loja</span>
+                )}
               </div>
               <div className="mt-0.5 text-[11px] text-white/60">
                 {p.original_price && p.original_price > p.price && (
@@ -490,7 +498,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   </>
                 )}
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">
-                  {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
+                  {p.is_active_by_professional ? "Retirar da loja" : "Reativar na loja"}
                 </button>
                 <button
                   onClick={() => setBuyersFor({ id: p.id, name: p.name, type: "professional" })}
