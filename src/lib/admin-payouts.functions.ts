@@ -1413,22 +1413,47 @@ export const listBlockedCommissions = createServerFn({ method: "POST" })
   });
 
 
-/** Libera antecipadamente as comissões escolhidas (registra auditoria e recalcula a carteira). */
+/**
+ * Libera antecipadamente as comissões escolhidas.
+ *
+ * A marcação é feita em lotes e o recálculo da carteira vem depois, em uma
+ * chamada separada: fazer as duas coisas de uma vez estourava o tempo limite
+ * do banco quando a seleção era grande ("statement timeout").
+ */
+const LOTE_ANTECIPACAO = 25;
+
 export const advanceCommissionRelease = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((data: { profileId: string; commissionIds: string[]; reason?: string }) => data)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
     if (!data.commissionIds?.length) throw new Error("Selecione ao menos uma comissão");
-    const { data: total, error } = await supabaseAdmin.rpc("admin_advance_commission_release" as never, {
+
+    let total = 0;
+    let erro: string | null = null;
+    for (let i = 0; i < data.commissionIds.length; i += LOTE_ANTECIPACAO) {
+      const lote = data.commissionIds.slice(i, i + LOTE_ANTECIPACAO);
+      const { data: parcial, error } = await supabaseAdmin.rpc("admin_advance_commission_release_batch" as never, {
+        _profile_id: data.profileId,
+        _commission_ids: lote,
+        _admin_user_id: context.userId,
+        _reason: data.reason || null,
+      } as never);
+      if (error) { erro = error.message; break; }
+      total += n(parcial as unknown as number);
+    }
+
+    // Recálculo isolado: mesmo que um lote falhe, o que já foi liberado precisa refletir na carteira.
+    const { error: recalcError } = await supabaseAdmin.rpc("admin_recalc_wallets_for_profile" as never, {
       _profile_id: data.profileId,
-      _commission_ids: data.commissionIds,
       _admin_user_id: context.userId,
-      _reason: data.reason || null,
     } as never);
-    if (error) throw new Error(error.message);
-    return { ok: true, total: n(total as unknown as number) };
+
+    if (erro) throw new Error(`Liberado ${total.toFixed(2)} antes da falha: ${erro}`);
+    if (recalcError) throw new Error(`Liberado ${total.toFixed(2)}, mas o recálculo falhou: ${recalcError.message}`);
+    return { ok: true, total: n(total) };
   });
+
 
 // ============= Antecipação de vendas de produto (parceiro/profissional) =============
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock, MapPin, CalendarDays } from "lucide-react";
+import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock, MapPin, CalendarDays, Eye, EyeOff } from "lucide-react";
+import { useStoreVisibility } from "@/lib/coach-store-overrides";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
@@ -70,6 +71,7 @@ function formatSchedules(rows: ScheduleRow[]): string[] {
 
 export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
   const navigate = useNavigate();
+  const vis = useStoreVisibility(true);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [schedulesByProduct, setSchedulesByProduct] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
@@ -334,7 +336,8 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
               </div>
             ) : (() => {
               const list = partnerFreebies.filter((p) =>
-                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+                (pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free")
+                && !vis.isHiddenByUpline("product", "partner_product", p.id)
               );
               if (list.length === 0) {
                 return <p className="text-sm text-white/50">
@@ -342,17 +345,47 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                 </p>;
               }
               return (
+                <>
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const hidden = vis.isHiddenByMe("vendor_partner", null, null);
+                      try { await vis.toggleHidden("vendor_partner", null, null, !hidden); }
+                      catch (e: any) { toast.error(e?.message || "Erro ao alterar visibilidade"); }
+                    }}
+                    title="Ocultar/exibir todos os benefícios de parceiros para sua rede"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white/70 hover:bg-white/10"
+                  >
+                    {vis.isHiddenByMe("vendor_partner", null, null)
+                      ? "✓ Mostrar todos (parceiros) para a rede"
+                      : "Ocultar todos (parceiros) da rede"}
+                  </button>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {list.map((p) => {
                     const isDiscount = p.redemption_mode === "discount";
                     const scheduleLines = formatSchedules(schedulesByProduct[p.id] || []);
                     const isScheduled = !!p.uses_scheduling || scheduleLines.length > 0;
+                    const hiddenByMe = vis.isHiddenByMe("product", "partner_product", p.id);
                     return (
                       <div
                         key={p.id}
-                        className={`text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full ${cardActive ? "" : "opacity-80"}`}
+                        className={`text-left rounded-xl border overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full ${hiddenByMe ? "border-amber-500/40 opacity-60" : "border-white/5"} ${cardActive ? "" : "opacity-80"}`}
                         style={{ backgroundColor: "#0F0F0F" }}
                       >
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try { await vis.toggleHidden("product", "partner_product", p.id, !hiddenByMe); }
+                            catch (e: any) { toast.error(e?.message || "Erro ao alterar visibilidade"); }
+                          }}
+                          title={hiddenByMe ? "Mostrar para sua rede" : "Ocultar da sua rede"}
+                          className="absolute top-2 left-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white/80 hover:text-white"
+                        >
+                          {hiddenByMe ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+
 
                         {isDiscount && p.discount_percent ? (
                           <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-xs font-extrabold px-2.5 py-1 rounded-lg shadow-lg">
@@ -448,6 +481,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     );
                   })}
                 </div>
+                </>
               );
             })()}
           </div>

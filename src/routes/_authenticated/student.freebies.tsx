@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useStoreVisibility } from "@/lib/coach-store-overrides";
 import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2, QrCode, ScanLine, ShieldAlert, Ticket, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,8 +115,17 @@ function StudentFreebies() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
-  const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
-  const [professionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
+  const [allPartnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [allProfessionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
+  const vis = useStoreVisibility(false);
+  const partnerFreebies = useMemo(
+    () => allPartnerFreebies.filter((p) => !vis.isHiddenForViewer("product", "partner_product", p.id)),
+    [allPartnerFreebies, vis],
+  );
+  const professionalFreebies = useMemo(
+    () => allProfessionalFreebies.filter((p) => !vis.isHiddenForViewer("product", "professional_product", p.id, p.coach_id)),
+    [allProfessionalFreebies, vis],
+  );
   const [sections, setSections] = useState<StoreSection[]>([]);
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [subcategories, setSubcategories] = useState<StoreSubcategory[]>([]);
