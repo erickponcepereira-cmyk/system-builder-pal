@@ -1,4 +1,4 @@
--- Release batch after the latest Lovable migrations: public checkout links use an unguessable bearer token. Order numbers are
+-- Release batch after Lovable migration 20260903015016: public checkout links use an unguessable bearer token. Order numbers are
 -- intentionally human-readable and therefore cannot authorize access to an
 -- order or to Mercado Pago operations.
 

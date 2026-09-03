@@ -1,4 +1,4 @@
--- Release batch: safe, retryable account-deletion processor (after UGC hardening).
+-- Release batch after Lovable migration 20260903015016: safe, retryable account-deletion processor.
 --
 -- The legacy admin_purge_user_dependents function is intentionally NOT used:
 -- it deletes required-FK rows generically and can remove financial history or

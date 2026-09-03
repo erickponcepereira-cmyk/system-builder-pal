@@ -15,7 +15,7 @@ O aplicativo exige o aceite da versão vigente das Diretrizes da Comunidade ante
 
 ## Componentes
 
-- Migration principal: `20260903000500_ugc_moderation.sql`.
+- Migration principal: `20260903020400_ugc_moderation.sql`.
 - Versão da política no cliente: `src/lib/ugc.constants.ts`.
 - Fluxos compartilhados: `src/lib/ugc.ts` e `src/components/ugc/`.
 - Diretrizes públicas: `/diretrizes-da-comunidade`.
@@ -23,7 +23,7 @@ O aplicativo exige o aceite da versão vigente das Diretrizes da Comunidade ante
 - Fila administrativa: `/admin/moderation`.
 - A tela editorial `/admin/avaliacoes` apenas lista e responde; ocultar, republicar e analisar recursos acontece exclusivamente na fila unificada para preservar a trilha de auditoria.
 - Processador seguro de mídia: `src/lib/ugc-media-jobs.server.ts` e `src/lib/ugc-moderation.functions.ts`.
-- Processador de exclusão dependente: `20260903000600_account_deletion_processor.sql`.
+- Processador de exclusão dependente: `20260903020500_account_deletion_processor.sql`.
 
 ## Modelo e garantias
 
@@ -64,15 +64,15 @@ O worker usa lease de dez minutos para recuperar jobs interrompidos e encerra em
 ## Ordem obrigatória de homologação
 
 1. Criar backup e testar restauração em staging.
-2. Sincronizar a branch com a `main` e confirmar que não surgiu migration posterior a `20260902182324_818d996d-82b3-44ed-9095-fbeada6b51e1.sql`. Se surgir uma migration da `main` com nome igual ou posterior ao primeiro arquivo deste lote, renumerar o lote inteiro antes da homologação.
+2. Sincronizar a branch com a `main` e confirmar que não surgiu migration posterior a `20260903015016_33e6336c-0b93-4c74-a1b8-64319a73fbd9.sql`. Se surgir uma migration da `main` com nome igual ou posterior ao primeiro arquivo deste lote, renumerar o lote inteiro antes da homologação.
 3. Aplicar, nesta ordem:
-   - `20260903000100_account_deletion_requests.sql`;
-   - `20260903000200_disable_public_test_accounts.sql`;
-   - `20260903000300_push_notification_audit.sql`;
-   - `20260903000400_secure_public_payment_links.sql`;
-   - `20260903000500_ugc_moderation.sql`;
-   - `20260903000600_account_deletion_processor.sql`;
-   - `20260903000700_secure_return_requests.sql`.
+   - `20260903020000_account_deletion_requests.sql`;
+   - `20260903020100_disable_public_test_accounts.sql`;
+   - `20260903020200_push_notification_audit.sql`;
+   - `20260903020300_secure_public_payment_links.sql`;
+   - `20260903020400_ugc_moderation.sql`;
+   - `20260903020500_account_deletion_processor.sql`;
+   - `20260903020600_secure_return_requests.sql`.
 4. Publicar o backend da mesma revisão, com `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` apenas no servidor.
 5. Regenerar `src/integrations/supabase/types.ts` a partir do Supabase de staging depois de todas as migrations.
 6. Rodar o checklist abaixo em staging com contas separadas de aluno, profissional, parceiro, moderador A e moderador B.

@@ -6,7 +6,7 @@ Este documento descreve a implantação operacional do processador de exclusão 
 
 - Fila e estado de processamento: `account_deletion_requests`.
 - Auditoria sanitizada: `account_deletion_attempts`.
-- Migration: `20260903000600_account_deletion_processor.sql`.
+- Migration: `20260903020500_account_deletion_processor.sql`.
 - Worker: `src/lib/account-deletion-processor.server.ts`.
 - Endpoint privado: `POST /api/public/hooks/account-deletion`.
 - Congelamento/claim atômico de cobranças: funções `account_deletion_freeze_billing` e `account_deletion_claim_recurring_charge`.
@@ -16,10 +16,10 @@ O endpoint só aceita um bearer secret dedicado com pelo menos 32 caracteres. El
 ## Ordem obrigatória de implantação
 
 1. Criar backup verificável do banco e ensaiar a restauração.
-2. Confirmar que o histórico remoto de migrations corresponde ao repositório e aplicar, na ordem dos nomes, todas as migrations pendentes da `main` até `20260902182324_818d996d-82b3-44ed-9095-fbeada6b51e1.sql`.
-3. Aplicar, também na ordem dos nomes, as migrations preparatórias desta release: `20260903000100_account_deletion_requests.sql`, `20260903000200_disable_public_test_accounts.sql`, `20260903000300_push_notification_audit.sql`, `20260903000400_secure_public_payment_links.sql` e `20260903000500_ugc_moderation.sql`.
+2. Confirmar que o histórico remoto de migrations corresponde ao repositório e aplicar, na ordem dos nomes, todas as migrations pendentes da `main` até `20260903015016_33e6336c-0b93-4c74-a1b8-64319a73fbd9.sql`.
+3. Aplicar, também na ordem dos nomes, as migrations preparatórias desta release: `20260903020000_account_deletion_requests.sql`, `20260903020100_disable_public_test_accounts.sql`, `20260903020200_push_notification_audit.sql`, `20260903020300_secure_public_payment_links.sql` e `20260903020400_ugc_moderation.sql`.
 4. Pausar temporariamente o cron de recorrências e colocar criação/cancelamento de recorrências em manutenção.
-5. Aplicar `20260903000600_account_deletion_processor.sql` em staging. Todo o conjunto foi colocado depois da base Lovable atual para não ser tratado como migration retroativa. Ela depende das tabelas UGC da etapa anterior e torna as gravações de recorrência exclusivas do backend; por isso migrations e backend devem entrar na mesma janela.
+5. Aplicar `20260903020500_account_deletion_processor.sql` em staging. Todo o conjunto foi colocado depois da base Lovable atual para não ser tratado como migration retroativa. Ela depende das tabelas UGC da etapa anterior e torna as gravações de recorrência exclusivas do backend; por isso migrations e backend devem entrar na mesma janela.
 6. Publicar imediatamente o backend que contém o worker e o claim atômico de recorrências.
 7. Configurar `ACCOUNT_DELETION_PROCESSOR_SECRET` e `INTERNAL_CRON_SECRET` diretamente no ambiente do backend.
 8. Guardar os mesmos valores no secret manager/Vault usado pelo agendador. Nunca inserir valores em migration, Git, log ou chat.

@@ -1,4 +1,4 @@
--- Release batch: account deletion request lifecycle (after the latest Lovable migrations).
+-- Release batch: account deletion request lifecycle (after Lovable migration 20260903015016).
 CREATE TABLE IF NOT EXISTS public.account_deletion_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,

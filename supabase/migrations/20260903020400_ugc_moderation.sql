@@ -1,4 +1,4 @@
--- Release batch after the latest Lovable migrations: Google Play UGC readiness, community policy acceptance, reports, blocks,
+-- Release batch after Lovable migration 20260903015016: Google Play UGC readiness, community policy acceptance, reports, blocks,
 -- moderation actions/appeals, server-side enforcement and profile privacy fixes.
 
 -- ---------------------------------------------------------------------------
