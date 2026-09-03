@@ -16785,6 +16785,15 @@ export type Database = {
         }
         Returns: number
       }
+      admin_advance_commission_release_batch: {
+        Args: {
+          _admin_user_id: string
+          _commission_ids: string[]
+          _profile_id: string
+          _reason?: string
+        }
+        Returns: number
+      }
       admin_advance_creator_release: {
         Args: {
           _admin_user_id: string
@@ -16848,6 +16857,10 @@ export type Database = {
       }
       admin_payables_report: { Args: never; Returns: Json }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
+      admin_recalc_wallets_for_profile: {
+        Args: { _admin_user_id: string; _profile_id: string }
+        Returns: undefined
+      }
       admin_reconcile_all_wallets: { Args: never; Returns: number }
       admin_release_user_subscription: {
         Args: { _reason?: string; _user_id: string }

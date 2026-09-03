@@ -1,0 +1,69 @@
+CREATE OR REPLACE FUNCTION public.admin_advance_commission_release_batch(_profile_id uuid, _commission_ids uuid[], _admin_user_id uuid, _reason text DEFAULT NULL::text)
+RETURNS numeric
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE v_total numeric := 0; v_bloqueadas int := 0; v_nomes text;
+BEGIN
+  IF NOT public.is_admin(_admin_user_id) THEN RAISE EXCEPTION 'Acesso negado'; END IF;
+  IF _profile_id IS NULL OR _commission_ids IS NULL OR array_length(_commission_ids, 1) IS NULL THEN
+    RAISE EXCEPTION 'Informe o perfil e ao menos uma comissao';
+  END IF;
+
+  SELECT count(*), string_agg(DISTINCT COALESCE(c.slot_label,'(sem rotulo)'), ', ')
+    INTO v_bloqueadas, v_nomes
+  FROM public.commissions c
+  WHERE c.id = ANY(_commission_ids)
+    AND c.beneficiary_profile_id = _profile_id
+    AND COALESCE(c.force_released, false) = false
+    AND COALESCE(c.is_network, false) = true
+    AND NOT COALESCE((
+      SELECT n.any_completed FROM public.network_unlock_history n
+      WHERE n.profile_id = c.beneficiary_profile_id
+        AND n.period_year = EXTRACT(YEAR FROM (c.created_at AT TIME ZONE 'UTC'))::int
+        AND n.period_month = EXTRACT(MONTH FROM (c.created_at AT TIME ZONE 'UTC'))::int
+    ), false);
+
+  IF COALESCE(v_bloqueadas, 0) > 0 THEN
+    RAISE EXCEPTION 'Nao e possivel antecipar % comissao(oes) de rede: a meta do mes nao foi batida (%).', v_bloqueadas, v_nomes;
+  END IF;
+
+  INSERT INTO public.commission_release_advances (commission_id, profile_id, amount, slot_label, original_status, original_available_at, reason, admin_user_id)
+  SELECT c.id, c.beneficiary_profile_id, c.amount, c.slot_label, c.status::text, c.available_at, _reason, _admin_user_id
+  FROM public.commissions c
+  WHERE c.id = ANY(_commission_ids) AND c.beneficiary_profile_id = _profile_id AND COALESCE(c.force_released, false) = false;
+
+  WITH alteradas AS (
+    UPDATE public.commissions c
+       SET force_released = true,
+           available_at = LEAST(COALESCE(c.available_at, now()), now()),
+           status = CASE WHEN c.status::text = 'pending' THEN 'available'::commission_status ELSE c.status END
+     WHERE c.id = ANY(_commission_ids)
+       AND c.beneficiary_profile_id = _profile_id
+       AND COALESCE(c.force_released, false) = false
+    RETURNING c.amount
+  )
+  SELECT COALESCE(SUM(amount), 0) INTO v_total FROM alteradas;
+
+  RETURN v_total;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.admin_recalc_wallets_for_profile(_profile_id uuid, _admin_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF NOT public.is_admin(_admin_user_id) THEN RAISE EXCEPTION 'Acesso negado'; END IF;
+  IF _profile_id IS NULL THEN RAISE EXCEPTION 'Informe o perfil'; END IF;
+  PERFORM public.recalc_wallets_for_owner(_profile_id);
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.admin_advance_commission_release_batch(uuid, uuid[], uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_advance_commission_release_batch(uuid, uuid[], uuid, text) TO service_role;
+REVOKE ALL ON FUNCTION public.admin_recalc_wallets_for_profile(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_recalc_wallets_for_profile(uuid, uuid) TO service_role;
