@@ -16,9 +16,8 @@ Fatos que não se descobrem lendo o código:
 
 - **O runtime mudou por causa de mTLS.** A API Sefin exige certificado cliente ICP-Brasil, e `workerd` não faz handshake mTLS. Era isso que obrigava o projeto antigo a delegar transmissão a um proxy Node no Railway, com o PFX e a senha viajando pela rede a cada emissão. Em Node o proxy deixou de existir. Não reintroduza runtime de borda nesse caminho.
 - **Existem duas faixas de município, e o eixo de abstração é o transporte, não o município.** Faixa A (~2.517) usa o Emissor Nacional via REST; Faixa B (~3.004) mantém emissor próprio com SOAP. A DPS é a mesma nos dois. Modelar "provider por município" foi o erro do projeto antigo.
-- **Cuiabá vira Emissor Nacional em 01/09/2026** (webservice municipal desligado em 31/08). Até lá o CNPJ da FitMind não emite pela Sefin — `E0084`, sem estabelecimento em município Faixa A. Depois disso, emite. Várzea Grande já é Faixa A, mas **não existe em produção restrita**: não há sandbox para VG.
-- **Supabase**: projeto `rvflkkrobxjrphphkkco` (renomeado "fiscal-engine"), criado 17/08/2026, separado do antigo `kadxohlpbpwqqbfnrznj`.
-- Segredos ficam só no `.env` e em variável de usuário do Windows. O `.env.example` é versionado — já houve um quase-incidente com a senha do certificado gravada nele por engano.
+- **Cuiabá ADIOU a migração de 01/09 para 01/11/2026** (confirmado em 02/09: o ADN ainda devolve `aderenteEmissorNacional: 0`, e o webservice municipal fica ativo até 31/10). Até lá o CNPJ da FitMind não emite pela Sefin — `E0084`, sem estabelecimento em município Faixa A. Várzea Grande já é Faixa A, mas **não existe em produção restrita**: não há sandbox para VG.
+- **O endpoint de PRODUÇÃO do ISSNet para Cuiabá não é público.** O projeto antigo nunca o recebeu e sondagem não acha; produção em Cuiabá segue em ABRASF 2.04. Só a homologação (`nfse.issnetonline.com.br/wsnfsenacional/homologacao/nfse.asmx`) responde. Pedir à Nota Control.
 
 O diagnóstico que motivou o reinício está em https://claude.ai/code/artifact/08ba45d5-8d70-4a12-81a0-105def081e19
 
