@@ -991,10 +991,21 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
                     checked={!!sel[r.id]}
                     onChange={(e) => setSel((s) => ({ ...s, [r.id]: e.target.checked }))}
                   />
-                  <span className="flex-1 text-white/80">{r.slotLabel || "Comissão"}{r.isNetwork ? " · rede" : ""}</span>
-                  <span className="text-white/40">
-                    {r.availableAt ? `libera ${new Date(r.availableAt).toLocaleDateString("pt-BR")}` : "—"}
+                  <span className="flex-1 text-white/80">
+                    {r.slotLabel || "Comissão"}
+                    {r.isNetwork && (
+                      <span className={r.goalMet ? "text-emerald-400" : "text-amber-400"}>
+                        {" "}· rede {r.periodKey || ""} {r.goalMet ? "(meta batida)" : "(meta não batida)"}
+                      </span>
+                    )}
+                    {!r.isNetwork && r.state === "hold" ? <span className="text-white/40"> · venda direta</span> : null}
                   </span>
+                  <span className="text-white/40">
+                    {r.state === "network_blocked"
+                      ? "prazo vencido"
+                      : r.availableAt ? `libera ${new Date(r.availableAt).toLocaleDateString("pt-BR")}` : "—"}
+                  </span>
+
                   <span className="font-bold text-white">{fmt(r.amount)}</span>
                 </label>
               ))}
