@@ -2635,23 +2635,152 @@ export const relatorioTurmasEEventos = createServerFn({ method: "POST" })
  * telefone e nascimento — o suficiente para achar a pessoa depois e para
  * cadastrar o rosto no leitor. Não cria usuário, não manda e-mail.
  */
+/**
+ * A régua de nome, telefone e nascimento do cadastro da academia.
+ *
+ * Existe separada porque dois caminhos escrevem esses campos — criar no balcão e
+ * editar a ficha. Duas cópias viram duas réguas diferentes na primeira vez que
+ * alguém mexer em uma só.
+ */
+/** A ficha de cadastro de uma pessoa da academia: o que existe e de onde veio. */
+export type CadastroPessoa = {
+  id: string;
+  nome: string | null;
+  telefone: string | null;
+  nascimento: string | null;
+  cpf: string | null;
+  referencia: string;
+  tipo: string;
+  ativo: boolean;
+  created_at: string;
+  /** `nextfit`, `sistema-antigo`… `null` = cadastrada no balcão. */
+  importado_de: string | null;
+  /** Tem conta na FitMind, ou só existe para a academia. */
+  tem_conta: boolean;
+  /** Preenchido quando tem conta: e por ele que a ficha completa abre. */
+  student_id: string | null;
+  tem_qr: boolean;
+  rosto_em: string | null;
+};
+
+/**
+ * Abre a ficha de cadastro para ver e editar.
+ *
+ * A academia importada quase não tem dado nenhum além do nome: a importação não
+ * trouxe nascimento nem CPF, e é por esta tela que eles entram. O aniversário
+ * automático depende disso.
+ */
+export const obterCadastroPessoa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string; credencialId: string }) => d)
+  .handler(async ({ data, context }): Promise<CadastroPessoa> => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { data: cr, error } = await admin
+      .from("academia_credenciais")
+      .select("id, nome_no_equipamento, telefone, nascimento, cpf, referencia, tipo, ativo, created_at, importado_de, student_id, qr_token, rosto_em")
+      .eq("id", data.credencialId)
+      .eq("partner_id", data.partnerId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!cr) throw new Error("Pessoa não encontrada nesta academia.");
+
+    const c = cr as {
+      id: string; nome_no_equipamento: string | null; telefone: string | null;
+      nascimento: string | null; cpf: string | null; referencia: string; tipo: string;
+      ativo: boolean; created_at: string; importado_de: string | null;
+      student_id: string | null; qr_token: string | null; rosto_em: string | null;
+    };
+
+    return {
+      id: c.id, nome: c.nome_no_equipamento, telefone: c.telefone,
+      nascimento: c.nascimento, cpf: c.cpf, referencia: c.referencia, tipo: c.tipo,
+      ativo: c.ativo, created_at: c.created_at, importado_de: c.importado_de,
+      tem_conta: c.student_id !== null, student_id: c.student_id,
+      tem_qr: c.qr_token !== null, rosto_em: c.rosto_em,
+    };
+  });
+
+/**
+ * Salva a ficha editada.
+ *
+ * Não toca no perfil da FitMind de quem tem conta: `nome_no_equipamento` é como
+ * a academia chama a pessoa, e o perfil é dela. Renomear aqui a conta dela seria
+ * a academia escrevendo no cadastro de outra pessoa.
+ */
+export const salvarCadastroPessoa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    partnerId: string; credencialId: string;
+    nome: string; telefone: string; nascimento: string; cpf?: string;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { admin } = await autorizar(context.userId, data.partnerId);
+    const { nome, telefone, nascimento } = normalizarCadastroPessoa(data);
+
+    const cpf = (data.cpf || "").replace(/\D/g, "");
+    if (cpf.length > 0 && cpf.length !== 11) throw new Error("CPF deve ter 11 dígitos, ou ficar em branco.");
+
+    // Mesmo telefone na mesma academia é a mesma pessoa. Na edição isso vira
+    // conflito com OUTRA ficha, e deixar passar criaria as duas fichas que o
+    // cadastro de balcão evita na criação.
+    const { data: conflito } = await admin
+      .from("academia_credenciais")
+      .select("id, nome_no_equipamento")
+      .eq("partner_id", data.partnerId)
+      .eq("telefone", telefone)
+      .eq("ativo", true)
+      .neq("id", data.credencialId)
+      // `limit(1)` antes do `maybeSingle`: ha telefone dividido por mais de uma
+      // pessoa nos dados antigos (3 numeros em 6 pessoas na Estacao), e sem o
+      // limite o `maybeSingle` estouraria em erro tecnico em vez de dizer de
+      // quem e o numero.
+      .limit(1)
+      .maybeSingle();
+
+    if (conflito) {
+      const c = conflito as { nome_no_equipamento: string | null };
+      throw new Error(`Este telefone já é de ${c.nome_no_equipamento ?? "outra pessoa"} nesta academia.`);
+    }
+
+    const { error } = await admin
+      .from("academia_credenciais")
+      .update({
+        nome_no_equipamento: nome,
+        telefone,
+        nascimento,
+        cpf: cpf.length === 11 ? cpf : null,
+      })
+      .eq("id", data.credencialId)
+      .eq("partner_id", data.partnerId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+function normalizarCadastroPessoa(d: { nome: string; telefone: string; nascimento: string }) {
+  const nome = (d.nome || "").trim().replace(/\s+/g, " ");
+  if (nome.length < 3) throw new Error("Informe o nome completo.");
+
+  const telefone = (d.telefone || "").replace(/\D/g, "");
+  if (telefone.length < 10 || telefone.length > 11) throw new Error("Telefone inválido (DDD + número).");
+
+  const nascimento = (d.nascimento || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) throw new Error("Informe a data de nascimento.");
+  const nasc = new Date(`${nascimento}T12:00:00`);
+  const anos = (Date.now() - nasc.getTime()) / (365.25 * 24 * 3600 * 1000);
+  if (!Number.isFinite(anos) || anos < 3 || anos > 110) throw new Error("Data de nascimento inválida.");
+
+  return { nome, telefone, nascimento };
+}
+
 export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string; nome: string; telefone: string; nascimento: string }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
 
-    const nome = (data.nome || "").trim().replace(/\s+/g, " ");
-    if (nome.length < 3) throw new Error("Informe o nome completo.");
-
-    const telefone = (data.telefone || "").replace(/\D/g, "");
-    if (telefone.length < 10 || telefone.length > 11) throw new Error("Telefone inválido (DDD + número).");
-
-    const nascimento = (data.nascimento || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) throw new Error("Informe a data de nascimento.");
-    const nasc = new Date(`${nascimento}T12:00:00`);
-    const anos = (Date.now() - nasc.getTime()) / (365.25 * 24 * 3600 * 1000);
-    if (!Number.isFinite(anos) || anos < 3 || anos > 110) throw new Error("Data de nascimento inválida.");
+    const { nome, telefone, nascimento } = normalizarCadastroPessoa(data);
 
     // Mesmo telefone na mesma academia é a mesma pessoa. Duplicar aqui
     // significa duas fichas e duas mensalidades para quem paga uma.

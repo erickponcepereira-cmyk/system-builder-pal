@@ -50,6 +50,9 @@ import {
   obterConfigAcademia,
   obterCredenciaisSemVinculo,
   obterEventosAcademia,
+  obterCadastroPessoa,
+  salvarCadastroPessoa,
+  type CadastroPessoa,
   obterCrmAcademia,
   obterFilaDeFotos,
   obterFrequenciaAcademia,
@@ -99,6 +102,7 @@ import {
   Bloco, Campo, Cartao, Etiqueta, EYEBROW, FOCO, LinhaDado, NOTA, Pilula, ROTULO,
   Selo, escolha, type Tom,
 } from "@/components/partner/VisualAcademia";
+import { ModalShell } from "@/components/ui/ModalShell";
 
 
 type SubAba = "relatorio" | "caixa" | "recepcao" | "alunos" | "mensalidade" | "produtos" | "frequencia" | "avisos" | "crm" | "robo" | "funis" | "dayuse" | "eventos" | "agente" | "instalacao" | "config";
@@ -2958,6 +2962,210 @@ function AvisosVencimento({ partnerId }: { partnerId: string }) {
   );
 }
 
+/** Como cada origem se chama na tela. Nulo é cadastro feito no balcão. */
+const ORIGEM_DO_CADASTRO: Record<string, string> = {
+  nextfit: "Importada do Next Fit",
+  "sistema-antigo": "Importada do sistema antigo",
+};
+
+/**
+ * A ficha de cadastro: ver e corrigir o que a academia sabe da pessoa.
+ *
+ * Existe porque a maioria das pessoas destas academias veio de importação e não
+ * tem conta na FitMind — para elas o modal do coach abre vazio, e o dado que a
+ * recepção precisa consertar (telefone errado, nascimento que a importação não
+ * trouxe) não aparecia em tela nenhuma. O aniversário automático depende
+ * justamente desse nascimento entrar por aqui.
+ */
+function FichaCadastro({ partnerId, credencialId, aoFechar, aoSalvar, aoVerFichaCompleta }: {
+  partnerId: string;
+  credencialId: string;
+  aoFechar: () => void;
+  aoSalvar: () => void;
+  aoVerFichaCompleta: (studentId: string) => void;
+}) {
+  const obter = useServerFn(obterCadastroPessoa);
+  const salvar = useServerFn(salvarCadastroPessoa);
+  const [pessoa, setPessoa] = useState<CadastroPessoa | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [editando, setEditando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [form, setForm] = useState({ nome: "", telefone: "", nascimento: "", cpf: "" });
+
+  useEffect(() => {
+    setCarregando(true);
+    obter({ data: { partnerId, credencialId } })
+      .then((r) => {
+        const p = r as CadastroPessoa;
+        setPessoa(p);
+        setForm({
+          nome: p.nome ?? "",
+          telefone: p.telefone ?? "",
+          nascimento: p.nascimento ?? "",
+          cpf: p.cpf ?? "",
+        });
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao abrir a ficha"))
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerId, credencialId]);
+
+  const confirmarESalvar = async () => {
+    // Alteração de cadastro pede confirmação: telefone é por onde o aviso sai, e
+    // trocar sem querer manda a cobrança da pessoa para o número de outra.
+    const certeza = window.confirm(
+      `Alterar os dados de ${pessoa?.nome ?? "esta pessoa"}?\n\nO cadastro atual será substituído pelo que está no formulário.`,
+    );
+    if (!certeza) return;
+
+    setSalvando(true);
+    try {
+      await salvar({ data: { partnerId, credencialId, ...form } });
+      toast.success("Cadastro alterado.");
+      setEditando(false);
+      aoSalvar();
+      const r = await obter({ data: { partnerId, credencialId } });
+      setPessoa(r as CadastroPessoa);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para salvar");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const dataBR = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+
+  return (
+    <ModalShell
+      zIndex={60}
+      header={
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className={EYEBROW}>Cadastro na academia</p>
+            <p className="truncate text-base font-bold text-aca-ink">
+              {pessoa?.nome ?? (carregando ? "Abrindo…" : "Pessoa")}
+            </p>
+          </div>
+          <button type="button" onClick={aoFechar} className={BOTAO_ICONE} aria-label="Fechar">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      }
+      footer={
+        editando ? (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setEditando(false)} className={`flex-1 ${BOTAO_NEUTRO}`}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => void confirmarESalvar()}
+              className={`flex-1 ${BOTAO_ACAO}`}
+            >
+              {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Salvar
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button type="button" onClick={aoFechar} className={`flex-1 ${BOTAO_NEUTRO}`}>
+              Fechar
+            </button>
+            <button
+              type="button"
+              disabled={carregando}
+              onClick={() => setEditando(true)}
+              className={`flex-1 ${BOTAO_ACAO}`}
+            >
+              <Pencil className="h-4 w-4" /> Editar
+            </button>
+          </div>
+        )
+      }
+    >
+      {carregando || !pessoa ? (
+        <Loader2 className="mx-auto my-6 h-6 w-6 animate-spin text-aca-acao" />
+      ) : editando ? (
+        <div className="space-y-3">
+          <Campo label="Nome completo">
+            <input
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              className={`${CAMPO} w-full`}
+            />
+          </Campo>
+          <Campo label="Telefone (DDD + número)">
+            <input
+              value={form.telefone}
+              onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+              placeholder="(65) 99999-0000"
+              className={`${CAMPO} w-full`}
+            />
+          </Campo>
+          <Campo label="Data de nascimento">
+            <input
+              type="date"
+              value={form.nascimento}
+              onChange={(e) => setForm({ ...form, nascimento: e.target.value })}
+              className={`${CAMPO} w-full`}
+            />
+          </Campo>
+          <Campo label="CPF (opcional)">
+            <input
+              value={form.cpf}
+              onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+              placeholder="000.000.000-00"
+              className={`${CAMPO} w-full`}
+            />
+          </Campo>
+          <p className={NOTA}>
+            O nascimento é o que faz a mensagem de aniversário sair. A importação não
+            trouxe esse dado, então ele entra por aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <Bloco className="space-y-1.5">
+            <LinhaDado esquerda="Telefone" direita={pessoa.telefone ?? "não informado"} />
+            <LinhaDado esquerda="Nascimento" direita={dataBR(pessoa.nascimento)} />
+            <LinhaDado esquerda="CPF" direita={pessoa.cpf ?? "não informado"} />
+            <LinhaDado esquerda="Identificador no leitor" direita={pessoa.referencia} />
+          </Bloco>
+
+          <Bloco className="space-y-1.5">
+            <p className={EYEBROW}>De onde veio</p>
+            <LinhaDado esquerda="Cadastrada em" direita={dataBR(pessoa.created_at)} />
+            <LinhaDado
+              esquerda="Origem"
+              direita={pessoa.importado_de
+                ? (ORIGEM_DO_CADASTRO[pessoa.importado_de] ?? `Importada (${pessoa.importado_de})`)
+                : "Cadastro no balcão"}
+            />
+            <LinhaDado
+              esquerda="Conta na FitMind"
+              direita={pessoa.tem_conta ? (pessoa.tem_qr ? "sim, com QR" : "sim") : "não tem"}
+            />
+          </Bloco>
+
+          {/* Ficha completa só existe para quem é aluno da plataforma: sem conta
+              não há treino, avaliação nem histórico de compra para mostrar. */}
+          {pessoa.tem_conta && pessoa.student_id && (
+            <button
+              type="button"
+              onClick={() => aoVerFichaCompleta(pessoa.student_id as string)}
+              className={`w-full ${BOTAO_NEUTRO}`}
+            >
+              <FileText className="h-4 w-4" /> Ver ficha completa do aluno
+            </button>
+          )}
+        </div>
+      )}
+    </ModalShell>
+  );
+}
+
 function ListaAlunos({ partnerId }: { partnerId: string }) {
   const listar = useServerFn(listarAlunosAcademia);
   const cancelar = useServerFn(cancelarMensalidadeAcademia);
@@ -2989,6 +3197,9 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
   // Ficha completa do aluno: reaproveita o mesmo modal do painel do coach, com
   // resumo, frequência, avaliações, anamnese, evolução, compras e treinos.
   const [fichaId, setFichaId] = useState<string | null>(null);
+  // Ficha de cadastro (nome, telefone, nascimento, origem). Vale para quem tem
+  // conta na FitMind e para quem só existe na credencial do leitor.
+  const [cadastroDe, setCadastroDe] = useState<string | null>(null);
   const [treinoDe, setTreinoDe] = useState<{ id: string; nome: string } | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<string>("todos");
@@ -3191,7 +3402,21 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
                     {/* Ficha completa só existe para quem é aluno da plataforma.
                         Aluno só da academia mora na credencial do leitor e não
                         tem ficha — o botão sumir é melhor do que abrir vazio. */}
-                    {l.student_id ? (
+                    {/* Agora o nome abre para TODO MUNDO, e o que abre e a ficha
+                        de cadastro — que existe com ou sem conta na FitMind. A
+                        ficha completa do coach continua alcancavel de dentro
+                        dela, para quem tem conta. Antes, aluno so da academia
+                        nao tinha onde clicar, e era a maioria. */}
+                    {l.credencial_id ? (
+                      <button
+                        type="button"
+                        onClick={() => setCadastroDe(l.credencial_id)}
+                        className="flex items-center gap-1.5 text-left font-semibold text-aca-ink hover:text-aca-acao"
+                      >
+                        <span className="truncate">{l.nome}</span>
+                        <Pencil className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </button>
+                    ) : l.student_id ? (
                       <button
                         type="button"
                         onClick={() => setFichaId(l.student_id)}
@@ -3433,6 +3658,16 @@ function ListaAlunos({ partnerId }: { partnerId: string }) {
             );
           })}
         </div>
+      )}
+
+      {cadastroDe && (
+        <FichaCadastro
+          partnerId={partnerId}
+          credencialId={cadastroDe}
+          aoFechar={() => setCadastroDe(null)}
+          aoSalvar={recarregar}
+          aoVerFichaCompleta={(studentId) => { setCadastroDe(null); setFichaId(studentId); }}
+        />
       )}
 
       {fichaId && <StudentDetailsModal studentId={fichaId} onClose={() => setFichaId(null)} />}

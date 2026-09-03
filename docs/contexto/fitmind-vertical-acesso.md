@@ -504,3 +504,51 @@ de importação, e a importação não trouxe nascimento. `profiles.birthdate` e
 vazio para essa gente. Telefone, ao contrário, tem em 416 e 83. Ou seja: o canal
 funciona e a mensagem sai sozinha, mas hoje ela alcança **8 pessoas**. A cobertura
 cresce conforme a recepção editar os cadastros.
+
+### 03/09 — a ficha de cadastro, e de onde cada pessoa veio
+
+A aba de alunos só abria modal para quem tem conta na FitMind, e **essa é a
+minoria**: a maioria destas academias veio de importação e só existe na
+credencial do leitor. Para elas o nome era texto morto, e o dado que a recepção
+precisa consertar — telefone errado, nascimento que a importação não trouxe — não
+aparecia em tela nenhuma.
+
+Agora o nome abre para todos, e o que abre é a **ficha de cadastro**: nome,
+telefone, nascimento, CPF, identificador no leitor, data do cadastro e origem.
+Editar é um botão; salvar pede confirmação, porque telefone é por onde o aviso
+sai e trocar sem querer manda a cobrança de uma pessoa para o número de outra. A
+ficha completa do coach continua alcançável de dentro dela, para quem tem conta.
+
+**A origem não existia como dado.** `academia_credenciais.importado_em` **não
+serve** — ela quer dizer "já foi vista no equipamento", e academia sem catraca
+tem isso nulo para sempre. A única marca morava em
+`academia_mensalidades.importado_de`, que é da mensalidade e não da pessoa: quem
+foi importado sem contrato não tem mensalidade nenhuma (29 das 113 no Reino).
+
+Entrou `importado_de` na credencial, no mesmo vocabulário da mensalidade. O
+backfill de quem não tem mensalidade **é inferência, e vale saber disso**:
+importação acontece em lote, e o lote aparece no `created_at` com clareza
+incomum — a Estação inteira nasceu em 15/08 00:35 (404 no mesmo minuto) e o Reino
+em três lotes de 01/09 (59 + 6 + 48 = 113). Cadastro de balcão é um por vez, em
+minutos espalhados. Resultado: **Reino 113 de 113 `sistema-antigo`; Estação 408
+`nextfit` e 9 de balcão** — números que batem com o que a memória já registrava
+das duas migrações.
+
+Duas coisas que os dados mostraram no caminho:
+
+- **As 9 pessoas nativas da Estação têm nascimento; as importadas não.** O
+  formulário de balcão sempre pediu a data. Ou seja, o buraco do aniversário é
+  100% da importação, e fecha conforme a recepção editar as fichas.
+- **3 telefones são divididos por 6 pessoas na Estação.** Isso já existia, e a
+  trava de duplicidade da edição só impede *novos* conflitos. Custou um defeito:
+  o `maybeSingle()` da checagem estoura quando acha mais de uma linha, então
+  entrou `limit(1)` antes dele — senão a recepção levaria erro técnico em vez de
+  "este telefone já é de fulano".
+
+Editar a ficha **não toca no perfil da FitMind** de quem tem conta:
+`nome_no_equipamento` é como a academia chama a pessoa, e o perfil é dela.
+
+Nota de manutenção: `src/integrations/supabase/types.ts` é gerado, e foi editado à
+mão para conhecer a coluna nova (Row, Insert e Update). Quando a Lovable
+regenerar, a coluna volta sozinha — se sumir antes disso, é regeneração feita
+antes desta migration rodar.

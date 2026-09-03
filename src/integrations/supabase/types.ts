@@ -460,6 +460,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           id: string
+          importado_de: string | null
           importado_em: string | null
           nascimento: string | null
           nome_no_equipamento: string | null
@@ -476,6 +477,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          importado_de?: string | null
           importado_em?: string | null
           nascimento?: string | null
           nome_no_equipamento?: string | null
@@ -492,6 +494,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          importado_de?: string | null
           importado_em?: string | null
           nascimento?: string | null
           nome_no_equipamento?: string | null
