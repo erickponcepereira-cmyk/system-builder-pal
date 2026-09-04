@@ -1030,8 +1030,12 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
                       onChange={(e) => setSelOrders((s) => ({ ...s, [o.id]: e.target.checked }))}
                     />
                     <span className="flex-1 text-white/80">
-                      {o.orderNumber || "Pedido"} · {o.origin === "partner" ? "parceiro" : "profissional"}
+                      {o.orderNumber || "Pedido"}
+                      {o.origin === "coproducer"
+                        ? <span className="text-primary"> · co-produção (sua parte)</span>
+                        : o.shared ? <span className="text-white/40"> · dono (sua parte)</span> : null}
                     </span>
+
                     <span className="text-white/40">
                       {o.releasesAt ? `libera ${new Date(o.releasesAt).toLocaleDateString("pt-BR")}` : "—"}
                     </span>
