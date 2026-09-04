@@ -1463,56 +1463,38 @@ export interface BlockedCreatorOrderRow {
   amount: number;
   paidAt: string | null;
   releasesAt: string | null;
-  origin: "partner" | "professional";
+  origin: "owner" | "coproducer";
+  shared: boolean;
 }
 
-/** Pedidos de produto pagos cujo valor do criador ainda está em carência de 7 dias. */
+/**
+ * Vendas de produto em carência com o valor que é desta pessoa —
+ * inclui quem participa apenas como co-produtor.
+ */
 export const listBlockedCreatorOrders = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((data: { profileId: string }) => data)
   .handler(async ({ context, data }): Promise<BlockedCreatorOrderRow[]> => {
     await assertAdmin(context.userId);
-    const { data: partner } = await supabaseAdmin
-      .from("partners").select("id").eq("profile_id", data.profileId).maybeSingle();
-    const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id").eq("profile_id", data.profileId).maybeSingle();
-    const partnerId = (partner as { id?: string } | null)?.id;
-    const coachId = (coach as { id?: string } | null)?.id;
-    if (!partnerId && !coachId) return [];
-
-    const out: BlockedCreatorOrderRow[] = [];
-    const now = Date.now();
-    const load = async (col: "partner_id" | "professional_coach_id", value: string, origin: BlockedCreatorOrderRow["origin"]) => {
-      const { data: rows, error } = await supabaseAdmin
-        .from("partner_product_orders")
-        .select("id, order_number, partner_net_amount, paid_at, created_at, released_early")
-        .eq(col, value)
-        .eq("status", "paid")
-        .order("created_at", { ascending: false });
-      if (error) throw new Error(error.message);
-      for (const r of (rows as unknown as Array<{
-        id: string; order_number: string | null; partner_net_amount: number | null;
-        paid_at: string | null; created_at: string | null; released_early: boolean | null;
-      }>) || []) {
-        if (r.released_early) continue;
-        const base = new Date(r.paid_at || r.created_at || Date.now()).getTime();
-        const releases = base + 7 * 24 * 60 * 60 * 1000;
-        if (releases <= now) continue;
-        if (!n(r.partner_net_amount)) continue;
-        out.push({
-          id: r.id,
-          orderNumber: r.order_number,
-          amount: n(r.partner_net_amount),
-          paidAt: r.paid_at,
-          releasesAt: new Date(releases).toISOString(),
-          origin,
-        });
-      }
-    };
-    if (partnerId) await load("partner_id", partnerId, "partner");
-    if (coachId) await load("professional_coach_id", coachId, "professional");
-    return out;
+    const { data: rows, error } = await supabaseAdmin.rpc("admin_blocked_creator_orders" as never, {
+      _profile_id: data.profileId,
+      _admin_user_id: context.userId,
+    } as never);
+    if (error) throw new Error(error.message);
+    return ((rows as unknown as Array<{
+      order_id: string; order_number: string | null; amount: number | null;
+      own_role: string; paid_at: string | null; releases_at: string | null; shared: boolean | null;
+    }>) || []).map((r) => ({
+      id: r.order_id,
+      orderNumber: r.order_number,
+      amount: n(r.amount),
+      paidAt: r.paid_at,
+      releasesAt: r.releases_at,
+      origin: r.own_role === "owner" ? "owner" : "coproducer",
+      shared: !!r.shared,
+    }));
   });
+
 
 /** Libera antecipadamente o valor de criador dos pedidos escolhidos. */
 export const advanceCreatorRelease = createServerFn({ method: "POST" })
