@@ -16825,6 +16825,18 @@ export type Database = {
           state: string
         }[]
       }
+      admin_blocked_creator_orders: {
+        Args: { _admin_user_id: string; _profile_id: string }
+        Returns: {
+          amount: number
+          order_id: string
+          order_number: string
+          own_role: string
+          paid_at: string
+          releases_at: string
+          shared: boolean
+        }[]
+      }
       admin_change_student_coach: {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
