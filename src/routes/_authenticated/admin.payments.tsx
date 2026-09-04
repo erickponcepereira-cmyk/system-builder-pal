@@ -401,7 +401,16 @@ function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGr
                     </div>
                     <div className="text-xs text-white/40">{p.email}</div>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-primary">{fmt(p.available)}</td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {(p.overpaid || 0) > 0.009 ? (
+                      <span className="text-red-400" title="Saldo devedor — abate das próximas liberações">
+                        − {fmt(p.overpaid || 0)}
+                      </span>
+                    ) : (
+                      <span className="text-primary">{fmt(p.available)}</span>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(p.blocked)}</td>
                   <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(p.totalWithdrawn)}</td>
                   <td className="px-4 py-3 text-center">
