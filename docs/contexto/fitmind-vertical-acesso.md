@@ -595,7 +595,19 @@ O que **não** foi copiado, porque é da unidade:
 Conferido: os dois fluxos com 8 passos, ativos, começando em `saudacao`, e **zero
 becos sem saída** (passo que não é `encerrar`, sem próximo e sem opção).
 
-**Detalhe para a recepção resolver:** o plano no banco chama-se `Plano Trimistral`,
-com erro de digitação. No texto do robô escrevi "Trimestral", porque é o que o
-cliente lê — mas o nome no cadastro continua errado e vai aparecer assim em
-relatório e em tela. Corrigir em `academia_planos`, não no robô.
+**Corrigido em 08/09, e o conserto tinha três partes, não uma.** O plano chamava-se
+`Plano Trimistral`, com erro de digitação. O nome do plano mora em **dois lugares**:
+`academia_planos.nome` (o catálogo) e `academia_mensalidades.plano`, que é **texto
+copiado na venda**, não chave estrangeira. Renomear só o catálogo deixaria 8
+mensalidades ativas dizendo "Trimistral" — divergência em relatório e, pior,
+`academia_importar_contratos` casa por **nome**, então uma importação futura não
+acharia o plano.
+
+Então foram: o catálogo, as 8 mensalidades (é correção de digitação, não
+renomeação de plano vendido — a academia nunca vendeu um "Trimistral"), e o nome
+antigo entrou em `apelidos`, para quem digitar a grafia velha continuar casando em
+vez de criar plano duplicado. Conferido depois: zero ocorrências como nome em
+qualquer academia, uma só em `apelidos`, de propósito.
+
+**A regra que fica:** nome de plano não é chave. Antes de renomear qualquer plano,
+procure o texto em `academia_mensalidades.plano` também.
