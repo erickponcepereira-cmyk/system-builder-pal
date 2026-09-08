@@ -26,6 +26,19 @@ const STATUS_META: Record<Status, { label: string; color: string; icon: typeof C
 const money = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/**
+ * O percentual da rede **daquele pedido**, deduzido dos próprios valores.
+ *
+ * Aqui não serve a taxa vigente: esta tela mostra pedido já fechado, e um de
+ * agosto foi rateado a 3/2/1 enquanto hoje é 10/5/3. O rótulo vinha escrito à
+ * mão como "(3%)" e passou a mentir no dia em que a rede mudou.
+ */
+const pctDaRede = (fatia: number, comissaoDoCoach: number): string => {
+  if (!comissaoDoCoach) return "";
+  const pct = (fatia / comissaoDoCoach) * 100;
+  return ` (${pct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%)`;
+};
+
 const SPEC: Record<string, string> = {
   personal_trainer: "Personal", nutritionist: "Nutri", doctor: "Médico",
   cardiologist: "Cardio", esthetician: "Esteticista", lawyer: "Advogado", other: "Outro",
@@ -184,9 +197,9 @@ function AdminPartnerOrdersPage() {
               <Row label="Taxa do sistema" value={`- ${money(editing.systemFee)}`} muted />
               <Row label="Comissão coach (bruta)" value={`- ${money(editing.coachCommission)}`} muted />
               <div className="pl-3 text-white/40 space-y-1">
-                <Row label="↳ Rede L1 (3%)" value={money(editing.networkL1)} muted small />
-                <Row label="↳ Rede L2 (2%)" value={money(editing.networkL2)} muted small />
-                <Row label="↳ Rede L3 (1%)" value={money(editing.networkL3)} muted small />
+                <Row label={`↳ Rede L1${pctDaRede(editing.networkL1, editing.coachCommission)}`} value={money(editing.networkL1)} muted small />
+                <Row label={`↳ Rede L2${pctDaRede(editing.networkL2, editing.coachCommission)}`} value={money(editing.networkL2)} muted small />
+                <Row label={`↳ Rede L3${pctDaRede(editing.networkL3, editing.coachCommission)}`} value={money(editing.networkL3)} muted small />
                 <Row label="↳ Coach líquido" value={money(editing.coachNet)} muted small />
               </div>
               <div className="border-t border-white/10 pt-1.5 flex justify-between font-bold">

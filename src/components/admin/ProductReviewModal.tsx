@@ -388,7 +388,7 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
                 className="mt-2 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
               />
               <p className="mt-1 text-[10px] text-white/40">
-                Deixe em branco para usar os 5% padrão. No modo valor fixo, o sistema retém esse
+                Deixe em branco para usar a taxa de sistema vigente. No modo valor fixo, o sistema retém esse
                 valor em reais por venda (limitado ao que sobra após taxa de pagamento e imposto).
                 Ao salvar, o resumo do dono do produto é atualizado e a venda passa a usar esta taxa.
               </p>

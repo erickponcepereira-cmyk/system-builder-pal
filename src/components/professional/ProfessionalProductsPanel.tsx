@@ -17,6 +17,7 @@ import {
   computeFromCharge,
   computeFromReceive,
   COACH_COMMISSION_OPTIONS,
+  DEFAULT_PARTNER_FEES,
   type CoachCommissionPct,
   type PartnerPriceMode,
   type PartnerSplitOverride,
@@ -1084,11 +1085,11 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
         <div className="mt-1 flex rounded-lg bg-black/40 p-0.5">
           <button type="button" onClick={() => changeMethod("pix")}
             className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "pix" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
-            PIX 0,99%
+            PIX {fmtPct(DEFAULT_PARTNER_FEES.pixFeePct)}
           </button>
           <button type="button" onClick={() => changeMethod("card")}
             className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "card" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
-            Cartão 4,98%
+            Cartão {fmtPct(DEFAULT_PARTNER_FEES.cardFeePct)}
           </button>
         </div>
       </div>
@@ -1110,7 +1111,13 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
 
       <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
-        <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
+        <BreakdownLine
+          label={`− Taxa ${method === "pix"
+            ? `PIX (${fmtPct(DEFAULT_PARTNER_FEES.pixFeePct)})`
+            : `cartão (${fmtPct(DEFAULT_PARTNER_FEES.cardFeePct)})`}`}
+          value={-breakdown.paymentFee}
+          muted
+        />
         {breakdown.taxPct > 0 && (
           <BreakdownLine label={`− Reserva fiscal (${fmtPct(breakdown.taxPct)})`} value={-breakdown.tax} muted />
         )}
