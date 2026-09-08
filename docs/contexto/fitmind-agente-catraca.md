@@ -158,3 +158,54 @@ Se um dia precisar do build inteiro, aumentar o heap:
 Continua valendo o resto da regra: restaurar o `vite.config.ts` depois, **nunca**
 commitá-lo alterado, e **não** rodar `git checkout` no `routeTree.gen.ts` depois
 do build, senão reverte o que acabou de ser gerado.
+
+## 08/09/2026 — publicar pacote é da plataforma, não da academia
+
+O upload do pacote base estava dentro do painel de **uma** academia (aba
+Instalação). O armazenamento sempre foi platform-wide —
+`instalacao/<programa>/base.zip`, sem `partner_id` no caminho — mas a tela mentia
+sobre isso: parecia que cada unidade sobe o seu. E em **Admin → Academias**, que é
+onde moram os modelos de academia, não havia opção nenhuma.
+
+Corrigido: `src/lib/admin-instalacao.functions.ts` +
+`src/components/admin/PacotesDeInstalacao.tsx`, renderizado no topo de
+`admin.academias.tsx`. **A academia continua baixando pelo painel dela** — baixar é
+operação da unidade, publicar é da plataforma. O `gerarEnvioDoPacoteBase` saiu de
+`academia-teste.functions.ts` (escopo de academia) e o `souSuporte` sumiu do
+retorno de `obterPacotesInstalacao`, que não precisava mais dele.
+
+### Estado real do robô e dos disparos, medido em 08/09
+
+**Estação Funcional** — saudável e rodando sozinha:
+
+| | |
+|---|---|
+| Conexão | conectada, vista 13:38, 16 enviadas hoje (limite 50) |
+| Avisos hoje | gerados 08:00, entregues 09:02 — 9 `d3`, 6 `d0`, 1 `retorno_7` |
+| Marcos ativos | `d3`, `d0`, `retorno_7`, `aniversario` (desligados: `d2`, `d1`, `ultimo_dia`, `retorno_30`, `retorno_90`) |
+| Fluxo do robô | "Atendimento da recepção", 8 passos, ativo |
+| Régua de acesso | 108 em dia, 29 a vencer, 3 em carência, 273 bloqueados |
+
+**Reino Muay Thai** — automação armada, faltando o chip:
+
+| | |
+|---|---|
+| Conexão | **desconectada, sem número** |
+| Campanhas | 3 geradas, **as 3 canceladas** — comportamento correto sem conexão |
+| Avisos entregues | zero |
+| Fluxo do robô | **nenhum** — a Estação tem um fluxo de atendimento, o Reino não tem |
+
+Ou seja: no Reino falta o número **e** o fluxo de atendimento. O funil, os avisos e
+os marcos já estão configurados e disparando em vazio, o que é o esperado.
+
+**Aniversário:** ninguém faz hoje nas duas, e a cobertura de data de nascimento é
+9 de 418 na Estação e 0 de 83 no Reino. Armado e sem alcance até os cadastros serem
+editados.
+
+### Armadilha de diagnóstico: `max(to_char(...))` ordena texto
+
+Eu relatei "oito dias sem disparo" na Estação a partir de
+`max(to_char(gerado_em,'DD/MM HH24:MI'))`. Isso compara **string**, e `'31/08'` é
+maior que `'08/09'` alfabeticamente — o máximo devolvido era o dia mais velho.
+Estava tudo funcionando. Agregue o **timestamp** e formate depois:
+`to_char(max(gerado_em), ...)`.

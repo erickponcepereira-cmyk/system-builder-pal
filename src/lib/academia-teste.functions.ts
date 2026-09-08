@@ -1910,12 +1910,11 @@ export const obterPacotesInstalacao = createServerFn({ method: "POST" })
     const { obterUltimaVersao, estadoDoPacoteBase } = await import("./instalacao.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [agente, conector, baseAgente, baseConector, perfil] = await Promise.all([
+    const [agente, conector, baseAgente, baseConector] = await Promise.all([
       obterUltimaVersao("agente"),
       obterUltimaVersao("conector"),
       estadoDoPacoteBase("agente"),
       estadoDoPacoteBase("conector"),
-      supabaseAdmin.from("profiles").select("is_master_admin").eq("user_id", context.userId).maybeSingle(),
     ]);
 
     const resumir = (v: Awaited<ReturnType<typeof obterUltimaVersao>>) =>
@@ -1924,43 +1923,10 @@ export const obterPacotesInstalacao = createServerFn({ method: "POST" })
     return {
       agente: resumir(agente),
       conector: resumir(conector),
+      // Publicar o pacote base é do admin da plataforma, não da unidade:
+      // existe um por programa, servindo todas as academias.
       base: { agente: baseAgente, conector: baseConector },
-      // Quem envia o pacote base é o suporte, não a academia: são os binários
-      // que ficam fora da auto-atualização de propósito.
-      souSuporte: Boolean((perfil.data as { is_master_admin?: boolean } | null)?.is_master_admin),
     };
-  });
-
-/**
- * Prepara o envio do pacote base, que só o suporte da FitMind faz.
- *
- * O arquivo sobe direto do navegador para o storage por URL assinada — ele tem
- * dezenas de MB e não tem por que atravessar o servidor da aplicação. `upsert`
- * ligado porque publicar de novo é substituir: só existe um base por programa,
- * e é o ponto de partida, não uma versão histórica.
- */
-export const gerarEnvioDoPacoteBase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: { programa: "agente" | "conector" }) => d)
-  .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: perfil } = await supabaseAdmin
-      .from("profiles").select("is_master_admin").eq("user_id", context.userId).maybeSingle();
-
-    if (!(perfil as { is_master_admin?: boolean } | null)?.is_master_admin) {
-      throw new Error("Só o suporte da FitMind envia o pacote base.");
-    }
-
-    const { caminhoDoPacoteBase } = await import("./instalacao.server");
-    const caminho = caminhoDoPacoteBase(data.programa);
-    const { data: envio, error } = await supabaseAdmin.storage
-      .from("instalacao")
-      .createSignedUploadUrl(caminho, { upsert: true });
-
-    if (error || !envio) throw new Error(error?.message ?? "Não deu para preparar o envio.");
-    // O caminho volta daqui para o navegador não ter uma segunda cópia da regra
-    // de onde o pacote base mora.
-    return { url: envio.signedUrl, token: envio.token, caminho };
   });
 
 /** Credenciais lidas do leitor que ainda não têm aluno, com sugestões por nome. */

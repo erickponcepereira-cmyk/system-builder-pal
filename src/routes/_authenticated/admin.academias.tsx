@@ -26,6 +26,7 @@ import {
   type AcademiaConfigurada,
   type ParceiroBusca,
 } from "@/lib/admin-academia-modelo.functions";
+import { PacotesDeInstalacao } from "@/components/admin/PacotesDeInstalacao";
 
 export const Route = createFileRoute("/_authenticated/admin/academias")({
   head: () => ({
@@ -306,6 +307,8 @@ function AdminAcademias() {
           em um parceiro — catraca, planos, avisos e turmas de uma vez.
         </p>
       </div>
+
+      <PacotesDeInstalacao />
 
       <section className="rounded-xl border border-border bg-card p-5">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">

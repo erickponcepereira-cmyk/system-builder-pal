@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Download, Loader2, Fingerprint, MessageCircle, AlertTriangle, Upload } from "lucide-react";
+import { Download, Loader2, Fingerprint, MessageCircle, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { obterPacotesInstalacao, gerarEnvioDoPacoteBase } from "@/lib/academia-teste.functions";
+import { obterPacotesInstalacao } from "@/lib/academia-teste.functions";
 
 /**
  * Manual de instalação da academia nova, escrito para a recepção.
@@ -101,7 +101,6 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
   const [agente, setAgente] = useState<Pacote>(null);
   const [conector, setConector] = useState<Pacote>(null);
   const [base, setBase] = useState<{ agente: EstadoBase; conector: EstadoBase } | null>(null);
-  const [souSuporte, setSouSuporte] = useState(false);
 
   const carregar = () => {
     setCarregando(true);
@@ -110,7 +109,6 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
         setAgente(r.agente);
         setConector(r.conector);
         setBase(r.base);
-        setSouSuporte(r.souSuporte);
       })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setCarregando(false));
@@ -174,8 +172,6 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
             programa="agente"
             partnerId={partnerId}
             base={base?.agente}
-            souSuporte={souSuporte}
-            aoEnviar={carregar}
           />
           <PacoteParaBaixar
             titulo="Conector de WhatsApp"
@@ -184,8 +180,6 @@ export function InstalacaoAcademia({ partnerId }: { partnerId: string }) {
             programa="conector"
             partnerId={partnerId}
             base={base?.conector}
-            souSuporte={souSuporte}
-            aoEnviar={carregar}
           />
         </>
       )}
@@ -382,37 +376,15 @@ function QuandoNaoSobe() {
   );
 }
 
-function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId, base, souSuporte, aoEnviar }: {
+function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId, base }: {
   titulo: string;
   destino: string;
   pacote: Pacote;
   programa: Programa;
   partnerId: string;
   base?: EstadoBase;
-  souSuporte: boolean;
-  aoEnviar: () => void;
 }) {
   const [baixando, setBaixando] = useState<string | null>(null);
-  const prepararEnvio = useServerFn(gerarEnvioDoPacoteBase);
-  const [enviando, setEnviando] = useState(false);
-
-  const enviarBase = async (arquivo: File) => {
-    setEnviando(true);
-    try {
-      const { token, caminho } = await prepararEnvio({ data: { programa } });
-      const { error } = await supabase.storage
-        .from("instalacao")
-        .uploadToSignedUrl(caminho, token, arquivo);
-      if (error) throw new Error(error.message);
-      toast.success("Pacote base enviado. A academia já pode baixar o sistema completo.");
-      aoEnviar();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não deu para enviar");
-    } finally {
-      setEnviando(false);
-    }
-  };
-
   if (!pacote) {
     return (
       <div className={cartao}>
@@ -481,27 +453,9 @@ function PacoteParaBaixar({ titulo, destino, pacote, programa, partnerId, base, 
         )
         : (
           <p className="mt-1.5 text-[11px] text-aca-atencao">
-            O pacote completo deste programa ainda não foi enviado — por enquanto só sai o código.
+            O pacote completo deste programa ainda não foi publicado pela FitMind — por enquanto só sai o código.
           </p>
         )}
-
-      {souSuporte && (
-        <label className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-aca-line px-3 py-2 text-[10px] font-semibold text-aca-muted hover:bg-aca-alto">
-          {enviando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-          {base?.existe ? "Substituir o pacote base (suporte)" : "Enviar o pacote base (suporte)"}
-          <input
-            type="file"
-            accept=".zip,application/zip"
-            className="hidden"
-            disabled={enviando}
-            onChange={(e) => {
-              const arquivo = e.target.files?.[0];
-              e.target.value = "";
-              if (arquivo) void enviarBase(arquivo);
-            }}
-          />
-        </label>
-      )}
 
       <div className="mt-2 space-y-1">
         {pacote.arquivos.map((nome) => (
