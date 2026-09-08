@@ -569,3 +569,33 @@ quem deve receber fica intacta esperando o número.
 Estado das conexões em 03/09: Estação `conectado`, número `65993251805`, limite 50
 por dia. Reino com conexão criada ("WhatsApp 1"), `desconectado` e sem número — é
 o que o Erick vai configurar na academia.
+
+### 08/09 — o Reino ganhou fluxo de atendimento
+
+O Reino não tinha fluxo nenhum: mesmo com o chip conectado, quem escrevesse para a
+academia não receberia resposta. Criado espelhando o da Estação, mesma estrutura de
+8 passos e mesmo gatilho `primeira_mensagem`:
+
+`saudacao` (2 opções) → `horarios` (7 opções) → `marcar` (ação `criar_cartao_crm`)
+→ `marcado` → `fecho` → `aviso_horario` (ação `fora_do_horario`) → `fim`.
+O caminho dos planos entra em `planos` e cai no mesmo `fecho`.
+
+O que **não** foi copiado, porque é da unidade:
+
+- **Horários:** os 7 do Reino (06, 07, 08, 17, 18, 19 e 20h, de uma hora cada),
+  contra os 6 da Estação. Por isso 9 opções aqui e 8 lá.
+- **Planos, tirados de `academia_planos` e não inventados:** Básico R$ 220,
+  Trimestral R$ 610, Quadrimestral R$ 650, Anual R$ 1.600.
+- **Janela de funcionamento** do `fora_do_horario`: 05:30 às 21:30, seg a sex, em
+  `America/Cuiaba` — a Estação usa 04:30 às 22:00 porque a primeira aula dela é
+  às 05h.
+- **Texto do agendamento** diz que luva e bandagem a academia empresta na primeira
+  aula, coisa que não existe em treino funcional.
+
+Conferido: os dois fluxos com 8 passos, ativos, começando em `saudacao`, e **zero
+becos sem saída** (passo que não é `encerrar`, sem próximo e sem opção).
+
+**Detalhe para a recepção resolver:** o plano no banco chama-se `Plano Trimistral`,
+com erro de digitação. No texto do robô escrevi "Trimestral", porque é o que o
+cliente lê — mas o nome no cadastro continua errado e vai aparecer assim em
+relatório e em tela. Corrigir em `academia_planos`, não no robô.
