@@ -19,3 +19,33 @@ Todas as taxas do FitMind moram numa tabela só: `public.taxas_vigentes`, lida p
 **Armadilha que custou horas:** a leitura da taxa no front rodava só no `useEffect` do `__root`, ou seja, no navegador. As server functions rodam em outro processo, com outra cópia do módulo — e lá ninguém chamava. O simulador de rede calculava com a taxa velha enquanto a venda cobrava a nova, e **nada quebrava para avisar**. Existe agora `taxas-vigentes.server.ts`. Ao mexer em constante compartilhada, pergunte em quantos processos ela existe. Segunda armadilha: mutar objeto não redesenha tela — por isso `aplicarTaxasVigentes` devolve se mudou e o root chama `router.invalidate()`.
 
 O documento vivo é `C:\dev\fitmind-acesso\ESTADO-DAS-TAXAS.html`, publicado em https://claude.ai/code/artifact/cb0477e4-ee7c-4461-b14c-ed52e3e37ca3 — leia antes de mexer em taxa. Método de trabalho em [[fitmind-como-trabalhar]]; o rateio em si em [[fitmind-loja-unificada]].
+
+**Maquininha renegociada, vigência 09/09/2026:** cartão 4,98% → **2,99%**, PIX 0,99% → **0,60%**.
+As demais colunas seguem iguais. A vigência é por data **UTC**, então a virada acontece às
+20h de Cuiabá do dia anterior — não à meia-noite local. Isso importa quando se escolhe a
+data para "não misturar as vendas de hoje".
+
+**A segunda fonte de verdade que sobreviveu:** `payment_fee_configs` ainda existe (7 linhas,
+uma `is_default`) e é lida por `mercadopago-impl.server.ts`, `financial.functions.ts` e
+`admin-subscriptions.functions.ts`. Ela **não tem vigência por data** — atualizar vale na
+hora. Não foi atualizada junto com a taxa de 09/09 justamente por isso: mudá-la antes da
+virada faria o registro contábil de hoje divergir do que o Mercado Pago cobra hoje.
+
+**`custom_split` é o portão de todos os overrides.** Em `create_partner_product_order`,
+`skip_tax`, `system_fee_pct_override`, `network_l1/l2/l3_pct_override`,
+`system_fee_amount_override` e `creator_pct_override` só valem se `custom_split = true`.
+Gravar override sem a flag não dá erro nenhum: a venda simplesmente usa o padrão. Foi o que
+aconteceu na importação do Augustus — 3.381 produtos precificados a 15%/10% de taxa de
+sistema cobrariam os 7% padrão, R$ 31.303 a menos no catálogo inteiro. **Ao gravar produto
+com override, ligue `custom_split` na mesma instrução.**
+
+**O preço não se atualiza sozinho quando a taxa muda.** A venda parte do `price` gravado;
+nada no banco lê `professional_net_amount`. Em `price_input_mode = 'receive'` o combinado é
+o líquido, e o preço é derivado — então toda mudança de maquininha desalinha os dois em
+silêncio. `public.recalcular_precos_modo_receive(data, coach_id, aplicar)` refaz a conta:
+com `aplicar => false` é simulação. Ela espelha a cascata passo a passo e **escolhe o
+centavo conferindo o resultado**, porque o arredondamento por etapa não tem inversa exata.
+
+**`is_admin` recebe o user_id** (`is_admin(auth.uid())`), não existe sem argumento. E em
+função que roda como serviço (migration, MCP) `auth.uid()` é NULL — guardas escritas como
+`IF NOT is_admin(...)` barram o próprio caminho administrativo.
