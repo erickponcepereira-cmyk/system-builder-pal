@@ -49,3 +49,29 @@ centavo conferindo o resultado**, porque o arredondamento por etapa não tem inv
 **`is_admin` recebe o user_id** (`is_admin(auth.uid())`), não existe sem argumento. E em
 função que roda como serviço (migration, MCP) `auth.uid()` é NULL — guardas escritas como
 `IF NOT is_admin(...)` barram o próprio caminho administrativo.
+
+**A carteira envelhece sozinha (09/09/2026).** O ledger (`financial_ledger_events`)
+deriva do TEMPO: comissão vira disponível quando `available_at <= now()`, sem evento
+nenhum. Mas `wallets`/`partner_wallets`/`professional_wallets` são materializadas por
+`recalc_wallets_for_owner`, e ninguém as avisa quando o relógio passa da data. Vencem
+comissões todo dia — o painel de pagamentos, que lê essas tabelas, mostra o número de
+ontem para quem teve vencimento. Não quebra toda semana: quebra todo dia.
+
+Use **`admin_conferencia_pagamentos()`** como fonte de verdade — não lê carteira,
+calcula na hora com a fórmula completa de `wallet_statement`: *liberado − sacado −
+saque em aberto − gasto na carteira − adiantamento*. Os três últimos termos são fáceis
+de esquecer e mudam o resultado. Ela devolve `carteira_diz` e `divergencia` junto, para
+a defasagem aparecer. **`admin_sincronizar_carteiras()`** faz as tabelas alcançarem a
+verdade, só para quem está defasado.
+
+**`admin_reprocess_partner_order` estava quebrada para metade do catálogo.** `v_prod`
+era um record carregado só no ramo de produto profissional e lido sempre: todo pedido
+de produto de PARCEIRO morria em *"record v_prod is not assigned yet"*. Além disso
+ignorava os overrides — reprocessar um exame do Augustus trocaria os 15% de taxa de
+sistema pelos 7% padrão, em silêncio — e sobrescrevia `selling_coach_id` com o coach do
+aluno. Corrigida em 09/09.
+
+**Pedido no cartão cobrado como PIX.** O pedido nasce PIX; quando o Mercado Pago
+confirma cartão, `sync_source_payment_method_from_mp` trocava só o `payment_method` e
+deixava a `payment_fee` do PIX. A FitMind absorvia a diferença: R$ 174,96 em 8 dos 18
+pedidos no cartão entre 05/08 e 09/09/2026. Agora a troca dispara o reprocessamento.

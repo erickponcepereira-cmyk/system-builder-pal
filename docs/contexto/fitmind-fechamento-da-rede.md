@@ -42,3 +42,22 @@ somar comissões já antecipadas antes.
 `fechar_rede_do_mes(ano, mes, <user_id admin>, true)` para simular, e só então
 com `false`. O `user_id` do Erick é `f974165f-afe8-4bba-9c8c-2d79659af5e9` —
 `auth.uid()` vem nulo quando a consulta roda por fora do app.
+
+**Patente é de venda própria — e não era (09/09/2026).** `sumOwnVp` em
+`coach-medals.functions.ts` somava quatro caminhos, e dois deles são produto criado:
+`professional_coach_id` e `partner_id` são quem é DONO do produto, não quem vendeu.
+Quem só cadastrou produto era premiado como vendedor. Juniior Santana aparecia com
+R$ 2.205,65 tendo vendido R$ 0,00; Wallace com R$ 2.779,90 tendo vendido R$ 179,90.
+Seis das dezenove medalhas concedidas eram indevidas — removidas, com snapshot em
+`auditoria.medalhas_indevidas_20260909`.
+
+Quando o dono também é o vendedor a venda continua contando, por `selling_coach_id`;
+o que mudou foi deixar de premiar a posse.
+
+**O ranking de rede não tinha fórmula errada** — herdava esse VP inflado. Depois da
+correção, a carreira individual (`sumOwnVp`) e o ranking/clube (`loadRevenueByCoach`)
+dão exatamente o mesmo número para todos os coaches. Se divergirem de novo, é porque
+alguém mexeu em uma das duas: elas têm definições diferentes de "venda própria"
+(a individual vai por `selling_coach_id`, o ranking vai pelo aluno) que hoje coincidem
+porque coach do aluno e vendedor são sempre a mesma pessoa. No dia em que houver venda
+cruzada de verdade, as duas vão separar.
