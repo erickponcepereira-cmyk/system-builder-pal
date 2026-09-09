@@ -1106,6 +1106,7 @@ export type Database = {
           observacao: string | null
           origem: string
           partner_id: string
+          partner_order_id: string | null
           plano: string
           registrado_por: string | null
           status: string
@@ -1131,6 +1132,7 @@ export type Database = {
           observacao?: string | null
           origem?: string
           partner_id: string
+          partner_order_id?: string | null
           plano: string
           registrado_por?: string | null
           status?: string
@@ -1156,6 +1158,7 @@ export type Database = {
           observacao?: string | null
           origem?: string
           partner_id?: string
+          partner_order_id?: string | null
           plano?: string
           registrado_por?: string | null
           status?: string
@@ -1357,7 +1360,8 @@ export type Database = {
           partner_id: string
           plano: string
           politica_renovacao: string
-          product_id: string
+          partner_product_id: string | null
+          product_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1367,7 +1371,8 @@ export type Database = {
           partner_id: string
           plano?: string
           politica_renovacao?: string
-          product_id: string
+          partner_product_id: string | null
+          product_id: string | null
           updated_at?: string
         }
         Update: {
@@ -1377,7 +1382,8 @@ export type Database = {
           partner_id?: string
           plano?: string
           politica_renovacao?: string
-          product_id?: string
+          partner_product_id?: string | null
+          product_id?: string | null
           updated_at?: string
         }
         Relationships: [

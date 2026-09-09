@@ -611,3 +611,57 @@ qualquer academia, uma só em `apelidos`, de propósito.
 
 **A regra que fica:** nome de plano não é chave. Antes de renomear qualquer plano,
 procure o texto em `academia_mensalidades.plano` também.
+
+## 09/09/2026 — produto da própria academia passa a liberar mensalidade
+
+Sintoma relatado: em "produtos que liberam", a busca não acha os produtos que a
+academia criou. A causa tinha **três camadas**, e consertar só a primeira seria
+armadilha — o vínculo ficaria salvo e a compra nunca geraria mensalidade, em
+silêncio.
+
+1. **A busca** olhava `products`, o catálogo da plataforma. O que a academia cria
+   vive em `partner_products`, outra tabela. O Reino tem 4 produtos lá, a Estação 6.
+2. **A chave estrangeira** de `academia_produtos_mensalidade.product_id` aponta
+   para `products`. Mesmo achando, salvar quebraria.
+3. **O gerador** `academia_mensalidade_gerar` é dirigido por **transação** — lê
+   `transactions.product_id`. Produto de parceiro é vendido por
+   `partner_product_orders`, esteira separada que nem tem essa coluna.
+
+Por isso `academia_produtos_mensalidade` estava **vazia nas duas academias**: nunca
+funcionou para produto de parceiro, e não dava erro nenhum.
+
+**O que entrou:** `partner_product_id` no vínculo, com `product_id` opcional e um
+`CHECK` exigindo exatamente uma origem; `partner_order_id` na mensalidade, porque
+`transaction_id` tem chave para `transactions` e pedido de parceiro não passa por
+lá — sem chave própria não havia como impedir a mesma compra de gerar duas vezes;
+e `academia_mensalidade_gerar_pedido`, espelhando a régua da versão de transação
+(política de renovação, busca da credencial, limite semanal do plano).
+
+**Gatilho próprio, não emenda no `grant_partner_product_perks`.** Aquela função já
+faz carteirinha, tickets e pontos; misturar academia ali faria uma falha de
+academia derrubar tudo. O gatilho novo engole a exceção e anota em
+`metadata.academia_erro` — **pagamento nunca cai por causa disto**.
+
+**A busca do parceiro é opt-in** (`incluirDoParceiro`). Ela é compartilhada com a
+tela de eventos, e `academia_produtos_evento.product_id` continua com chave para
+`products`: oferecer produto de parceiro lá deixaria escolher algo que não salva.
+
+Provado em transação com ROLLBACK: compra paga gera mensalidade de 30 dias, valor
+199, forma `pix`, **ligada na credencial** (o que faz destravar na porta, e não só
+na conta); pedido tocado duas vezes gera **uma** mensalidade; produto sem vínculo
+gera **zero**. `md5(prosrc)` das duas funções batendo com a migration.
+
+### O que ainda falta para funcionar de verdade no Reino
+
+**Nenhuma das 83 credenciais do Reino tem `student_id`.** A compra gera a
+mensalidade ligada ao aluno, mas quem avalia a porta é a credencial. Enquanto a
+conciliação não acontecer, comprar não destrava ninguém — é a mesma dependência de
+sempre, e o motivo de a conciliação ser rotina e não mutirão.
+
+**Preços da loja e planos da academia não batem:** Mensalidade R$ 199 contra Básico
+R$ 220, Trimestral R$ 547 contra R$ 610, Anual R$ 1.650 contra R$ 1.600. E dois
+produtos estão com status `pending`, não aprovados.
+
+**`types.ts` foi editado à mão** para conhecer as colunas novas. Ele é gerado do
+banco; a próxima geração pela Lovable substitui, e tudo bem — mas se aparecer erro
+de "coluna não existe no tipo" depois de mexer no banco, é isto.

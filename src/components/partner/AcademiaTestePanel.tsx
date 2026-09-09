@@ -86,6 +86,7 @@ import {
   sincronizarCrmAcademia,
   validarCredencialEvento,
   vincularCredencial,
+  type ProdutoParaVincular,
   type FormaPagamento,
   type ModeloAviso,
   type ReferenciaAviso,
@@ -1892,8 +1893,8 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
   const [loading, setLoading] = useState(true);
   const [dados, setDados] = useState<Awaited<ReturnType<typeof obter>> | null>(null);
   const [termo, setTermo] = useState("");
-  const [achados, setAchados] = useState<Array<{ id: string; name: string }>>([]);
-  const [novo, setNovo] = useState<{ id: string; name: string } | null>(null);
+  const [achados, setAchados] = useState<ProdutoParaVincular[]>([]);
+  const [novo, setNovo] = useState<ProdutoParaVincular | null>(null);
   const [dias, setDias] = useState(30);
   const [politica, setPolitica] = useState("justa");
 
@@ -1909,8 +1910,10 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
   useEffect(() => {
     if (termo.trim().length < 3) { setAchados([]); return; }
     const t = setTimeout(() => {
-      buscar({ data: { partnerId, termo } })
-        .then((r) => setAchados(r.produtos))
+      // incluirDoParceiro: o que a academia criou vive em outra tabela, e e
+      // justamente o que o dono procura aqui.
+      buscar({ data: { partnerId, termo, incluirDoParceiro: true } })
+        .then((r) => setAchados(r.produtos as ProdutoParaVincular[]))
         .catch(() => setAchados([]));
     }, 350);
     return () => clearTimeout(t);
@@ -1960,7 +1963,7 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
               type="button"
               onClick={async () => {
                 try {
-                  await salvar({ data: { partnerId, productId: novo.id, plano: novo.name, diasValidade: dias, politica, ativo: true } });
+                  await salvar({ data: { partnerId, productId: novo.id, origem: novo.origem, plano: novo.name, diasValidade: dias, politica, ativo: true } });
                   setNovo(null); setTermo(""); carregar();
                   toast.success("Produto vinculado.");
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
@@ -1983,6 +1986,9 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
                 className={`w-full truncate rounded-lg bg-aca-alto px-2.5 py-1.5 text-left text-sm text-aca-ink hover:bg-aca-line ${FOCO}`}
               >
                 {p.name}
+                {p.origem === "parceiro" && (
+                  <span className="ml-1.5 text-[10px] text-aca-acao">· desta academia</span>
+                )}
               </button>
             ))}
           </>
@@ -1998,7 +2004,7 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-aca-ink">
-                    {dados.nomes[v.product_id] ?? v.plano}
+                    {dados.nomes[v.partner_product_id ?? v.product_id ?? ""] ?? v.plano}
                   </p>
                   <p className={`mt-0.5 tabular-nums ${NOTA}`}>
                     {v.dias_validade} dia(s) ·{" "}
@@ -2012,7 +2018,10 @@ function ProdutosMensalidade({ partnerId }: { partnerId: string }) {
                       try {
                         await salvar({
                           data: {
-                            partnerId, productId: v.product_id, plano: v.plano,
+                            partnerId,
+                            productId: (v.partner_product_id ?? v.product_id) as string,
+                            origem: v.partner_product_id ? "parceiro" : "catalogo",
+                            plano: v.plano,
                             diasValidade: v.dias_validade, politica: v.politica_renovacao,
                             ativo: e.target.checked,
                           },

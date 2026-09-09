@@ -1634,42 +1634,89 @@ export const obterProdutosMensalidade = createServerFn({ method: "POST" })
 
     const { data: vinculos } = await admin
       .from("academia_produtos_mensalidade")
-      .select("id, product_id, plano, dias_validade, politica_renovacao, ativo")
+      .select("id, product_id, partner_product_id, plano, dias_validade, politica_renovacao, ativo")
       .eq("partner_id", data.partnerId);
 
-    const ids = ((vinculos ?? []) as Array<{ product_id: string }>).map((v) => v.product_id);
-    const { data: nomes } = ids.length
-      ? await admin.from("products").select("id, name").in("id", ids)
-      : { data: [] };
+    const linhas = (vinculos ?? []) as Array<{
+      id: string; product_id: string | null; partner_product_id: string | null;
+      plano: string; dias_validade: number; politica_renovacao: string; ativo: boolean;
+    }>;
+
+    // O nome sai de duas tabelas: catálogo da plataforma e produtos que a
+    // própria academia criou. Um vínculo tem exatamente uma das duas origens.
+    const idsCatalogo = linhas.map((v) => v.product_id).filter((x): x is string => !!x);
+    const idsParceiro = linhas.map((v) => v.partner_product_id).filter((x): x is string => !!x);
+
+    const [catalogo, doParceiro] = await Promise.all([
+      idsCatalogo.length
+        ? admin.from("products").select("id, name").in("id", idsCatalogo)
+        : Promise.resolve({ data: [] }),
+      idsParceiro.length
+        ? admin.from("partner_products").select("id, name").in("id", idsParceiro)
+        : Promise.resolve({ data: [] }),
+    ]);
 
     return {
-      vinculos: (vinculos ?? []) as Array<{
-        id: string; product_id: string; plano: string;
-        dias_validade: number; politica_renovacao: string; ativo: boolean;
-      }>,
+      vinculos: linhas,
       nomes: Object.fromEntries(
-        ((nomes ?? []) as Array<{ id: string; name: string }>).map((p) => [p.id, p.name]),
+        [
+          ...((catalogo.data ?? []) as Array<{ id: string; name: string }>),
+          ...((doParceiro.data ?? []) as Array<{ id: string; name: string }>),
+        ].map((p) => [p.id, p.name]),
       ),
     };
   });
 
+export type ProdutoParaVincular = { id: string; name: string; origem: "catalogo" | "parceiro" };
+
+/**
+ * Produtos que a academia pode vincular.
+ *
+ * São duas tabelas diferentes: `products` é o catálogo da plataforma, e
+ * `partner_products` é o que a própria academia criou. A busca só olhava a
+ * primeira, então o dono da academia nunca achava os produtos dele.
+ *
+ * `incluirDoParceiro` é opt-in de propósito. Esta busca também serve à tela de
+ * eventos, e `academia_produtos_evento.product_id` continua com chave para
+ * `products` — oferecer produto de parceiro lá deixaria escolher algo que não
+ * salva.
+ */
 export const buscarProdutosParaVincular = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { partnerId: string; termo: string }) => d)
+  .inputValidator((d: { partnerId: string; termo: string; incluirDoParceiro?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
     const termo = (data.termo || "").trim();
-    if (termo.length < 3) return { produtos: [] as Array<{ id: string; name: string }> };
+    if (termo.length < 3) return { produtos: [] as ProdutoParaVincular[] };
 
-    const { data: produtos } = await admin
-      .from("products").select("id, name").ilike("name", `%${termo}%`).limit(20);
-    return { produtos: (produtos ?? []) as Array<{ id: string; name: string }> };
+    const [catalogo, doParceiro] = await Promise.all([
+      admin.from("products").select("id, name").ilike("name", `%${termo}%`).limit(20),
+      data.incluirDoParceiro
+        ? admin
+            .from("partner_products")
+            .select("id, name")
+            .eq("partner_id", data.partnerId)
+            .is("deleted_at", null)
+            .ilike("name", `%${termo}%`)
+            .limit(20)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    // Os do parceiro vêm primeiro: numa academia, é o que a pessoa procura.
+    return {
+      produtos: [
+        ...((doParceiro.data ?? []) as Array<{ id: string; name: string }>)
+          .map((p) => ({ ...p, origem: "parceiro" as const })),
+        ...((catalogo.data ?? []) as Array<{ id: string; name: string }>)
+          .map((p) => ({ ...p, origem: "catalogo" as const })),
+      ],
+    };
   });
 
 export const salvarProdutoMensalidade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: {
-    partnerId: string; productId: string; plano: string;
+    partnerId: string; productId: string; origem?: "catalogo" | "parceiro"; plano: string;
     diasValidade: number; politica: string; ativo: boolean;
   }) => d)
   .handler(async ({ data, context }) => {
@@ -1677,17 +1724,23 @@ export const salvarProdutoMensalidade = createServerFn({ method: "POST" })
     if (!Number.isFinite(data.diasValidade) || data.diasValidade < 1) {
       throw new Error("Informe quantos dias a mensalidade vale.");
     }
+
+    // A origem decide a coluna, e o CHECK do banco exige exatamente uma. Cada
+    // origem tem a sua chave estrangeira: misturar deixaria o vínculo apontando
+    // para uma tabela que não tem aquele id.
+    const doParceiro = data.origem === "parceiro";
     const { error } = await admin.from("academia_produtos_mensalidade").upsert(
       {
         partner_id: data.partnerId,
-        product_id: data.productId,
+        product_id: doParceiro ? null : data.productId,
+        partner_product_id: doParceiro ? data.productId : null,
         plano: (data.plano || "Mensalidade").trim(),
         dias_validade: Math.floor(data.diasValidade),
         politica_renovacao: data.politica,
         ativo: data.ativo,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "partner_id,product_id" },
+      { onConflict: doParceiro ? "partner_id,partner_product_id" : "partner_id,product_id" },
     );
     if (error) throw new Error(error.message);
     return { ok: true };
