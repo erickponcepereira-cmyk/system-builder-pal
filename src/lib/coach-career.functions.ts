@@ -83,7 +83,8 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
       .select("id,gross_amount" as never)
       .in("student_id" as never, ids as never)
       .eq("status" as never, "paid" as never)
-      .gte("created_at" as never, effectiveSince as never);
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, effectiveSince as never);
     ((partnerOrdersByStudent as unknown as { id: string; gross_amount: number }[] | null) || []).forEach((o) => {
       partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
     });
@@ -107,7 +108,8 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
       .select("id,gross_amount" as never)
       .in(column as never, values as never)
       .eq("status" as never, "paid" as never)
-      .gte("created_at" as never, effectiveSince as never);
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, effectiveSince as never);
     ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
       // setIfAbsent: já contado via outro caminho? Mantém valor (dedup por id)
       if (!partnerOrderMap.has(o.id)) partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
