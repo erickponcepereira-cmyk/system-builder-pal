@@ -21,7 +21,7 @@ import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
 import { maskPhone } from "@/lib/masks";
-import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, DEFAULT_PARTNER_FEES, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
+import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, DEFAULT_PARTNER_FEES, pctTaxa, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
@@ -1514,11 +1514,11 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <div className="mt-1 flex rounded-lg bg-black/40 p-0.5">
           <button type="button" onClick={() => changeMethod("pix")}
             className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "pix" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
-            PIX 0,99%
+            PIX {pctTaxa(DEFAULT_PARTNER_FEES.pixFeePct)}
           </button>
           <button type="button" onClick={() => changeMethod("card")}
             className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "card" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
-            Cartão 4,98%
+            Cartão {pctTaxa(DEFAULT_PARTNER_FEES.cardFeePct)}
           </button>
         </div>
       </div>
@@ -1538,12 +1538,20 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
       <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
-        <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
-        <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
+        <BreakdownLine
+          label={`− Taxa ${method === "pix"
+            ? `PIX (${pctTaxa(DEFAULT_PARTNER_FEES.pixFeePct)})`
+            : `cartão (${pctTaxa(DEFAULT_PARTNER_FEES.cardFeePct)})`}`}
+          value={-breakdown.paymentFee}
+          muted
+        />
+        {breakdown.taxPct > 0 && (
+          <BreakdownLine label={`− Reserva fiscal estimada (${pctTaxa(breakdown.taxPct)})`} value={-breakdown.tax} muted />
+        )}
         <BreakdownLine
           label={product.system_fee_amount_override != null
             ? "− Taxa do sistema (valor fixo)"
-            : `− Taxa do sistema (${breakdown.systemFeePct}%)`}
+            : `− Taxa do sistema (${pctTaxa(breakdown.systemFeePct)})`}
           value={-breakdown.systemFee}
           muted
         />
@@ -1554,9 +1562,9 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
           <p className="text-white/40 text-[10px] font-semibold uppercase">Distribuição da comissão do coach</p>
           <BreakdownLine label="Coach vendedor (líquido)" value={breakdown.coachNet} muted />
-          <BreakdownLine label="Rede L1 (3%)" value={breakdown.networkL1} muted />
-          <BreakdownLine label="Rede L2 (2%)" value={breakdown.networkL2} muted />
-          <BreakdownLine label="Rede L3 (1%)" value={breakdown.networkL3} muted />
+          <BreakdownLine label={`Rede L1 (${pctTaxa(breakdown.networkL1Pct)})`} value={breakdown.networkL1} muted />
+          <BreakdownLine label={`Rede L2 (${pctTaxa(breakdown.networkL2Pct)})`} value={breakdown.networkL2} muted />
+          <BreakdownLine label={`Rede L3 (${pctTaxa(breakdown.networkL3Pct)})`} value={breakdown.networkL3} muted />
         </div>
       </div>
     </div>

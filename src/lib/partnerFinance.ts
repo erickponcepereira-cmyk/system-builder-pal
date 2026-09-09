@@ -27,6 +27,18 @@ export type CoachCommissionPct = (typeof COACH_COMMISSION_OPTIONS)[number];
 export const NETWORK_SPLIT: { l1: number; l2: number; l3: number } = { l1: 3, l2: 2, l3: 1 };
 
 /**
+ * Percentual de taxa para exibir na tela.
+ *
+ * Existe porque o número vinha escrito à mão no texto: "Rede L1 (3%)",
+ * "Cartão 4,98%", "Reserva fiscal (6%)". O valor em reais sempre veio do
+ * cálculo e estava certo — mentia só o rótulo, e por isso a mudança da rede
+ * para 10/5/3 não apareceu em lugar nenhum. Formate sempre a partir da
+ * constante viva, nunca digite o número.
+ */
+export const pctTaxa = (n: number): string =>
+  `${Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+
+/**
  * Alinha os padroes do front com a taxa vigente do banco.
  *
  * Estes numeros viviam cravados aqui E dentro de seis funcoes SQL. Enquanto
