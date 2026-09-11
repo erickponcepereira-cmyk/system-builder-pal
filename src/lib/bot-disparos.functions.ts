@@ -13,6 +13,15 @@ import { z } from "zod";
 
 type Db = { from: (t: string) => any; rpc: (fn: string, args?: Record<string, unknown>) => any };
 
+/**
+ * Quantos valores mandar num `.in()` por vez.
+ *
+ * O supabase-js põe a lista na URL do GET, e o gateway do Supabase corta em
+ * ~16 KB (medido em 11/09: 380 uuids passam, 400 não). Telefone ocupa ~16
+ * caracteres na URL, uuid ~39; 200 de qualquer um cabe com folga.
+ */
+const LOTE_DO_IN = 200;
+
 async function contexto(userId: string, disparoId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const db = supabaseAdmin as unknown as Db;
@@ -462,14 +471,19 @@ export async function executarDisparo(db: Db, disparo: Disparo) {
       .update({ status: "enfileirando", iniciado_em: new Date().toISOString() })
       .eq("id", disparo.id);
 
-    // 4. conversas que já existem neste número, para não duplicar
+    // 4. conversas que já existem neste número, para não duplicar. Em lotes:
+    // sem limite diário no chip, os alvos do dia passam de mil telefones, e a
+    // lista inteira num `.in()` não cabe na URL.
     const telefones = vaoAgora.map((a) => a.telefone);
-    const { data: existentes } = await db
-      .from("bot_conversas").select("id, telefone")
-      .eq("conexao_id", conexao.id).in("telefone", telefones);
-    const porTelefone = new Map(
-      ((existentes ?? []) as Array<{ id: string; telefone: string }>).map((c) => [c.telefone, c.id]),
-    );
+    const porTelefone = new Map<string, string>();
+    for (let i = 0; i < telefones.length; i += LOTE_DO_IN) {
+      const { data: existentes } = await db
+        .from("bot_conversas").select("id, telefone")
+        .eq("conexao_id", conexao.id).in("telefone", telefones.slice(i, i + LOTE_DO_IN));
+      for (const c of (existentes ?? []) as Array<{ id: string; telefone: string }>) {
+        porTelefone.set(c.telefone, c.id);
+      }
+    }
 
     const intervalo = Math.max(5, disparo.intervalo_segundos) * 1000;
 
@@ -604,19 +618,21 @@ export const cancelarCampanha = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { db } = await contexto(context.userId, data.disparoId);
 
-    // só as que ainda não foram enviadas
-    const { data: msgs } = await db
-      .from("bot_mensagens").select("id")
-      .eq("disparo_id", data.disparoId).eq("status", "pendente");
-    const ids = ((msgs ?? []) as Array<{ id: string }>).map((m) => m.id);
-    if (ids.length) {
-      await db.from("bot_mensagens")
-        .update({ status: "erro", erro: "campanha cancelada" }).in("id", ids);
-    }
+    /*
+     * Só as que ainda não foram enviadas — pelo filtro da campanha, não por uma
+     * lista de ids. A lista ia num `.in()` na URL: numa campanha de 500 ela
+     * passava do limite do gateway, o UPDATE falhava calado, a campanha
+     * aparecia "cancelada" e as mensagens saíam do mesmo jeito.
+     */
+    const { data: canceladas } = await db
+      .from("bot_mensagens")
+      .update({ status: "erro", erro: "campanha cancelada" })
+      .eq("disparo_id", data.disparoId).eq("status", "pendente")
+      .select("id");
     await db.from("bot_disparo_alvos")
       .update({ status: "ignorado" }).eq("disparo_id", data.disparoId).eq("status", "enfileirado");
     await db.from("bot_disparos")
       .update({ status: "cancelado", concluido_em: new Date().toISOString() }).eq("id", data.disparoId);
 
-    return { canceladas: ids.length };
+    return { canceladas: (canceladas ?? []).length };
   });

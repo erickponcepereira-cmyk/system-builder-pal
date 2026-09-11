@@ -209,3 +209,34 @@ Eu relatei "oito dias sem disparo" na Estação a partir de
 maior que `'08/09'` alfabeticamente — o máximo devolvido era o dia mais velho.
 Estava tudo funcionando. Agregue o **timestamp** e formate depois:
 `to_char(max(gerado_em), ...)`.
+
+### A fila parava de sair aos ~390 contatos por número (corrigido em 11/09)
+
+`GET /api/bot/fila` carregava **todas** as conversas da conexão e filtrava as
+mensagens com `.in("conversa_id", ids)`. O supabase-js põe o `.in()` na URL, e o
+gateway do Supabase corta em **~16 KB**: medido em 11/09 com a chave anônima,
+passa com 380 uuids (15.154 caracteres) e a conexão cai com 400 (15.934). Daí em
+diante a rota devolveria 500 e **nenhuma resposta sairia** — enquanto as
+recebidas continuavam gravando, então o painel pareceria normal. A Estação
+estava com 143 conversas e 8,4 novas por dia; e campanha cria uma conversa por
+pessoa, então uma campanha para a base inteira estouraria na hora.
+
+Corrigido com o join `bot_conversas!inner(telefone, jid, conexao_id)` filtrado
+por `bot_conversas.conexao_id`: a URL fica em 437 caracteres com qualquer número
+de conversas. Na mesma família: `executarDisparo` busca as conversas existentes
+em lotes de `LOTE_DO_IN = 200` telefones (mil telefones de uma vez dão 16.150
+caracteres e derrubam a conexão), e `cancelarCampanha` passou a cancelar pelo
+filtro da campanha em vez de uma lista de ids — com 500 pendentes, o UPDATE
+falhava calado e a campanha "cancelada" saía do mesmo jeito.
+
+**Regra:** `.in()` só com lista de tamanho **conhecido e pequeno**. Lista que
+cresce com o uso (conversas, alvos, alunos) é bomba-relógio: funciona por
+semanas e para de uma vez, sem aviso. Prefira join embutido (`!inner`) ou filtro
+pela coluna do pai; se a lista for inevitável, em lotes. Os `.in()` que ficaram
+no robô são limitados: até 50 na marcação da fila, até 30 em
+`listarConversasBot`, até 50 no `PartnerRoboPanel`, e `jaPagaram` no
+`executarDisparo`, do tamanho de um aviso automático do dia.
+
+Para medir, o `createClient` do supabase-js aceita `global.fetch`: embrulhe o
+`fetch` para registrar `String(url).length` e rode a consulta com a chave
+anônima — a RLS devolve vazio, mas o status e o tamanho da URL são os reais.
