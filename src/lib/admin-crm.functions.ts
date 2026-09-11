@@ -183,15 +183,22 @@ export const renomearQuadroCrm = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Todos os funis e quadros ativos de um dono (usado pelos painéis do próprio dono). */
+/**
+ * Todos os funis e quadros ativos de um dono (usado pelos painéis do próprio dono).
+ *
+ * Lê com o cliente de quem chamou, não com a service role. O `ownerId` vem do
+ * navegador: com a service role, qualquer pessoa logada listava nome e id dos
+ * funis de qualquer parceiro só trocando esse id. Pela RLS de `crm_quadros`
+ * (`crm_acesso_quadro`) volta apenas o que a pessoa já pode abrir — o mesmo
+ * que o CrmBoard, que também lê pela RLS, conseguiria mostrar.
+ */
 export const meusQuadrosCrm = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ escopo: z.enum(["parceiro", "profissional"]), ownerId: z.string().uuid() }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: linhas, error } = await supabaseAdmin
+  .handler(async ({ context, data }) => {
+    const { data: linhas, error } = await context.supabase
       .from("crm_quadros" as never)
       .select("id, nome, tipo, arquivado_em")
       .eq("escopo" as never, data.escopo as never)

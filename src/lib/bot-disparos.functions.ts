@@ -71,6 +71,26 @@ async function contextoParceiro(userId: string, partnerId: string) {
 }
 
 /**
+ * O quadro pertence a este dono?
+ *
+ * Ids de quadro e de cartão chegam do navegador e são lidos com a service role.
+ * Sem esta conferência, quem monta campanha numa academia puxava nome e
+ * telefone dos leads do funil de outra só trocando o id — e a lista de alvos,
+ * com esses dados, aparece no painel de quem puxou.
+ */
+async function quadroEhDoDono(db: Db, quadroId: string, escopo: string, ownerId: string | null) {
+  const { data } = await db.from("crm_quadros").select("escopo, owner_id").eq("id", quadroId).maybeSingle();
+  const quadro = data as { escopo: string; owner_id: string | null } | null;
+  return !!quadro && quadro.escopo === escopo && quadro.owner_id === ownerId;
+}
+
+async function cartaoEhDoParceiro(db: Db, cartaoId: string, partnerId: string) {
+  const { data } = await db.from("crm_cartoes").select("quadro_id").eq("id", cartaoId).maybeSingle();
+  const quadroId = (data as { quadro_id: string } | null)?.quadro_id;
+  return !!quadroId && quadroEhDoDono(db, quadroId, "parceiro", partnerId);
+}
+
+/**
  * Uma mensagem para uma pessoa só, direto do cartão do CRM.
  *
  * Existe para tirar o `wa.me` do caminho. Abrir o WhatsApp Web para responder
@@ -98,6 +118,11 @@ export const enviarMensagemDireta = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { db } = await contextoParceiro(context.userId, data.partnerId);
+    // O cartão vira o dono do histórico desta conversa (bot_registrar_no_cartao):
+    // cartão de outra academia receberia as mensagens desta.
+    if (data.cartaoId && !(await cartaoEhDoParceiro(db, data.cartaoId, data.partnerId))) {
+      throw new Error("Este cartão não é desta academia.");
+    }
 
     const telefone = soDigitos(data.telefone);
     if (telefone.length < 10) throw new Error("Telefone incompleto — falta o DDD.");
@@ -168,6 +193,9 @@ export const alvosDoFunil = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { db, disparo } = await contexto(context.userId, data.disparoId);
     if (disparo.status !== "rascunho") throw new Error("A campanha já foi disparada");
+    if (!(await quadroEhDoDono(db, data.quadroId, disparo.escopo, disparo.owner_id))) {
+      throw new Error("Este funil não é da mesma academia da campanha.");
+    }
 
     let q = db.from("crm_cartoes")
       .select("id, titulo, contato_nome, contato_telefone")
@@ -256,9 +284,10 @@ export const alvosDaAcademia = createServerFn({ method: "POST" })
 export const previaDaAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ partnerId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const db = supabaseAdmin as unknown as Db;
+  .handler(async ({ context, data }) => {
+    // Sem isto, qualquer pessoa logada via quantos alunos ativos e parados
+    // qualquer academia tem. Não há tela chamando hoje, mas a rota existe.
+    const { db } = await contextoParceiro(context.userId, data.partnerId);
     const { data: faixas, error } = await db.rpc("academia_reativacao_previa", {
       p_partner_id: data.partnerId,
     });

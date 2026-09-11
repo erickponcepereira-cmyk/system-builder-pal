@@ -108,3 +108,34 @@ O regenerado só reordena imports, não muda rota nenhuma.
 O painel da academia exige login, então tela atrás de auth não dá para conferir
 assim. O jeito é uma rota descartável em `src/routes/` que monte o componente
 sem dados — e apagar depois.
+
+## Service role com id vindo do navegador (11/09/2026)
+
+`requireSupabaseAuth` só diz **quem** chamou. Se o handler depois consulta com
+`supabaseAdmin` usando um id que veio do navegador (`ownerId`, `quadroId`,
+`cartaoId`, `partnerId`), a RLS some e qualquer pessoa logada lê o que quiser
+trocando o id. Em 11/09 havia quatro assim: `meusQuadrosCrm` (funis de qualquer
+dono), `alvosDoFunil` (puxava nome e telefone dos leads do funil de **outra
+academia** para a própria campanha — e as duas juntas formavam o caminho
+completo), `previaDaAcademia` (contagem de alunos de qualquer academia) e o
+`cartaoId` de `enviarMensagemDireta`.
+
+**Why:** função de servidor é rota HTTP mesmo sem tela chamando —
+`previaDaAcademia` não tinha chamador e estava aberta do mesmo jeito.
+
+**How to apply:** para **ler**, prefira `context.supabase` (o cliente do próprio
+usuário, pela RLS). Quando precisar da service role, confira a pertença do id
+antes — `quadroEhDoDono` em `bot-disparos.functions.ts` é o modelo.
+
+**Para provar o que a RLS devolve a um usuário real**, sem login nem token, numa
+chamada só do MCP:
+
+```sql
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"<auth.users.id>","role":"authenticated"}', true);
+SELECT ... ;   -- auth.uid() passa a devolver o sub
+```
+
+A string roda como uma transação implícita, então papel e claims morrem no fim —
+conferido: a chamada seguinte volta a `current_user = postgres`. Foi assim que
+se provou em 11/09 que o dono do Reino vê o próprio funil e nenhum outro.
