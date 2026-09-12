@@ -287,33 +287,27 @@ function addBreakdown(a: StudentBreakdown, b: StudentBreakdown) {
   a.partnerStudent += b.partnerStudent;
 }
 
+/**
+ * Faturamento por coach, da mesma fonte que carreira e medalhas usam.
+ *
+ * Este cálculo era próprio e discordava dos outros dois em três pontos: pedido
+ * de parceiro era creditado ao coach DO ALUNO em vez de a quem vendeu (se o
+ * coach A vendia para o aluno do coach B, o ranking premiava B e as medalhas
+ * premiavam A); `store_orders` e `partner_product_orders` não descartavam
+ * `is_test`; e a duplicata entre transação e pedido de loja era resolvida ao
+ * contrário — aqui descartava a transação espelho, lá descartava o pedido.
+ */
 async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: string, to: string) {
   const revenue = new Map<string, number>();
   coachIds.forEach((id) => revenue.set(id, 0));
   if (!coachIds.length) return revenue;
   const fromIso = new Date(`${from}T00:00:00`).toISOString();
   const toIso = new Date(`${to}T23:59:59`).toISOString();
-  const { data: studentsRaw } = await supabaseAdmin.from("students").select("id,coach_id").in("coach_id", coachIds).eq("is_test", false);
-  const students = ((studentsRaw as Array<{ id: string; coach_id: string }> | null) || []);
-  const studentToCoach = new Map(students.map((s) => [s.id, s.coach_id]));
-  const studentIds = students.map((s) => s.id);
-  if (!studentIds.length) return revenue;
-  const [txRes, storeRes, partnerRes] = await Promise.all([
-    // exclui transações espelho de store_orders (senão a venda conta duas vezes)
-    supabaseAdmin.from("transactions").select("student_id,gross_amount,metadata").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
-    supabaseAdmin.from("store_orders").select("student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("paid_at", fromIso).lte("paid_at", toIso),
-    supabaseAdmin.from("partner_product_orders").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
-  ]);
-  const add = (studentId: string, amount: number) => {
-    const coachId = studentToCoach.get(studentId);
-    if (!coachId) return;
-    revenue.set(coachId, (revenue.get(coachId) || 0) + (Number(amount) || 0));
-  };
-  ((txRes.data as Array<{ student_id: string; gross_amount: number; metadata: { store_order_id?: string } | null }> | null) || [])
-    .filter((r) => !r.metadata?.store_order_id)
-    .forEach((r) => add(r.student_id, r.gross_amount));
-  ((storeRes.data as Array<{ student_id: string; total_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.total_amount));
-  ((partnerRes.data as Array<{ student_id: string; gross_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.gross_amount));
+  const { data } = await supabaseAdmin.rpc("coach_vp_no_periodo", { _desde: fromIso, _ate: toIso });
+  const alvo = new Set(coachIds);
+  ((data as Array<{ coach_id: string; vp: number }> | null) || []).forEach((r) => {
+    if (alvo.has(r.coach_id)) revenue.set(r.coach_id, Number(r.vp) || 0);
+  });
   return revenue;
 }
 

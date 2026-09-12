@@ -45,42 +45,30 @@ async function resolveCoachId(userId: string): Promise<string | null> {
   return coach?.id ?? null;
 }
 
+/**
+ * Venda própria do coach, da mesma fonte que as patentes e o ranking usam.
+ *
+ * Era calculada aqui à mão, e cada painel calculava do seu jeito — três contas
+ * para a mesma coisa, três números na mesma tela. Agora é `coach_vp_no_periodo`
+ * no banco: transações e pedidos de loja dos alunos dele, mais os pedidos de
+ * parceiro/profissional que ELE vendeu (`selling_coach_id`). Ser dono do produto
+ * não entra: contar produto criado premiava quem só cadastrou.
+ *
+ * A função no banco já descarta `is_test`, que este cálculo não filtrava.
+ */
 async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<number> {
   const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
   const cutoff = await getServerCutoffIso();
   const effectiveSince = cutoff
     ? (sinceIso && sinceIso > cutoff ? sinceIso : cutoff)
     : sinceIso;
-  const { data: studs } = await supabaseAdmin
-    .from("students").select("id").eq("coach_id", coachId);
-  const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
-  let total = 0;
-  if (ids.length > 0) {
-    let txq = supabaseAdmin
-      .from("transactions").select("gross_amount")
-      .in("student_id", ids).eq("status", "paid")
-      .not("paid_at", "is", null);
-    if (effectiveSince) txq = txq.gte("paid_at", effectiveSince);
-    const { data: txs } = await txq;
-    ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
-  }
-
-  // Só o que ele VENDEU. `selling_coach_id` é quem fez a venda; ser dono do
-  // produto (`professional_coach_id`, `partner_id`) não entra: patente é de
-  // venda própria, e contar produto criado premiava quem só cadastrou. Quando
-  // o dono também é o vendedor, a venda continua contando — por `selling_coach_id`.
-  let q = supabaseAdmin
-    .from("partner_product_orders" as never)
-    .select("id,gross_amount" as never)
-    .eq("selling_coach_id" as never, coachId as never)
-    .eq("status" as never, "paid" as never)
-    .not("paid_at" as never, "is" as never, null as never);
-  if (effectiveSince) q = (q as any).gte("paid_at", effectiveSince);
-  const { data: rows } = await q;
-  ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
-    total += Number(o.gross_amount) || 0;
-  });
-  return total;
+  const { data } = await supabaseAdmin.rpc("coach_vp_no_periodo" as never, {
+    _desde: effectiveSince,
+    _ate: new Date().toISOString(),
+  } as never);
+  const linha = ((data as unknown as Array<{ coach_id: string; vp: number }>) || [])
+    .find((r) => r.coach_id === coachId);
+  return Number(linha?.vp ?? 0);
 }
 
 
