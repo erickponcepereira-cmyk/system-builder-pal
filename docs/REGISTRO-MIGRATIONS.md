@@ -1,3 +1,29 @@
+## 20260912100000_pdv_patio_operacao.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do PDV de estacionamento |
+| **Data** | 12/09/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao — so leitura |
+| **Aplicada em producao?** | **Nao** |
+
+Fase 2 do PDV, parte que nao toca dinheiro. Tres funcoes de operacao do patio:
+`pdv_patio` (lista com tempo e valor ja resolvidos), `pdv_abrir_ticket` (acha ou
+cria o veiculo e abre o ticket numa chamada so) e `pdv_veiculo_resumo` (historico
+curto do carro).
+
+**Nao cria tabela nem coluna.** Nenhuma venda, pagamento, turno ou lancamento
+financeiro — isso e o resto da fase 2 e fica para depois do aval. O valor que
+`pdv_patio` devolve e leitura da regua da fase 1, calculada no banco de proposito:
+se a tela somasse fracoes por conta propria existiriam duas reguas, a que cobra e
+a que o cliente le.
+
+**Depende de 20260909120000_pdv_patio_e_tarifa.sql**, que ainda nao foi aplicada.
+Aplicar as duas na ordem.
+
+---
+
 ## 20260909120000_pdv_patio_e_tarifa.sql
 
 | | |

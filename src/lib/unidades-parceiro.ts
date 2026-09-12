@@ -17,7 +17,9 @@ export type Permissao =
   | "store.ver"
   | "subscription.ver"
   | "crm"
-  | "robo";
+  | "robo"
+  | "pdv.operar"
+  | "pdv.configurar";
 
 export const PERMISSOES: Permissao[] = [
   "overview.ver",
@@ -37,6 +39,8 @@ export const PERMISSOES: Permissao[] = [
   "subscription.ver",
   "crm",
   "robo",
+  "pdv.operar",
+  "pdv.configurar",
 ];
 
 export const ROTULOS_PERMISSAO: Record<Permissao, string> = {
@@ -57,6 +61,8 @@ export const ROTULOS_PERMISSAO: Record<Permissao, string> = {
   "subscription.ver": "Ver mensalidade e anuidade",
   "crm": "Usar o CRM da unidade",
   "robo": "Usar o robô de atendimento",
+  "pdv.operar": "Operar o PDV — pátio, entrada e saída",
+  "pdv.configurar": "Configurar vagas e tabela de tarifa",
 };
 
 export type PapelUnidade = "owner" | "manager" | "staff";

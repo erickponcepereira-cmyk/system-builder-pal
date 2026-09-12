@@ -108,6 +108,19 @@ e vira retaguarda depois, não lixo.
 próprio terminal, e a carteirinha FitMind é lida pela **câmera** dele. Isso
 derrubou a decisão anterior de mandar comprovante por WhatsApp.
 
+**Estado em 12/09/2026.** Fase 1 (tabelas do pátio + régua) e fase 2a (operar o
+pátio) estão **escritas e commitadas, nenhuma aplicada** — as tabelas `pdv_*`
+respondem 404 em produção. A rota é `/pdv`, fora do painel de parceiro pela
+mesma razão de `/academia`: quem opera a guarita não cuida de carteira. O gate é
+`pode(unidade, "pdv.operar")`, e as duas permissões novas já entraram em
+`src/lib/unidades-parceiro.ts` — sem isso elas existiriam no banco e ninguém
+conseguiria atribuir, porque `PartnerMembersPanel` itera `PERMISSOES`.
+
+**A régua de preço não é duplicada no front.** `pdv_patio` devolve minutos e
+valor já calculados; `src/lib/pdv-patio.ts` só trata placa e formatação de
+tempo. Se a tela somasse frações, existiriam duas réguas — a que cobra e a que o
+cliente lê.
+
 **Os dois atritos do motor** (achados lendo o código, não supostos):
 
 - `partner_product_orders.student_id` é **NOT NULL**. Venda anônima — a regra no

@@ -99,6 +99,13 @@ CRM (`crm_quadros`/`crm_cartoes`), bot (`bot_fluxos`/`bot_disparos`),
   de base deixa de ser 15 e o próximo turno se perde. O Vite cacheia o stub — trocar o
   conteúdo exige matar o dev e `rm -rf node_modules/.vite`. Enquanto o dev viver ele
   reescreve `routeTree.gen.ts`; restaurar o arquivo só cola depois de matar o processo.
+- **`vitest` quebra pelo mesmo `mcpPlugin()`** (confirmado em 12/09/2026): ele carrega
+  o `vite.config.ts` e morre em `routesDir "src/routes" must resolve under ...`. O
+  contorno não mexe no repo — uma config própria fora dele, **sem `import` de
+  `vitest/config`** (o arquivo fora do projeto não acha o pacote); exporte um objeto:
+  `export default { root: "C:/dev/fitmind-bugs", resolve: { alias: { "@": "C:/dev/fitmind-bugs/src" } }, test: { environment: "node", include: ["src/lib/__tests__/**/*.test.ts"] } }`
+  e rode `node node_modules/vitest/vitest.mjs run --config <caminho>`. Com isso a suíte
+  inteira roda (5 arquivos, 42 testes em 12/09/2026).
 - **Tela atrás de login não dá para conferir assim.** O jeito é uma rota descartável em
   `src/routes/` que monte o componente sem dados — e apagar depois.
 - **O Supabase do MCP não é o do app.** O app é `myqyjifvrlwvesrwubsg`. Para inspecionar
