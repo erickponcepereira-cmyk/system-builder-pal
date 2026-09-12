@@ -2552,8 +2552,10 @@ export const relatorioAcademia = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return r as unknown as {
       periodo: { de: string; ate: string; hoje: string };
-      financeiro: { lancamentos: number; bruto: number; taxas: number; liquido: number };
-      por_forma: Array<{ forma: string; bruto: number; taxas: number; liquido: number }>;
+      /** `cortesias` já está dentro de `lancamentos`: é o lançamento de valor zero. */
+      financeiro: { lancamentos: number; cortesias: number; bruto: number; taxas: number; liquido: number };
+      /** A forma `cortesia` não é pagamento: é a linha das mensalidades de valor zero. */
+      por_forma: Array<{ forma: string; qtd: number; bruto: number; taxas: number; liquido: number }>;
       por_plano: Array<{ plano: string; vendas: number; bruto: number }>;
       situacao: { liberados: number; em_carencia: number; a_vencer: number; bloqueados: number; bloqueados_antigos: number; total_com_mensalidade: number };
       sem_mensalidade: number;

@@ -1,3 +1,25 @@
+## 20260912160000_cortesia_aparece_no_relatorio.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 12/09/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao — so leitura de relatorio |
+| **Aplicada em producao?** | **Sim — 12/09/2026**, `md5(prosrc)` das duas funcoes conferido |
+
+Reescreve `academia_relatorio` e `academia_relatorio_pessoas_extra` a partir da
+definicao que estava em producao (nao da ultima migration do repo). Cortesia —
+mensalidade nao importada com valor zero — deixa de contar como venda
+(`financeiro.cortesias`), ganha linha propria em `por_forma` (com `qtd`, que todas
+as linhas passam a trazer) e lista propria (`forma` + filtro `cortesia`). As listas
+de recebido, renovacoes e plano escrevem "cortesia" no lugar de "R$ 0,00 · forma".
+
+Compativel com a tela anterior: os campos novos sao aditivos, e a linha `cortesia`
+aparece com o nome cru e R$ 0,00 ate a tela nova subir.
+
+---
+
 ## 20260912100000_pdv_patio_operacao.sql
 
 | | |

@@ -665,3 +665,34 @@ produtos estão com status `pending`, não aprovados.
 **`types.ts` foi editado à mão** para conhecer as colunas novas. Ele é gerado do
 banco; a próxima geração pela Lovable substitui, e tudo bem — mas se aparecer erro
 de "coluna não existe no tipo" depois de mexer no banco, é isto.
+
+## 12/09/2026 — cortesia aparece no relatório
+
+**Cortesia é mensalidade lançada por aqui com valor zero** — o plano "gratuito" ou a
+renovação marcada como cortesia (`RenovarAluno`). Não tem bandeira no banco:
+`academia_renovar` não recebe `cortesia`, grava `forma_pagamento = 'outro'` e não
+cria linha em `academia_mensalidade_pagamentos`. O critério é `valor = 0` com
+`importado_de IS NULL` — importação do Next Fit também tem valor zero e **não** é
+cortesia.
+
+Antes, o relatório contava a cortesia como **venda** ("82 vendas no balcão"),
+ela sumia da tabela por forma de pagamento (que lê a tabela de pagamentos) e as
+listas mostravam "R$ 0,00 · outro". Agora (`20260912160000`): `financeiro.cortesias`
+separa "N vendas · M cortesias"; `por_forma` ganha a linha `cortesia` com `qtd`;
+`academia_relatorio_pessoas_extra` com `forma` + filtro `cortesia` lista quem
+ganhou, e recebido/renovações/plano escrevem "cortesia".
+
+**`cortesia` não entra em `FORMAS_PAGAMENTO`.** Aquela lista alimenta o seletor de
+pagamento da venda e a configuração de taxas; o rótulo mora só no relatório. E
+cuidado com o nome: `cortesia` também é um dos `TIPOS_DAYUSE` (`academia_dayuse.tipo`),
+que é outra coisa — acesso avulso, não mensalidade.
+
+Na data havia 4 cortesias, todas da Estação e de agosto (2 no "gratuito" e 2
+lançamentos avulsos de valor zero, um deles marcado "testando"); nenhuma em setembro,
+então o mês corrente não mostra a linha.
+
+**Como foi conferido, e vale repetir:** antes de aplicar, as funções novas foram
+criadas em `pg_temp` na mesma chamada do MCP e comparadas linha a linha com as de
+`public` (`regexp_split_to_table` + `EXCEPT ALL` nos dois sentidos) — o diff mostrou
+só o planejado. Depois de aplicar, cada categoria das listas foi comparada por md5
+com uma fotografia tirada antes: as que não tratam de cortesia saíram idênticas.

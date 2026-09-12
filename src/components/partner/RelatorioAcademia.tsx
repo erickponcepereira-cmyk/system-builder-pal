@@ -6,7 +6,12 @@ import { relatorioAcademia, relatorioAcademiaExtra, relatorioTurmasEEventos, FOR
 import { PessoasDoRelatorio } from "@/components/partner/PessoasDoRelatorio";
 
 const brl = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const rotuloForma = (v: string) => FORMAS_PAGAMENTO.find((f) => f.value === v)?.label ?? v;
+// Cortesia não é forma de pagamento — não entra no seletor da venda nem nas
+// taxas —, mas tem linha própria na tabela do relatório.
+const FORMA_CORTESIA = "cortesia";
+const rotuloForma = (v: string) =>
+  v === FORMA_CORTESIA ? "Cortesia" : FORMAS_PAGAMENTO.find((f) => f.value === v)?.label ?? v;
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
 type Dados = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademia>>>>;
 type Extra = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof relatorioAcademiaExtra>>>>;
@@ -137,6 +142,8 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
 
   const f = dados.financeiro;
   const s = dados.situacao;
+  // Cortesia é lançamento, não venda: quem ganhou não entra na conta de vendas.
+  const vendas = f.lancamentos - f.cortesias;
 
   // Ordena pelo relogio. Sem isto a grade vinha 05:00, 06:00, 19:30, 17:30,
   // 18:30, 07:00 -- a ordem em que o banco devolveu.
@@ -168,7 +175,10 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
         <h3 className={`mb-2 ${EYEBROW}`}>Dinheiro no período</h3>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <Cartao rot="Recebido" valor={brl(f.bruto)} tom="ok"
-            nota={`${f.lancamentos} ${f.lancamentos === 1 ? "venda" : "vendas"} no balcão`}
+            nota={
+              `${plural(vendas, "venda", "vendas")} no balcão` +
+              (f.cortesias > 0 ? ` · ${plural(f.cortesias, "cortesia", "cortesias")}` : "")
+            }
             acao="Ver quem pagou"
             aoClicar={f.lancamentos > 0 ? abrir("recebido", "Quem pagou no período") : undefined} />
           <Cartao rot="Taxas" valor={brl(f.taxas)} tom="neutro"
@@ -266,16 +276,22 @@ export function RelatorioAcademia({ partnerId }: { partnerId: string }) {
                     <th className="p-2 text-right font-normal">Taxa</th><th className="p-2 text-right font-normal">Líquido</th></tr>
               </thead>
               <tbody>
-                {dados.por_forma.map((l) => (
-                  <tr key={l.forma}
-                      onClick={abrir("forma", `Pagaram com ${rotuloForma(l.forma)}`, l.forma)}
-                      className="cursor-pointer border-t border-aca-line hover:bg-aca-alto">
-                    <td className="p-2 font-semibold text-aca-acao">{rotuloForma(l.forma)}</td>
-                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.bruto)}</td>
-                    <td className="p-2 text-right tabular-nums text-aca-muted">{brl(l.taxas)}</td>
-                    <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.liquido)}</td>
-                  </tr>
-                ))}
+                {dados.por_forma.map((l) => {
+                  const ehCortesia = l.forma === FORMA_CORTESIA;
+                  return (
+                    <tr key={l.forma}
+                        onClick={abrir("forma", ehCortesia ? "Cortesias no período" : `Pagaram com ${rotuloForma(l.forma)}`, l.forma)}
+                        className="cursor-pointer border-t border-aca-line hover:bg-aca-alto">
+                      {/* Na cortesia o dinheiro é zero por definição; o que informa é quantas foram. */}
+                      <td className="p-2 font-semibold text-aca-acao">
+                        {rotuloForma(l.forma)}{ehCortesia && ` · ${l.qtd}`}
+                      </td>
+                      <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.bruto)}</td>
+                      <td className="p-2 text-right tabular-nums text-aca-muted">{brl(l.taxas)}</td>
+                      <td className="p-2 text-right tabular-nums text-aca-ink">{brl(l.liquido)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
