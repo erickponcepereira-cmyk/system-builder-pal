@@ -49,80 +49,6 @@ async function resolveCoachId(userId: string): Promise<string | null> {
   return coach?.id ?? null;
 }
 
-async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promise<number> {
-  if (coachIds.length === 0) return 0;
-  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
-  const cutoff = await getServerCutoffIso();
-  const effectiveSince = cutoff && cutoff > sinceIso ? cutoff : sinceIso;
-  const { data: studs } = await supabaseAdmin
-    .from("students").select("id").in("coach_id", coachIds);
-  const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
-  let total = 0;
-  const linkedOrderIds = new Set<string>();
-  // Dedupe partner orders por id — contam apenas uma vez, independente do caminho (aluno, selling coach, professional, partner)
-  const partnerOrderMap = new Map<string, number>();
-  if (ids.length > 0) {
-    const { data: txs } = await supabaseAdmin
-      .from("transactions").select("gross_amount, metadata")
-      .in("student_id", ids).eq("status", "paid")
-      .not("paid_at", "is", null).gte("paid_at", effectiveSince);
-    ((txs as { gross_amount: number; metadata: any }[] | null) || []).forEach((t) => {
-      total += Number(t.gross_amount) || 0;
-      const linked = t?.metadata?.store_order_id;
-      if (linked) linkedOrderIds.add(String(linked));
-    });
-    const { data: orders } = await supabaseAdmin
-      .from("store_orders").select("id,total_amount")
-      .in("student_id", ids).eq("status", "paid").gte("paid_at", effectiveSince);
-    ((orders as { id: string; total_amount: number }[] | null) || []).forEach((o) => {
-      if (linkedOrderIds.has(o.id)) return;
-      total += Number(o.total_amount) || 0;
-    });
-    const { data: partnerOrdersByStudent } = await supabaseAdmin
-      .from("partner_product_orders" as never)
-      .select("id,gross_amount" as never)
-      .in("student_id" as never, ids as never)
-      .eq("status" as never, "paid" as never)
-      .not("paid_at" as never, "is" as never, null as never)
-      .gte("paid_at" as never, effectiveSince as never);
-    ((partnerOrdersByStudent as unknown as { id: string; gross_amount: number }[] | null) || []).forEach((o) => {
-      partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
-    });
-  }
-
-  const { data: coachProfiles } = await supabaseAdmin
-    .from("coaches")
-    .select("id,profile_id")
-    .in("id", coachIds);
-  const profileIds = ((coachProfiles as Array<{ id: string; profile_id: string | null }> | null) || [])
-    .map((c) => c.profile_id)
-    .filter(Boolean) as string[];
-  const { data: partnerRows } = profileIds.length
-    ? await supabaseAdmin.from("partners" as never).select("id" as never).in("profile_id" as never, profileIds as never)
-    : { data: [] as unknown };
-  const partnerIds = (((partnerRows as unknown as Array<{ id: string }>) || []).map((p) => p.id));
-  const loadPartnerOrders = async (column: "selling_coach_id" | "professional_coach_id" | "partner_id", values: string[]) => {
-    if (!values.length) return;
-    const { data: rows } = await supabaseAdmin
-      .from("partner_product_orders" as never)
-      .select("id,gross_amount" as never)
-      .in(column as never, values as never)
-      .eq("status" as never, "paid" as never)
-      .not("paid_at" as never, "is" as never, null as never)
-      .gte("paid_at" as never, effectiveSince as never);
-    ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
-      // setIfAbsent: já contado via outro caminho? Mantém valor (dedup por id)
-      if (!partnerOrderMap.has(o.id)) partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
-    });
-  };
-  await Promise.all([
-    loadPartnerOrders("selling_coach_id", coachIds),
-    loadPartnerOrders("professional_coach_id", coachIds),
-    loadPartnerOrders("partner_id", partnerIds),
-  ]);
-  partnerOrderMap.forEach((amount) => { total += amount; });
-  return total;
-}
 
 export const getCareerProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -152,38 +78,38 @@ export const getCareerProgress = createServerFn({ method: "GET" })
       return { coachId: null, patents, windows, currentPatentKey: null, nextPatentKey: patents[0]?.key ?? null, achievements: [] };
     }
 
-    // Build full downline (all depths) for "team" sales
-    const { data: allCoaches } = await supabaseAdmin
-      .from("coaches").select("id, upline_coach_id");
-    const byUpline = new Map<string, string[]>();
-    ((allCoaches as { id: string; upline_coach_id: string | null }[] | null) || []).forEach((c) => {
-      const k = c.upline_coach_id || "__root__";
-      const arr = byUpline.get(k) || [];
-      arr.push(c.id);
-      byUpline.set(k, arr);
-    });
-    const downline: string[] = [];
-    const queue = [...(byUpline.get(myCoachId) || [])];
-    while (queue.length) {
-      const cur = queue.shift()!;
-      downline.push(cur);
-      (byUpline.get(cur) || []).forEach((c) => queue.push(c));
-    }
-
+    // Venda própria e de equipe vêm do banco, de `coach_vp_no_periodo` e
+    // `coach_ve_no_periodo`. Antes cada painel tinha sua própria conta: este
+    // somava até produto criado (`professional_coach_id`, `partner_id`), o de
+    // medalhas somava só o que o coach vendeu, e o ranking da rede somava por
+    // aluno. Três definições de "venda própria" davam três números na mesma
+    // tela. A árvore do downline também era montada aqui e refeita a cada
+    // janela; agora é uma recursiva dentro da função de equipe.
     const distinctWindows = Array.from(new Set(patents.map((p) => p.time_window_months))).filter((m) => m > 0);
+    const ateIso = new Date().toISOString();
     for (const months of distinctWindows) {
       const since = new Date();
       since.setMonth(since.getMonth() - months);
       const sinceIso = since.toISOString();
-      const own = await sumRevenueForCoaches([myCoachId], sinceIso);
-      const team = await sumRevenueForCoaches(downline, sinceIso);
+      const [{ data: vpRows }, { data: veRows }] = await Promise.all([
+        supabaseAdmin.rpc("coach_vp_no_periodo" as never, { _desde: sinceIso, _ate: ateIso } as never),
+        supabaseAdmin.rpc("coach_ve_no_periodo" as never, { _desde: sinceIso, _ate: ateIso } as never),
+      ]);
+      const own = Number(
+        ((vpRows as unknown as Array<{ coach_id: string; vp: number }>) || [])
+          .find((r) => r.coach_id === myCoachId)?.vp ?? 0,
+      );
+      const team = Number(
+        ((veRows as unknown as Array<{ coach_id: string; ve: number }>) || [])
+          .find((r) => r.coach_id === myCoachId)?.ve ?? 0,
+      );
       const total = own + team;
       const ownPct = total > 0 ? (own / total) * 100 : 100;
       windows[months] = { ownRevenue: own, teamRevenue: team, totalRevenue: total, ownPct };
     }
 
-    // Determine highest patent met (cap BOTH VP and VE by their allowed %).
-    // Once a higher patent is reached, all lower ones are auto-conquered.
+    // Maior patente atingida. Alcançar uma conquista todas as anteriores, e o
+    // histórico nunca é removido — "uma vez nessa patente, para sempre".
     let currentPatentKey: string | null = null;
     let currentLevel = 0;
     const achievedNow: Array<{ key: string; level: number; qualifying: number }> = [];
@@ -196,16 +122,19 @@ export const getCareerProgress = createServerFn({ method: "GET" })
         achievedNow.push({ key: p.key, level: p.level, qualifying: 0 });
         continue;
       }
-      const vpPct = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
-      const vePct = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpPct);
-      const vpRequired = (p.required_revenue * vpPct) / 100;
-      const veRequired = (p.required_revenue * vePct) / 100;
-      // REGRA: precisa atingir AMBOS — mínimo de VP E mínimo de VE
-      const meetsVP = w.ownRevenue >= vpRequired - 0.001;
-      const meetsVE = veRequired === 0 || w.teamRevenue >= veRequired - 0.001;
-      if (meetsVP && meetsVE) {
+      // REGRA: `required_revenue` é a produção da janela ("R$ 20.000 em 6
+      // meses") e `max_team_sales_pct` é o TETO da parte que pode vir da
+      // equipe. A equipe contribui até esse teto; vender mais por conta própria
+      // nunca prejudica.
+      //
+      // Antes daqui a condição era `own >= required*vp% && team >= required*ve%`,
+      // tratando o teto de equipe como piso: quem vendia tudo sozinho não subia,
+      // que é o contrário do que a regra existe para proteger.
+      const tetoEquipe = (p.required_revenue * (p.max_team_sales_pct ?? 0)) / 100;
+      const equipeQueConta = Math.min(w.teamRevenue, tetoEquipe);
+      const qualifying = w.ownRevenue + equipeQueConta;
+      if (qualifying >= p.required_revenue - 0.001) {
         if (p.level > currentLevel) { currentPatentKey = p.key; currentLevel = p.level; }
-        const qualifying = Math.min(w.ownRevenue, vpRequired) + Math.min(w.teamRevenue, veRequired);
         achievedNow.push({ key: p.key, level: p.level, qualifying });
       }
     }
