@@ -1,3 +1,45 @@
+## 20260909120000_pdv_patio_e_tarifa.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do PDV de estacionamento |
+| **Data** | 09/09/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | **Parcialmente — precisa do aval do financeiro antes de aplicar** |
+| **Aplicada em producao?** | **Nao** |
+
+Fase 1 do PDV: `pdv_vagas`, `pdv_tarifas`, `pdv_veiculos`, `pdv_tickets`, mais
+`pdv_normalizar_placa`, `pdv_timezone`, `pdv_tarifa_para`, `pdv_valor_fracoes`,
+`pdv_valor_tarifa` e `pdv_calcular_tarifa`. Desenho em `PDV-ESTACIONAMENTO.md`.
+
+**Por que "parcialmente".** Nao encosta em carteira, comissao, fatura, taxa nem
+em nenhuma tabela do motor financeiro — nao chama `process_partner_product_order_paid`
+e nao credita ninguem. Mas **cria colunas de valor** (`primeira_fracao_valor`,
+`teto_periodo_valor`, `valor_fixo`, `pdv_tickets.valor_calculado`) e define o
+preco cobrado do cliente final. Pela regra deste arquivo, isso pede aviso ao
+chat financeiro **antes** de aplicar, nao depois.
+
+**Protecao de relogio (12/09/2026):** um gatilho normaliza `saida_em` para
+`entrada_em` quando a saida vem antes da entrada. Sem isso o CHECK barraria o
+UPDATE e o carro ficaria preso no patio — o iDFace deste projeto ja chegou com
+quatro horas de atraso, entao relogio de dispositivo errado nao e hipotese.
+
+**Duas permissoes novas esperadas em `partner_members.permissoes`:**
+`pdv.operar` (tickets e veiculos, o dia a dia) e `pdv.configurar` (vagas e
+tarifas). A separacao e proposital: quem opera a guarita nao muda o preco.
+
+**Verificacao:** `docs/propostas/2026-09-09-pdv-fase1-testes.sql`. A parte A e
+pura e pode rodar em producao; a parte B cria e desfaz dados em transacao com
+ROLLBACK e precisa de um `partner_id` de teste; a parte C e manual, pelo app,
+para provar a RLS com dois parceiros.
+
+A regua aritmetica foi provada fora do banco em 09/09/2026 (14 casos de borda:
+tolerancia exata, fracao comecada, teto por periodo de 24h, multiplos dias,
+regra fixa e relogio invertido). Isso prova a conta, **nao** o SQL — a maquina
+de desenvolvimento nao tem Postgres nem Docker.
+
+---
+
 ## 20260805140000_bot_v2.sql
 
 | | |
