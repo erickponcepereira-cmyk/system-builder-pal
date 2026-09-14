@@ -18,8 +18,16 @@ function PartnerOrdersInProgressPage() {
       if (!u.user) { setLoading(false); return; }
       const { data: p } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
       if (!p) { setLoading(false); return; }
-      const { data: pt } = await supabase.from("partners").select("id").eq("profile_id", (p as any).id).maybeSingle();
-      setPartnerId((pt as any)?.id || null);
+      // `maybeSingle()` devolve erro quando o login tem mais de uma unidade, e
+      // a tela ficava vazia para quem tem filial. A principal é a aprovada mais
+      // antiga, mesma regra das outras telas de parceiro.
+      const { data: pts } = await supabase
+        .from("partners").select("id,status,created_at")
+        .eq("profile_id", (p as any).id)
+        .order("created_at", { ascending: true });
+      const lista = (pts as Array<{ id: string; status: string }> | null) ?? [];
+      const principal = lista.find((r) => r.status === "approved") ?? lista[0];
+      setPartnerId(principal?.id || null);
       setLoading(false);
     })();
   }, []);

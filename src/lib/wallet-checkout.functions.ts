@@ -14,12 +14,16 @@ export const getMyWalletTotals = createServerFn({ method: "GET" })
       supabase.from("partners").select("id,status,created_at").eq("profile_id", profileId).order("created_at", { ascending: true }),
       supabase.from("coaches").select("id").eq("profile_id", profileId).maybeSingle(),
     ]);
+    // Todas as filiais, não só a principal. Um login de parceiro pode ter mais
+    // de uma unidade e cada uma tem carteira própria: mostrar só a primeira
+    // escondia o saldo das outras, e a pessoa via menos do que tem.
     const plist = pRows.data ?? [];
-    const primaryPartner = plist.find((r) => r.status === "approved") ?? plist[0] ?? null;
+    const partnerIds = plist.map((r) => r.id);
     let partner = 0, professional = 0;
-    if (primaryPartner?.id) {
-      const { data } = await supabase.from("partner_wallets").select("available_balance").eq("partner_id", primaryPartner.id).maybeSingle();
-      partner = Number(data?.available_balance || 0);
+    if (partnerIds.length) {
+      const { data } = await supabase
+        .from("partner_wallets").select("available_balance").in("partner_id", partnerIds);
+      partner = (data ?? []).reduce((soma, w) => soma + Number(w.available_balance || 0), 0);
     }
     if (cRow.data?.id) {
       const { data } = await supabase.from("professional_wallets").select("available_balance").eq("professional_coach_id", cRow.data.id).maybeSingle();

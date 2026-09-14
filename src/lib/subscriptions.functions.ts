@@ -32,13 +32,16 @@ export const getMySubscription = createServerFn({ method: "GET" })
         supabase.from("partners").select("id,status,created_at").eq("profile_id", profile.id).order("created_at", { ascending: true }),
         supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
       ]);
-      // Unidade principal (aprovada mais antiga) — o login pode ter filiais.
+      // Todas as filiais somadas: o login pode ter mais de uma unidade, cada
+      // uma com carteira própria. Mostrar só a principal escondia o saldo das
+      // demais — e a cascata de débito hoje gasta de todas.
       const pl = partnerRows ?? [];
-      const partner = pl.find((r) => r.status === "approved") ?? pl[0] ?? null;
+      const partnerIds = pl.map((r) => r.id);
       wallets.coach = Number(cw?.available_balance || 0);
-      if (partner?.id) {
-        const { data: pw } = await supabase.from("partner_wallets").select("available_balance").eq("partner_id", partner.id).maybeSingle();
-        wallets.partner = Number(pw?.available_balance || 0);
+      if (partnerIds.length) {
+        const { data: pw } = await supabase
+          .from("partner_wallets").select("available_balance").in("partner_id", partnerIds);
+        wallets.partner = (pw ?? []).reduce((soma, w) => soma + Number(w.available_balance || 0), 0);
       }
       if (coach?.id) {
         const { data: pw } = await supabase.from("professional_wallets").select("available_balance").eq("professional_coach_id", coach.id).maybeSingle();

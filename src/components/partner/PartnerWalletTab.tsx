@@ -93,20 +93,27 @@ export function PartnerWalletTab() {
     if (!profile) return;
     setProfileId(profile.id);
 
-    const { data: partner } = await supabase
+    // Um login pode ter mais de uma unidade. Isto era `.maybeSingle()`, que
+    // devolve ERRO quando vem mais de uma linha — e o `if (!partner) return`
+    // logo abaixo deixava a aba de carteira vazia justamente para quem tem
+    // filial. A carteira soma todas; o saque sai pela unidade principal.
+    const { data: partnerRows } = await supabase
       .from("partners")
-      .select("id")
+      .select("id,status,created_at")
       .eq("profile_id", profile.id)
-      .maybeSingle();
-    if (!partner) { setLoading(false); return; }
-    setPartnerId(partner.id);
+      .order("created_at", { ascending: true });
+    const partners = partnerRows ?? [];
+    if (!partners.length) { setLoading(false); return; }
+    const partnerIds = partners.map((r) => r.id);
+    const principal = partners.find((r) => r.status === "approved") ?? partners[0];
+    setPartnerId(principal.id);
 
     const cutoff = await getClientCutoffIso();
 
     let withdrawsQ = supabase
       .from("withdrawal_requests")
       .select("id,amount,status,requested_at,paid_at")
-      .eq("partner_id" as never, partner.id as never)
+      .in("partner_id" as never, partnerIds as never)
       .order("requested_at", { ascending: false })
       .limit(20);
     if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
@@ -115,15 +122,19 @@ export function PartnerWalletTab() {
       supabase
         .from("partner_wallets" as never)
         .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
-        .eq("partner_id" as never, partner.id as never)
-        .maybeSingle(),
+        .in("partner_id" as never, partnerIds as never),
       fetchMySales({ data: { limit: 100, fromIso: cutoff || null } }).catch(() => ({ sales: [] as any[] })),
       withdrawsQ,
     ]);
 
-    let walletRow = ((walletRes.data as unknown as WalletRow | null)) || {
-      available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
-    };
+    // Soma as filiais numa carteira só, que é como o dono pensa no próprio saldo.
+    const linhas = (walletRes.data as unknown as WalletRow[] | null) || [];
+    let walletRow = linhas.reduce<WalletRow>((soma, linha) => ({
+      available_balance: soma.available_balance + Number(linha.available_balance || 0),
+      pending_balance:   soma.pending_balance   + Number(linha.pending_balance   || 0),
+      total_earned:      soma.total_earned      + Number(linha.total_earned      || 0),
+      total_withdrawn:   soma.total_withdrawn   + Number(linha.total_withdrawn   || 0),
+    }), { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 });
     const baseOrders = ((salesRes as any)?.sales as OrderRow[]) || [];
     const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
 
