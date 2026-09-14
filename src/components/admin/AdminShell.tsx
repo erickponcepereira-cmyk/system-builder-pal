@@ -5,7 +5,7 @@ import {
   Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins, Search, Palette, KanbanSquare, Bot,
 
   Blocks, MessageCircle,
-  Image, IdCard, BookOpen, Undo2, Star } from "lucide-react";
+  Image, IdCard, BookOpen, Undo2, Star, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -20,6 +20,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/students", label: "Alunos", icon: Users, perm: "students" },
   { to: "/admin/student-trace", label: "Rastrear aluno", icon: Search, perm: "students" },
   { to: "/admin/carteirinha", label: "Carteirinha", icon: IdCard, perm: "students" },
+  { to: "/admin/anamneses", label: "Anamneses", icon: ClipboardList, perm: "anamneses" },
   { to: "/admin/users", label: "Admins", icon: ShieldCheck, perm: "users" },
   
   { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart, perm: "orders" },

@@ -3,7 +3,7 @@ export type AdminPermKey =
   | "orders" | "digital_products" | "coach_applications"
   | "payments" | "financeiro" | "financial_summary" | "reports" | "patents" | "settings" | "calendars" | "store" | "freebies" | "store_reports" | "products"
   | "product_orders" | "partner_orders" | "nutritionist_wallet" | "admin_wallet" | "career" | "library" | "partners" | "professionals" | "assessment_deletions"
-  | "fitmind_events" | "challenge" | "crm" | "robo";
+  | "fitmind_events" | "challenge" | "crm" | "robo" | "anamneses";
 
 
 export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
@@ -41,6 +41,8 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "crm", label: "CRM" },
   { key: "robo", label: "Robô de WhatsApp" },
   { key: "professionals", label: "Profissionais" },
+  // Dado de saúde: permissão própria, para não vir junto de "Alunos" ou "Profissionais".
+  { key: "anamneses", label: "Anamneses" },
   { key: "assessment_deletions", label: "Exclusões de Avaliações" },
   { key: "settings", label: "Configurações" },
 ];

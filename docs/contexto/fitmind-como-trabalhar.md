@@ -139,3 +139,27 @@ SELECT ... ;   -- auth.uid() passa a devolver o sub
 A string roda como uma transação implícita, então papel e claims morrem no fim —
 conferido: a chamada seguinte volta a `current_user = postgres`. Foi assim que
 se provou em 11/09 que o dono do Reino vê o próprio funil e nenhum outro.
+
+## Permissão por área do admin só esconde o menu (14/09/2026)
+
+`admin_permissions` (`canAccess`, em `src/lib/admin-permissions.ts`) filtra os
+itens do `AdminShell` e nada mais. As funções de servidor do admin conferem só
+`role = 'admin'`: um admin sem a área "Financeiro" não vê o link, mas chama a
+função do financeiro direto. Em 14/09 os dois admins eram master ou `full`, então
+ninguém estava exposto — **ao criar o primeiro admin limitado, isto passa a valer.**
+
+A aba **Anamneses** (dado de saúde) é a primeira que confere a permissão no
+servidor: `exigirPermissao` em `admin-anamneses.functions.ts`, com o mesmo
+`canAccess` do menu. É o modelo para as outras.
+
+**Retorno de função de servidor precisa ser serializável no tipo.**
+`Record<string, unknown>` quebra o `tsc` (`ValidateSerializable`). Para devolver
+uma linha inteira do banco, use o tipo gerado:
+`Database["public"]["Tables"]["tabela"]["Row"]`.
+
+**No teste com a chave anônima, 42501 também é sinal de formato certo.** Consulta
+que passa por tabela que o anônimo não lê (`profiles`) volta 401/`42501`: é o
+Postgres executando, depois de o PostgREST já ter resolvido os joins. Join errado
+para antes — 400 `PGRST200` (relação inexistente) ou 300 `PGRST201` (ambígua).
+`coaches → profiles` é ambígua (`profile_id` e `approved_by`): use
+`profiles!coaches_profile_id_fkey`.

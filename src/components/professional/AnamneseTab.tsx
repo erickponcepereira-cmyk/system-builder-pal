@@ -9,7 +9,12 @@ interface Props { coachId: string }
 type Client = { id: string; name: string; whatsapp: string | null; email: string | null; student_id?: string | null };
 type Question = { id: string; label: string; kind: string; options: string[]; position: number };
 
-const DEFAULT_QUESTIONS: Question[] = [
+/**
+ * Perguntas usadas quando o profissional não personalizou as dele. As respostas
+ * ficam gravadas com estas chaves (`_d1`…), então quem exibe a anamnese fora
+ * daqui — o admin — precisa desta lista para saber o que foi perguntado.
+ */
+export const DEFAULT_QUESTIONS: Question[] = [
   { id: "_d1", label: "Tem alguma doença pré-existente? Quais?", kind: "textarea", options: [], position: 1 },
   { id: "_d2", label: "Faz uso de medicação contínua? Quais?", kind: "textarea", options: [], position: 2 },
   { id: "_d3", label: "Possui alergia ou intolerância alimentar?", kind: "textarea", options: [], position: 3 },
