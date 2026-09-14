@@ -82,6 +82,33 @@ export const updateSubscriptionAdmin = createServerFn({ method: "POST" })
       .from("user_subscriptions").select("user_id").eq("id", id).maybeSingle();
     const { error } = await (context.supabase.from("user_subscriptions") as any).update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+
+    // O valor novo precisa alcançar a fatura que ainda vai ser paga. Sem isto a
+    // alteração sumia: `user_subscriptions` guardava R$ 150 e a pessoa continuava
+    // vendo o boleto de R$ 100 emitido antes — era o relato de "mudei a
+    // mensalidade e não aparece para eles".
+    //
+    // Só as que ainda não venceram: reajustar dívida de um mês que já passou
+    // seria mudar o combinado depois do prazo. Paga e cancelada nunca se mexe, e
+    // taxa/imposto/líquido ficam de fora porque só são preenchidos no pagamento.
+    if (data.custom_amount !== undefined) {
+      const { data: atual } = await context.supabase
+        .from("user_subscriptions")
+        .select("custom_amount, plan:subscription_plans(default_amount)")
+        .eq("id", id).maybeSingle();
+      const valor = Number(
+        (atual as any)?.custom_amount ?? (atual as any)?.plan?.default_amount ?? 0,
+      );
+      if (valor > 0) {
+        await (context.supabase.from("subscription_invoices") as any)
+          .update({ amount: valor, updated_at: new Date().toISOString() })
+          .eq("user_subscription_id", id)
+          .is("paid_at", null)
+          .in("status", ["pending", "blocked"])
+          .gte("due_date", new Date().toISOString().slice(0, 10));
+      }
+    }
+
     // Ao isentar a assinatura, limpa faturas que ainda bloqueiam o acesso
     if (data.status && data.status.startsWith("exempt") && (sub as any)?.user_id) {
       await context.supabase.rpc("admin_release_user_subscription", {
