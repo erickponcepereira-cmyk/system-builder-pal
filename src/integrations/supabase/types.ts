@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_agente_20260915: {
+        Row: {
+          definicao: string | null
+          guardado_em: string | null
+          md5: string | null
+          proname: unknown
+          prosrc: string | null
+        }
+        Insert: {
+          definicao?: string | null
+          guardado_em?: string | null
+          md5?: string | null
+          proname?: unknown
+          prosrc?: string | null
+        }
+        Update: {
+          definicao?: string | null
+          guardado_em?: string | null
+          md5?: string | null
+          proname?: unknown
+          prosrc?: string | null
+        }
+        Relationships: []
+      }
       academia_acessos_negados: {
         Row: {
           detalhe: string | null
@@ -1194,6 +1218,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academia_mensalidades_partner_order_id_fkey"
+            columns: ["partner_order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "academia_mensalidades_registrado_por_fkey"
             columns: ["registrado_por"]
             isOneToOne: false
@@ -1358,9 +1389,9 @@ export type Database = {
           dias_validade: number
           id: string
           partner_id: string
+          partner_product_id: string | null
           plano: string
           politica_renovacao: string
-          partner_product_id: string | null
           product_id: string | null
           updated_at: string
         }
@@ -1369,10 +1400,10 @@ export type Database = {
           dias_validade?: number
           id?: string
           partner_id: string
+          partner_product_id?: string | null
           plano?: string
           politica_renovacao?: string
-          partner_product_id: string | null
-          product_id: string | null
+          product_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1380,9 +1411,9 @@ export type Database = {
           dias_validade?: number
           id?: string
           partner_id?: string
+          partner_product_id?: string | null
           plano?: string
           politica_renovacao?: string
-          partner_product_id?: string | null
           product_id?: string | null
           updated_at?: string
         }
@@ -1392,6 +1423,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_produtos_mensalidade_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
             referencedColumns: ["id"]
           },
           {
@@ -16147,6 +16185,10 @@ export type Database = {
           telefone: string
         }[]
       }
+      academia_credencial_no_grupo: {
+        Args: { p_partner_id: string; p_referencia: string }
+        Returns: string
+      }
       academia_credencial_sugestoes: {
         Args: { p_credencial_id: string; p_partner_id: string }
         Returns: {
@@ -16352,6 +16394,10 @@ export type Database = {
       }
       academia_mensalidade_gerar: {
         Args: { p_transaction_id: string }
+        Returns: boolean
+      }
+      academia_mensalidade_gerar_pedido: {
+        Args: { p_order_id: string }
         Returns: boolean
       }
       academia_mensalidades_pendentes_reprocessar: {
@@ -16724,6 +16770,15 @@ export type Database = {
         }[]
       }
       academia_telefone_digitos: { Args: { p_texto: string }; Returns: string }
+      academia_transferir_credenciais: {
+        Args: {
+          p_credenciais: string[]
+          p_destino: string
+          p_nota: string
+          p_origem: string
+        }
+        Returns: Json
+      }
       academia_treino_do_modelo: {
         Args: {
           p_dia: number
@@ -16847,6 +16902,24 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      admin_conferencia_pagamentos: {
+        Args: { _profile_id?: string }
+        Returns: {
+          adiantamento_aberto: number
+          carteira_diz: number
+          divergencia: number
+          em_espera: number
+          ganho_total: number
+          gasto_na_carteira: number
+          ja_sacado: number
+          nome: string
+          pagar_agora: number
+          papel: string
+          profile_id: string
+          rede_bloqueada: number
+          saque_em_aberto: number
+        }[]
+      }
       admin_hard_delete_user: { Args: { _user_id: string }; Returns: Json }
       admin_mark_student_withdrawal_paid: {
         Args: {
@@ -16896,6 +16969,15 @@ export type Database = {
         Args: { _coach_id: string; _valid_until: string }
         Returns: undefined
       }
+      admin_sincronizar_carteiras: {
+        Args: never
+        Returns: {
+          antes: number
+          depois: number
+          nome: string
+          profile_id: string
+        }[]
+      }
       admin_skip_invoice: {
         Args: { _invoice_id: string; _reason?: string }
         Returns: undefined
@@ -16921,6 +17003,20 @@ export type Database = {
           _title?: string
         }
         Returns: undefined
+      }
+      auditar_carteiras: {
+        Args: { _corrigir?: boolean }
+        Returns: {
+          carteira: string
+          corrigida: boolean
+          ganho_na_carteira: number
+          ganho_no_extrato: number
+          nome: string
+          pendente_na_carteira: number
+          pendente_no_extrato: number
+          profile_id: string
+          saldo_negativo: boolean
+        }[]
       }
       auto_ensure_subscription_for_profile: {
         Args: { _profile_id: string }
@@ -17062,6 +17158,27 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      carteira_atual: {
+        Args: { _profile_id?: string }
+        Returns: {
+          a_receber_depois: number
+          adiantamento_aberto: number
+          bloqueado_por_meta: number
+          disponivel: number
+          ganho: number
+          ganho_coach: number
+          ganho_parceiro: number
+          ganho_profissional: number
+          gasto_na_plataforma: number
+          liberado: number
+          nome: string
+          pago_a_mais: number
+          pendente: number
+          profile_id: string
+          sacado: number
+          saque_em_aberto: number
+        }[]
+      }
       carteirinha_definir_excecao: {
         Args: {
           _admin_user_id: string
@@ -17180,6 +17297,20 @@ export type Database = {
           _target_type: string
         }
         Returns: undefined
+      }
+      coach_ve_no_periodo: {
+        Args: { _ate?: string; _desde?: string }
+        Returns: {
+          coach_id: string
+          ve: number
+        }[]
+      }
+      coach_vp_no_periodo: {
+        Args: { _ate?: string; _desde?: string }
+        Returns: {
+          coach_id: string
+          vp: number
+        }[]
       }
       commission_seller_profile_id: {
         Args: { _partner_order_id: string; _transaction_id: string }
@@ -18023,6 +18154,17 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: undefined
       }
+      recalcular_precos_modo_receive: {
+        Args: { _aplicar?: boolean; _coach_id?: string; _data?: string }
+        Returns: {
+          combinado: number
+          confere: boolean
+          nome: string
+          preco_antes: number
+          preco_depois: number
+          produto_id: string
+        }[]
+      }
       recalculate_coach_card_access: {
         Args: { _coach_id: string }
         Returns: string
@@ -18043,6 +18185,7 @@ export type Database = {
         }[]
       }
       refresh_coach_inactivity: { Args: never; Returns: number }
+      refresh_coach_medals: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
       refresh_monthly_rankings: {
         Args: { _reference_month?: string }
@@ -18319,6 +18462,16 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      simular_liquido_da_cascata: {
+        Args: {
+          _com_pct: number
+          _fee_pct: number
+          _preco: number
+          _sys_pct: number
+          _tax_pct: number
+        }
+        Returns: number
+      }
       slot_target_profile_id: {
         Args: {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
