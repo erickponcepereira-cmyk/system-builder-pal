@@ -14,6 +14,10 @@ type Appointment = {
   professional?: { name: string | null } | null;
 };
 
+type RawAppointment = Omit<Appointment, "professional"> & {
+  professional?: { profiles?: { name: string | null } | null } | null;
+};
+
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", {
     weekday: "short",
