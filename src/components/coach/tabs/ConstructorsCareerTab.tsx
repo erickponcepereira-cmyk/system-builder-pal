@@ -132,20 +132,18 @@ export function ConstructorsCareerTab() {
             windowMonths={next.time_window_months}
           />
           {(() => {
-            const vpPct = next.vp_max_pct != null ? next.vp_max_pct : (next.min_own_sales_pct || 100);
-            const vePct = next.ve_max_pct != null ? next.ve_max_pct : Math.max(0, 100 - vpPct);
-            const vpReq = (next.required_revenue * vpPct) / 100;
-            const veReq = (next.required_revenue * vePct) / 100;
-            const vpOk = nextWindow.ownRevenue >= vpReq - 0.001;
-            const veOk = veReq === 0 || nextWindow.teamRevenue >= veReq - 0.001;
+            const { teamCap, qualifying } = qualificacao(next, nextWindow);
+            const falta = Math.max(0, next.required_revenue - qualifying);
             return (
               <>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <Stat icon={Users} label={`VP (mín. ${fmtBRL(vpReq)})`} value={fmtBRL(nextWindow.ownRevenue)} hint={vpOk ? "✓ atingido" : `faltam ${fmtBRL(Math.max(0, vpReq - nextWindow.ownRevenue))}`} />
-                  <Stat icon={TrendingUp} label={`VE (mín. ${fmtBRL(veReq)})`} value={fmtBRL(nextWindow.teamRevenue)} hint={veOk ? "✓ atingido" : `faltam ${fmtBRL(Math.max(0, veReq - nextWindow.teamRevenue))}`} />
+                  <Stat icon={Users} label="VP (venda própria)" value={fmtBRL(nextWindow.ownRevenue)} hint="conta integralmente" />
+                  <Stat icon={TrendingUp} label={`VE (teto ${fmtBRL(teamCap)})`} value={fmtBRL(nextWindow.teamRevenue)} hint={`conta ${fmtBRL(Math.min(nextWindow.teamRevenue, teamCap))}`} />
                 </div>
                 <div className="mt-3 rounded-lg px-2.5 py-2 text-[11px] bg-white/5 text-white/60">
-                  Regra: é obrigatório bater <strong>ambos</strong> os mínimos — {vpPct}% em VP ({fmtBRL(vpReq)}) <strong>E</strong> {vePct}% em VE ({fmtBRL(veReq)}).
+                  Regra: some {fmtBRL(next.required_revenue)} em {next.time_window_months} meses. Sua venda própria conta inteira; a da equipe conta
+                  até o teto de {next.max_team_sales_pct}% ({fmtBRL(teamCap)}).{" "}
+                  {falta > 0 ? `Faltam ${fmtBRL(falta)}.` : "✓ requisito atingido."}
                 </div>
               </>
             );
