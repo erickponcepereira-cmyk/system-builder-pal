@@ -1729,19 +1729,31 @@ export const salvarProdutoMensalidade = createServerFn({ method: "POST" })
     // origem tem a sua chave estrangeira: misturar deixaria o vínculo apontando
     // para uma tabela que não tem aquele id.
     const doParceiro = data.origem === "parceiro";
-    const { error } = await admin.from("academia_produtos_mensalidade").upsert(
-      {
-        partner_id: data.partnerId,
-        product_id: doParceiro ? null : data.productId,
-        partner_product_id: doParceiro ? data.productId : null,
-        plano: (data.plano || "Mensalidade").trim(),
-        dias_validade: Math.floor(data.diasValidade),
-        politica_renovacao: data.politica,
-        ativo: data.ativo,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: doParceiro ? "partner_id,partner_product_id" : "partner_id,product_id" },
-    );
+    const colunaOrigem = doParceiro ? "partner_product_id" : "product_id";
+    const vinculo = {
+      partner_id: data.partnerId,
+      product_id: doParceiro ? null : data.productId,
+      partner_product_id: doParceiro ? data.productId : null,
+      plano: (data.plano || "Mensalidade").trim(),
+      dias_validade: Math.floor(data.diasValidade),
+      politica_renovacao: data.politica,
+      ativo: data.ativo,
+      updated_at: new Date().toISOString(),
+    };
+
+    // A unicidade do lado do parceiro é um índice PARCIAL, e o Postgres não
+    // infere índice parcial num ON CONFLICT — o upsert falhava com "no unique
+    // or exclusion constraint matching". Por isso procura primeiro e decide.
+    const { data: existente } = await admin
+      .from("academia_produtos_mensalidade")
+      .select("id")
+      .eq("partner_id", data.partnerId)
+      .eq(colunaOrigem, data.productId)
+      .maybeSingle();
+
+    const { error } = existente
+      ? await admin.from("academia_produtos_mensalidade").update(vinculo).eq("id", existente.id)
+      : await admin.from("academia_produtos_mensalidade").insert(vinculo);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
