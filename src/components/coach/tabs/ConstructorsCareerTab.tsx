@@ -16,6 +16,16 @@ const PHASE_LABELS: Record<number, { title: string; subtitle: string }> = {
   4: { title: "Fase 4 — Legado", subtitle: "Grandes organizações dentro do ecossistema FitMind" },
 };
 
+type Janela = { ownRevenue: number; teamRevenue: number };
+
+/** Mesma regra do servidor: VP conta inteira, VE conta até o teto da patente. */
+function qualificacao(p: PatentRule, w: Janela | null | undefined) {
+  const teamCap = (p.required_revenue * (p.max_team_sales_pct ?? 0)) / 100;
+  if (!w) return { teamCap, qualifying: 0, achieved: p.required_revenue === 0 };
+  const qualifying = w.ownRevenue + Math.min(w.teamRevenue, teamCap);
+  return { teamCap, qualifying, achieved: qualifying >= p.required_revenue - 0.001 };
+}
+
 export function ConstructorsCareerTab() {
   const fetchProgress = useServerFn(getCareerProgress);
   const [data, setData] = useState<CareerProgress | null>(null);
