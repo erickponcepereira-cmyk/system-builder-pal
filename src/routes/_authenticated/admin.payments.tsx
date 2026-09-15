@@ -60,6 +60,42 @@ const statusColor = (s: string | null) => {
   return "bg-white/10 text-white/60";
 };
 
+/**
+ * Situação da assinatura de quem vai receber, na mesma linha do pagamento.
+ * Vermelho é fatura já vencida — é o caso que muda a decisão de pagar.
+ */
+function MensalidadeSelo({ m }: { m: PayoutPersonRow["mensalidade"] }) {
+  if (!m) return <span className="text-[10px] text-white/25">—</span>;
+  if (m.vencidas > 0) {
+    return (
+      <span
+        className="rounded-full bg-destructive/20 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive"
+        title={`${m.vencidas} fatura(s) vencida(s) · ${fmt(m.emAberto)} em aberto`}
+      >
+        Vencida {fmt(m.emAberto)}
+      </span>
+    );
+  }
+  if (m.emAberto > 0) {
+    return (
+      <span
+        className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-400"
+        title={`Vence em ${m.proximoVencimento ?? "—"}`}
+      >
+        A vencer {fmt(m.emAberto)}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold uppercase text-success"
+      title={m.ultimoPagamento ? `Último pagamento em ${m.ultimoPagamento.slice(0, 10)}` : undefined}
+    >
+      Em dia
+    </span>
+  );
+}
+
 function AdminPayments() {
   type Tab = "dashboard" | "payables" | "wallets" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet" | "recurring";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -387,6 +423,7 @@ function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGr
                 <th className="text-right px-4 py-3">Disponível</th>
                 <th className="text-right px-4 py-3">Bloqueado</th>
                 <th className="text-right px-4 py-3">Sacado</th>
+                <th className="text-center px-4 py-3">Mensalidade</th>
                 <th className="text-center px-4 py-3">Solicitação</th>
                 <th className="px-2"></th>
               </tr>
@@ -413,6 +450,9 @@ function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGr
 
                   <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(p.blocked)}</td>
                   <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(p.totalWithdrawn)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <MensalidadeSelo m={p.mensalidade} />
+                  </td>
                   <td className="px-4 py-3 text-center">
                     {p.pendingRequestId ? (
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusColor(p.pendingRequestStatus)}`}>

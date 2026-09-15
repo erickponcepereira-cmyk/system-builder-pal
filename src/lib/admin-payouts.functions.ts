@@ -404,6 +404,18 @@ export interface PayoutPersonRow {
   pendingRequestAmount: number;
   pendingRequestStatus: string | null;
   role: "coach" | "partner" | "professional" | "student_referrer";
+  /**
+   * Situação da mensalidade, para não precisar abrir outra tela antes de pagar.
+   * `emAberto` é a fatura mais antiga ainda não paga — é ela que decide se a
+   * pessoa está devendo.
+   */
+  mensalidade?: {
+    emDia: boolean;
+    emAberto: number;
+    vencidas: number;
+    proximoVencimento: string | null;
+    ultimoPagamento: string | null;
+  } | null;
 }
 
 export const listPayoutPeople = createServerFn({ method: "POST" })
@@ -454,7 +466,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     })();
 
     const [{ data: profs }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
+      supabaseAdmin.from("profiles").select("id,name,email,user_id").in("id", profileIds),
       pendingReqsQ,
       supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,total_withdrawn" as never).in("profile_id" as never, profileIds as never),
       (async () => {
@@ -566,9 +578,41 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const cMap = new Map(
       ((carteirasRaw as unknown as Array<{
         profile_id: string; ganho: number; pendente: number; bloqueado_por_meta: number;
-        sacado: number; gasto_na_plataforma: number; disponivel: number;
+        sacado: number; gasto_na_plataforma: number; disponivel: number; pago_a_mais: number;
       }>) || []).map((c) => [c.profile_id, c]),
     );
+
+    // Mensalidade na mesma linha: sem isto era preciso abrir outra tela para
+    // saber se quem vai receber está devendo assinatura.
+    const userIdsPorPerfil = new Map(
+      ((profs as Array<{ id: string; user_id?: string }>) || []).map((p) => [p.user_id ?? "", p.id]),
+    );
+    const { data: faturas } = await supabaseAdmin
+      .from("subscription_invoices")
+      .select("user_id,status,amount,due_date,paid_at")
+      .in("user_id", Array.from(userIdsPorPerfil.keys()).filter(Boolean));
+    const mensMap = new Map<string, NonNullable<PayoutPersonRow["mensalidade"]>>();
+    const hoje = new Date().toISOString().slice(0, 10);
+    ((faturas as Array<{ user_id: string; status: string; amount: number; due_date: string; paid_at: string | null }>) || [])
+      .forEach((f) => {
+        const pid = userIdsPorPerfil.get(f.user_id);
+        if (!pid) return;
+        const atual = mensMap.get(pid)
+          ?? { emDia: true, emAberto: 0, vencidas: 0, proximoVencimento: null, ultimoPagamento: null };
+        if (f.status === "paid") {
+          if (!atual.ultimoPagamento || (f.paid_at ?? "") > atual.ultimoPagamento) {
+            atual.ultimoPagamento = f.paid_at;
+          }
+        } else if (f.status === "pending" || f.status === "blocked") {
+          atual.emAberto += n(f.amount);
+          if (f.due_date < hoje) atual.vencidas += 1;
+          if (!atual.proximoVencimento || f.due_date < atual.proximoVencimento) {
+            atual.proximoVencimento = f.due_date;
+          }
+        }
+        atual.emDia = atual.vencidas === 0;
+        mensMap.set(pid, atual);
+      });
 
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const c = cMap.get(p.id);
@@ -619,11 +663,12 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         blocked,
         totalEarned,
         totalWithdrawn,
-        overpaid: st?.overpaid || 0,
+        overpaid: st?.overpaid || n(c?.pago_a_mais),
         pendingRequestId: r?.id || null,
         pendingRequestAmount: r?.amount || 0,
         pendingRequestStatus: r?.status || null,
         role,
+        mensalidade: mensMap.get(p.id) ?? null,
       };
     });
 
