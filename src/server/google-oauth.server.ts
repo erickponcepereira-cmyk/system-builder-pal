@@ -197,7 +197,17 @@ export async function getValidAccessTokenForUser(userId: string) {
     return { accessToken: row.access_token, row };
   }
 
-  const refreshed = await refreshAccessToken(row.refresh_token);
+  let refreshed;
+  try {
+    refreshed = await refreshAccessToken(row.refresh_token);
+  } catch (e) {
+    // Token morto: apagar a linha para o app parar de dizer "conectado" e
+    // mostrar o botão de conectar de novo.
+    if (e instanceof GoogleReauthRequiredError) {
+      await supabaseAdmin.from("coach_google_tokens").delete().eq("user_id", userId);
+    }
+    throw e;
+  }
   const newExpires = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
   await supabaseAdmin
     .from("coach_google_tokens")
