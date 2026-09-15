@@ -97,3 +97,53 @@ de `patent_rules`; não filtrava `is_active`; e gravava em `profiles.patent`, va
 inteira. Reescrita, com `refresh_coach_medals` ao lado — antes a conquista só era gravada
 se o coach **abrisse a tela**, e era por isso que havia 91 coaches com patente e só 7 com
 medalha.
+
+## Bônus de Master Coach — o que é, e o buraco nele (15/09/2026)
+
+Quando alguém **marcado como Master Coach opera uma venda para o aluno de outro
+coach**, uma fatia da comissão do coach titular vai para ele. A fatia sai de
+dentro do líquido do titular, depois da rede — o cliente não paga nada a mais e
+o dono do produto não perde nada; quem divide é o coach.
+
+O percentual é `coaches.master_coach_commission_pct` **do coach titular do
+aluno**, não do master, limitado entre 10% e 70%. Hoje: 100 coaches em 10%, e
+seis com 20/30/40/50/70.
+
+**Quem conta como Master Coach é mais largo do que o nome sugere.**
+`is_master_coach()` devolve verdadeiro para quem tem a badge `master_coach`
+**ou** para qualquer coach com `is_professional = true` e aprovado. Ou seja:
+todo profissional aprovado é master coach por tabela, sem ninguém ter concedido.
+
+**O buraco:** a condição de disparo compara quem operou (`v_caller_coach_id`)
+com o coach titular do aluno, e nunca com o próprio comprador. Quando um coach
+compra **para si mesmo**, `resolve_selling_coach` corretamente tira ele de
+vendedor (ninguém vende para si) e passa a venda ao coach titular — mas o bônus
+de master continua apontando para quem operou, isto é, para o comprador. Ele
+tira uma fatia da comissão do próprio coach dele, comprando.
+
+Levantado em 15/09/2026: **28 pedidos, R$ 142,27**, sobre R$ 6.906 de volume.
+O maior caso é 17 compras de um mesmo comprador levando 30% da comissão da
+coach titular. Contra 41 pedidos legítimos (R$ 347,73), é quase um terço do
+mecanismo funcionando ao contrário. **Não corrigido ainda** — corrigir muda
+quanto gente já recebeu, e a regra de negócio é do Erick.
+
+**Reprocessar apagava esse bônus.** `admin_reprocess_partner_order` zerava
+`master_coach_cross_bonus_amount` e o beneficiário no UPDATE, e
+`process_partner_product_order_paid` só recria a comissão quando o beneficiário
+está preenchido — então sumia para sempre. Corrigido em 15/09: o beneficiário é
+guardado antes e o valor recalculado sobre o líquido novo. **Ao mexer no
+reprocessamento, confira também se cada beneficiário continuou recebendo** —
+conferir só a taxa e a data não pega esse tipo de perda.
+
+## Pago a mais: o desconto já é automático
+
+Quem sacou além do liberado aparece com `pago_a_mais` em `carteira_atual`, e
+`disponivel` fica em zero. **Não é preciso lançar nada à mão para descontar de
+ganhos futuros**: como `disponivel = GREATEST(liberado − sacado − gasto − …, 0)`,
+todo ganho novo entra primeiro abatendo o débito. Conferido para os dois casos
+sem pendente que os cubra (Marilene 31,76 e Erick 59,75) — decisão dele em
+15/09/2026 foi justamente descontar em ganhos futuros, que é o que já acontece.
+
+**Não registre esse débito em `wallet_advances`** achando que formaliza: o
+extrato subtrai `advance_open` *além* de `liberado − sacado`, e o desconto
+sairia em dobro.
