@@ -49,6 +49,9 @@ export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
         <Wallet className="h-4 w-4 text-primary" />
         <span>Saldo interno: <span className="font-semibold text-white">{brl(totals.total)}</span></span>
       </div>
+      {/* Origem do que foi ganho — não são caixas separadas. O saldo é um só, e
+          saque e gasto saem dele sem pertencer a nenhuma origem. */}
+      <div className="mb-1 text-[10px] uppercase tracking-wide text-white/30">Veio de</div>
       <div className="mb-3 grid grid-cols-3 gap-1 text-[10px] text-white/50">
         <span>Coach: {brl(totals.coach)}</span>
         <span>Parceiro: {brl(totals.partner)}</span>

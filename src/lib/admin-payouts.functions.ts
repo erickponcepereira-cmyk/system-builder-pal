@@ -453,9 +453,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       return q;
     })();
 
-    const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
+    const [{ data: profs }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
-      supabaseAdmin.from("wallets").select("profile_id,available_balance,pending_balance,total_earned,total_withdrawn").in("profile_id", profileIds),
       pendingReqsQ,
       supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,total_withdrawn" as never).in("profile_id" as never, profileIds as never),
       (async () => {
@@ -468,50 +467,23 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 
     const commAgg = await aggregateCommissionsBy(profileIds, cutoff, data.group === "seller" ? "seller" : "referral");
 
-    const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const swMap = new Map(((stuW as unknown as Array<{ student_id: string; available_balance: number; total_withdrawn: number }>) || []).map((w) => [w.student_id, w]));
+
+    // As três tabelas de carteira saíram daqui: o saldo agora vem de
+    // `carteira_atual`, mais abaixo. `partners` e `coaches` continuam sendo
+    // lidos porque o bloco de ganho como criador precisa mapear id → perfil.
     const { data: partnerRows } = await supabaseAdmin
       .from("partners" as never)
       .select("id,profile_id" as never)
       .in("profile_id" as never, profileIds as never);
     const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
     const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
-    const { data: partnerWallets } = partnerIds.length
-      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,pending_balance,total_earned,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
-      : { data: [] as unknown };
-    const pwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
-    ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
-      const pid = partnerProfileById.get(w.partner_id);
-      if (!pid) return;
-      const current = pwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
-      pwMap.set(pid, {
-        available_balance: n(current.available_balance) + n(w.available_balance),
-        pending_balance: n(current.pending_balance) + n(w.pending_balance),
-        total_earned: n(current.total_earned) + n(w.total_earned),
-        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
-      });
-    });
     const { data: coachRows2 } = await supabaseAdmin
       .from("coaches" as never).select("id,profile_id" as never)
       .in("profile_id" as never, profileIds as never);
     const coachIds2 = ((coachRows2 as unknown as Array<{ id: string; profile_id: string }>) || []);
     const coachProfileById2 = new Map(coachIds2.map((c) => [c.id, c.profile_id]));
-    const { data: profWallets } = coachIds2.length
-      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,pending_balance,total_earned,total_withdrawn" as never).in("professional_coach_id" as never, coachIds2.map((c) => c.id) as never)
-      : { data: [] as unknown };
-    const profwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
-    ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
-      const pid = coachProfileById2.get(w.professional_coach_id);
-      if (!pid) return;
-      const current = profwMap.get(pid) || { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 };
-      profwMap.set(pid, {
-        available_balance: n(current.available_balance) + n(w.available_balance),
-        pending_balance: n(current.pending_balance) + n(w.pending_balance),
-        total_earned: n(current.total_earned) + n(w.total_earned),
-        total_withdrawn: n(current.total_withdrawn) + n(w.total_withdrawn),
-      });
-    });
 
 
     // ===== Ganhos como criador de produto (partner_net_amount) — agrega 7-day rule =====
@@ -583,10 +555,23 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       });
     }
 
+    // Saldo derivado do ledger, em vez das três tabelas de carteira.
+    //
+    // As tabelas envelhecem sozinhas: uma comissão sai de `hold` para
+    // `available` quando `available_at <= now()`, e nesse instante nada avisa a
+    // tabela. Era isso que fazia este painel discordar da realidade de um dia
+    // para o outro. `carteira_atual` recalcula na hora, então não há o que
+    // envelhecer.
+    const { data: carteirasRaw } = await supabaseAdmin.rpc("carteira_atual" as never, { _profile_id: null } as never);
+    const cMap = new Map(
+      ((carteirasRaw as unknown as Array<{
+        profile_id: string; ganho: number; pendente: number; bloqueado_por_meta: number;
+        sacado: number; gasto_na_plataforma: number; disponivel: number;
+      }>) || []).map((c) => [c.profile_id, c]),
+    );
+
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
-      const w = wMap.get(p.id);
-      const pw = pwMap.get(p.id);
-      const profw = profwMap.get(p.id);
+      const c = cMap.get(p.id);
       const nw = nMap.get(p.id);
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
@@ -604,25 +589,28 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         : (role === "student_referrer"
           ? n(sw?.available_balance)
           : (st ? st.available + n(nw?.available_balance)
-                : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance)));
+                : n(c?.disponivel) + n(nw?.available_balance)));
       const blocked = cutoff
         ? (agg?.blocked || 0) + cre.blocked
         : (role === "student_referrer"
           ? 0
           : (st ? st.blocked
-                : n((w as { pending_balance?: number } | undefined)?.pending_balance) + n(pw?.pending_balance) + n(profw?.pending_balance)));
+                : n(c?.pendente) + n(c?.bloqueado_por_meta)));
       const totalEarned = cutoff
         ? (agg?.earned || 0) + cre.earned
         : (role === "student_referrer"
           ? 0
-          : (st ? st.earned
-                : n((w as { total_earned?: number } | undefined)?.total_earned) + n(pw?.total_earned) + n(profw?.total_earned)));
+          : (st ? st.earned : n(c?.ganho)));
+      // O que saiu da carteira: saque pago e o que a pessoa gastou dentro da
+      // plataforma. O gasto entra aqui porque sem ele a linha não fecha —
+      // `ganho = disponível + bloqueado + saiu` — e era justamente o que fazia
+      // a conta "comissão menos saques" parecer errada.
       const totalWithdrawn = cutoff
         ? 0
         : (role === "student_referrer"
           ? n(sw?.total_withdrawn)
           : (st ? st.withdrawn + n(nw?.total_withdrawn)
-                : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn)));
+                : n(c?.sacado) + n(c?.gasto_na_plataforma) + n(nw?.total_withdrawn)));
       return {
         profileId: p.id,
         name: p.name || "—",

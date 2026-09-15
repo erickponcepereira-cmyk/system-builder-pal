@@ -42,6 +42,12 @@ BEGIN
     RAISE EXCEPTION 'Valor inválido';
   END IF;
 
+  -- Alinha as tabelas ao ledger antes de decidir. Elas envelhecem sozinhas
+  -- quando um prazo de liberação vence — nada dispara nesse instante — e sem
+  -- isto a cascata recusava pagamento por dinheiro que já estava liberado,
+  -- dizendo "saldo insuficiente" para quem tinha saldo.
+  PERFORM public.recalc_wallets_for_owner(_profile_id);
+
   SELECT COALESCE(available_balance, 0) INTO v_bal
   FROM public.wallets
   WHERE profile_id = _profile_id
