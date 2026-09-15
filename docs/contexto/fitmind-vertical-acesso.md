@@ -696,3 +696,55 @@ criadas em `pg_temp` na mesma chamada do MCP e comparadas linha a linha com as d
 `public` (`regexp_split_to_table` + `EXCEPT ALL` nos dois sentidos) — o diff mostrou
 só o planejado. Depois de aplicar, cada categoria das listas foi comparada por md5
 com uma fotografia tirada antes: as que não tratam de cortesia saíram idênticas.
+
+## 14/09/2026 — alunas da Estação passam para a Jessica, e o grupo vale para o agente inteiro
+
+A Jessica (`afcad56d-…`, dono Fernando) é a segunda operação no mesmo endereço da
+Estação: mesmo grupo, mesmo leitor. Em 14/09 **10 alunas** foram transferidas com
+histórico por `academia_transferir_credenciais` (migration `20260915170000`, com
+a lista e os ids no fim).
+
+**A migration de 27/08 afirmava uma coisa que não era verdade.** Disse que
+`academia_agente_enviar` achava a credencial no grupo — e registrou um md5 para
+isso. Em 14/09 a função em produção tinha **aquele mesmo md5** e procurava só na
+academia do equipamento: o md5 anotado era da versão antiga, e a versão com grupo
+nunca foi aplicada nem versionada. Só o retrato olhava o grupo. Transferir sem
+consertar teria gravado cada entrada da aluna como **barrada** na Estação,
+recriado a aluna na Estação na leitura seguinte do leitor (duplicata) e deixado
+aluna nova da Jessica fora do leitor. **Desconfie de md5 anotado em comentário:
+confira o corpo.**
+
+Regra que ficou, igual à do retrato: **o equipamento é do grupo; a pessoa é de
+uma academia só**, e tudo que ela gera (frequência, barrada) vai para a academia
+dela. Rosto desconhecido fica com a dona do equipamento. Carência e fuso saem da
+dona do equipamento (Estação) — nas duas eram iguais.
+
+O cadastro de pessoa (`academia-teste.functions.ts`) passou a gerar a referência
+**olhando o grupo**: antes a primeira aluna nova de cada academia receberia 700001,
+e duas pessoas com o mesmo id no leitor é uma entrando com a liberação da outra.
+
+**Como foi conferido:** backup das 9 definições antigas em
+`public._backup_agente_20260915` antes de aplicar; diff linha a linha contra o
+backup (só o planejado); md5 das 11 funções contra a migration; retrato replicado
+em SQL antes e depois — 416 pessoas e md5 idênticos. Totais das duas academias
+fecharam aluna por aluna.
+
+**Em aberto:**
+
+- **Duas alunas da lista esperam confirmação do Erick:** "Anna Karoline"
+  (candidata Ana Karoliny dos Santos Oliveira, ref 40) e "Karolina Camargo"
+  (candidata Karoline camargo costa, ref 81). Para transferir, a mesma chamada do
+  fim da migration com os ids delas.
+- **9 das 10 estão com plano vencido** (imports do Next Fit): só entram depois que
+  a Jessica lançar plano. A Gislaine estava liberada até 16/09.
+- **A Jessica não tem acesso ao painel da academia dela** — o único membro é o
+  Fernando. A credencial dela mesma (ref 900008, gratuito até 2028) ficou na
+  Estação, por decisão do Erick.
+- **Avisos automáticos da Jessica estão desligados** e ela não tem funil nem regra
+  de CRM: as alunas transferidas não recebem lembrete até alguém ligar.
+- Ainda **não olham o grupo**: as funções de rosto de evento
+  (`faces_pendentes`, `face_enviada`, `face_removida`) e as telas do painel da
+  Estação (liberar na mão, ficha) — aluna da Jessica se gerencia pelo painel da
+  Jessica.
+- **Apagar `public._backup_agente_20260915`** depois que a catraca registrar
+  passagens normais com as funções novas.

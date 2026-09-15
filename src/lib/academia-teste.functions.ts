@@ -2834,20 +2834,38 @@ export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
      *    de tipo excluía justamente elas da verificação.
      *
      * A faixa 700001+ é nossa desde a migration de 18/08: 1..421 e 900000+ são
-     * do sistema antigo. Aqui é max+1 dentro dela, conferindo contra TODAS as
-     * credenciais da unidade.
+     * do sistema antigo. Aqui é max+1 dentro dela.
+     *
+     * Conferindo contra o GRUPO, não só a unidade: academias que dividem o
+     * leitor dividem a lista de ids dele. Olhando só a unidade, a primeira
+     * aluna nova da Jessica e a primeira da Estação receberiam as duas o
+     * 700001 — e uma entraria com a liberação da outra.
      */
     const INICIO_FAIXA = 700001;
-    const { data: usados } = await admin
+    const FIM_FAIXA = 900000;
+    const { data: grupo, error: erroGrupo } = await admin.rpc(
+      "academia_parceiros_do_grupo" as never,
+      { p_partner_id: data.partnerId } as never,
+    );
+    if (erroGrupo) throw new Error(erroGrupo.message);
+    const academiasDoLeitor = ((grupo ?? []) as unknown as Array<{ partner_id: string }>).map((g) => g.partner_id);
+
+    // Só perto da faixa: ler todas as referências batia no teto de mil linhas
+    // do banco assim que o grupo passasse disso, e o maior número usado podia
+    // ficar de fora. O filtro é de TEXTO, então também traz "81" ou "8" — é
+    // largo de propósito, e o filtro numérico logo abaixo acerta a faixa.
+    const { data: usados, error: erroUsados } = await admin
       .from("academia_credenciais")
       .select("referencia")
-      .eq("partner_id", data.partnerId);
+      .in("partner_id", academiasDoLeitor)
+      .gte("referencia", String(INICIO_FAIXA))
+      .lt("referencia", String(FIM_FAIXA));
+    if (erroUsados) throw new Error(erroUsados.message);
 
-    const todos = ((usados ?? []) as Array<{ referencia: string }>)
+    const nossos = ((usados ?? []) as Array<{ referencia: string }>)
       .map((u) => Number(u.referencia))
-      .filter((n) => Number.isFinite(n));
-    const ocupados = new Set(todos);
-    const nossos = todos.filter((n) => n >= INICIO_FAIXA);
+      .filter((n) => Number.isInteger(n) && n >= INICIO_FAIXA && n < FIM_FAIXA);
+    const ocupados = new Set(nossos);
 
     let candidato = nossos.length ? Math.max(...nossos) + 1 : INICIO_FAIXA;
     while (ocupados.has(candidato)) candidato += 1;

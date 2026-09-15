@@ -1,3 +1,31 @@
+## 20260915170000_grupo_vale_para_o_agente_inteiro.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 14/09/2026, 23h de Cuiaba (academia fechada) |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao — as 10 mensalidades movidas eram importadas, R$ 0 |
+| **Aplicada em producao?** | **Sim — 14/09/2026**, `md5(prosrc)` das 11 funcoes conferido |
+
+Nove funcoes do agente da catraca passam a olhar o grupo (Estacao + Jessica):
+`enviar`, `credenciais_importar`, `credenciais_pendentes`, `faces_a_enviar`,
+`face_enviada_confirmar`, `marcar_rostos`, `pessoas`, `credencial_desligar`,
+`credencial_editar`. Nova `academia_credencial_no_grupo` (auxiliar) e
+`academia_transferir_credenciais` (transferencia com historico). As duas novas
+sem EXECUTE para anon/authenticated.
+
+Depois das funcoes, transferidas 10 alunas da Estacao para a Jessica (lista e
+ids no fim da migration): 10 credenciais, 10 mensalidades, 24 frequencias, 14
+barradas, 4 avisos, 10 cartoes arquivados no funil da Estacao com nota. O
+retrato do leitor saiu identico (416 pessoas, md5 `c774819e…` antes e depois).
+
+**Backup das 9 definicoes antigas** em `public._backup_agente_20260915` (RLS
+ligada, sem grant). Apagar depois que a catraca da Estacao registrar passagens
+normais com as funcoes novas.
+
+---
+
 ## 20260912160000_cortesia_aparece_no_relatorio.sql
 
 | | |
