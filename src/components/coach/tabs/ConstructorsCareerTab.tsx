@@ -178,15 +178,9 @@ export function ConstructorsCareerTab() {
                 {list.map((p) => {
                   const w = windows[p.time_window_months];
                   const isCurrent = p.key === currentPatentKey;
-                  const vpPct = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
-                  const vePct = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpPct);
-                  const vpReq = (p.required_revenue * vpPct) / 100;
-                  const veReq = (p.required_revenue * vePct) / 100;
-                  const meetsVP = w ? w.ownRevenue >= vpReq - 0.001 : false;
-                  const meetsVE = w ? (veReq === 0 || w.teamRevenue >= veReq - 0.001) : false;
-                  const qualifying = w ? Math.min(w.ownRevenue, vpReq) + Math.min(w.teamRevenue, veReq) : 0;
+                  const { qualifying, achieved: bateRegra } = qualificacao(p, w);
                   const achievedAt = achievedAtByKey.get(p.key) ?? null;
-                  const achieved = !!achievedAt || p.required_revenue === 0 || (meetsVP && meetsVE);
+                  const achieved = !!achievedAt || bateRegra;
                   return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} onClick={() => setModalPatent(p)} />;
                 })}
 
