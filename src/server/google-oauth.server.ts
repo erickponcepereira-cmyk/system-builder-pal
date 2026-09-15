@@ -11,6 +11,14 @@ export const GOOGLE_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
 ].join(" ");
 
+/** Google recusou o refresh_token: o coach precisa conectar a conta de novo. */
+export class GoogleReauthRequiredError extends Error {
+  constructor() {
+    super("Conexão com o Google expirou. Conecte sua conta novamente.");
+    this.name = "GoogleReauthRequiredError";
+  }
+}
+
 export function getRedirectUri(origin: string) {
   return `${origin.replace(/\/$/, "")}/api/oauth/google/callback`;
 }
@@ -80,6 +88,10 @@ export async function refreshAccessToken(refreshToken: string) {
   });
   if (!res.ok) {
     const t = await res.text();
+    // Autorização revogada/expirada: só reconectar resolve.
+    if (res.status === 400 && t.includes("invalid_grant")) {
+      throw new GoogleReauthRequiredError();
+    }
     throw new Error(`Google token refresh failed [${res.status}]: ${t}`);
   }
   return (await res.json()) as {
