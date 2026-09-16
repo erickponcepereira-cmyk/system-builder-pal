@@ -14,6 +14,10 @@ type Appointment = {
   professional?: { name: string | null } | null;
 };
 
+type RawAppointment = Omit<Appointment, "professional"> & {
+  professional?: { profiles?: { name: string | null } | null } | null;
+};
+
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", {
     weekday: "short",
@@ -42,15 +46,23 @@ export function StudentAppointmentsCard() {
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!student) return setLoading(false);
-    const { data } = await supabase
+    // `coaches` não tem coluna `name`: o nome vem do profile ligado ao coach.
+    const { data, error } = await supabase
       .from("professional_appointments" as never)
       .select(
-        "id,starts_at,ends_at,status,cancellation_window_hours,professional_coach_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(name)" as never,
+        "id,starts_at,ends_at,status,cancellation_window_hours,professional_coach_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(profiles!coaches_profile_id_fkey(name))" as never,
       )
       .eq("student_id" as never, student.id as never)
       .neq("status" as never, "cancelled" as never)
       .order("starts_at" as never, { ascending: true });
-    setItems((data as unknown as Appointment[]) || []);
+    if (error) console.error("[consultas-agendadas]", error.message);
+    const linhas = (data as unknown as RawAppointment[]) || [];
+    setItems(
+      linhas.map((a) => ({
+        ...a,
+        professional: { name: a.professional?.profiles?.name ?? null },
+      })),
+    );
     setLoading(false);
   };
 

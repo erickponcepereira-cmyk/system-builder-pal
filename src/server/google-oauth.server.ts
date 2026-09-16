@@ -11,6 +11,14 @@ export const GOOGLE_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
 ].join(" ");
 
+/** Google recusou o refresh_token: o coach precisa conectar a conta de novo. */
+export class GoogleReauthRequiredError extends Error {
+  constructor() {
+    super("Conexão com o Google expirou. Conecte sua conta novamente.");
+    this.name = "GoogleReauthRequiredError";
+  }
+}
+
 export function getRedirectUri(origin: string) {
   return `${origin.replace(/\/$/, "")}/api/oauth/google/callback`;
 }
@@ -80,6 +88,10 @@ export async function refreshAccessToken(refreshToken: string) {
   });
   if (!res.ok) {
     const t = await res.text();
+    // Autorização revogada/expirada: só reconectar resolve.
+    if (res.status === 400 && t.includes("invalid_grant")) {
+      throw new GoogleReauthRequiredError();
+    }
     throw new Error(`Google token refresh failed [${res.status}]: ${t}`);
   }
   return (await res.json()) as {
@@ -185,7 +197,17 @@ export async function getValidAccessTokenForUser(userId: string) {
     return { accessToken: row.access_token, row };
   }
 
-  const refreshed = await refreshAccessToken(row.refresh_token);
+  let refreshed;
+  try {
+    refreshed = await refreshAccessToken(row.refresh_token);
+  } catch (e) {
+    // Token morto: apagar a linha para o app parar de dizer "conectado" e
+    // mostrar o botão de conectar de novo.
+    if (e instanceof GoogleReauthRequiredError) {
+      await supabaseAdmin.from("coach_google_tokens").delete().eq("user_id", userId);
+    }
+    throw e;
+  }
   const newExpires = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
   await supabaseAdmin
     .from("coach_google_tokens")
