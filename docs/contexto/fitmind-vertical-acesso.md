@@ -729,19 +729,91 @@ backup (só o planejado); md5 das 11 funções contra a migration; retrato repli
 em SQL antes e depois — 416 pessoas e md5 idênticos. Totais das duas academias
 fecharam aluna por aluna.
 
+**Em aberto ao fim de 14/09** — as duas alunas pendentes, o plano vencido de 9
+delas e os avisos desligados foram resolvidos em 15/09, na seção abaixo.
+
+## 15/09/2026 — as 12 na Jessica, com plano e aviso
+
+O Erick confirmou as duas que faltavam e passou valor e dia de vencimento de cada
+uma. Ana Karoliny (ref 40) e Karoline camargo costa (ref 81) foram pela mesma
+`academia_transferir_credenciais`: 2 credenciais, 2 mensalidades, 7 frequências,
+3 barradas, 1 aviso e 2 cartões arquivados. São **12 alunas** na Jessica.
+
+**Não existe campo de "dia de vencimento".** A régua de acesso só conhece
+`valido_ate`, por mensalidade — o dia fixo do mês só existe enquanto alguém lançar
+a próxima mensalidade naquele dia. Para o dia não se perder, ele ficou escrito na
+`observacao` de cada lançamento.
+
+Lançadas com origem `externa`, forma `outro` e plano "Treino Personalizado -
+Mensal", R$ 795,00 no total:
+
+| Ref | Aluna | Valor | Vence dia | Válido até |
+|---|---|---|---|---|
+| 257 | Aline Costa Monteiro | 60 | 11 | 11/10/2026 |
+| 13 | Leidiane C C Da Silva | 80 | 12 | 12/10/2026 |
+| 269 | Keila Maciel Silva | 60 | 6 | 06/10/2026 |
+| 134 | Claudenice da Silva | 145 | 12 | 12/10/2026 |
+| 30 | Camila de Jesus Baez | 145 | 12 | 12/10/2026 |
+| 113 | Carolyne Ewelly da Silva | 80 | 10 | 10/10/2026 |
+| 138 | Andreia Borges Ofrasio | 145 | 12 | 12/10/2026 |
+| 40 | Ana Karoliny dos Santos Oliveira | 80 | 20 | 20/10/2026 |
+
+**Quatro não pagaram, e por isso não têm lançamento:**
+
+| Ref | Aluna | Valor | Vence dia | Como ficou |
+|---|---|---|---|---|
+| 126 | Gislaine Carvalho | 145 | 16 | vale até 16/09, entra até 18/09 |
+| 6 | Jessica aparecida Cerqueira de Campos | 60 | 20 | venceu em 22/08, bloqueada |
+| 271 | Jozilene Lima Marinho | 145 | 14 | venceu em 29/08, bloqueada |
+| 81 | Karoline camargo costa | 60 | 14 | venceu em 23/12/2025, bloqueada |
+
+**Lançar mensalidade é afirmar que o dinheiro entrou.** Na primeira passada eu
+lancei dez de uma vez, incluindo Gislaine e Jessica Aparecida, que estavam na
+lista de quem ainda devia o mês — e isso ao mesmo tempo soltou a catraca por um
+mês que ninguém pagou e pôs R$ 205 no relatório da Jessica como recebido. Os dois
+lançamentos foram **cancelados** (`status` `cancelada`, com motivo) em vez de
+apagados, e as duas voltaram para a data real. **Não existe estado de "deve":** a
+régua só guarda "pago até tal dia", então quem não pagou fica sem lançamento e o
+dia de vencimento dela só vive nesta tabela até alguém receber.
+
+**O limite semanal veio da mensalidade anterior, não do perfil da academia.**
+`limite_dias_semana` é coluna de `academia_mensalidades`; copiar o que a aluna já
+tinha evita soltar 7x para quem pagava 3x. Só a Jessica Aparecida tem limite (3).
+
+**Avisos da Jessica: dois modelos, e só.** O texto é o do Erick, sem `{nome}` e
+sem `{data}` — ele mandou pronto.
+
+- `d2` (referência `vencimento`, `quando` 2) dispara em D−2: "Vence em 2 dias".
+- `ultimo_dia` (referência `bloqueio`, `quando` 0) dispara em `quando − carência`.
+  A carência das duas academias é 2, então D+2, o último dia de entrada. É o
+  "Plano vencido". **Não existe marco que caia em D+1**: para mudar o dia, mexe-se
+  na carência (que também move o bloqueio) ou no `quando` do modelo.
+
+`avisos_automaticos` e `avisos_envio_automatico` ligados, e **`avisos_dias` foi
+para os sete dias**. Isso não é gosto: o marco casa com o dia exato
+(`dias_restantes = quando`), e dia fora de `avisos_dias` não envia — a campanha
+nasce às 8h, é cancelada na faxina da manhã seguinte e **aquele aviso some**,
+porque no dia seguinte a conta já não bate. Com a régua de segunda a sexta que
+vem por padrão, 5 dos 8 "vence em 2 dias" destas alunas caíam em sábado ou
+domingo e nunca sairiam. Vale para qualquer academia: **`avisos_dias` menor que
+sete não adia aviso, descarta.**
+
+**Ela não tem número de WhatsApp, e não precisa:** `bot_escolher_conexao` já cai
+para o grupo, então a campanha dela sai pelo chip da Estação (65 99325-1805,
+limite 50/dia).
+
+**Como foi conferido:** `acesso_avaliar_academia` da Jessica — 10 `liberado`
+`contrato_ativo` e 2 `negado` `vencido_bloqueado`; retrato replicado em SQL — 416
+pessoas no leitor, as mesmas de antes, 12 delas da Jessica e nenhuma referência
+repetida.
+
 **Em aberto:**
 
-- **Duas alunas da lista esperam confirmação do Erick:** "Anna Karoline"
-  (candidata Ana Karoliny dos Santos Oliveira, ref 40) e "Karolina Camargo"
-  (candidata Karoline camargo costa, ref 81). Para transferir, a mesma chamada do
-  fim da migration com os ids delas.
-- **9 das 10 estão com plano vencido** (imports do Next Fit): só entram depois que
-  a Jessica lançar plano. A Gislaine estava liberada até 16/09.
 - **A Jessica não tem acesso ao painel da academia dela** — o único membro é o
   Fernando. A credencial dela mesma (ref 900008, gratuito até 2028) ficou na
   Estação, por decisão do Erick.
-- **Avisos automáticos da Jessica estão desligados** e ela não tem funil nem regra
-  de CRM: as alunas transferidas não recebem lembrete até alguém ligar.
+- **Ela não tem funil nem regra de CRM**, então nada além dos dois avisos toca
+  essas alunas.
 - Ainda **não olham o grupo**: as funções de rosto de evento
   (`faces_pendentes`, `face_enviada`, `face_removida`) e as telas do painel da
   Estação (liberar na mão, ficha) — aluna da Jessica se gerencia pelo painel da
