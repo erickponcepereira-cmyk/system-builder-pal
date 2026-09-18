@@ -55,3 +55,41 @@ cadastrado como "suplemento".
 Produto médico não tem foto e não vai ter. `arteDaTaxonomia` (`src/lib/store-arte-padrao.ts`)
 escolhe ícone e paleta pela trilha da taxonomia — sem isso são 3.785 sacolas de compras
 idênticas na prateleira.
+
+
+## Curadoria do coach: o que ele esconde da rede (17/09/2026)
+
+O coach esconde da rede dele produto, seção, categoria ou a FitMind inteira. Tudo mora em
+`coach_store_hidden_items`; `store_visibility_context()` devolve o que a cadeia acima de quem
+olha escondeu (`hidden`) e o que ele mesmo escondeu (`my_hidden`), e o filtro fica em
+`src/lib/store-visibility.ts`. Em modo coach, o que **ele** escondeu continua aparecendo — é
+o único jeito de desfazer.
+
+**Um toque escondeu a FitMind de 571 alunos, e ninguém viu quem foi.** A loja nova põe no
+topo da tela do coach um cartão que parece aviso ("Produtos FitMind visíveis para sua rede"),
+e o toque nele gravava `vendor_fitmind`, sem confirmação. O Nathan Utuari, topo da rede, tocou
+em 15/09 — 110 coaches e 571 alunos perderam o catálogo FitMind; a Tatiane, dentro da rede
+dele, em 30/08. Os coaches abaixo viam "bloqueada pelo seu upline", e **nenhuma tela do admin
+lista ocultação de coach** — por isso pareceu defeito. Primeira consulta num incidente assim:
+`SELECT * FROM coach_store_hidden_items ORDER BY created_at DESC`. As duas linhas foram
+removidas com cópia em `auditoria.ocultacoes_fitmind_20260917`, e esconder em grupo (FitMind,
+seção, categoria) passou a pedir confirmação nas duas lojas.
+
+**Esconder por categoria nunca funcionou.** O CHECK de `target_type` não aceitava
+`'category'`: a loja antiga mostrava o olho de categoria desde julho e todo toque morria em
+erro de constraint; a nova nem mostrava categoria. O coach escondia "Herbalife" produto por
+produto — são 114. Hoje o detalhe do produto, em modo coach, oferece esconder a categoria e a
+seção inteiras, com a contagem, logo abaixo do botão de esconder o produto, que é onde o
+coach já estava. **Antes de pôr um tipo novo de ocultação na tela, confira o CHECK da
+tabela:** a leitura aceita qualquer coisa, e só a escrita recusa.
+
+**A fusão de "Suplementos" (29/08) consertou os dados e não o código que os cria.**
+`mirrorHerbalifeCatalog` continuou gravando espelho de parceiro na seção e na categoria
+desativadas (`...0002`), e o espelho da Arlete (12/09, 56 produtos) nasceu fora da categoria
+que o coach esconde. Os 56 voltaram para a `...0001` (cópia em
+`auditoria.herbalife_espelho_20260917`) e a função passou a usar uma seção só. **Fusão de
+taxonomia pede `grep` pelos ids antigos no `src/`**, não só `UPDATE` nas tabelas.
+
+O que ainda não existe: esconder um **vendedor específico**. `vendor_partner` e
+`vendor_professional` só funcionam com `target_id` nulo — escondem todos os parceiros, ou
+todos os profissionais, de uma vez.

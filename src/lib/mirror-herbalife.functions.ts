@@ -3,11 +3,12 @@ import { z } from "zod";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const HERBALIFE_SECTION_FITMIND = "11111111-0000-0000-0000-000000000001";
-const HERBALIFE_CATEGORY_FITMIND = "22222222-0000-0000-0000-000000000001";
-
-const HERBALIFE_SECTION_PARTNER = "11111111-0000-0000-0000-000000000002";
-const HERBALIFE_CATEGORY_PARTNER = "22222222-0000-0000-0000-000000000002";
+// Uma seção e uma categoria só, para a FitMind e para o espelho. Até 29/08
+// existia uma "Suplementos > Herbalife" de parceiro (...0002); a fusão
+// (20260829190000) a desativou, mas esta função continuou gravando lá, e
+// o espelho da Arlete nasceu fora da categoria que o coach consegue esconder.
+const HERBALIFE_SECTION = "11111111-0000-0000-0000-000000000001";
+const HERBALIFE_CATEGORY = "22222222-0000-0000-0000-000000000001";
 
 type SourceProduct = {
   id: string;
@@ -50,8 +51,8 @@ export const mirrorHerbalifeCatalog = createServerFn({ method: "POST" })
       .select(
         "id,name,description,image_url,image_urls,price,original_price,stock,delivery_days,subcategory_id,sort_order",
       )
-      .eq("section_id", HERBALIFE_SECTION_FITMIND)
-      .eq("category_id", HERBALIFE_CATEGORY_FITMIND)
+      .eq("section_id", HERBALIFE_SECTION)
+      .eq("category_id", HERBALIFE_CATEGORY)
       .eq("status", "active");
 
     if (srcErr) throw new Error("Falha ao carregar catálogo Herbalife: " + srcErr.message);
@@ -89,8 +90,8 @@ export const mirrorHerbalifeCatalog = createServerFn({ method: "POST" })
       price: Number(p.price || 0),
       original_price: p.original_price,
       stock: p.stock,
-      section_id: HERBALIFE_SECTION_PARTNER,
-      category_id: HERBALIFE_CATEGORY_PARTNER,
+      section_id: HERBALIFE_SECTION,
+      category_id: HERBALIFE_CATEGORY,
       subcategory_id: p.subcategory_id,
       is_physical: true,
       delivery_days: p.delivery_days ?? 15,

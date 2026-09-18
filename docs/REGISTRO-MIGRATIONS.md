@@ -1,3 +1,28 @@
+## 20260917120000_fitmind_volta_e_ocultar_por_categoria.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de loja/curadoria |
+| **Data** | 17/09/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 17/09/2026**, conferida por simulacao de RLS (coach esconde, aluno da rede herda) |
+
+Tres coisas, as tres de dados/constraint (nenhuma funcao mudou):
+
+1. Remove as duas ocultacoes `vendor_fitmind` de pe — Nathan Utuari (15/09, topo
+   da rede, 571 alunos) e Tatiane (30/08, dentro da rede dele) —, feitas por um
+   toque sem confirmacao no cartao do topo da loja nova. Copia em
+   `auditoria.ocultacoes_fitmind_20260917`, com o INSERT de volta comentado na
+   migration.
+2. Os 56 espelhos Herbalife da Arlete (12/09) saem da secao/categoria
+   desativadas (`...0002`) para as canonicas (`...0001`). Copia em
+   `auditoria.herbalife_espelho_20260917`.
+3. O CHECK de `coach_store_hidden_items.target_type` passa a aceitar
+   `'category'`. Antes, esconder categoria dava erro de constraint.
+
+---
+
 ## 20260915170000_grupo_vale_para_o_agente_inteiro.sql
 
 | | |

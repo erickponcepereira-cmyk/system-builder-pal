@@ -1341,6 +1341,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 type="button"
                 onClick={async () => {
                   const hidden = vis.isHiddenByMe("vendor_fitmind", null, null);
+                  // Esconder a FitMind inteira some com o catálogo da rede toda: pede confirmação.
+                  if (!hidden && !window.confirm("Esconder TODO o catálogo FitMind da sua rede?\n\nSeus alunos e os coaches abaixo de você deixam de ver até você mostrar de novo.")) return;
                   try {
                     await vis.toggleHidden("vendor_fitmind", null, null, !hidden);
                     toast.success(hidden ? "FitMind reativada para sua rede." : "FitMind oculta para sua rede.");

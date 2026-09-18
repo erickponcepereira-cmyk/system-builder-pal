@@ -100,6 +100,16 @@ const ORIGIN_LABEL: Record<UnifiedOrigin, string> = {
 
 type StockMap = Record<string, { stock: number; remaining: number }>;
 
+/** Categoria ou seção que o coach esconde de uma vez, a partir do detalhe do produto. */
+type GrupoDeCuradoria = {
+  chave: string;
+  /** "categoria «Herbalife»" — entra no botão e na confirmação. */
+  rotulo: string;
+  quantos: number;
+  escondido: boolean;
+  onAlternar: () => void;
+};
+
 /**
  * Vitrine unificada — superfície de teste.
  *
@@ -489,6 +499,69 @@ export function UnifiedStorePage({
     }
   };
 
+  /**
+   * Esconder um GRUPO pede confirmação; mostrar de novo, não.
+   *
+   * Grupo é onde um toque errado custa caro: em 15/09 um toque no cartão da
+   * FitMind escondeu o catálogo inteiro de 571 alunos, e ninguém soube dizer
+   * quem tinha sido. Produto avulso continua de um toque só.
+   */
+  const curarGrupo = (
+    chave: string,
+    tipo: "section" | "category" | "vendor_fitmind",
+    targetId: string | null,
+    oque: string,
+    oculto: boolean,
+  ) => {
+    if (curando !== null) return;
+    const confirmou = !oculto || window.confirm(
+      `Esconder ${oque} da sua rede?\n\nSeus alunos e os coaches abaixo de você deixam de ver até você mostrar de novo. Você continua vendo, para poder desfazer.`,
+    );
+    if (confirmou) void curar(chave, tipo, null, targetId, oculto);
+  };
+
+  const nomeDaCategoria = useMemo(
+    () => new Map((catalog?.categories ?? []).map((c) => [c.id, c.name])),
+    [catalog],
+  );
+  const nomeDaSecao = useMemo(
+    () => new Map((catalog?.sections ?? []).map((s) => [s.id, s.name])),
+    [catalog],
+  );
+
+  /** Quantos produtos da rede o grupo leva junto — o número da confirmação. */
+  const contarNoGrupo = (tipo: "section" | "category", id: string) =>
+    visiveis.filter((p) => (tipo === "section" ? p.sectionId : p.categoryId) === id).length;
+
+  /**
+   * A categoria e a seção do produto aberto, para esconder de uma vez.
+   *
+   * Fica no detalhe porque é ali que o coach já escondia produto por produto:
+   * "Herbalife" eram mais de 40 toques, e a loja nova não tinha outro caminho
+   * — a antiga mostrava as categorias com o olho, e esta nunca mostrou
+   * categoria nenhuma.
+   */
+  const gruposDoProduto = (produto: UnifiedProduct): GrupoDeCuradoria[] => {
+    const candidatos = [
+      { tipo: "category" as const, id: produto.categoryId, palavra: "categoria", nomes: nomeDaCategoria },
+      { tipo: "section" as const, id: produto.sectionId, palavra: "seção", nomes: nomeDaSecao },
+    ];
+    return candidatos.flatMap(({ tipo, id, palavra, nomes }) => {
+      const nome = id ? nomes.get(id) : undefined;
+      if (!id || !nome) return [];
+      const quantos = contarNoGrupo(tipo, id);
+      const escondido = visibilidade.ocultadoPorMim(tipo, null, id);
+      const rotulo = `${palavra} «${nome}»`;
+      return [{
+        chave: `${tipo}-${id}`,
+        rotulo,
+        quantos,
+        escondido,
+        onAlternar: () => curarGrupo(`${tipo}-${id}`, tipo, id, `a ${rotulo} (${quantos} produtos)`, !escondido),
+      }];
+    });
+  };
+
   /*
    * "E fisico?" pergunta ao CATALOGO, nao ao item salvo.
    *
@@ -735,7 +808,13 @@ export function UnifiedStorePage({
           <button
             type="button"
             disabled={curando !== null}
-            onClick={() => void curar("vendor", "vendor_fitmind", null, null, !escondi)}
+            onClick={() => curarGrupo(
+              "vendor",
+              "vendor_fitmind",
+              null,
+              `todo o catálogo FitMind (${visiveis.filter((p) => p.origin === "fitmind").length} produtos)`,
+              !escondi,
+            )}
             className={`flex items-center justify-between gap-3 rounded-2xl border p-3 text-left disabled:opacity-60 ${
               escondi ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-card"
             }`}
@@ -1091,11 +1170,17 @@ export function UnifiedStorePage({
                       aria-label={secaoEscondida ? "Mostrar seção para a rede" : "Esconder seção da rede"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        void curar("sec-" + s.id, "section", null, s.id, !secaoEscondida);
+                        curarGrupo(
+                          "section-" + s.id,
+                          "section",
+                          s.id,
+                          `a seção «${s.name}» (${contarNoGrupo("section", s.id)} produtos)`,
+                          !secaoEscondida,
+                        );
                       }}
                       className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur"
                     >
-                      {curando === "sec-" + s.id
+                      {curando === "section-" + s.id
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                         : secaoEscondida
                           ? <EyeOff className="h-3.5 w-3.5 text-amber-500" />
@@ -1173,6 +1258,7 @@ export function UnifiedStorePage({
             detail.sourceId,
             !visibilidade.ocultadoPorMim("product", visibilidade.kindDeCuradoria(detail), detail.sourceId),
           )}
+          grupos={modoCoach ? gruposDoProduto(detail) : []}
           carteirinhaAtiva={ctx.cardActive}
           onVerGratuitos={() => navigate({ to: "/student/freebies" })}
         />
@@ -1548,6 +1634,7 @@ function DetailSheet({
   podeCurar,
   escondidoDaRede,
   onCurar,
+  grupos,
   carteirinhaAtiva,
   onVerGratuitos,
 }: {
@@ -1569,6 +1656,8 @@ function DetailSheet({
   podeCurar: boolean;
   escondidoDaRede: boolean;
   onCurar: () => void;
+  /** Categoria e seção do produto, para esconder de uma vez. Vazio fora do modo coach. */
+  grupos: GrupoDeCuradoria[];
   carteirinhaAtiva: boolean;
   onVerGratuitos: () => void;
 }) {
@@ -1781,6 +1870,22 @@ function DetailSheet({
             {escondidoDaRede ? "Mostrar para minha rede" : "Esconder da minha rede"}
           </button>
         )}
+
+        {grupos.map((g) => (
+          <button
+            key={g.chave}
+            type="button"
+            onClick={g.onAlternar}
+            className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold ${
+              g.escondido
+                ? "border-amber-500/40 text-amber-500"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {g.escondido ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {g.escondido ? `Mostrar a ${g.rotulo}` : `Esconder a ${g.rotulo} inteira`} · {g.quantos}
+          </button>
+        ))}
 
         {podeIndicar && (
           <button
