@@ -18,6 +18,9 @@ import { useEffect } from "react";
  * modal abrir uma confirmação por cima. Aí o certo é uma pilha compartilhada,
  * onde só o topo responde; não um parâmetro que cada chamador tem de lembrar
  * de passar.
+ *
+ * A confirmação global (`ConfirmProvider`, 17/09/2026) foi o primeiro caso, e
+ * resolve o dela sozinha: engole o Escape na captura, antes de chegar à window.
  */
 export function useFecharComEscape(aoFechar: () => void): void {
   useEffect(() => {

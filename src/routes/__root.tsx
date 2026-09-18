@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
+import { ConfirmProvider } from "@/components/ui/ConfirmProvider";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 
@@ -247,9 +248,11 @@ function RootComponent() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <ImageCropProvider>
-          <AuthLoadingGate>
-            <Outlet />
-          </AuthLoadingGate>
+          <ConfirmProvider>
+            <AuthLoadingGate>
+              <Outlet />
+            </AuthLoadingGate>
+          </ConfirmProvider>
           <Toaster richColors position="top-center" />
         </ImageCropProvider>
       </QueryClientProvider>

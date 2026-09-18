@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useConfirmar, type Pergunta } from "@/components/ui/ConfirmProvider";
 
 export type HideTargetType =
   | "product"
@@ -46,19 +47,21 @@ const ALVO_PADRAO: Record<HideTargetType, AlvoDaOcultacao> = {
 /**
  * A pergunta antes de esconder algo da rede. Mostrar de novo não pergunta.
  *
- * Mora aqui, e não em cada tela, porque todo caminho de esconder passa por
- * `toggleHidden`. Em 15/09 um toque sem pergunta escondeu o catálogo FitMind
- * de 571 alunos; uma tela nova que esquecesse de perguntar repetiria isso.
+ * Quem pergunta é `toggleHidden`, e não cada tela, porque todo caminho de
+ * esconder passa por ele. Em 15/09 um toque sem pergunta escondeu o catálogo
+ * FitMind de 571 alunos; uma tela nova que esquecesse de perguntar repetiria
+ * isso.
  */
-export function confirmarOcultacao(alvo: AlvoDaOcultacao): boolean {
+export function perguntaDaOcultacao(alvo: AlvoDaOcultacao): Pergunta {
   const oque = "grupo" in alvo
     ? `todos os produtos ${alvo.grupo}`
     : alvo.produto ? `o produto «${alvo.produto}»` : "este produto";
   const quem = "grupo" in alvo ? "esses produtos" : "esse produto";
-  return window.confirm(
-    `Tem certeza que deseja ocultar ${oque}?\n\n` +
-    `Ninguém da sua rede verá mais ${quem} nem poderá comprar. Essa ação é reversível.`,
-  );
+  return {
+    titulo: `Tem certeza que deseja ocultar ${oque}?`,
+    descricao: `Ninguém da sua rede verá mais ${quem} nem poderá comprar. Essa ação é reversível.`,
+    acao: "Ocultar",
+  };
 }
 
 type HideRow = {
@@ -93,6 +96,7 @@ export function useStoreVisibility(coachMode: boolean) {
     my_hidden: [],
   });
   const [loaded, setLoaded] = useState(false);
+  const confirmar = useConfirmar();
 
   const refresh = useCallback(async () => {
     try {
@@ -147,7 +151,7 @@ export function useStoreVisibility(coachMode: boolean) {
       nextHidden: boolean,
       alvo: AlvoDaOcultacao = ALVO_PADRAO[targetType],
     ): Promise<boolean> => {
-      if (nextHidden && !confirmarOcultacao(alvo)) return false;
+      if (nextHidden && !(await confirmar(perguntaDaOcultacao(alvo)))) return false;
       const { error } = await supabase.rpc("coach_store_set_hidden" as never, {
         _target_type: targetType,
         _product_kind: productKind,
@@ -158,7 +162,7 @@ export function useStoreVisibility(coachMode: boolean) {
       await refresh();
       return true;
     },
-    [refresh],
+    [confirmar, refresh],
   );
 
   // Applies the creator-aware exception: a hide is bypassed when the creator
