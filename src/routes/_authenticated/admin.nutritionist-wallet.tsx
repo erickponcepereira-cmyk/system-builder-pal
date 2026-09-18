@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Lock, Unlock, X, Wallet, UserPlus } from "lucide-react";
+import { Check, Loader2, Lock, Unlock, X, Wallet, UserPlus } from "lucide-react";
 import {
   listNutritionistWallets,
   listNutritionistBlockedEntries,
@@ -30,7 +30,7 @@ function NutriWalletPage() {
 
   const [wallets, setWallets] = useState<NutritionistWalletRow[] | null>(null);
   const [entries, setEntries] = useState<NutriBlockedEntry[] | null>(null);
-  const [filter, setFilter] = useState<"blocked" | "released" | "cancelled" | "all">("blocked");
+  const [filter, setFilter] = useState<"blocked" | "released" | "paid" | "cancelled" | "all">("blocked");
   const [busy, setBusy] = useState<string | null>(null);
   const [assignFor, setAssignFor] = useState<NutriBlockedEntry | null>(null);
   const [assignTarget, setAssignTarget] = useState<string>("");
@@ -131,7 +131,7 @@ function NutriWalletPage() {
       <section>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <h2 className="mr-auto text-sm font-semibold text-white/80">Lançamentos</h2>
-          {(["blocked", "released", "cancelled", "all"] as const).map((s) => (
+          {(["blocked", "released", "paid", "cancelled", "all"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -139,7 +139,7 @@ function NutriWalletPage() {
                 filter === s ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"
               }`}
             >
-              {s === "all" ? "Todos" : s === "blocked" ? "Bloqueados" : s === "released" ? "Liberados" : "Cancelados"}
+              {s === "all" ? "Todos" : s === "blocked" ? "Bloqueados" : s === "released" ? "Liberados" : s === "paid" ? "Pagos" : "Cancelados"}
             </button>
           ))}
         </div>
@@ -190,6 +190,11 @@ function NutriWalletPage() {
                       ) : e.status === "released" ? (
                         <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300">
                           <Unlock className="h-3 w-3" /> Liberado
+                        </span>
+                      ) : e.status === "paid" ? (
+                        // Sem este ramo, lançamento pago caía no "Cancelado" vermelho.
+                        <span className="inline-flex items-center gap-1 rounded bg-sky-500/15 px-2 py-0.5 text-xs text-sky-300">
+                          <Check className="h-3 w-3" /> Pago
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded bg-red-500/15 px-2 py-0.5 text-xs text-red-300">

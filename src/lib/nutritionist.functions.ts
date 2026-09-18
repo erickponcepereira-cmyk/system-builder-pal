@@ -34,7 +34,7 @@ export type NutriBlockedEntry = {
   product_name: string | null;
   slot_label: string | null;
   amount: number;
-  status: "blocked" | "released" | "cancelled";
+  status: "blocked" | "released" | "cancelled" | "paid";
   reason: string | null;
   notes: string | null;
   created_at: string;
@@ -48,10 +48,21 @@ export const listNutritionistWallets = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<NutritionistWalletRow[]> => {
     await ensureAdmin(context.userId);
-    const { data: wallets } = await supabaseAdmin
-      .from("nutritionist_wallets")
-      .select("*");
-    const ids = (wallets || []).map((w: any) => w.profile_id);
+    // Quem pode receber é todo coach com a especialidade de nutricionista, com
+    // ou sem carteira. A carteira só nasce na primeira atribuição, e listar só
+    // quem já tinha carteira deixava de fora justamente quem nunca recebeu:
+    // em 17/09/2026 eram 8 nutricionistas e a lista mostrava 2.
+    const [{ data: wallets }, { data: nutricionistas }] = await Promise.all([
+      supabaseAdmin.from("nutritionist_wallets").select("*"),
+      supabaseAdmin.from("coaches").select("profile_id").eq("specialty_key", "nutritionist"),
+    ]);
+    const walletByProfile = new Map<string, any>((wallets || []).map((w: any) => [w.profile_id, w]));
+    const ids = Array.from(new Set([
+      ...walletByProfile.keys(),
+      ...((nutricionistas || []) as Array<{ profile_id: string | null }>)
+        .map((c) => c.profile_id)
+        .filter((id): id is string => !!id),
+    ]));
     const { data: profiles } = ids.length
       ? await supabaseAdmin.from("profiles").select("id,name,email").in("id", ids)
       : { data: [] as any[] };
@@ -82,21 +93,26 @@ export const listNutritionistWallets = createServerFn({ method: "GET" })
       total_withdrawn: nDebits,
     };
 
-    const rows = (wallets || []).map((w: any) => ({
-      profile_id: w.profile_id,
-      name: pMap.get(w.profile_id)?.name || "—",
-      email: pMap.get(w.profile_id)?.email || null,
-      available_balance: Number(w.available_balance || 0),
-      blocked_balance: Number(w.blocked_balance || 0),
-      total_earned: Number(w.total_earned || 0),
-      total_released: Number(w.total_released || 0),
-      total_withdrawn: Number(w.total_withdrawn || 0),
-    }));
+    const rows = ids
+      .map((id) => {
+        const w = walletByProfile.get(id);
+        return {
+          profile_id: id,
+          name: pMap.get(id)?.name || "—",
+          email: pMap.get(id)?.email || null,
+          available_balance: Number(w?.available_balance || 0),
+          blocked_balance: Number(w?.blocked_balance || 0),
+          total_earned: Number(w?.total_earned || 0),
+          total_released: Number(w?.total_released || 0),
+          total_withdrawn: Number(w?.total_withdrawn || 0),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     return [unassigned, ...rows];
   });
 
 export const listNutritionistBlockedEntries = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) => (d as { status?: "blocked" | "released" | "cancelled" | "all" }) || {})
+  .inputValidator((d: unknown) => (d as { status?: "blocked" | "released" | "cancelled" | "paid" | "all" }) || {})
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }): Promise<NutriBlockedEntry[]> => {
     await ensureAdmin(context.userId);

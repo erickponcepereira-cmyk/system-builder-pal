@@ -1,3 +1,25 @@
+## 20260917230000_nutricionista_recebe_na_carteira_dela.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de financeiro/nutricionista |
+| **Data** | 17/09/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | **Sim** — registra R$ 94,00 pagos ao Helton por Pix, fora do sistema |
+| **Aplicada em producao?** | **Sim — 17/09/2026**, `md5(prosrc)` das 2 funcoes conferido |
+
+`pay_nutritionist_available` para de gravar `withdrawal_requests` (o pagamento de
+nutricionista virava "pago a mais" na carteira de coach da mesma pessoa, porque o
+ledger nao conhece ganho de nutricionista). `recalc_nutritionist_wallets` passa a
+contar `paid` e a recalcular o sacado a partir dos lancamentos, e fica so com
+`service_role` (estava aberta para anon).
+
+Dados: a fatia de nutricionista da venda FM-D77E7F0E (R$ 94,00) sai do sistema e
+vai para o Helton Matos Fernandes, ja paga. Carteira de coach dele conferida antes
+e depois: igual. Definicoes antigas em `auditoria.funcoes_nutricionista_20260917`.
+
+---
+
 ## 20260917120000_fitmind_volta_e_ocultar_por_categoria.sql
 
 | | |

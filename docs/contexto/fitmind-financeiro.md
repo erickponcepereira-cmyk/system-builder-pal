@@ -147,3 +147,49 @@ sem pendente que os cubra (Marilene 31,76 e Erick 59,75) — decisão dele em
 **Não registre esse débito em `wallet_advances`** achando que formaliza: o
 extrato subtrai `advance_open` *além* de `liberado − sacado`, e o desconto
 sairia em dobro.
+
+
+## Carteira de nutricionista: a primeira vez em uso (17/09/2026)
+
+Produto com cardápio tem uma fatia fixa de nutricionista (R$ 94 no Protocolo/kit).
+`find_nutritionist_for` é casca vazia, então **toda fatia cai na carteira do sistema como
+"Nutricionista (nutricionista ausente)"** e alguém precisa atribuir à mão em
+`/admin/nutritionist-wallet`. Até 17/09 ninguém tinha atribuído nada: zero lançamentos, e
+56 fatias (R$ 1.822,70) paradas sem dono. O Helton foi o primeiro, e a primeira vez
+mostrou quatro defeitos de uma vez:
+
+- **A lista de quem pode receber só mostrava quem já tinha carteira** — e a carteira só nasce
+  na primeira atribuição. Dos 8 coaches com `specialty_key = 'nutritionist'`, apareciam 2
+  (Erick e Nathan). Hoje a lista é a especialidade.
+- **Pagar nutricionista cobrava da carteira de coach.** `pay_nutritionist_available` gravava o
+  pagamento também em `withdrawal_requests`, e `carteira_atual` soma todo saque pago da
+  pessoa como sacado — mas `financial_ledger_events` **não conhece ganho de
+  nutricionista**. Simulado no Helton pelo botão de então: R$ 81,58 de "pago a mais" e o
+  "a receber" dele de R$ 95,62 para R$ 1,62. Todos os 8 nutricionistas são coaches. O
+  pagamento agora fica só na carteira de nutricionista.
+- **`recalc_nutritionist_wallets` ignorava lançamento `paid`**: depois de pagar, o recálculo
+  (a limpeza de vendas de teste chama) mostrava "ganhou 0, sacou X". E estava aberta até
+  para `anon`. Hoje os lançamentos são a verdade, inclusive o sacado, e só `service_role`
+  chama.
+- **A tela mostrava lançamento pago como "Cancelado"**, em vermelho — o status `paid` não
+  tinha ramo. Ganhou o selo "Pago" e o filtro "Pagos".
+
+**A carteira de nutricionista vive fora do ledger.** Ganho e pagamento de nutricionista
+ficam em `nutritionist_blocked_entries` e `nutritionist_wallets`, e nada disso aparece em
+`carteira_atual`, `wallet_statement` nem no extrato do coach. É coerente enquanto as duas
+pontas ficam do mesmo lado. O conserto de fundo é trazer o ganho de nutricionista para
+`financial_ledger_events` — aí o pagamento pode voltar ao histórico unificado de saques.
+Não foi feito.
+
+**Pagamento feito por fora** se registra como o do Helton (migration `20260917230000`):
+lançamento com `status = 'paid'` e nota do Pix, débito no sistema com o mesmo
+`transaction_id` e valor do crédito (é assim que a tela casa os dois e tira da lista de não
+atribuídos), linha em `nutritionist_wallets`, e `recalc_nutritionist_wallets()`. **Nunca
+crie `withdrawal_request` para isso.**
+
+**Como ler uma venda com cartão parcelado.** No pedido FM-D77E7F0E (Karla, R$ 1.280 em
+4x), o Mercado Pago mostra dois custos: `mercadopago_fee` (R$ 63,74, da FitMind) e
+`financing_fee` (R$ 145,41). O segundo é o juro do parcelamento, **pago pela cliente** —
+ela pagou R$ 1.425,41, e `net_received_amount` é R$ 1.216,26 = valor − taxa do MP. É esse
+líquido que as fatias dividem. Fatia de rede sem upline naquele nível volta para quem
+vendeu como "Comissão Direta (sem upline N3)" — é regra desde 29/07, não sobra.
