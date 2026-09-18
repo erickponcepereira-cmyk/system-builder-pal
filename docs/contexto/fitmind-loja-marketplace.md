@@ -72,8 +72,16 @@ em 15/09 — 110 coaches e 571 alunos perderam o catálogo FitMind; a Tatiane, d
 dele, em 30/08. Os coaches abaixo viam "bloqueada pelo seu upline", e **nenhuma tela do admin
 lista ocultação de coach** — por isso pareceu defeito. Primeira consulta num incidente assim:
 `SELECT * FROM coach_store_hidden_items ORDER BY created_at DESC`. As duas linhas foram
-removidas com cópia em `auditoria.ocultacoes_fitmind_20260917`, e esconder em grupo (FitMind,
-seção, categoria) passou a pedir confirmação nas duas lojas.
+removidas com cópia em `auditoria.ocultacoes_fitmind_20260917`.
+
+**Toda ocultação pergunta antes**, com o texto do Erick: "Tem certeza que deseja ocultar todos
+os produtos da categoria «Herbalife»? Ninguém da sua rede verá mais esses produtos nem poderá
+comprar. Essa ação é reversível." A pergunta mora em `toggleHidden`
+(`src/lib/coach-store-overrides.ts`), por onde passam as quatro telas que escondem — loja nova,
+loja antiga, loja de parceiro/profissional e a aba Benefícios. **Tela nova que esconda algo não
+precisa, e não deve, perguntar por conta própria:** basta passar o `alvo` com o nome, e sem ele
+a pergunta usa um texto genérico do tipo. `toggleHidden` devolve `false` quando a pessoa
+desiste; quem mostra aviso de "oculto" tem que conferir.
 
 **Esconder por categoria nunca funcionou.** O CHECK de `target_type` não aceitava
 `'category'`: a loja antiga mostrava o olho de categoria desde julho e todo toque morria em

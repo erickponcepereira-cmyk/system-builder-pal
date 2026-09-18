@@ -22,6 +22,7 @@ import { notasDosProdutos, origemDoProduto, type ResumoDeNotas } from "@/lib/sto
 import { useFecharComEscape } from "@/hooks/use-fechar-com-escape";
 import { vendedorDoProduto } from "@/lib/store-seller";
 import { useVisibilidadeLoja } from "@/lib/store-visibility";
+import type { AlvoDaOcultacao } from "@/lib/coach-store-overrides";
 import { AlertTriangle, ChevronDown, Eye, EyeOff, History, IdCard, Loader2, MapPin, Minus, Plus, Search, Share2, ShoppingBag, ShoppingCart, Ticket, Timer, Trash2, TrendingUp, Trophy, UserRound, X } from "lucide-react";
 
 import {
@@ -487,37 +488,20 @@ export function UnifiedStorePage({
     kind: string | null,
     targetId: string | null,
     oculto: boolean,
+    alvo: AlvoDaOcultacao,
   ) => {
+    if (curando !== null) return;
     setCurando(chave);
     try {
-      await visibilidade.alternarOculto(tipo, kind, targetId, oculto);
-      toast.success(oculto ? "Escondido da sua rede." : "Visível para sua rede de novo.");
+      // A pergunta antes de esconder mora em `alternarOculto`: é o mesmo
+      // caminho para produto, seção, categoria e a FitMind inteira.
+      const aplicou = await visibilidade.alternarOculto(tipo, kind, targetId, oculto, alvo);
+      if (aplicou) toast.success(oculto ? "Escondido da sua rede." : "Visível para sua rede de novo.");
     } catch (erro) {
       toast.error(erro instanceof Error ? erro.message : "Não foi possível mudar agora.");
     } finally {
       setCurando(null);
     }
-  };
-
-  /**
-   * Esconder um GRUPO pede confirmação; mostrar de novo, não.
-   *
-   * Grupo é onde um toque errado custa caro: em 15/09 um toque no cartão da
-   * FitMind escondeu o catálogo inteiro de 571 alunos, e ninguém soube dizer
-   * quem tinha sido. Produto avulso continua de um toque só.
-   */
-  const curarGrupo = (
-    chave: string,
-    tipo: "section" | "category" | "vendor_fitmind",
-    targetId: string | null,
-    oque: string,
-    oculto: boolean,
-  ) => {
-    if (curando !== null) return;
-    const confirmou = !oculto || window.confirm(
-      `Esconder ${oque} da sua rede?\n\nSeus alunos e os coaches abaixo de você deixam de ver até você mostrar de novo. Você continua vendo, para poder desfazer.`,
-    );
-    if (confirmou) void curar(chave, tipo, null, targetId, oculto);
   };
 
   const nomeDaCategoria = useMemo(
@@ -529,7 +513,7 @@ export function UnifiedStorePage({
     [catalog],
   );
 
-  /** Quantos produtos da rede o grupo leva junto — o número da confirmação. */
+  /** Quantos produtos o grupo leva junto — o número que aparece no botão. */
   const contarNoGrupo = (tipo: "section" | "category", id: string) =>
     visiveis.filter((p) => (tipo === "section" ? p.sectionId : p.categoryId) === id).length;
 
@@ -557,7 +541,7 @@ export function UnifiedStorePage({
         rotulo,
         quantos,
         escondido,
-        onAlternar: () => curarGrupo(`${tipo}-${id}`, tipo, id, `a ${rotulo} (${quantos} produtos)`, !escondido),
+        onAlternar: () => void curar(`${tipo}-${id}`, tipo, null, id, !escondido, { grupo: `da ${rotulo}` }),
       }];
     });
   };
@@ -808,13 +792,7 @@ export function UnifiedStorePage({
           <button
             type="button"
             disabled={curando !== null}
-            onClick={() => curarGrupo(
-              "vendor",
-              "vendor_fitmind",
-              null,
-              `todo o catálogo FitMind (${visiveis.filter((p) => p.origin === "fitmind").length} produtos)`,
-              !escondi,
-            )}
+            onClick={() => void curar("vendor", "vendor_fitmind", null, null, !escondi, { grupo: "da FitMind" })}
             className={`flex items-center justify-between gap-3 rounded-2xl border p-3 text-left disabled:opacity-60 ${
               escondi ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-card"
             }`}
@@ -1170,12 +1148,13 @@ export function UnifiedStorePage({
                       aria-label={secaoEscondida ? "Mostrar seção para a rede" : "Esconder seção da rede"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        curarGrupo(
+                        void curar(
                           "section-" + s.id,
                           "section",
+                          null,
                           s.id,
-                          `a seção «${s.name}» (${contarNoGrupo("section", s.id)} produtos)`,
                           !secaoEscondida,
+                          { grupo: `da seção «${s.name}»` },
                         );
                       }}
                       className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur"
@@ -1257,6 +1236,7 @@ export function UnifiedStorePage({
             visibilidade.kindDeCuradoria(detail),
             detail.sourceId,
             !visibilidade.ocultadoPorMim("product", visibilidade.kindDeCuradoria(detail), detail.sourceId),
+            { produto: detail.title },
           )}
           grupos={modoCoach ? gruposDoProduto(detail) : []}
           carteirinhaAtiva={ctx.cardActive}

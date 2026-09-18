@@ -1341,10 +1341,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 type="button"
                 onClick={async () => {
                   const hidden = vis.isHiddenByMe("vendor_fitmind", null, null);
-                  // Esconder a FitMind inteira some com o catálogo da rede toda: pede confirmação.
-                  if (!hidden && !window.confirm("Esconder TODO o catálogo FitMind da sua rede?\n\nSeus alunos e os coaches abaixo de você deixam de ver até você mostrar de novo.")) return;
                   try {
-                    await vis.toggleHidden("vendor_fitmind", null, null, !hidden);
+                    if (!(await vis.toggleHidden("vendor_fitmind", null, null, !hidden, { grupo: "da FitMind" }))) return;
                     toast.success(hidden ? "FitMind reativada para sua rede." : "FitMind oculta para sua rede.");
                   } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
                 }}
@@ -1383,7 +1381,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                       onClick={async (e) => {
                         e.stopPropagation();
                         try {
-                          await vis.toggleHidden("section", null, s.id, !secHidden);
+                          if (!(await vis.toggleHidden("section", null, s.id, !secHidden, { grupo: `da seção «${s.name}»` }))) return;
                           toast.success(secHidden ? "Seção reativada para sua rede." : "Seção oculta da sua rede.");
                         } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
                       }}
@@ -1424,7 +1422,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                     onClick={async (e) => {
                       e.stopPropagation();
                       try {
-                        await vis.toggleHidden("category", null, c.id, !catHidden);
+                        if (!(await vis.toggleHidden("category", null, c.id, !catHidden, { grupo: `da categoria «${c.name}»` }))) return;
                         toast.success(catHidden ? "Categoria reativada para sua rede." : "Categoria oculta da sua rede.");
                       } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
                     }}
@@ -1523,7 +1521,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                       onClick={async (e) => {
                         e.stopPropagation();
                         try {
-                          await vis.toggleHidden("product", pk, item.sourceId, !itemHidden);
+                          if (!(await vis.toggleHidden("product", pk, item.sourceId, !itemHidden, { produto: item.title }))) return;
                           toast.success(itemHidden ? "Produto reativado para sua rede." : "Produto oculto da sua rede.");
                         } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
                       }}

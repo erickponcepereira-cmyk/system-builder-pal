@@ -8,7 +8,7 @@ import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
-import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
+import { useStoreVisibility, type AlvoDaOcultacao, type HideProductKind } from "@/lib/coach-store-overrides";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
 import { getPendingProduct, clearPendingProduct } from "@/lib/pending-product";
 import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
@@ -144,11 +144,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     pKind: HideProductKind,
     targetId: string | null,
     e?: React.MouseEvent,
+    alvo?: AlvoDaOcultacao,
   ) => {
     e?.stopPropagation();
     const currentlyHidden = vis.isHiddenByMe(targetType, pKind, targetId);
     try {
-      await vis.toggleHidden(targetType, pKind, targetId, !currentlyHidden);
+      if (!(await vis.toggleHidden(targetType, pKind, targetId, !currentlyHidden, alvo))) return;
       toast.success(currentlyHidden ? "Reativado para a sua rede." : "Ocultado da sua rede.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao alterar visibilidade.");
@@ -556,7 +557,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 {mode === "reseller" && (
                   <button
                     type="button"
-                    onClick={(e) => handleToggleHide("section", null, s.id, e)}
+                    onClick={(e) => handleToggleHide("section", null, s.id, e, { grupo: `da seção «${s.name}»` })}
                     title={sectionHidden ? "Mostrar seção para sua rede" : "Ocultar seção da sua rede"}
                     className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
                   >
@@ -640,7 +641,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   {mode === "reseller" && (
                     <button
                       type="button"
-                      onClick={(e) => handleToggleHide("product", pProductKind, p.id, e)}
+                      onClick={(e) => handleToggleHide("product", pProductKind, p.id, e, { produto: p.name })}
                       title={productHidden ? "Mostrar para sua rede" : "Ocultar da sua rede"}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
                     >

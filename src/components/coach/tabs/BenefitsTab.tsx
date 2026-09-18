@@ -377,7 +377,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                         <button
                           type="button"
                           onClick={async () => {
-                            try { await vis.toggleHidden("product", "partner_product", p.id, !hiddenByMe); }
+                            try { await vis.toggleHidden("product", "partner_product", p.id, !hiddenByMe, { produto: p.name }); }
                             catch (e: any) { toast.error(e?.message || "Erro ao alterar visibilidade"); }
                           }}
                           title={hiddenByMe ? "Mostrar para sua rede" : "Ocultar da sua rede"}

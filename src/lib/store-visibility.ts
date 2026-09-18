@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useStoreVisibility,
+  type AlvoDaOcultacao,
   type HideProductKind,
 } from "@/lib/coach-store-overrides";
 import type { UnifiedProduct } from "@/lib/unified-store";
@@ -64,13 +65,17 @@ export type VisibilidadeLoja = {
     kind: string | null,
     targetId: string | null,
   ) => boolean;
-  /** Liga/desliga a ocultação. Recarrega o contexto sozinho. */
+  /**
+   * Liga/desliga a ocultação e recarrega o contexto. Esconder pergunta antes;
+   * `false` quer dizer que a pessoa desistiu.
+   */
   alternarOculto: (
     tipo: "section" | "category" | "product" | "vendor_fitmind",
     kind: string | null,
     targetId: string | null,
     oculto: boolean,
-  ) => Promise<void>;
+    alvo?: AlvoDaOcultacao,
+  ) => Promise<boolean>;
   /** `product_kind` deste produto, ou `null` quando não há override possível. */
   kindDeCuradoria: (produto: UnifiedProduct) => string | null;
 };
@@ -209,8 +214,8 @@ export function useVisibilidadeLoja(
       vis.isHiddenByMe(tipo as never, kind as never, targetId),
     ocultadoPorUpline: (tipo, kind, targetId) =>
       vis.isHiddenByUpline(tipo as never, kind as never, targetId),
-    alternarOculto: (tipo, kind, targetId, oculto) =>
-      vis.toggleHidden(tipo as never, kind as never, targetId, oculto),
+    alternarOculto: (tipo, kind, targetId, oculto, alvo) =>
+      vis.toggleHidden(tipo as never, kind as never, targetId, oculto, alvo),
     kindDeCuradoria: (produto) => kindDeOverride(produto),
   };
 }

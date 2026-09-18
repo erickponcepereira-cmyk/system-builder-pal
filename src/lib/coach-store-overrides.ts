@@ -25,6 +25,42 @@ export function visibilityKey(
   return `${targetType}:${productKind ?? ""}:${targetId ?? ""}`;
 }
 
+/**
+ * O que se esconde, para a pergunta de confirmação.
+ *
+ * `grupo` já vem com a preposição — "da categoria «Herbalife»", "da FitMind",
+ * "de todos os parceiros" — porque não cabem todos num molde só.
+ * `produto: null` vira "este produto".
+ */
+export type AlvoDaOcultacao = { produto: string | null } | { grupo: string };
+
+const ALVO_PADRAO: Record<HideTargetType, AlvoDaOcultacao> = {
+  product: { produto: null },
+  section: { grupo: "desta seção" },
+  category: { grupo: "desta categoria" },
+  vendor_partner: { grupo: "de todos os parceiros" },
+  vendor_professional: { grupo: "de todos os profissionais" },
+  vendor_fitmind: { grupo: "da FitMind" },
+};
+
+/**
+ * A pergunta antes de esconder algo da rede. Mostrar de novo não pergunta.
+ *
+ * Mora aqui, e não em cada tela, porque todo caminho de esconder passa por
+ * `toggleHidden`. Em 15/09 um toque sem pergunta escondeu o catálogo FitMind
+ * de 571 alunos; uma tela nova que esquecesse de perguntar repetiria isso.
+ */
+export function confirmarOcultacao(alvo: AlvoDaOcultacao): boolean {
+  const oque = "grupo" in alvo
+    ? `todos os produtos ${alvo.grupo}`
+    : alvo.produto ? `o produto «${alvo.produto}»` : "este produto";
+  const quem = "grupo" in alvo ? "esses produtos" : "esse produto";
+  return window.confirm(
+    `Tem certeza que deseja ocultar ${oque}?\n\n` +
+    `Ninguém da sua rede verá mais ${quem} nem poderá comprar. Essa ação é reversível.`,
+  );
+}
+
 type HideRow = {
   target_type: HideTargetType;
   product_kind: HideProductKind;
@@ -99,13 +135,19 @@ export function useStoreVisibility(coachMode: boolean) {
     );
   }, [ctx.my_hidden]);
 
+  /**
+   * Esconde ou mostra. Esconder pergunta antes, e devolve `false` quando a
+   * pessoa desiste — para a tela não anunciar "oculto" sem ter ocultado.
+   */
   const toggleHidden = useCallback(
     async (
       targetType: HideTargetType,
       productKind: HideProductKind,
       targetId: string | null,
       nextHidden: boolean,
-    ) => {
+      alvo: AlvoDaOcultacao = ALVO_PADRAO[targetType],
+    ): Promise<boolean> => {
+      if (nextHidden && !confirmarOcultacao(alvo)) return false;
       const { error } = await supabase.rpc("coach_store_set_hidden" as never, {
         _target_type: targetType,
         _product_kind: productKind,
@@ -114,6 +156,7 @@ export function useStoreVisibility(coachMode: boolean) {
       } as never);
       if (error) throw new Error(error.message);
       await refresh();
+      return true;
     },
     [refresh],
   );
