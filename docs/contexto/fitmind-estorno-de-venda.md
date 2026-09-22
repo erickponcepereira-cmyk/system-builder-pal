@@ -67,3 +67,30 @@ não muda a comissão: a venda deixou de valer, e a comissão sai inteira.
   revogado; o consumido fica, e a tela avisa quantos foram.
 - **Não mexe em fitcoin de indicação já creditado** (`is_referral`), além de
   cancelar a comissão correspondente.
+
+## O pedido nunca chegava a ser criado (22/09/2026)
+
+`return_requests` tinha **zero linhas** desde julho, e o motivo não era falta de
+tela: `getStudentPurchaseHistory` prefixa o id de cada linha do histórico
+(`tx-`, `order-`, `pp-`) porque as quatro origens são tabelas diferentes e podem
+repetir uuid. O formulário mandava esse texto para `return_requests.order_id`,
+que é **uuid** — e o banco recusava com `22P02 invalid input syntax for type
+uuid`. O `catch` genérico virava "Não consegui enviar seu pedido agora, tente de
+novo em instantes", então ninguém nunca soube por quê.
+
+`product_reviews.order_id` é uuid pelo mesmo motivo e recebia o mesmo prefixo:
+**"Avaliar" falhava calado desde 29/08** pela mesma causa, e o mapa de
+avaliações — indexado pelo uuid cru — nunca casava com a linha da tela.
+
+`idDoPedido` e `tipoDoPedido` (`src/lib/store-returns.ts`) fazem a tradução num
+lugar só. O prefixo também é quem sabe a tabela de verdade: `source` não
+distingue assinatura (que é `transactions`) de pedido da loja, e por isso
+`tipoDoPedido` passou a receber o id da linha.
+
+**A lição, que vale para o resto do app:** id de lista unificada não é id de
+tabela. Onde o histórico junta origens diferentes, o id ganha prefixo — e todo
+`insert` que o usa precisa desfazer isso.
+
+Provado em produção, em transação desfeita, com o JWT de uma aluna real: com o
+prefixo, `22P02`; sem ele, o pedido é criado e o gatilho
+`sync_release_status_from_returns` já põe o repasse do pedido em `blocked`.

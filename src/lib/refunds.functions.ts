@@ -23,7 +23,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const SLOT_ESTORNO = "Estorno solicitado pelo cliente";
 
-type Origem = "store_order" | "partner_product_order";
+type Origem = "store_order" | "partner_product_order" | "transaction" | "subscription_invoice";
+
+type Linha = { id: string; product_id: string | null; student_id: string | null };
 
 export type ResultadoDoEstorno = {
   comissoes_canceladas: number;
@@ -48,13 +50,20 @@ async function exigirAdmin(userId: string): Promise<string> {
   return perfil.id;
 }
 
-/** As transações do gateway ligadas a um pedido da loja. */
-async function transacoesDoPedido(orderId: string): Promise<Array<{ id: string; product_id: string | null; student_id: string | null }>> {
-  const { data } = await supabaseAdmin
-    .from("transactions")
-    .select("id, product_id, student_id")
-    .filter("metadata->>store_order_id", "eq", orderId);
-  return ((data as Array<{ id: string; product_id: string | null; student_id: string | null }>) || []);
+/**
+ * As transações do gateway que carregam o dinheiro deste pedido.
+ *
+ * O histórico do aluno tem quatro origens e o pedido de estorno guarda qual
+ * é: `store_order` tem transação ligada por `metadata->>store_order_id`,
+ * enquanto `transaction` (assinatura e compra direta) já É a transação.
+ */
+async function transacoesDoPedido(orderId: string, tipo: Origem): Promise<Linha[]> {
+  if (tipo === "partner_product_order") return [];
+  const consulta = supabaseAdmin.from("transactions").select("id, product_id, student_id");
+  const { data } = tipo === "transaction"
+    ? await consulta.eq("id", orderId)
+    : await consulta.filter("metadata->>store_order_id", "eq", orderId);
+  return ((data as Linha[]) || []);
 }
 
 /**
@@ -266,13 +275,17 @@ export const executarEstorno = createServerFn({ method: "POST" })
       throw new Error("Aprove o pedido antes de estornar — aprovar é a autorização, estornar devolve o dinheiro.");
     }
 
+    if (pedido.order_type === "subscription_invoice") {
+      throw new Error("Estorno de fatura de assinatura ainda não é automático — cancele a fatura pelo financeiro.");
+    }
+
     const motivo = `${SLOT_ESTORNO}: ${pedido.reason}${pedido.description ? ` — ${pedido.description}` : ""}`;
-    const daLoja = pedido.order_type !== "partner_product_order";
-    const transacoes = daLoja ? await transacoesDoPedido(pedido.order_id) : [];
+    const deParceiro = pedido.order_type === "partner_product_order";
+    const transacoes = await transacoesDoPedido(pedido.order_id, pedido.order_type);
     const txIds = transacoes.map((t) => t.id);
 
-    const comissoes = await cancelarComissoes(txIds, daLoja ? null : pedido.order_id);
-    const sistema = await debitarSistema(txIds, daLoja ? null : pedido.order_id, motivo);
+    const comissoes = await cancelarComissoes(txIds, deParceiro ? pedido.order_id : null);
+    const sistema = await debitarSistema(txIds, deParceiro ? pedido.order_id : null, motivo);
     const bloqueios = await cancelarBloqueios(txIds, motivo);
     const tickets = await revogarTickets(txIds);
     const dias = await retirarDiasDeCarteirinha(transacoes);
@@ -282,17 +295,17 @@ export const executarEstorno = createServerFn({ method: "POST" })
       await supabaseAdmin.from("transactions").update({ status: "refunded" } as never).in("id", txIds);
     }
 
-    const donos = daLoja ? [] : await donoDoPedidoDeParceiro(pedido.order_id);
-    if (daLoja) {
-      await supabaseAdmin
-        .from("store_orders")
-        .update({ status: "refunded", updated_at: new Date().toISOString() } as never)
-        .eq("id", pedido.order_id);
-    } else {
+    const donos = deParceiro ? await donoDoPedidoDeParceiro(pedido.order_id) : [];
+    if (deParceiro) {
       await supabaseAdmin
         .from("partner_product_orders" as never)
         .update({ status: "refunded", cancelled_at: new Date().toISOString(), notes: motivo } as never)
         .eq("id" as never, pedido.order_id as never);
+    } else if (pedido.order_type === "store_order") {
+      await supabaseAdmin
+        .from("store_orders")
+        .update({ status: "refunded", updated_at: new Date().toISOString() } as never)
+        .eq("id", pedido.order_id);
     }
 
     const afetados = Array.from(new Set([...comissoes.perfis, ...donos]));
