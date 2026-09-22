@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ROTULO_MOTIVO, ROTULO_STATUS, type StatusEstorno } from "@/lib/store-returns";
+import { executarEstorno } from "@/lib/refunds.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/estornos")({ component: AdminEstornos });
 
@@ -40,6 +42,7 @@ const ABERTOS: StatusEstorno[] = ["requested", "under_review", "approved"];
  * esperando há mais tempo aparece em cima, e não some no fim da lista.
  */
 function AdminEstornos() {
+  const estornar = useServerFn(executarEstorno);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [soAbertos, setSoAbertos] = useState(true);
@@ -64,6 +67,41 @@ function AdminEstornos() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  /**
+   * Devolve o dinheiro e desfaz a venda em todas as pontas.
+   *
+   * Só depois de aprovado: aprovar autoriza, estornar executa. O resumo do
+   * que saiu vai no toast porque é a única confirmação de que a comissão da
+   * rede caiu junto — sem isso o admin fica sem saber se pegou.
+   */
+  const estornarDeVerdade = async (l: Linha, valor: number, nota: string) => {
+    if (l.status !== "approved") {
+      toast.error("Aprove o pedido primeiro. Aprovar autoriza; estornar devolve o dinheiro.");
+      return;
+    }
+    setSalvando(l.id);
+    try {
+      const res = await estornar({ data: { returnRequestId: l.id, valorDevolvido: valor, nota: nota.trim() || undefined } });
+      const partes = [
+        `${res.comissoes_canceladas} comissões canceladas`,
+        `${res.pessoas_recalculadas} carteiras recalculadas`,
+        res.sistema_debitado > 0 ? `${dinheiro(res.sistema_debitado)} retirados do sistema` : null,
+        res.tickets_revogados > 0 ? `${res.tickets_revogados} tickets revogados` : null,
+        res.dias_de_carteirinha_retirados > 0 ? `${res.dias_de_carteirinha_retirados} dias de carteirinha retirados` : null,
+        res.bloqueios_cancelados > 0 ? `${res.bloqueios_cancelados} bloqueios de nutri/professor cancelados` : null,
+      ].filter(Boolean);
+      toast.success(`Estornado. ${partes.join(" · ")}.`);
+      if (res.tickets_ja_usados > 0) {
+        toast.warning(`${res.tickets_ja_usados} ticket(s) já tinham sido usados em inscrição e não voltaram.`);
+      }
+    } catch (e) {
+      console.error("[admin-estornos] estornar", e);
+      toast.error((e as Error).message || "Não consegui estornar. Nada foi alterado.");
+    }
+    setSalvando(null);
+    carregar();
+  };
+
   const decidir = async (l: Linha, novo: StatusEstorno) => {
     const r = rascunho[l.id] ?? { valor: "", nota: "" };
     const valor = r.valor.trim() ? Number(r.valor.replace(",", ".")) : null;
@@ -74,6 +112,13 @@ function AdminEstornos() {
     }
     if (novo === "rejected" && !r.nota.trim()) {
       toast.error("Escreva o motivo da recusa — o aluno vê essa resposta.");
+      return;
+    }
+
+    // Estornar é a única decisão que mexe em dinheiro: sai do servidor, não
+    // daqui. Aprovar continua sendo só autorização.
+    if (novo === "refunded") {
+      await estornarDeVerdade(l, valor as number, r.nota);
       return;
     }
 
@@ -185,7 +230,7 @@ function AdminEstornos() {
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(["under_review", "approved", "refunded", "rejected"] as StatusEstorno[]).map((s) => (
+                      {(["under_review", "approved", "rejected"] as StatusEstorno[]).map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -196,6 +241,16 @@ function AdminEstornos() {
                           {salvando === l.id ? "..." : ROTULO_STATUS[s]}
                         </button>
                       ))}
+                      {/* Separado dos outros: é o único que mexe em dinheiro. */}
+                      <button
+                        type="button"
+                        disabled={salvando === l.id || l.status !== "approved"}
+                        onClick={() => decidir(l, "refunded")}
+                        title={l.status !== "approved" ? "Aprove o pedido primeiro" : "Devolve e retira todas as comissões"}
+                        className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] font-bold text-red-300 disabled:opacity-40"
+                      >
+                        {salvando === l.id ? "..." : "Estornar e retirar comissões"}
+                      </button>
                     </div>
                   </div>
                 )}

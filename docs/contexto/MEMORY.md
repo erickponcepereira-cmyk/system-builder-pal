@@ -52,6 +52,8 @@ volta a ficar preso numa máquina.
   e as armadilhas do build local
 - [Sistema de taxas](fitmind-sistema-de-taxas.md) — `taxas_vigentes` é a fonte única, e o que
   na loja ficou de fora de propósito
+- [Estorno de venda](fitmind-estorno-de-venda.md) — as carteiras são derivadas do razão,
+  estornar é desfazer o fato e recalcular, e o que o estorno não faz
 - [Benefícios de venda](fitmind-beneficios-de-venda.md) — desafio, carteirinha e pontos:
   duas réguas, e por que R$ 150 não dá ticket
 - [PDV de estacionamento](fitmind-pdv-estacionamento.md) — o app que roda **dentro** da

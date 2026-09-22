@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift, Heart, Star, Sparkles } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift, Heart, Star, Sparkles, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,6 +36,9 @@ const sections = [
     title: "Conta",
     items: [
       { icon: QrCode, label: "Minha Carteirinha", to: "/student/card" },
+      // Pedido, nota e estorno é aqui que a pessoa procura — antes de 22/09
+      // o único caminho era rolar a loja até o fim.
+      { icon: ShoppingBag, label: "Minhas compras", to: "/student/compras" },
       { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
       { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Meu Protocolo", to: "/student/protocol" },
