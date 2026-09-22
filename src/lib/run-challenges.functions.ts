@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { tzToday } from "@/lib/timezone";
 
 export type RunChallengeTier = { id: string; label: string; target_km: number; sort_order: number };
 
@@ -17,6 +18,8 @@ export type RunChallengeCard = {
   description: string | null;
   starts_on: string;
   ends_on: string;
+  /** Prazo acabou. Só aparece encerrado para quem estava inscrito. */
+  ended: boolean;
   requires_ticket: boolean;
   ownerName: string | null;
   tiers: RunChallengeTier[];
@@ -71,13 +74,24 @@ export const listMyRunChallenges = createServerFn({ method: "GET" })
     const ownerIds = Array.from(new Set([...me.chainIds, ...me.myCoachIds]));
     if (ownerIds.length === 0) return [];
 
-    const today = new Date().toISOString().slice(0, 10);
+    // Dia em Cuiabá, não em UTC: com toISOString o desafio encerrava às 20h do
+    // último dia, enquanto run_challenge_progress ainda conta a corrida do dia.
+    const today = tzToday();
+    // Quem se inscreveu continua vendo o desafio depois do fim, como encerrado.
+    // Filtrar só por ends_on fazia o card sumir no dia seguinte ao término,
+    // junto com o progresso de quem estava participando.
+    const { data: myEntries } = await supabaseAdmin
+      .from("run_challenge_entries").select("challenge_id").eq("profile_id", me.profileId);
+    const enrolledIds = (myEntries || []).map((e) => e.challenge_id);
+    const openOrEnrolled = enrolledIds.length
+      ? `ends_on.gte.${today},id.in.(${enrolledIds.join(",")})`
+      : `ends_on.gte.${today}`;
     const { data: challenges } = await supabaseAdmin
       .from("run_challenges")
       .select("id, owner_coach_id, name, description, starts_on, ends_on, requires_ticket, partner_product_id, professional_product_id")
       .in("owner_coach_id", ownerIds)
       .eq("is_active", true)
-      .gte("ends_on", today)
+      .or(openOrEnrolled)
       .order("starts_on", { ascending: true });
 
     const list = (challenges as Array<{
@@ -123,6 +137,7 @@ export const listMyRunChallenges = createServerFn({ method: "GET" })
         description: c.description,
         starts_on: c.starts_on,
         ends_on: c.ends_on,
+        ended: c.ends_on < today,
         requires_ticket: c.requires_ticket,
         ownerName: ownerName.get(c.owner_coach_id) ?? null,
         tiers: ((tiers as Array<RunChallengeTier & { challenge_id: string }> | null) || [])
@@ -151,7 +166,7 @@ export const joinRunChallenge = createServerFn({ method: "POST" })
       .eq("id", data.challengeId).maybeSingle();
     const c = ch as unknown as { id: string; owner_coach_id: string; requires_ticket: boolean; is_active: boolean; ends_on: string } | null;
     if (!c || !c.is_active) return { ok: false, error: "Desafio indisponível." };
-    if (c.ends_on < new Date().toISOString().slice(0, 10)) return { ok: false, error: "Este desafio já encerrou." };
+    if (c.ends_on < tzToday()) return { ok: false, error: "Este desafio já encerrou." };
 
     const allowed = [...me.chainIds, ...me.myCoachIds].includes(c.owner_coach_id);
     if (!allowed) return { ok: false, error: "Este desafio é exclusivo da rede do organizador." };
