@@ -33,18 +33,73 @@ pendente. Criar o estado `rejected` exige antes fechar o furo abaixo — senão 
 própria pessoa desfaz a recusa — e decidir o que acontece com papel, mensalidade
 e `partner_members` se ela for aprovada depois.
 
-**Furo de segurança, não corrigido em 22/09/2026.** A policy
-`partners_owner_insert` só confere `profile_id = current_profile_id()`, o papel
+**Furo de segurança em `partners`, fechado em 22/09/2026.** A policy
+`partners_owner_insert` só conferia `profile_id = current_profile_id()`, o papel
 `authenticated` tem INSERT e UPDATE em `status` e `approved_at`, e nenhum gatilho
-de `partners` barra isso (`partners_ensure_approved_at` até preenche a data). Um
-usuário logado consegue criar uma parceria já `approved`, ou aprovar a própria
-pela policy `partners_owner_update`. O espelho nasce aprovado junto: painel de
-coach, código de indicação e comissão. A correção é um gatilho BEFORE INSERT OR
-UPDATE que, com `auth.uid()` não nulo e sem `is_admin`, force `pending` no
-INSERT e recuse mudança de status e datas de aprovação no UPDATE. O cadastro e a
-aprovação usam `supabaseAdmin` (uid nulo) e não quebram. **Cuidado:** um revoke
-em `partners` já derrubou o login de todos os parceiros (22/08/2026) — testar o
-login de parceiro e de colaborador depois.
+barrava (`partners_ensure_approved_at` até preenchia a data). Qualquer usuário
+logado criava parceria já `approved`, ou aprovava a própria — com o espelho
+nascendo aprovado junto: painel de coach, código de indicação e comissão.
+
+O remédio é o gatilho `a_partners_trava_autoaprovacao_trg` (migration
+`20260922142526`): com `auth.uid()` não nulo e sem `is_admin`, força `pending` e
+anula datas de aprovação/ativação/revisão no INSERT, e recusa no UPDATE qualquer
+mudança de `status`, `approved_at`, `blocked_at`, `activation_paid_at`,
+`activation_source`, `documents_reviewed_*`, `profile_id` e `referral_code`.
+**Nada de revoke de coluna** — foi um revoke em `partners` que derrubou o login
+de todos os parceiros em 22/08/2026, e `admin.partners.tsx` aprova pelo cliente
+autenticado, como admin.
+
+Três detalhes que custaram tempo e valem para a próxima trava assim:
+
+- **O nome começa com `a_`** porque a ordem dos gatilhos BEFORE é alfabética. Ele
+  precisa rodar antes de `partners_ensure_approved_at_trg` (que preencheria a
+  data) e antes de `apply_student_coach_to_new_partner_panel_trg` (que mexe em
+  `upline_coach_id` e dispararia a exceção sozinho).
+- **`upline_coach_id` só é barrado em `pg_trigger_depth() = 1`.** O gatilho
+  `sync_profile_upline_from_student_coach`, em `students`, copia para `partners`
+  o coach do aluno sempre que ele muda; barrar sem exceção quebraria toda troca
+  de coach feita sob JWT de usuário. Vindo de outro gatilho, é o sistema.
+- **No INSERT também se anula `referral_code`/`referral_link`**, senão proteger o
+  código no UPDATE seria inútil: bastava escolhê-lo no INSERT.
+
+Provado em produção, em transação desfeita, com `SET LOCAL ROLE authenticated` +
+`set_config('request.jwt.claims', …)`: parceiro aprovado ainda lê a ficha e edita
+o perfil; INSERT com `status:'approved'` grava `pending`, sem datas e sem espelho
+aprovado, com o código trocado pelo do sistema; dono de parceria pendente leva
+42501 no PATCH de status mas continua editando o perfil; admin continua
+aprovando. `RETURNING` não serve nesse teste: exige SELECT na tabela, que o
+`authenticated` não tem.
+
+**A auditoria das 59 parcerias aprovadas não achou nenhuma autoaprovação**
+(22/09/2026). 48 têm `partner_approved_final` no `admin_audit_log`; as 9 sem
+trilha foram aprovadas até 16/07/2026, antes de a aprovação final passar a
+registrar — `reviewPartnerStatus` e o botão Aprovar de `admin.partners.tsx` não
+gravam nada até hoje. A única que **nasceu** aprovada é a unidade "Jessica"
+(`afcad56d-…`, dono Fernando), criada em 27/08 pelo cutover da Estação, por
+service role. Ver [[fitmind-vertical-acesso]].
+
+**Dois furos irmãos continuam abertos** (levantados em 22/09/2026, ainda não
+corrigidos):
+
+- **`coaches` tem o mesmo furo no INSERT.** `trg_guard_coaches_self_update` é só
+  BEFORE UPDATE — conferido em `pg_trigger`. A policy `coaches_own_insert` só
+  olha `profile_id`, e o `authenticated` tem INSERT em `approved_at`,
+  `approved_by` e `activation_paid_at`. Um aluno logado insere o próprio
+  `profile_id` com `approved_at` preenchido e vira coach aprovado; `coach.tsx` só
+  olha `approved_at` para liberar o painel. Nenhum coach do banco nasceu aprovado
+  até 22/09, então isto não foi explorado. Ao fechar, cuidado com
+  `mirror_partner_as_coach`: ele insere em `coaches` por gatilho, e o
+  `auth.uid()` do chamador não é nulo quando o INSERT em `partners` vem do
+  navegador — a mesma saída do `pg_trigger_depth()` serve.
+- **`upgradeExistingToPartnerFn`, `upgradeExistingToCoachFn` e
+  `upgradeExistingToProfessionalFn` não têm `requireSupabaseAuth`** e confiam no
+  `userId` que vem no corpo. `src/start.ts` registra só `attachSupabaseAuth`, que
+  é `.client()` e apenas anexa o Bearer. No servidor as três buscam o perfil com
+  `supabaseAdmin`, que ignora RLS. Com o `user_id` de outra pessoa, qualquer um
+  empurra a vítima para `role='partner'`, com parceria pendente, espelho `EMP` e
+  a mensalidade de R$ 100 — o estado da Aliny, sem ela ter pedido. Pior:
+  `upgradeExistingToProfessional` zera o `approved_at` de um coach já aprovado.
+  `getMyBoundCoachFn` aceita qualquer `userId` do mesmo jeito.
 
 **O mesmo furo existe em `coaches`, e fechar só `partners` resolve metade.** A
 policy `coaches_own_insert` também confere apenas `profile_id`, o papel
