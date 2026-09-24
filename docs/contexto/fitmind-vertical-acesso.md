@@ -798,9 +798,10 @@ vem por padrão, 5 dos 8 "vence em 2 dias" destas alunas caíam em sábado ou
 domingo e nunca sairiam. Vale para qualquer academia: **`avisos_dias` menor que
 sete não adia aviso, descarta.**
 
-**Ela não tem número de WhatsApp, e não precisa:** `bot_escolher_conexao` já cai
-para o grupo, então a campanha dela sai pelo chip da Estação (65 99325-1805,
-limite 50/dia).
+**Enquanto ela não teve número**, a campanha dela saiu pelo chip da Estação:
+`bot_escolher_conexao` aceita o número de qualquer academia do mesmo grupo. Em
+24/09 ela ganhou o próprio número (65 98466-6420) — veja a seção abaixo, porque
+a escolha do chip precisou de conserto antes.
 
 **Como foi conferido:** `acesso_avaliar_academia` da Jessica — 10 `liberado`
 `contrato_ativo` e 2 `negado` `vencido_bloqueado`; retrato replicado em SQL — 416
@@ -820,3 +821,35 @@ repetida.
   Jessica.
 - **Apagar `public._backup_agente_20260915`** depois que a catraca registrar
   passagens normais com as funções novas.
+
+
+## 24/09/2026 — cada academia manda pelo próprio número
+
+A Jessica ganhou WhatsApp próprio (65 98466-6420), no mesmo PC da Estação. Duas
+coisas precisavam existir antes.
+
+**A escolha do chip entregava a campanha de uma academia ao número da outra.**
+`bot_escolher_conexao` aceita o número de qualquer academia do grupo — é o que
+fazia a Jessica conseguir disparar sem número próprio. Mas a ordem era
+`prioridade`, e no empate **quem enviou menos hoje**. As duas conexões nascem com
+prioridade 10, então, simulado com o número da Jessica ligado, a campanha da
+**Estação** sairia pelo WhatsApp da **Jessica** (0 envios contra 6). A cobrança
+de mensalidade da academia chegaria pelo número pessoal dela, e o personal dela
+pelo número da academia — as duas unidades existem para não misturar esse
+dinheiro. Hoje a ordenação começa por `(c.owner_id IS DISTINCT FROM _owner_id)`:
+número próprio primeiro, número do grupo só como reserva, quando o próprio está
+desconectado, bloqueado ou no limite do dia. **Duas academias no mesmo grupo com
+chips diferentes: confira a ordenação antes de ligar o segundo.**
+
+**O conector é de um número por pasta.** `config.json`, a pasta `sessao` e o
+spool são todos relativos à pasta do programa, e o painel (onde o QR aparece —
+ele não sai no terminal) escuta `process.env.PORT || 3100`. Segundo número no
+mesmo PC = **cópia da pasta, sem `config.json`, sem `sessao` e sem
+`pendentes.json`**, com `PORT` diferente. Copiar a pasta inteira, com a sessão
+junto, faz a cópia subir como o número da Estação e as duas instâncias brigarem
+pela mesma sessão — é assim que se derruba o número que já estava de pé.
+
+O código do conector que roda na academia mora em `conector_versoes.arquivos`
+(hoje 1.03.00), e não no repositório: ele se atualiza sozinho pelo
+`/api/bot/atualizacao`. `conector-whatsapp/` no repo é outro programa, o da
+plataforma.

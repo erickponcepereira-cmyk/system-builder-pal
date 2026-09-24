@@ -1,3 +1,22 @@
+## 20260924200000_cada_academia_manda_pelo_proprio_numero.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do robo/WhatsApp |
+| **Data** | 24/09/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 24/09/2026**, `md5(prosrc)` conferido (`958a5808...`) |
+
+`bot_escolher_conexao` passa a ordenar pelo numero da propria academia antes do
+numero do grupo. Antes, com duas conexoes de prioridade igual, o desempate por
+"quem enviou menos hoje" entregava a campanha de uma academia ao chip da outra:
+simulado com o numero da Jessica ligado, a campanha da Estacao sairia pelo
+WhatsApp dela. O numero do grupo continua como reserva quando o proprio esta
+fora do ar.
+
+---
+
 ## 20260917230000_nutricionista_recebe_na_carteira_dela.sql
 
 | | |
