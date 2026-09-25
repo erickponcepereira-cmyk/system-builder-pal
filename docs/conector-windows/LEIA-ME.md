@@ -25,6 +25,22 @@ não sai no terminal) escuta uma porta por cópia. 3100 para a primeira, 3101 pa
 a segunda, e assim por diante. Duas cópias na mesma porta: a segunda não abre o
 painel, e sem painel não há como ler o QR.
 
+## Dois jeitos de rodar, e o `.bat` descobre sozinho
+
+- **`FitMindConector.exe`** — já traz o Node dentro. É o caso de quem nunca
+  instalou Node na máquina.
+- **`conector.mjs` + Node** — o `.bat` procura o Node nesta ordem: `node.exe` na
+  própria pasta, `node` no PATH, e depois as pastas de instalação do Node em
+  Arquivos de Programas, em `%LOCALAPPDATA%` e em `C:`.
+
+Com os dois presentes ele prefere o `conector.mjs`, que é o arquivo reescrito
+pela atualização automática.
+
+> **Tarefa como SYSTEM tem outro PATH.** Se o Node estiver instalado só para um
+> usuário, `node` some quando a tarefa roda como SYSTEM, e o log diz
+> `ERRO: conector.mjs sem Node`. A saída é copiar o `node.exe` para dentro da
+> pasta do conector: é o primeiro lugar em que o `.bat` procura.
+
 ## Instalar
 
 1. Copie `iniciar-conector.bat` e `oculto.vbs` para a pasta do conector.
@@ -69,8 +85,8 @@ o motivo de cada parada e o código de saída.
 
 | O que aparece | O que é |
 |---|---|
-| `ERRO: Node.js nao encontrado` | Node não instalado, ou fora do PATH da conta que rodou. Instale a versão LTS, ou ponha um `node.exe` na pasta. |
-| `ERRO: falta conector.mjs` | A pasta não é a do conector, ou a cópia veio incompleta. |
+| `ERRO: conector.mjs sem Node` | Node não instalado, ou fora do PATH da conta que rodou (típico de tarefa como SYSTEM). Instale a versão LTS, ou copie o `node.exe` para a pasta. |
+| `ERRO: sem FitMindConector.exe e sem conector.mjs` | A pasta não é a do conector, ou a cópia veio incompleta. O log lista o que tem lá dentro. |
 | `AVISO: falta painel.html` | Sobe, mas o painel abre em branco e não dá para ler o QR. Copie o arquivo da pasta que funciona. |
 | `ERRO: npm ci falhou` | Sem internet, ou a pasta está dentro do OneDrive (trava arquivo e dá `EPERM`). Ponha em `C:\`. |
 | `saiu com codigo 42` | Normal: ele se atualizou e reabriu sozinho. |
