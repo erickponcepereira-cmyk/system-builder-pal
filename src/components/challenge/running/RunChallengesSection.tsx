@@ -73,7 +73,7 @@ export function RunChallengesSection() {
         const tier = c.tiers.find((t) => t.id === (c.entry?.tier_id ?? picked[c.id])) ?? c.tiers[0];
         const target = tier ? Number(tier.target_km) : 0;
         const pct = target > 0 ? Math.min(100, Math.round((c.progressKm / target) * 100)) : 0;
-        const canJoin = !c.entry && (!c.requires_ticket || c.ticketsAvailable > 0);
+        const canJoin = !c.entry && !c.ended && (!c.requires_ticket || c.ticketsAvailable > 0);
 
         return (
           <article key={c.id} className="space-y-3 rounded-2xl border border-primary/40 bg-card p-4">
@@ -101,16 +101,21 @@ export function RunChallengesSection() {
                 {c.entry.goal_reached_at ? (
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-green-500">
                     <CheckCircle2 className="h-4 w-4" />
-                    Meta batida em {new Date(c.entry.goal_reached_at).toLocaleDateString("pt-BR")} — continue somando km!
+                    Meta batida em {new Date(c.entry.goal_reached_at).toLocaleDateString("pt-BR")}
+                    {c.ended ? "." : " — continue somando km!"}
                   </p>
+                ) : c.ended ? (
+                  <p className="text-xs text-muted-foreground">Desafio encerrado em {fmt(c.ends_on)}.</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     Faltam {Math.max(0, target - c.progressKm).toFixed(1)} km para bater a meta.
                   </p>
                 )}
-                <Link to="/student/evolution" className="inline-block text-xs font-semibold text-primary underline">
-                  Registrar corrida no painel de Evolução
-                </Link>
+                {!c.ended && (
+                  <Link to="/student/evolution" className="inline-block text-xs font-semibold text-primary underline">
+                    Registrar corrida no painel de Evolução
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

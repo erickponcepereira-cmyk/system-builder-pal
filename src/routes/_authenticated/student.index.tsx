@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift, AlertCircle, GraduationCap } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift, AlertCircle, GraduationCap, ShoppingBag } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,6 +280,19 @@ function StudentHome() {
         <div className="flex-1">
           <p className="text-sm font-bold text-foreground">Meus cursos</p>
           <p className="text-[11px] text-foreground/55">Assista às aulas e acompanhe seu progresso 🎓</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-foreground/40" />
+      </Link>
+
+      {/* Minhas compras — até 22/09/2026 o único caminho era rolar a loja até
+          o fim, e quem precisava pedir estorno não achava. */}
+      <Link to="/student/compras" className="flex items-center gap-3 rounded-2xl border border-white/10 bg-card p-4 transition-transform hover:scale-[1.01]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground/10">
+          <ShoppingBag className="h-6 w-6 text-foreground/70" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-foreground">Minhas compras</p>
+          <p className="text-[11px] text-foreground/55">Pedidos, downloads e pedido de estorno 🧾</p>
         </div>
         <ChevronRight className="h-5 w-5 text-foreground/40" />
       </Link>

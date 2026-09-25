@@ -4,7 +4,7 @@ import { Loader2, ShoppingBag, Store, Stethoscope, Handshake, CreditCard, Ticket
 import { getStudentPurchaseHistory, type StudentPurchaseRow } from "@/lib/student-purchases.functions";
 import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 import { RefundRequestSheet, type CompraParaEstorno } from "@/components/store/RefundRequestSheet";
-import { meusEstornos, ROTULO_STATUS, tipoDoPedido, type PedidoDeEstorno } from "@/lib/store-returns";
+import { idDoPedido, meusEstornos, ROTULO_STATUS, tipoDoPedido, type PedidoDeEstorno } from "@/lib/store-returns";
 import { ReviewSheet } from "@/components/store/ReviewSheet";
 import { StarRating } from "@/components/store/StarRating";
 import { minhasAvaliacoes, type Avaliacao, type OrigemDoProduto } from "@/lib/store-reviews";
@@ -181,8 +181,8 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
                 {/* Estorno. Só faz sentido em compra paga: o que não foi pago
                     não tem o que devolver. */}
                 {st === "paid" && !somenteLeitura && (() => {
-                  const pedido = estornos.get(r.id) ?? null;
-                  const nota = avaliacoes.get(r.id) ?? null;
+                  const pedido = estornos.get(idDoPedido(r.id)) ?? null;
+                  const nota = avaliacoes.get(idDoPedido(r.id)) ?? null;
                   return (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {/* Avaliar só faz sentido com o produto identificado: sem
@@ -232,8 +232,8 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
           origem={origemDaCompra(avaliando.source)}
           produtoId={avaliando.product_id}
           orderId={avaliando.id}
-          orderType={tipoDoPedido(avaliando.source)}
-          existente={avaliacoes.get(avaliando.id) ?? null}
+          orderType={tipoDoPedido(avaliando.id, avaliando.source)}
+          existente={avaliacoes.get(idDoPedido(avaliando.id)) ?? null}
           onFechar={() => setAvaliando(null)}
           onMudou={recarregarAvaliacoes}
         />
@@ -242,7 +242,7 @@ export function StudentPurchaseHistory({ studentId, somenteLeitura = false }: { 
       {!somenteLeitura && pedindoPara && (
         <RefundRequestSheet
           compra={pedindoPara}
-          existente={estornos.get(pedindoPara.id) ?? null}
+          existente={estornos.get(idDoPedido(pedindoPara.id)) ?? null}
           onFechar={() => setPedindoPara(null)}
           onMudou={recarregarEstornos}
         />

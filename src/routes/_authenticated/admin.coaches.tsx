@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard, History } from "lucide-react";
@@ -344,7 +344,18 @@ function AdminCoaches() {
                   )}
                 </div>
 
-                {!c.approved_at ? (
+                {/* Código EMP é o coach-espelho que o banco cria para todo pedido de
+                    empresa parceira. Aprovar aqui o transformaria em coach; Rejeitar
+                    apagava só o espelho e deixava o pedido, o papel de parceiro e a
+                    mensalidade intactos. A decisão é da parceria, não do coach. */}
+                {!c.approved_at && c.referral_code?.startsWith("EMP") ? (
+                  <Link
+                    to="/admin/partner-releases"
+                    className="max-w-[16rem] rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/15"
+                  >
+                    Pedido de empresa parceira — decida em Liberar Parceiros
+                  </Link>
+                ) : !c.approved_at ? (
                   <div className="flex gap-2">
                     <button
                       onClick={() => approve(c.id)}

@@ -163,6 +163,44 @@ export type StudentTrace = {
 };
 
 
+async function loadOrderProductNames(partnerIds: string[], professionalIds: string[]) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const [{ data: partnerProds }, { data: professionalProds }] = await Promise.all([
+    partnerIds.length ? supabaseAdmin.from("partner_products").select("id, name").in("id", partnerIds) : Promise.resolve({ data: [] }),
+    professionalIds.length ? supabaseAdmin.from("professional_products").select("id, name").in("id", professionalIds) : Promise.resolve({ data: [] }),
+  ]);
+  return new Map([...(partnerProds || []), ...(professionalProds || [])].map((p) => [p.id, p.name] as const));
+}
+
+/**
+ * Compras de produto de coach, profissional ou parceiro. Elas ficam só em
+ * partner_product_orders e nunca geram linha em transactions — sem isto o
+ * aluno aparece como "Nenhuma compra registrada" mesmo tendo pago.
+ */
+async function loadPartnerOrderPurchases(studentId: string): Promise<StudentTrace["purchases"]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: orders } = await supabaseAdmin
+    .from("partner_product_orders")
+    .select("id, order_number, gross_amount, payment_method, status, paid_at, created_at, partner_product_id, professional_product_id")
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const rows = orders || [];
+  const names = await loadOrderProductNames(
+    rows.map((o) => o.partner_product_id).filter((id): id is string => !!id),
+    rows.map((o) => o.professional_product_id).filter((id): id is string => !!id),
+  );
+  return rows.map((o) => ({
+    id: o.id,
+    description: `${names.get(o.partner_product_id || o.professional_product_id || "") || "Produto"} · ${o.order_number}`,
+    amount: Number(o.gross_amount || 0),
+    paymentMethod: o.payment_method ?? null,
+    status: o.status ?? null,
+    paidAt: o.paid_at ?? null,
+    createdAt: o.created_at ?? null,
+  }));
+}
+
 export const adminTraceStudent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ studentId: uuid }).parse(input),
@@ -437,6 +475,8 @@ export const adminTraceStudent = createServerFn({ method: "POST" })
       paidAt: t.paid_at ?? null,
       createdAt: t.created_at ?? null,
     }));
+    purchases.push(...(await loadPartnerOrderPurchases(student.id)));
+    purchases.sort((a, b) => (b.paidAt || b.createdAt || "").localeCompare(a.paidAt || a.createdAt || ""));
 
     // ---- Perfis que a pessoa tem + anuidade + mensalidade ----
     const profilesOwned: StudentTrace["profilesOwned"] = [

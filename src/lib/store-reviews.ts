@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { idDoPedido } from "@/lib/store-returns";
 
 /**
  * Avaliação de produto: estrela e comentário, de quem comprou.
@@ -174,7 +175,8 @@ export async function avaliar(entrada: {
   const { error } = await supabase.from("product_reviews" as never).insert({
     product_origin: entrada.origem,
     product_id: entrada.produtoId,
-    order_id: entrada.orderId,
+    // `product_reviews.order_id` é uuid; a linha do histórico vem prefixada.
+    order_id: idDoPedido(entrada.orderId),
     order_type: entrada.orderType,
     author_id: profileId,
     rating: entrada.nota,

@@ -63,9 +63,30 @@ export const ROTULO_STATUS: Record<StatusEstorno, string> = {
   cancelled: "Cancelado por você",
 };
 
-/** A compra e o pedido de estorno vivem em tabelas diferentes por origem. */
-export const tipoDoPedido = (source: PurchaseSource): string =>
-  source === "partner" || source === "professional" ? "partner_product_order" : "store_order";
+/**
+ * Da linha do histórico de volta ao registro de origem.
+ *
+ * As quatro origens são tabelas diferentes e podem repetir uuid entre si, por
+ * isso `getStudentPurchaseHistory` prefixa o id da linha: `tx-` para
+ * `transactions`, `order-` para `store_orders`, `pp-` para
+ * `partner_product_orders`. Mas `return_requests.order_id` e
+ * `product_reviews.order_id` são colunas `uuid`: mandar o prefixo derruba o
+ * insert com `22P02 invalid input syntax for type uuid`, que era o
+ * "não consegui enviar seu pedido agora" de 22/09/2026 — e a mesma coisa
+ * fazia "Avaliar" falhar calado desde 29/08.
+ *
+ * O prefixo é também quem sabe a tabela de verdade: `source` não distingue
+ * uma assinatura (que é `transactions`) de um pedido da loja.
+ */
+export const idDoPedido = (idDaLinha: string): string =>
+  idDaLinha.replace(/^(tx|order|pp)-/, "");
+
+export const tipoDoPedido = (idDaLinha: string, source: PurchaseSource): string => {
+  if (idDaLinha.startsWith("pp-")) return "partner_product_order";
+  if (idDaLinha.startsWith("order-")) return "store_order";
+  if (idDaLinha.startsWith("tx-")) return "transaction";
+  return source === "partner" || source === "professional" ? "partner_product_order" : "store_order";
+};
 
 async function meuProfileId(): Promise<string | null> {
   const { data: sessao } = await supabase.auth.getUser();
@@ -113,8 +134,8 @@ export async function pedirEstorno(entrada: {
   if (!profileId) return { ok: false, erro: "Não consegui identificar sua conta. Entre de novo e tente." };
 
   const { error } = await supabase.from("return_requests" as never).insert({
-    order_id: entrada.orderId,
-    order_type: tipoDoPedido(entrada.source),
+    order_id: idDoPedido(entrada.orderId),
+    order_type: tipoDoPedido(entrada.orderId, entrada.source),
     requested_by: profileId,
     reason: entrada.motivo,
     description: entrada.detalhe.trim() || null,
@@ -134,8 +155,11 @@ export async function pedirEstorno(entrada: {
     if ((error as { code?: string }).code === "23505") {
       return { ok: false, erro: "Já existe um pedido de estorno em andamento para esta compra." };
     }
+    // A mensagem do banco vai junto: o texto genérico escondeu por semanas um
+    // erro que era sempre o mesmo, e ninguém tinha como saber qual.
     console.error("[estorno] falha ao abrir o pedido", error);
-    return { ok: false, erro: "Não consegui enviar seu pedido agora. Tente de novo em instantes." };
+    const detalhe = (error as { message?: string }).message || "";
+    return { ok: false, erro: `Não consegui enviar seu pedido agora.${detalhe ? ` (${detalhe})` : ""}` };
   }
   return { ok: true };
 }

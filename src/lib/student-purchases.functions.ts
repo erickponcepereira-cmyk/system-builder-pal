@@ -216,15 +216,24 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
 
     const partnerProductIds = Array.from(new Set(((ppOrders as any[]) || []).map((o) => o.partner_product_id).filter(Boolean))) as string[];
     const professionalProductIds = Array.from(new Set(((ppOrders as any[]) || []).map((o) => o.professional_product_id).filter(Boolean))) as string[];
+    const ppOrderIds = ((ppOrders as any[]) || []).map((o) => o.id as string);
 
-    const [{ data: pProds }, { data: profProds }] = await Promise.all([
+    const [{ data: pProds }, { data: profProds }, { data: runTickets }] = await Promise.all([
       partnerProductIds.length
         ? (supabaseAdmin as any).from("partner_products").select("id, name, description").in("id", partnerProductIds)
         : Promise.resolve({ data: [] as any[] }),
       professionalProductIds.length
         ? (supabaseAdmin as any).from("professional_products").select("id, name, description").in("id", professionalProductIds)
         : Promise.resolve({ data: [] as any[] }),
+      // Ticket de desafio de corrida emitido pela compra do produto do desafio.
+      ppOrderIds.length
+        ? supabaseAdmin.from("run_challenge_tickets").select("source_order_id").in("source_order_id", ppOrderIds)
+        : Promise.resolve({ data: [] as Array<{ source_order_id: string | null }> }),
     ]);
+    const runTicketsByOrder = new Map<string, number>();
+    for (const t of runTickets || []) {
+      if (t.source_order_id) runTicketsByOrder.set(t.source_order_id, (runTicketsByOrder.get(t.source_order_id) || 0) + 1);
+    }
     const ppMap = new Map<string, { name: string; description: string | null }>();
     ((pProds as any[]) || []).forEach((p) => ppMap.set(p.id, { name: p.name, description: p.description ?? null }));
     ((profProds as any[]) || []).forEach((p) => ppMap.set(p.id, { name: p.name, description: p.description ?? null }));
@@ -234,6 +243,8 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
       const prodId = o.partner_product_id || o.professional_product_id;
       const prod = prodId ? ppMap.get(prodId) : null;
       const sc = (o.sale_channel === "coach" || o.sale_channel === "store") ? o.sale_channel : null;
+      // O que a compra concedeu fica no metadata do pedido (grant_partner_product_perks).
+      const perks = o.metadata?.perks_granted ? o.metadata : null;
       return {
         id: `pp-${o.id}`,
         source: isProfessional ? "professional" : "partner",
@@ -248,8 +259,8 @@ export const getStudentPurchaseHistory = createServerFn({ method: "POST" })
         sale_channel: sc,
         created_at: o.created_at,
         paid_at: o.paid_at,
-        challenge_tokens_granted: 0,
-        card_days_granted: 0,
+        challenge_tokens_granted: Number(perks?.perks_tickets || 0) + (runTicketsByOrder.get(o.id) || 0),
+        card_days_granted: Number(perks?.perks_card_days || 0),
         duration_days: null,
         metadata: o.metadata ?? null,
       };
