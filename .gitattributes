@@ -1,0 +1,5 @@
+# Arquivo de script do Windows quebra com LF: o cmd le o .bat por bytes e
+# engole pedacos das linhas ("echo" vira "ho"). Conferido em 24/09/2026.
+*.bat text eol=crlf
+*.vbs text eol=crlf
+*.ps1 text eol=crlf
