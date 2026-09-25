@@ -242,6 +242,43 @@ async function donoDoPedidoDeParceiro(orderId: string): Promise<string[]> {
   return perfis;
 }
 
+/**
+ * Os co-produtores do pedido: perdem o crédito de co-produção junto com a venda.
+ *
+ * Não têm comissão nem são donos do produto, então nenhuma das outras listas os
+ * alcança — e a tabela de carteira deles ficava com o crédito estornado até o
+ * próximo recálculo (Jean, 24/09/2026: R$ 44,24 de quatro ingressos).
+ */
+async function coprodutoresDoPedido(orderId: string): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("product_coproduction_credits" as never)
+    .select("collaborator_type, collaborator_id" as never)
+    .eq("order_id" as never, orderId as never);
+  const creditos = (data as unknown as Array<{ collaborator_type: string; collaborator_id: string }>) || [];
+
+  const parceiros = creditos.filter((c) => c.collaborator_type === "partner").map((c) => c.collaborator_id);
+  const profissionais = creditos.filter((c) => c.collaborator_type === "professional").map((c) => c.collaborator_id);
+
+  const perfis: string[] = [];
+  if (parceiros.length) {
+    const { data: p } = await supabaseAdmin
+      .from("partners" as never)
+      .select("profile_id" as never)
+      .in("id" as never, parceiros as never);
+    const linhas = (p as unknown as Array<{ profile_id: string | null }>) || [];
+    perfis.push(...linhas.map((r) => r.profile_id).filter((id): id is string => !!id));
+  }
+  if (profissionais.length) {
+    const { data: c } = await supabaseAdmin
+      .from("coaches")
+      .select("profile_id")
+      .in("id", profissionais);
+    const linhas = (c as Array<{ profile_id: string | null }>) || [];
+    perfis.push(...linhas.map((r) => r.profile_id).filter((id): id is string => !!id));
+  }
+  return perfis;
+}
+
 const entradaSchema = z.object({
   returnRequestId: z.string().uuid(),
   valorDevolvido: z.number().positive(),
@@ -295,7 +332,9 @@ export const executarEstorno = createServerFn({ method: "POST" })
       await supabaseAdmin.from("transactions").update({ status: "refunded" } as never).in("id", txIds);
     }
 
-    const donos = deParceiro ? await donoDoPedidoDeParceiro(pedido.order_id) : [];
+    const donos = deParceiro
+      ? [...await donoDoPedidoDeParceiro(pedido.order_id), ...await coprodutoresDoPedido(pedido.order_id)]
+      : [];
     if (deParceiro) {
       await supabaseAdmin
         .from("partner_product_orders" as never)

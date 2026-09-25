@@ -94,3 +94,23 @@ tabela. Onde o histórico junta origens diferentes, o id ganha prefixo — e tod
 Provado em produção, em transação desfeita, com o JWT de uma aluna real: com o
 prefixo, `22P02`; sem ele, o pedido é criado e o gatilho
 `sync_release_status_from_returns` já põe o repasse do pedido em `blocked`.
+
+## Os 5 ingressos da FitMind Rave (24/09/2026)
+
+Primeiro estorno real pela tela: 5 × R$ 39,90 do ingresso (produto da Ana
+Flávia, co-produção da Julia e do Jean, vendidos pela Julia). As 20 comissões
+viraram `cancelled`, os pedidos saíram de `paid`, e nada deles restou em
+`financial_ledger_events`. Ninguém ficou devendo: o gatilho de `return_requests`
+já tinha bloqueado o repasse desde o pedido (22/09), então nenhum saque feito
+nesse meio-tempo — o da Vimark, pago em 24/09 — levou dinheiro estornado.
+
+**O furo:** `executarEstorno` recalculava quem tinha comissão e o dono do
+produto, mas não os **co-produtores**, que não são nem um nem outro. A tabela do
+Jean ficou com R$ 44,24 a mais (4 créditos de R$ 11,06). O painel não mentiu —
+lê `carteira_atual` — mas `auditar_carteiras` acusou. Corrigido em
+`coprodutoresDoPedido`. `product_coproduction_credits.collaborator_id` aponta
+para `partners.id` quando o tipo é `partner` e para `coaches.id` quando é
+`professional`.
+
+**Para conferir depois de qualquer estorno:** `auditar_carteiras(false)` tem de
+voltar vazio.
