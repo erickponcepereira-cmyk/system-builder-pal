@@ -101,3 +101,29 @@ taxonomia pede `grep` pelos ids antigos no `src/`**, não só `UPDATE` nas tabel
 O que ainda não existe: esconder um **vendedor específico**. `vendor_partner` e
 `vendor_professional` só funcionam com `target_id` nulo — escondem todos os parceiros, ou
 todos os profissionais, de uma vez.
+
+
+## Produto de parceiro triplicado: o botão que não travava (28/09/2026)
+
+"YA registro de marcas" apareceu três vezes na loja e três vezes na tela de
+liberação, com o parceiro jurando que mandou uma. Mandou mesmo: as três linhas
+nasceram em **145 milésimos** (22/09, 11:07:39.087, .180 e .232). O botão Salvar
+do formulário de produto (`partner.tsx`) não tinha `disabled` nem trava de
+reentrada, então cada toque do clique triplo gravou uma linha — e o admin depois
+aprovou as três, uma a uma, sem desconfiar.
+
+**A trava que vale é `useRef`, não estado.** `setSalvando(true)` só aparece no
+ciclo seguinte do React; dois eventos do mesmo toque (o celular manda isso) caem
+no mesmo ciclo e passam os dois. A Gruon tem duas cópias com **1ms** de
+diferença, que é essa outra forma do mesmo defeito. O `disabled` continua, mas
+para a pessoa ver que está salvando.
+
+**Como reconhecer pelo horário:** milissegundos entre as cópias = clique repetido
+ou evento duplicado; **zero** milissegundos (mesmo `created_at` até o
+microssegundo) = mesma transação, ou seja, importação — foi assim que nasceram as
+duplicatas do laboratório do Augustus e as da Spazzio, que são outro assunto.
+
+Ao limpar, confira antes se a cópia tem reserva (`partner_freebie_reservations`)
+ou pedido (`partner_product_orders`): sem isso, apagar é seguro; com isso, some
+histórico. As duas cópias da YA não tinham nenhum dos dois, e o conteúdo das três
+era idêntico — só id e datas diferiam.

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { RecurrenceFields, normalizeRecurrence, recurrenceLabel } from "@/components/shared/RecurrenceFields";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -852,6 +852,32 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     setEditing(null); onReload();
   };
 
+  /**
+   * Um clique salva uma vez.
+   *
+   * O botao nao travava enquanto gravava: tres toques rapidos viraram tres
+   * produtos iguais para a YA registro de marcas em 22/09/2026 (87ms, 180ms e
+   * 232ms), e o admin ainda aprovou os tres, um a um, na tela de liberacao.
+   *
+   * O `useRef` e o que segura de verdade. Estado so muda no ciclo seguinte do
+   * React, e dois eventos do mesmo toque — o que o celular as vezes manda —
+   * chegam antes disso; a Gruon tem duas copias criadas com 1ms de diferenca.
+   * O `disabled` fica para a pessoa ver que esta salvando.
+   */
+  const salvandoRef = useRef(false);
+  const [salvando, setSalvando] = useState(false);
+  const salvarUmaVez = async () => {
+    if (salvandoRef.current) return;
+    salvandoRef.current = true;
+    setSalvando(true);
+    try {
+      await save();
+    } finally {
+      salvandoRef.current = false;
+      setSalvando(false);
+    }
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Excluir produto?")) return;
     // Try hard delete first; if there are linked orders, fall back to soft delete
@@ -1412,7 +1438,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 {readOnly ? "Fechar" : "Cancelar"}
               </button>
               {!readOnly && (
-                <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>
+                <button onClick={salvarUmaVez} disabled={salvando} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                  {salvando
+                    ? <><Loader2 className="inline h-4 w-4 mr-1 animate-spin" /> Salvando…</>
+                    : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}
+                </button>
               )}
             </div>
 
