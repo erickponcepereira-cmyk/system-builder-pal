@@ -114,3 +114,26 @@ para `partners.id` quando o tipo é `partner` e para `coaches.id` quando é
 
 **Para conferir depois de qualquer estorno:** `auditar_carteiras(false)` tem de
 voltar vazio.
+
+## O estorno podia se desfazer sozinho (28/09/2026)
+
+A devolução é por fora, então **no Mercado Pago o pagamento continua
+`approved` para sempre**. Quatro caminhos reaplicam aprovação a partir disso —
+webhook reenviado, consulta de status, a varredura automática (`mp-sweep`, que
+refaz todo aprovado dos **últimos 7 dias** cujo pedido não está pago) e o botão
+"Reprocessar agora" do alerta de pagamentos travados. E
+`process_partner_product_order_paid` marca pago qualquer pedido que não esteja
+pago, estornado incluído, recriando as comissões.
+
+O alerta listava os 6 ingressos estornados como "aprovados sem processamento".
+Nenhum voltou porque todos tinham mais de 7 dias quando foram estornados, e
+ninguém clicou no botão. Estornar uma venda recente teria sido desfeito pela
+varredura em minutos.
+
+Três camadas agora:
+- `applyApproval` ignora origem `refunded`/`chargeback` — cobre os quatro caminhos;
+- o alerta e o botão usam lista **positiva** do que ainda espera pagamento
+  (`AGUARDANDO_PAGAMENTO`), então status novo fica de fora, não dentro;
+- gatilho `trg_estornado_nao_volta_a_pago` em `partner_product_orders`,
+  `store_orders` e `transactions`: nada tira um pedido de `refunded`, nem SQL
+  direto nem `admin_reprocess_partner_order`.

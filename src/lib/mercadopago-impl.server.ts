@@ -197,7 +197,39 @@ export async function attachPaymentToSource(
   }
 }
 
+const TABELA_DA_ORIGEM: Record<SourceKind, string> = {
+  store_order: "store_orders",
+  partner_product_order: "partner_product_orders",
+  subscription_invoice: "subscription_invoices",
+  transaction: "transactions",
+};
+
+/**
+ * Venda estornada não volta a ser paga.
+ *
+ * A devolução ao cliente é feita por fora (Pix, maquininha), então no Mercado
+ * Pago o pagamento continua "approved" para sempre. Webhook reenviado,
+ * consulta de status, varredura automática e o botão "Reprocessar agora" —
+ * todos chegam aqui com um pagamento aprovado, e aplicar a aprovação marcaria
+ * o pedido como pago de novo e recriaria as comissões que o estorno cancelou.
+ */
+async function foiEstornada(kind: SourceKind, id: string): Promise<boolean> {
+  const tabela = TABELA_DA_ORIGEM[kind];
+  if (!tabela) return false;
+  const { data } = await supabaseAdmin
+    .from(tabela as never)
+    .select("status" as never)
+    .eq("id" as never, id as never)
+    .maybeSingle();
+  const status = (data as unknown as { status?: string } | null)?.status;
+  return status === "refunded" || status === "chargeback";
+}
+
 export async function applyApproval(kind: SourceKind, id: string) {
+  if (await foiEstornada(kind, id)) {
+    console.warn(`[mp] aprovação ignorada: ${kind} ${id} foi estornado`);
+    return;
+  }
   if (kind === "store_order") {
     const annualActivationOrder = await isAnnualActivationStoreOrder(id);
     const { error } = await supabaseAdmin.rpc("mark_store_order_paid_and_process" as never, { _order_id: id } as never);
