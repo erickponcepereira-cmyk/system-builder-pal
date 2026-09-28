@@ -38,6 +38,12 @@ type Enroll = {
   coach: { id?: string; profile: { name: string } } | null;
 };
 
+type CampeaoRow = {
+  id: string; gender: string; result_kg: number | null; result_pct: number | null; prize_amount: number | null;
+  student_id: string; student_name: string; avatar_url: string | null; photo_url: string | null;
+  coach_id: string; coach_name: string; competition_id: string; month: number; year: number;
+};
+
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -65,17 +71,11 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
   useEffect(() => {
     (async () => {
       setLoading(true);
+      // Os campeões vêm por função, não pelo cadastro do aluno: a RLS de
+      // `students`/`profiles` só deixa cada coach ler os próprios alunos, e o
+      // nome de quem é de outro coach chegava vazio ("—").
       const [w, e, comps] = await Promise.all([
-        supabase
-          .from("competition_hall_of_fame" as never)
-          .select(`
-            id, gender, result_kg, result_pct, prize_amount,
-            student:student_id ( id, profile:profile_id ( name, avatar_url, photo_url ) ),
-            coach:coach_id ( id, profile:profile_id ( name ) ),
-            competition:competition_id ( id, month, year )
-          `)
-          .order("created_at" as never, { ascending: false })
-          .limit(500),
+        supabase.rpc("hall_da_fama_campeoes" as never),
         supabase
           .from("competition_enrollments" as never)
           .select(`
@@ -95,7 +95,16 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
           .select("id, finalized_at")
           .not("finalized_at" as never, "is", null),
       ]);
-      setWinners((w.data as any[]) || []);
+      setWinners(((w.data as CampeaoRow[] | null) || []).map((c) => ({
+        id: c.id,
+        gender: c.gender,
+        result_kg: c.result_kg,
+        result_pct: c.result_pct,
+        prize_amount: Number(c.prize_amount || 0),
+        student: { id: c.student_id, profile: { name: c.student_name, avatar_url: c.avatar_url, photo_url: c.photo_url } },
+        coach: { id: c.coach_id, profile: { name: c.coach_name } },
+        competition: { id: c.competition_id, month: c.month, year: c.year },
+      })));
       setEnrolls((e.data as any[]) || []);
       setFinalizedIds(new Set(((comps.data as any[]) || []).map((c: any) => c.id)));
       setLoading(false);
