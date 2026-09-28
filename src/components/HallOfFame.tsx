@@ -44,6 +44,14 @@ type CampeaoRow = {
   coach_id: string; coach_name: string; competition_id: string; month: number; year: number;
 };
 
+type RankingRow = {
+  id: string; gender: string; student_id: string; coach_id: string;
+  result_fat_pct_lost: number | null; result_muscle_gain_pct: number | null; result_kg_lost: number | null;
+  initial_share_url: string | null; final_share_url: string | null;
+  student_name: string; avatar_url: string | null; photo_url: string | null; coach_name: string;
+  competition_id: string; month: number; year: number;
+};
+
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -71,25 +79,13 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
   useEffect(() => {
     (async () => {
       setLoading(true);
-      // Os campeões vêm por função, não pelo cadastro do aluno: a RLS de
-      // `students`/`profiles` só deixa cada coach ler os próprios alunos, e o
-      // nome de quem é de outro coach chegava vazio ("—").
+      // Campeões e ranking vêm por função, não pelas tabelas: a RLS de
+      // `students`, `profiles` e `competition_enrollments` só deixa cada um ler
+      // os próprios alunos — o nome de quem era de outro coach chegava vazio
+      // ("—") e o aluno via só a si mesmo no ranking.
       const [w, e, comps] = await Promise.all([
         supabase.rpc("hall_da_fama_campeoes" as never),
-        supabase
-          .from("competition_enrollments" as never)
-          .select(`
-            id, gender, student_id, coach_id,
-            initial_weight, final_weight,
-            initial_body_fat, final_body_fat,
-            initial_muscle_mass, final_muscle_mass,
-            initial_share_url, final_share_url,
-            result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
-            competition:competition_id ( id, month, year ),
-            student:student_id ( id, profile:profile_id ( name, avatar_url, photo_url ) ),
-            coach:coach_id ( id, profile:profile_id ( name ) )
-          `)
-          .limit(2000),
+        supabase.rpc("hall_da_fama_ranking" as never),
         supabase
           .from("competitions" as never)
           .select("id, finalized_at")
@@ -105,7 +101,26 @@ export function HallOfFame({ showAudit = false, highlightStudentId, coachId }: P
         coach: { id: c.coach_id, profile: { name: c.coach_name } },
         competition: { id: c.competition_id, month: c.month, year: c.year },
       })));
-      setEnrolls((e.data as any[]) || []);
+      setEnrolls(((e.data as RankingRow[] | null) || []).map((r) => ({
+        id: r.id,
+        gender: r.gender,
+        student_id: r.student_id,
+        coach_id: r.coach_id,
+        initial_weight: null,
+        final_weight: null,
+        initial_body_fat: null,
+        final_body_fat: null,
+        initial_muscle_mass: null,
+        final_muscle_mass: null,
+        initial_share_url: r.initial_share_url,
+        final_share_url: r.final_share_url,
+        result_fat_pct_lost: r.result_fat_pct_lost,
+        result_muscle_gain_pct: r.result_muscle_gain_pct,
+        result_kg_lost: r.result_kg_lost,
+        competition: { id: r.competition_id, month: r.month, year: r.year },
+        student: { id: r.student_id, profile: { name: r.student_name, avatar_url: r.avatar_url, photo_url: r.photo_url } },
+        coach: { id: r.coach_id, profile: { name: r.coach_name } },
+      })));
       setFinalizedIds(new Set(((comps.data as any[]) || []).map((c: any) => c.id)));
       setLoading(false);
     })();
