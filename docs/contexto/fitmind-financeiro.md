@@ -98,7 +98,7 @@ inteira. Reescrita, com `refresh_coach_medals` ao lado — antes a conquista só
 se o coach **abrisse a tela**, e era por isso que havia 91 coaches com patente e só 7 com
 medalha.
 
-## Bônus de Master Coach — o que é, e o buraco nele (15/09/2026)
+## Bônus de Master Coach — o que é, e o buraco que ele tinha (15/09 e 25/09/2026)
 
 Quando alguém **marcado como Master Coach opera uma venda para o aluno de outro
 coach**, uma fatia da comissão do coach titular vai para ele. A fatia sai de
@@ -121,17 +121,38 @@ vendedor (ninguém vende para si) e passa a venda ao coach titular — mas o bô
 de master continua apontando para quem operou, isto é, para o comprador. Ele
 tira uma fatia da comissão do próprio coach dele, comprando.
 
-Levantado em 15/09/2026: **28 pedidos, R$ 142,27**, sobre R$ 6.906 de volume.
-O maior caso é 17 compras de um mesmo comprador levando 30% da comissão da
-coach titular. Contra 41 pedidos legítimos (R$ 347,73), é quase um terço do
-mecanismo funcionando ao contrário. **Não corrigido ainda** — corrigir muda
-quanto gente já recebeu, e a regra de negócio é do Erick.
+**O que isso custou de verdade: 7 pedidos pagos, R$ 14,48** até 24/09/2026,
+todos de produto de parceiro — Vimark 5 (R$ 13,09, comprando o próprio Plano
+Base), Luana R$ 1,93, Ana Flávia R$ 0,21, Erick R$ 0,08 (o teste de R$ 1).
+Contra 11 pedidos legítimos pagos (R$ 152,10).
+
+**Armadilha que fez o primeiro número sair dez vezes maior:** o valor do bônus fica gravado
+no pedido desde a criação, mas a comissão só nasce no pagamento. Pedido
+`cancelled` carrega `master_coach_cross_bonus_amount` preenchido e nunca moveu
+um centavo. O primeiro levantamento (15/09) somou os cancelados e chegou a
+"28 pedidos, R$ 142,27, R$ 126,97 do Erick" — o Erick nunca tinha recebido isso.
+**Para dinheiro, filtre `status = 'paid'` ou leia `commissions`, nunca o
+campo do pedido.**
+
+**Corrigido em 25/09/2026, só daqui para frente** (decisão do Erick):
+`compra_para_si_mesmo(coach, aluno)` entra na condição dos quatro caminhos —
+`create_partner_product_order`, `create_scheduled_professional_order`,
+`create_partner_company_order` e o gatilho da loja `apply_master_cross_sale_split`.
+Quem compra para si deixa a comissão inteira com o titular. Os 7 pedidos
+passados não mudam, e reprocessá-los também não: o reprocessamento preserva o
+beneficiário gravado.
 
 **Reprocessar apagava esse bônus.** `admin_reprocess_partner_order` zerava
 `master_coach_cross_bonus_amount` e o beneficiário no UPDATE, e
 `process_partner_product_order_paid` só recria a comissão quando o beneficiário
 está preenchido — então sumia para sempre. Corrigido em 15/09: o beneficiário é
-guardado antes e o valor recalculado sobre o líquido novo. **Ao mexer no
+guardado antes e o valor recalculado sobre o líquido novo.
+
+**E voltou.** Uma migração da Lovable 1h depois (20260915145953) regravou a
+função com a versão anterior — zerando o bônus de novo — e ficou assim até
+25/09, quando foi restaurada. Nenhum pedido com bônus foi reprocessado nesse
+intervalo. Lição: depois de qualquer push da Lovable que toque em
+`supabase/migrations`, confira o md5 das funções financeiras. **Ao mexer no
 reprocessamento, confira também se cada beneficiário continuou recebendo** —
 conferir só a taxa e a data não pega esse tipo de perda.
 

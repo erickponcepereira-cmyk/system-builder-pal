@@ -160,7 +160,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
     // Validate the client exists. Master Coaches may sell to clients of other coaches;
     // every other coach can only sell to their own clients.
     const { data: client } = await supabaseAdmin
-      .from("students").select("id,coach_id").eq("id", data.clientId).maybeSingle();
+      .from("students").select("id,coach_id,profile_id").eq("id", data.clientId).maybeSingle();
     if (!client) throw new Error("Cliente não encontrado");
 
     const titularCoachId: string | null = (client as { coach_id: string | null }).coach_id ?? null;
@@ -169,7 +169,13 @@ export const createCoachSale = createServerFn({ method: "POST" })
       const { data: masterCheck } = await supabaseAdmin
         .rpc("is_master_coach" as never, { _coach_id: coachId } as never);
       if (!masterCheck) throw new Error("Cliente não pertence ao coach");
-      if (titularCoachId) isMasterCrossSale = true;
+      // Comprar para si mesmo não é venda cruzada: o comprador levaria uma fatia
+      // da comissão do próprio coach. O gatilho `apply_master_cross_sale_split`
+      // faz a mesma checagem; aqui é para o registro informativo não contar.
+      const { data: eu } = await supabaseAdmin
+        .from("coaches").select("profile_id").eq("id", coachId).maybeSingle();
+      const paraSiMesmo = !!eu && (eu as { profile_id: string }).profile_id === (client as { profile_id: string | null }).profile_id;
+      if (titularCoachId && !paraSiMesmo) isMasterCrossSale = true;
     }
 
     const subtotal = data.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);

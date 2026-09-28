@@ -18,12 +18,32 @@ export interface ReconcileApprovedSummary {
   details: ReconcileApprovedItem[];
 }
 
-const SOURCE_TABLE: Record<string, { table: string; statusPaid: string }> = {
-  store_order: { table: "store_orders", statusPaid: "paid" },
-  partner_product_order: { table: "partner_product_orders", statusPaid: "paid" },
-  subscription_invoice: { table: "subscription_invoices", statusPaid: "paid" },
-  transaction: { table: "transactions", statusPaid: "paid" },
+const SOURCE_TABLE: Record<string, { table: string }> = {
+  store_order: { table: "store_orders" },
+  partner_product_order: { table: "partner_product_orders" },
+  subscription_invoice: { table: "subscription_invoices" },
+  transaction: { table: "transactions" },
 };
+
+/**
+ * Só está "travado" o que ainda espera pagamento.
+ *
+ * A regra era ao contrário — tudo que não fosse pago nem cancelado — e pegava
+ * venda estornada: o Mercado Pago continua dizendo "approved" porque a
+ * devolução é feita por fora. O alerta listava os estornos como travados, e o
+ * "Reprocessar agora" os marcaria como pagos de novo, recriando as comissões.
+ * Lista positiva: status novo que ninguém previu fica de fora, não dentro.
+ */
+const AGUARDANDO_PAGAMENTO: Record<string, string[]> = {
+  store_order: ["pending"],
+  partner_product_order: ["pending"],
+  subscription_invoice: ["pending", "overdue", "blocked"],
+  transaction: ["pending", "failed"],
+};
+
+function aindaEsperaPagamento(kind: string, status: string | undefined): boolean {
+  return !!status && (AGUARDANDO_PAGAMENTO[kind] || []).includes(status);
+}
 
 export interface StuckApprovedPayment {
   mpPaymentId: string | null;
@@ -67,7 +87,7 @@ export const listStuckApprovedPayments = createServerFn({ method: "GET" })
         .eq("id" as never, p.source_id as never)
         .maybeSingle();
       const status = (srcRow as unknown as { status?: string } | null)?.status;
-      if (!srcRow || status === meta.statusPaid || status === "cancelled") continue;
+      if (!srcRow || !aindaEsperaPagamento(p.source_kind, status)) continue;
       out.push({
         mpPaymentId: p.mp_payment_id,
         sourceKind: p.source_kind,
@@ -124,7 +144,7 @@ export const reconcileApprovedPendingPayments = createServerFn({ method: "POST" 
         .eq("id" as never, p.source_id as never)
         .maybeSingle();
       const status = (srcRow as unknown as { status?: string } | null)?.status;
-      if (!srcRow || status === meta.statusPaid || status === "cancelled") continue;
+      if (!srcRow || !aindaEsperaPagamento(p.source_kind, status)) continue;
 
       candidates += 1;
       try {
