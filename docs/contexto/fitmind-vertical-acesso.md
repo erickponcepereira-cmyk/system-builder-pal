@@ -850,7 +850,7 @@ junto, faz a cópia subir como o número da Estação e as duas instâncias brig
 pela mesma sessão — é assim que se derruba o número que já estava de pé.
 
 O código do conector que roda na academia mora em `conector_versoes.arquivos`
-(hoje 1.04.00), e não no repositório: ele se atualiza sozinho pelo
+(hoje 1.05.00), e não no repositório: ele se atualiza sozinho pelo
 `/api/bot/atualizacao`. `conector-whatsapp/` no repo é outro programa, o da
 plataforma.
 
@@ -924,3 +924,66 @@ que não sobe prende o conector, que nunca mais busca correção.
 (`66fbac50…`) passa a `1.04.00` na segunda consulta depois da troca — a primeira
 baixa e reinicia, a seguinte registra. E no `log.txt` do PC aparece
 `WhatsApp pediu reenvio de <id>; reenviando` quando um celular pedir.
+
+
+## 30/09/2026 — o conector da Estação reabre o da Jessica (1.05.00)
+
+O conector da Jessica (`C:\conector-jessica`, conexão `1958452f…`, 65 98466-6420)
+fechou em 25/09 às 05:05 e nunca mais abriu. O painel seguiu com o selo
+"conectado" por 4 dias: o status só muda quando o conector manda um evento, e um
+processo encerrado de uma vez não manda nada.
+
+**Como se provou que estava fechado, e não caído.** A linha dela em
+`bot_conexoes` não foi tocada desde 25/09 05:05 (`updated_at` = `visto_em`; o
+gatilho `trg_bot_conexoes_touch` marca qualquer UPDATE, inclusive o de `versao`
+que a consulta de atualização faz a cada 10 min). No mesmo período o conector da
+Estação, no mesmo PC, recebeu e enviou normalmente. Queda de WhatsApp deixaria
+rastro: o conector manda `erro`/`desconectado` ao perder a conexão.
+
+**Auto-atualização não reabre programa fechado.** É o próprio programa que
+pergunta se há versão nova; a nuvem não alcança o PC. E o início automático é
+por pasta — a da Estação tinha; a dela não, ou falhou (o `log.txt` dela diria).
+
+**1.05.00:** o conector da Estação vigia a pasta dela — 1 min depois de subir e
+a cada 5 min — e a reabre quando está fechada. O mapeamento é fixo, em `IRMAOS`,
+pelo `conexaoId` da Estação; nos outros conectores o trecho não faz nada. Só abre
+com certeza de três coisas (na dúvida, não abre: duas cópias da mesma sessão
+derrubam o número):
+
+- o `config.json` da pasta é da conexão esperada (`1958452f…`) — pasta copiada
+  da Estação não passa;
+- `sessao/creds.json` não é do número da Estação;
+- nenhuma cópia dela está rodando: nem processo com a pasta na linha de comando
+  (`Get-CimInstance Win32_Process`; se o PowerShell falhar, conta como rodando),
+  nem painel em 3100–3105 respondendo com o `conexaoId` dela.
+
+Abre por `oculto.vbs` (preferido), `iniciar-conector.bat` ou `conector.mjs`, com
+`PORT` diferente da do conector que abre (3101, ou 3102 se ele mesmo estiver em
+3101) e o diretório do Node dele no PATH. Depois de abrir, espera 15 min antes de
+tentar de novo, e conta no painel **pela conexão dela** (lê o segredo do
+`config.json` dela): `desconectado`, com "reaberto pelo conector do 5565…".
+Recusas também aparecem ali, como `erro`. Sem `config.json` válido não há como
+avisar — só o `log.txt` da Estação sabe.
+
+**`detached` é obrigatório, e foi medido.** Aberto sem `detached`, o `cmd.exe`
+do `.bat` entra no job object do Node que o abriu e **morre junto** quando esse
+Node sai — e o conector da Estação sai a cada atualização (código 42). O Node
+neto sobrevive (breakaway silencioso), mas o laço de reabertura do `.bat` não.
+Com `detached`, pelo `.bat` ou pelo `.vbs`, tudo sobreviveu ao pai, e o
+`where node` do `.bat` continua achando o Node.
+
+**Armadilha de teste que custou tempo:** `echo x=%errorlevel%>> arq` vira
+`echo x= 0>> arq` — o `0>>` é redirecionamento do handle 0, e o arquivo sai
+vazio. Ponha o redirecionamento na frente: `>> arq echo ...`.
+
+**Conferido antes de publicar:** 11 casos da vigia rodados isolados, contra
+pasta e nuvem falsas — abre pelo `.bat` e pelo `.vbs` na porta certa; não abre
+segunda cópia com processo rodando; não se engana com painel de outra conexão;
+recusa sessão da Estação, config de outra conexão e pasta vazia; espera 15 min
+entre aberturas. E o conector inteiro de pé por 75 s com o id da Estação.
+Publicada montando no banco sobre a 1.04.00, com o INSERT condicionado ao md5
+(`1aa72cbc…`).
+
+**O que ela não resolve:** conector dela aberto mas sem painel (conflito de
+porta, por exemplo) — a vigia vê o processo e não mexe; e sessão deslogada no
+celular — ele sobe pedindo QR, e o QR só se lê no painel do PC.

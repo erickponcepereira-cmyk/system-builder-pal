@@ -80,6 +80,11 @@ ponha ali um atalho do `oculto.vbs`. Serve quando o PC entra sozinho na conta.
 > estava na pasta Iniciar ou em outra tarefa, remova essa entrada. Duas cópias da
 > **mesma** pasta brigam pela mesma sessão e derrubam o número.
 
+> **`C:\conector-jessica` é reaberta pelo conector da Estação** (1.05.00+): ele
+> olha a pasta a cada 5 minutos e abre pelo `oculto.vbs` quando ela está fechada.
+> Início automático próprio nela não atrapalha — a vigia vê o processo e não abre
+> outro. Detalhes em `docs/contexto/fitmind-vertical-acesso.md`, seção de 30/09.
+
 ## Quando não sobe
 
 `log.txt`, na pasta, tem a resposta. O `.bat` grava ali a data de cada abertura,
