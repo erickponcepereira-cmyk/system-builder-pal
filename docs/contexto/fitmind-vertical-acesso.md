@@ -850,7 +850,7 @@ junto, faz a cópia subir como o número da Estação e as duas instâncias brig
 pela mesma sessão — é assim que se derruba o número que já estava de pé.
 
 O código do conector que roda na academia mora em `conector_versoes.arquivos`
-(hoje 1.05.00), e não no repositório: ele se atualiza sozinho pelo
+(hoje 1.05.02), e não no repositório: ele se atualiza sozinho pelo
 `/api/bot/atualizacao`. `conector-whatsapp/` no repo é outro programa, o da
 plataforma.
 
@@ -987,3 +987,28 @@ Publicada montando no banco sobre a 1.04.00, com o INSERT condicionado ao md5
 **O que ela não resolve:** conector dela aberto mas sem painel (conflito de
 porta, por exemplo) — a vigia vê o processo e não mexe; e sessão deslogada no
 celular — ele sobe pedindo QR, e o QR só se lê no painel do PC.
+
+**Como terminou — 1.05.01 e 1.05.02, no mesmo dia.** A 1.05.00 rodou três vezes
+e não abriu nada, e não havia como saber por quê: os caminhos de "não abro" só
+escreviam no `log.txt` local. A **1.05.01** passou a devolver cada decisão no
+`status_detalhe` da **própria conexão da Estação**, que continua `conectado` (não
+mexe no chip que envia; só manda quando o texto muda; do `log.txt` só vão linhas
+de erro, nunca conversa). O primeiro relato resolveu o caso:
+
+> `vigia C:\conector-jessica: sem config.json da conexao dela; pasta: FitMindWhatsApp`
+
+O programa dela está **um nível abaixo**, em `C:\conector-jessica\FitMindWhatsApp`
+— provavelmente é também o layout da pasta da Estação. A **1.05.02** acha o
+conector nas subpastas, reconhecendo pelo `conexaoId` do `config.json` (nunca pelo
+nome), e abre também pelo `FitMindConector.exe` quando é ele que está lá. Abriu às
+17:06; a conexão dela voltou a `conectado` com batimento em dia, e
+`bot_escolher_conexao` voltou a devolver o chip dela para as campanhas dela.
+
+O relato da reabertura trouxe a última linha de erro do log dela:
+`[08:38:29] conexao caiu: queda de conexao (codigo 500)` — 04:38 em Cuiabá (o log
+usa UTC), a queda que explica o `conectado_em` de 04:41. Depois disso, nenhum
+"saiu com codigo": às 05:05 o `.bat` dela morreu junto com o programa, o que
+combina com o PC reiniciando e a pasta dela sem início automático.
+
+**Lição da vigia muda:** código que decide "não faço" num PC que ninguém vê tem
+que dizer o motivo para fora. Custou uma versão inteira.
