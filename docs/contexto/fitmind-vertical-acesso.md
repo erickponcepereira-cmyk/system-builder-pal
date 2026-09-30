@@ -850,6 +850,77 @@ junto, faz a cópia subir como o número da Estação e as duas instâncias brig
 pela mesma sessão — é assim que se derruba o número que já estava de pé.
 
 O código do conector que roda na academia mora em `conector_versoes.arquivos`
-(hoje 1.03.00), e não no repositório: ele se atualiza sozinho pelo
+(hoje 1.04.00), e não no repositório: ele se atualiza sozinho pelo
 `/api/bot/atualizacao`. `conector-whatsapp/` no repo é outro programa, o da
 plataforma.
+
+
+## 29/09/2026 — "Aguardando mensagem": o conector não atendia o pedido de reenvio
+
+Aviso de vencimento da Estação chegava no celular do aluno como **"Aguardando
+mensagem. Essa ação pode levar alguns instantes"**, e ficava assim. O registro
+dizia `enviada`, com `wa_id`. Visto no celular do Erick (66 98128-3314), que
+também é aluno da Estação.
+
+**A causa é o `getMessage` padrão do Baileys.** Quando o celular de quem recebe
+não decifra uma mensagem, ele mostra o "Aguardando" e pede ao remetente que mande
+de novo, com chaves novas. O Baileys atende esse pedido perguntando a
+`getMessage(key)` qual era o conteúdo — e a padrão (6.7.24,
+`Defaults/index.js`) é `async () => undefined`. Sem conteúdo, `sendMessagesAgain`
+só registra "message not available" e o reenvio nunca sai. O conector não passava
+`getMessage` nenhum desde a primeira versão.
+
+**Como a causa foi separada**, na conversa do Erick com o número da Estação:
+
+| Quando | Para onde saiu | No celular |
+|---|---|---|
+| 26/08 20:06, teste | telefone (`@s.whatsapp.net`) | chegou |
+| 22/09 09:04, aviso de vencimento | telefone | Aguardando |
+| 22/09 11:24, resposta do menu | LID da conversa (`@lid`) | chegou |
+| 24/09 20:36, teste | telefone | Aguardando |
+| 25/09 09:02, aviso de vencimento | telefone | Aguardando |
+
+O que saía pelo telefone travava; a resposta pelo LID, na mesma conversa, chegava.
+Tudo que é campanha sai pelo telefone (`jidDeVerdade`), então **todo aviso de
+vencimento e toda campanha estavam expostos**, não só os do Erick.
+
+**1.04.00, publicada em 29/09:**
+
+- `getMessage` devolve o texto do que foi enviado, guardado por id em
+  `enviadas.json` (até 300). Em disco porque o pedido de reenvio chega quando o
+  celular do aluno volta a ficar online, e o conector pode ter reiniciado.
+- Mensagem **recebida** que o conector não decifrou (`m.message` vazio, stub
+  `CIPHERTEXT`) não vai mais para o robô. Ia como texto em branco, e o robô
+  respondia o menu para ela; a versão legível chega depois, com o mesmo id.
+  É parte dos ~15% de entradas vazias em `bot_mensagens` desde agosto (104 de
+  629 em 30 dias) — o resto são figurinha, reação e afins, que o conector
+  classifica como `texto` sem corpo e que continuam disparando o menu.
+
+Conferido antes de publicar: `node --check`; o trecho das enviadas rodado isolado
+(teto de 300, sobrevive a reinício, arquivo corrompido não derruba, e o objeto que
+`getMessage` devolve passa pelo `encodeWAMessage` do próprio Baileys); e o conector
+inteiro de pé contra um servidor falso, com o Baileys 6.7.24 do `package-lock`,
+chegando ao QR. **O reenvio de verdade não dá para provar fora do PC** — só com um
+celular que peça.
+
+**Montada no banco, não colada.** A 1.04.00 foi gravada aplicando sete `replace`
+no texto da 1.03.00 já publicada, com o INSERT condicionado ao md5 do arquivo
+testado (`f266a4d7…`). Colar 24 KB à mão arrisca um erro de cópia — e uma versão
+que não sobe prende o conector, que nunca mais busca correção.
+
+**O que ficou de fora, de propósito:**
+
+- **Mandar campanha pelo LID em vez do telefone.** No 6.7.24 o `onWhatsApp` já
+  devolve `lid`, e a tabela acima mostra que o LID chega. Evitaria até o
+  "Aguardando" momentâneo, antes do reenvio. Não entrou porque muda o endereço de
+  **toda** campanha de uma vez, com base em um contato só; o reenvio resolve o
+  sintoma sem mudar o caminho que já funcionava. Se o "Aguardando" continuar
+  aparecendo (ainda que por segundos), é o próximo passo.
+- **Subir o Baileys para a 7.x**, que trata LID de fábrica. A auto-atualização
+  só escreve `conector.mjs` e `painel.html`: dependência nova exige alguém no PC.
+- **A cópia em `C:\dev\robo-crm-pacote\conector`** continua na 1.03.00.
+
+**Para saber se chegou:** `bot_conexoes.versao` da conexão da Estação
+(`66fbac50…`) passa a `1.04.00` na segunda consulta depois da troca — a primeira
+baixa e reinicia, a seguinte registra. E no `log.txt` do PC aparece
+`WhatsApp pediu reenvio de <id>; reenviando` quando um celular pedir.

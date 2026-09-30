@@ -10,14 +10,16 @@ O código do conector não mora aqui: ele se atualiza sozinho pelo
 
 ## Um número por pasta
 
-`config.json`, a pasta `sessao`, `pendentes.json` e `log.txt` são todos da pasta
-onde o programa está. Segundo número no mesmo PC = **outra pasta**.
+`config.json`, a pasta `sessao`, `pendentes.json`, `enviadas.json` e `log.txt`
+são todos da pasta onde o programa está. Segundo número no mesmo PC = **outra
+pasta**.
 
 Ao copiar a pasta de um conector que já funciona, **apague na cópia**:
 
 - `config.json` — senão a cópia sobe como o número antigo;
 - `sessao` — duas cópias com a mesma sessão **derrubam** o número que estava de pé;
 - `pendentes.json` — fila de mensagens do outro número;
+- `enviadas.json` — o que o outro número mandou, guardado para reenvio (1.04.00+);
 - `log.txt` — só para não misturar o histórico.
 
 E mude a **porta** no `iniciar-conector.bat`: o painel (onde o QR aparece — ele
