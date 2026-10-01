@@ -21,8 +21,10 @@ subtrair saldo na mão** — é desfazer o fato na origem e mandar recalcular:
   monta a partir de `paid_orders`;
 - nutricionista e professor têm tabela própria (`*_blocked_entries`) e função
   de cancelar (`cancel_nutritionist_blocked_entry`, `cancel_professor_blocked_entry`);
-- a parte do sistema está em `admin_system_wallet_entries` e é a única que exige
-  lançamento manual de débito.
+- a parte do sistema sai com um lançamento de débito em
+  `admin_system_wallet_entries` — só a taxa do sistema, nunca a linha
+  informativa da taxa do Mercado Pago. O saldo não se mexe à mão: desde
+  01/10/2026 ele é reescrito a partir do extrato (ver [[fitmind-financeiro]]).
 
 **Quem já sacou fica devendo, e o sistema já sabia disso.** `wallet_statement`
 calcula `available = liberado − sacado − gasto − adiantamento` e expõe o que

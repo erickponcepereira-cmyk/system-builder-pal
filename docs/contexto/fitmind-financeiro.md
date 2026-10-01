@@ -222,3 +222,49 @@ crie `withdrawal_request` para isso.**
 ela pagou R$ 1.425,41, e `net_received_amount` é R$ 1.216,26 = valor − taxa do MP. É esse
 líquido que as fatias dividem. Fatia de rede sem upline naquele nível volta para quem
 vendeu como "Comissão Direta (sem upline N3)" — é regra desde 29/07, não sobra.
+
+## Carteira do sistema: o saldo sai do extrato (01/10/2026)
+
+`admin_system_wallet` era somada e subtraída à mão em sete funções e em dois
+pontos do app, e o extrato (`admin_system_wallet_entries`) gravado à parte. Em
+01/10 o saldo estava **R$ 239,12 acima** do que o extrato sustenta:
+
+- atribuir a parte de uma venda a nutricionista ou professor
+  (`nutritionist.functions.ts`, `professor.functions.ts`) lançava o débito e
+  não tirava do saldo — R$ 94,00 do Helton;
+- apagar venda (recriar conta de teste, `admin_purge_user_dependents`) apaga o
+  lançamento em cascata (`transaction_id … ON DELETE CASCADE`) e deixava o
+  dinheiro no saldo — ≈ R$ 145;
+- o estorno de pedido de parceiro debitava também a taxa do Mercado Pago, que
+  entra no extrato só como linha informativa (R$ 1,60 a menos).
+
+**Agora o saldo é derivado**, como as carteiras das pessoas.
+`conciliar_carteira_do_sistema(_corrigir)` soma o extrato e, com `true`,
+reescreve o saldo; o gatilho `trg_carteira_do_sistema_derivada` (constraint
+trigger, **adiado para o fim da transação**) chama isso sempre que o extrato
+muda. As funções antigas que ainda somam no saldo à mão podem continuar: a
+reescrita vem depois delas. **Código do app não deve mais tocar no saldo** — numa
+requisição separada, depois do gatilho, debitaria em dobro.
+
+**O que conta** (a regra está no cabeçalho da migração 20261001120000):
+
+| No extrato | Conta? |
+|---|---|
+| `credit` de venda que ainda existe | receita |
+| `subscription` de fatura que existe (inclui a baixa manual "isenta") | receita |
+| `credit` 'Rede nao liberada …' do fechamento | receita |
+| `credit` 'Taxa de Pagamento - …' / 'Imposto - …' (pedido de parceiro) | **não**: informativo |
+| `payment_fee` / `tax` negativos (mensalidade) | **não**: o `subscription` já é líquido |
+| `debit` | sai do saldo; sem origem conta como retirada |
+| `credit` de venda apagada | **não**: aparece em `sem_origem_ignorado` |
+
+**Somar o extrato inteiro dá número errado**: as linhas informativas entram como
+`credit` (pedido de parceiro) e a taxa e o imposto da mensalidade são
+descontados duas vezes. Para conferir, use a função, não `sum(amount)`.
+
+**Para testar o gatilho** numa transação desfeita: ele só roda no commit, então
+force com `SET CONSTRAINTS public.trg_carteira_do_sistema_derivada IMMEDIATE`
+antes de ler o saldo — e só uma vez por transação (ele marca a transação para
+não refazer a soma a cada linha).
+
+Backup do antes em `backup.conciliacao_sistema_20261001`.

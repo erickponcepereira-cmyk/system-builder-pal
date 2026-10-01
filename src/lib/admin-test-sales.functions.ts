@@ -159,25 +159,6 @@ async function subtractWallet(profileId: string | null, amount: number) {
     .eq("profile_id", profileId);
 }
 
-async function subtractAdminWallet(amount: number) {
-  const supabaseAdmin = await getSupabaseAdmin();
-  if (amount <= 0) return;
-  const { data } = await supabaseAdmin
-    .from("admin_system_wallet")
-    .select("available_balance,total_earned")
-    .eq("id", true)
-    .maybeSingle();
-  const row = data as any;
-  await supabaseAdmin
-    .from("admin_system_wallet")
-    .update({
-      available_balance: Math.max(0, moneyNumber(row?.available_balance) - amount),
-      total_earned: Math.max(0, moneyNumber(row?.total_earned) - amount),
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", true);
-}
-
 async function profileIdForPartner(partnerId: string | null | undefined) {
   const supabaseAdmin = await getSupabaseAdmin();
   if (!partnerId) return null;
@@ -195,7 +176,9 @@ async function deleteSimulation(data: DeleteInput) {
       .maybeSingle();
     const row = order as any;
     if (!row?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
-    await subtractAdminWallet(moneyNumber(row.system_fee));
+    // O saldo do sistema é reescrito a partir do extrato (trg_carteira_do_sistema_derivada):
+    // basta apagar os lançamentos do pedido, que senão ficariam soltos sem ele.
+    await supabaseAdmin.from("admin_system_wallet_entries").delete().eq("partner_order_id", data.id);
     await subtractWallet(await profileIdForCoach(row.selling_coach_id), moneyNumber(row.coach_net_amount));
     await subtractWallet(await profileIdForCoach(row.upline_l1_coach_id), moneyNumber(row.network_l1_amount));
     await subtractWallet(await profileIdForCoach(row.upline_l2_coach_id), moneyNumber(row.network_l2_amount));
@@ -215,14 +198,9 @@ async function deleteSimulation(data: DeleteInput) {
   const txList = ((txs as any[]) || []);
   const txIds = txList.map((t) => t.id);
 
-  // Reverte créditos do admin_system_wallet desta tx
+  // O saldo do sistema é reescrito a partir do extrato (trg_carteira_do_sistema_derivada):
+  // apagar os lançamentos destas tx basta.
   if (txIds.length) {
-    const { data: sysEntries } = await supabaseAdmin
-      .from("admin_system_wallet_entries")
-      .select("amount")
-      .in("transaction_id", txIds);
-    const sysTotal = ((sysEntries as any[]) || []).reduce((s, e) => s + moneyNumber(e.amount), 0);
-    if (sysTotal > 0) await subtractAdminWallet(sysTotal);
     await supabaseAdmin.from("admin_system_wallet_entries").delete().in("transaction_id", txIds);
 
     // Reverte comissões (carteiras) antes de apagar
@@ -761,16 +739,7 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
     const orphanIds = orphanList.map((t) => t.id);
     let orphanCleaned = 0;
     if (orphanIds.length > 0) {
-      // Reverte créditos do admin_system_wallet desta tx
-      const { data: sysEntries } = await supabaseAdmin
-        .from("admin_system_wallet_entries")
-        .select("amount")
-        .in("transaction_id", orphanIds);
-      const sysTotal = ((sysEntries as any[]) || []).reduce(
-        (s, e) => s + moneyNumber(e.amount),
-        0
-      );
-      if (sysTotal > 0) await subtractAdminWallet(sysTotal);
+      // O saldo do sistema é reescrito a partir do extrato (trg_carteira_do_sistema_derivada).
       await supabaseAdmin
         .from("admin_system_wallet_entries")
         .delete()
