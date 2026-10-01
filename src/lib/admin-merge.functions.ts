@@ -15,6 +15,8 @@ export type MergeCandidate = {
   status: string | null;
   createdAt: string | null;
   mergedIntoProfileId: string | null;
+  /** Último acesso pelo app. O destino deve ser o cadastro que a pessoa usa. */
+  lastAccessAt: string | null;
   hasCoach: boolean;
   hasStudent: boolean;
   hasPartner: boolean;
@@ -38,7 +40,7 @@ export const searchProfilesForMerge = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, name, email, cpf, phone, role, status, created_at, merged_into_profile_id")
+      .select("id, name, email, cpf, phone, role, status, created_at, merged_into_profile_id, last_app_login_at")
       .or(filters.join(","))
       .limit(25);
     if (error) throw new Error(error.message);
@@ -67,11 +69,25 @@ export const searchProfilesForMerge = createServerFn({ method: "POST" })
       status: (r.status as string) ?? null,
       createdAt: (r.created_at as string) ?? null,
       mergedIntoProfileId: (r as { merged_into_profile_id?: string | null }).merged_into_profile_id ?? null,
+      lastAccessAt: (r as { last_app_login_at?: string | null }).last_app_login_at ?? null,
       hasCoach: coachSet.has(r.id as string),
       hasStudent: studentSet.has(r.id as string),
       hasPartner: partnerSet.has(r.id as string),
     }));
   });
+
+/**
+ * Resultado de `admin_merge_profiles`. A simulação executa tudo e desfaz no fim,
+ * então `moved`/`skipped`/`avisos` são o que a mesclagem real vai fazer, e
+ * `erro` é o motivo pelo qual ela falharia.
+ */
+export type MergeResult = {
+  dry_run: boolean;
+  moved: Record<string, number | string>;
+  skipped: Record<string, number>;
+  avisos: string[];
+  erro: string | null;
+};
 
 /** Executa (ou simula) a mesclagem de dois cadastros. */
 export const adminMergeProfiles = createServerFn({ method: "POST" })
@@ -96,5 +112,5 @@ export const adminMergeProfiles = createServerFn({ method: "POST" })
     } as never);
     if (error) throw new Error(error.message);
 
-    return { ok: true, dryRun: data.dryRun, result: JSON.stringify(result ?? {}) };
+    return { ok: true, dryRun: data.dryRun, result: result as unknown as MergeResult };
   });

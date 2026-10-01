@@ -137,3 +137,21 @@ Três camadas agora:
 - gatilho `trg_estornado_nao_volta_a_pago` em `partner_product_orders`,
   `store_orders` e `transactions`: nada tira um pedido de `refunded`, nem SQL
   direto nem `admin_reprocess_partner_order`.
+
+## Reembolso lançado como saque (desfeito em 30/09/2026)
+
+Antes de existir o fluxo de estorno, quatro reembolsos do desafio (Rayssa e
+Willians, da Gabi; Adriana e Marcus Ferraz, da Suellyn) foram registrados como
+**saques pagos** de R$ 200 na carteira das duas coaches, com a observação
+"Estorno ...". Saque pago conta como `sacado`: a coach perdia os R$ 200 brutos
+inteiros, e a rede e o sistema ficavam com a parte deles de uma venda que não
+existia mais.
+
+O certo — e o que foi refeito — é o estorno: comissão da coach e da rede
+`cancelled`, débito na carteira do sistema, ticket revogado, venda
+`refunded`; e o lançamento de saque vira `rejected` com a explicação na nota.
+Cada coach ganhou de volta R$ 200 menos a comissão das duas vendas. Backup em
+`backup.reembolso_desafio_20260930`.
+
+**Ao ver um saque com observação de estorno ou reembolso, desconfie:** é o mesmo
+erro. Saque é só dinheiro que saiu para a pessoa.
