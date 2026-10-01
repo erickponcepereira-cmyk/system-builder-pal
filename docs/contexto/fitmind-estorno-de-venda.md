@@ -150,7 +150,10 @@ existia mais.
 O certo — e o que foi refeito — é o estorno: comissão da coach e da rede
 `cancelled`, débito na carteira do sistema, ticket revogado, venda
 `refunded`; e o lançamento de saque vira `rejected` com a explicação na nota.
-Cada coach ganhou de volta R$ 200 menos a comissão das duas vendas. Backup em
+Cada coach ganhou de volta R$ 200 menos a comissão das duas vendas. O mesmo erro
+apareceu na Ana Flávia (Elisangela Miranda, Ticket Desafio 85, baixa de R$ 85 em
+03/09) e foi corrigido do mesmo jeito. Depois disso não sobrou nenhum saque pago
+com observação de estorno ou reembolso. Backup em
 `backup.reembolso_desafio_20260930`.
 
 **Ao ver um saque com observação de estorno ou reembolso, desconfie:** é o mesmo
