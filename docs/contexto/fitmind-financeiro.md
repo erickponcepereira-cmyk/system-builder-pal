@@ -152,7 +152,15 @@ guardado antes e o valor recalculado sobre o líquido novo.
 função com a versão anterior — zerando o bônus de novo — e ficou assim até
 25/09, quando foi restaurada. Nenhum pedido com bônus foi reprocessado nesse
 intervalo. Lição: depois de qualquer push da Lovable que toque em
-`supabase/migrations`, confira o md5 das funções financeiras. **Ao mexer no
+`supabase/migrations`, confira o md5 das funções financeiras.
+
+**Só admin desde 30/09/2026.** A função era SECURITY DEFINER com EXECUTE para
+`authenticated` e sem conferir quem chamava: qualquer usuário logado apagava e
+recriava as comissões de qualquer pedido pelo PostgREST. Agora o EXECUTE é só de
+`service_role`, e a trava interna barra chamada direta de quem não é admin mas
+deixa passar a de dentro de gatilho (`pg_trigger_depth() > 0`) — o acerto do
+meio de pagamento (`sync_source_payment_method_from_mp`, gatilho em
+`mercadopago_payments`) roda às vezes durante a ação de um usuário comum. **Ao mexer no
 reprocessamento, confira também se cada beneficiário continuou recebendo** —
 conferir só a taxa e a data não pega esse tipo de perda.
 
