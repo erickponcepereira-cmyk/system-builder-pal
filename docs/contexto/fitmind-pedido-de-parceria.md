@@ -154,3 +154,55 @@ Personalizados": continua `pending`, com papel `partner` e a mensalidade de
 R$ 100 ativa (faturas de agosto e setembro bloqueadas — isso trava só o painel
 de parceiro, não a área de aluno). Ela participa do desafio de corrida pela
 regra acima.
+
+**Dois pedidos de parceria da mesma pessoa viram dois de tudo — inclusive duas
+mensalidades.** Emmily Ventura abriu conta duas vezes em 19/08/2026, com cinco
+minutos de diferença: `emmilyventura9@icloud.com` às 12:54 (e-mail e senha,
+nunca usada para entrar) e `emmilyventura9@gmail.com` às 12:59 (Google). Cada
+cadastro ganhou perfil, coach-espelho (números 114 e 115), unidade com o **mesmo
+CNPJ**, aluno, carteiras, ficha de avaliação na lista da coach — e uma
+mensalidade de R$ 100. A do cadastro morto acumulou R$ 300 em aberto
+(agosto e setembro bloqueadas, outubro pendente) sem ninguém notar: nada no
+sistema compara CNPJ, telefone ou nascimento entre pedidos.
+
+**A unificação já existe pronta: `admin_merge_profiles(origem, destino, admin,
+dry_run)`.** Ela religa todas as FKs para `profiles`/`students`/`coaches`,
+funde a ficha de avaliação, cancela a mensalidade e as faturas em aberto da
+origem, bloqueia o coach da origem, apaga o aluno da origem quando está vazio,
+move os logins sociais, bane o login que sobrou e marca
+`profiles.status = 'merged'`. Com `dry_run = true` ela **roda tudo de verdade e
+desfaz no fim** — use sempre antes. Quem chama é
+`src/lib/admin-merge.functions.ts`.
+
+**O que ela faz e você provavelmente não quer: `UPDATE partners SET profile_id
+= destino`.** A unidade da conta morta vai junto para o perfil que fica, e aí
+quase todo o app escolhe a unidade errada — o padrão em `partner-sales`,
+`partner-reports`, `master-commission` e companhia é
+`plist.find(status === "approved") ?? plist[0]`, com `order by created_at asc`,
+e a unidade duplicada costuma ser a **mais antiga**. Outros pontos
+(`annual-activation`, `coach-modal`, `challenge-tokens`) pegam `limit(1)` sem
+ordem nenhuma. Na Emmily isso esconderia a unidade de verdade — a que tem os
+dois produtos, os 16 cupons e a colaboradora. Depois da unificação, devolva a
+unidade duplicada para o perfil morto e deixe-a `status='blocked'` com
+`blocked_at`. Para mexer no dono em `partner_members` é preciso admin no JWT:
+`set_config('request.jwt.claims', json_build_object('sub', <user_id do admin>,
+'role','authenticated')::text, true)` — senão `guard_partner_members_owner`
+derruba o UPDATE.
+
+**A terceira cópia não estava em `profiles`.** A coach dela (Ana Flávia) tinha
+aberto na mão, em 18/05/2026, uma ficha "Emmily Costa Ventura" com três
+avaliações de 2024/2025, solta de qualquer login — a Emmily nunca viu essas
+avaliações no app. Ao procurar duplicata de alguém, olhe também
+`coach_evaluation_clients` por nome, nascimento e WhatsApp, não só por
+`profile_id`.
+
+**Achado a resolver: a importação de avaliações rodou duas vezes.** Em
+28/05/2026 as fichas importadas em 18/05 foram reimportadas iguais:
+**3.683 clientes de 4 coaches** têm avaliação em dobro, 9.669 linhas sobrando,
+6.347 pares idênticos campo a campo. Só as três da Emmily foram limpas
+(03/10/2026). O resto é decisão à parte.
+
+Migrations: `20261003120000_emmily_ventura_um_cadastro_so.sql` e
+`20261003130000_emmily_ventura_as_avaliacoes_dela.sql`. Retratos do antes em
+`auditoria.emmily_ventura_20261003` (48 linhas) e
+`auditoria.emmily_ventura_avaliacoes_20261003` (8 linhas).

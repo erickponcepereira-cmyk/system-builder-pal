@@ -1,3 +1,52 @@
+## 20261003130000_emmily_ventura_as_avaliacoes_dela.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de cadastro duplicado |
+| **Data** | 03/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 03/10/2026**, conferida por consulta |
+
+Liga as tres avaliacoes de 2024/2025 da Emmily (ficha "Emmily Costa Ventura",
+aberta na mao pela Ana Flavia em 18/05/2026, solta de qualquer login) a ficha do
+login dela, leva a altura 155 junto, apaga as tres copias identicas da
+reimportacao de 28/05/2026 e remove a ficha antiga, ja vazia. A coach deixa de
+ver duas Emmilys e a Emmily passa a ver as proprias avaliacoes.
+
+Retrato do antes em `auditoria.emmily_ventura_avaliacoes_20261003` (8 linhas).
+
+**Fica em aberto:** a reimportacao de 28/05 atingiu **3.683 clientes de 4
+coaches** — 9.669 linhas sobrando, 6.347 pares identicos campo a campo. So as
+tres da Emmily foram limpas.
+
+---
+
+## 20261003120000_emmily_ventura_um_cadastro_so.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de cadastro duplicado |
+| **Data** | 03/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | **Sim** — cancela a mensalidade duplicada de R$ 100 e tres faturas (R$ 300 em aberto) |
+| **Aplicada em producao?** | **Sim — 03/10/2026**, conferida por consulta |
+
+Unifica os dois cadastros da Emmily Ventura (icloud 12:54 e gmail 12:59 de
+19/08/2026) no do gmail, que e o mais recente e o unico com historia. Usa a
+`admin_merge_profiles` que ja existia, em `dry_run` antes. Leva o ramo de
+atividade, que so existia na duplicada.
+
+Depois da unificacao devolve a **unidade duplicada** para o perfil morto e a
+bloqueia: a funcao traz a unidade da origem para o perfil que fica, e como o app
+escolhe a unidade aprovada **mais antiga**, a vazia esconderia a de verdade (dois
+produtos, 16 cupons, uma colaboradora). Apaga tambem dois retratos de carreira
+zerados que ficaram com coach de um lado e perfil do outro.
+
+Retrato do antes em `auditoria.emmily_ventura_20261003` (48 linhas).
+
+---
+
 ## 20260924200000_cada_academia_manda_pelo_proprio_numero.sql
 
 | | |
