@@ -6,6 +6,7 @@ import {
   searchProfilesForMerge,
   adminMergeProfiles,
   type MergeCandidate,
+  type MergeResult,
 } from "@/lib/admin-merge.functions";
 
 function badges(c: MergeCandidate) {
@@ -16,9 +17,77 @@ function badges(c: MergeCandidate) {
   return list;
 }
 
+function formatAccess(iso: string | null) {
+  if (!iso) return "nunca acessou pelo app";
+  return `último acesso ${new Date(iso).toLocaleDateString("pt-BR")}`;
+}
+
+/** O que cada ligação movida significa para quem está unificando. */
+const MOVED_LABELS: Record<string, string> = {
+  "students.coach_id": "Alunos do coach",
+  "coaches.upline_coach_id": "Coaches da equipe",
+  "commissions.beneficiary_profile_id": "Comissões",
+  "withdrawal_requests.profile_id": "Saques",
+  "partners.profile_id": "Empresas parceiras",
+  "partner_members.profile_id": "Dono da unidade",
+  "partner_product_orders.student_id": "Compras de produtos",
+  "store_orders.student_id": "Pedidos da loja",
+  "transactions.student_id": "Pagamentos",
+  "competition_enrollments.student_id": "Inscrições no desafio",
+  "notifications.profile_id": "Notificações",
+  logins_movidos: "Logins (Apple/Google)",
+  mensalidade_da_origem: "Mensalidade da origem",
+  faturas_canceladas: "Faturas canceladas",
+  faturas_movidas: "Faturas movidas",
+  coach_da_origem: "Coach da origem",
+  aluno_da_origem: "Aluno da origem",
+};
+
+function MergeSummary({ result }: { result: MergeResult }) {
+  const moved = Object.entries(result.moved ?? {});
+  const highlighted = moved.filter(([key]) => MOVED_LABELS[key]);
+  const others = moved.filter(([key]) => !MOVED_LABELS[key]);
+  const skipped = Object.entries(result.skipped ?? {});
+
+  return (
+    <div className="mt-4 space-y-3 text-xs">
+      {result.erro && (
+        <p className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-red-200">
+          A unificação falharia: {result.erro}
+        </p>
+      )}
+      {(result.avisos ?? []).map((aviso) => (
+        <p key={aviso} className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-amber-200">
+          {aviso}
+        </p>
+      ))}
+      <ul className="grid gap-1 sm:grid-cols-2">
+        {highlighted.map(([key, value]) => (
+          <li key={key} className="flex justify-between rounded bg-white/5 px-3 py-1.5 text-white/80">
+            <span>{MOVED_LABELS[key]}</span>
+            <span className="font-semibold text-white">{String(value)}</span>
+          </li>
+        ))}
+      </ul>
+      {others.length > 0 && (
+        <details className="text-white/50">
+          <summary className="cursor-pointer">Outras ligações movidas ({others.length})</summary>
+          <p className="mt-1">{others.map(([key, value]) => `${key}: ${value}`).join(" · ")}</p>
+        </details>
+      )}
+      {skipped.length > 0 && (
+        <p className="text-white/50">
+          Ficam na origem por conflito (saldos são recalculados):{" "}
+          {skipped.map(([key, value]) => `${key}: ${value}`).join(" · ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /**
  * Ferramenta administrativa para unificar dois cadastros da mesma pessoa
- * (ex.: conta criada por e-mail + conta criada pelo Google).
+ * (ex.: conta criada por e-mail + conta criada pelo Google ou pela Apple).
  * O cadastro de origem é desativado e todo o histórico vai para o destino.
  */
 export function MergeAccountsPanel() {
@@ -30,8 +99,15 @@ export function MergeAccountsPanel() {
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<MergeCandidate | null>(null);
   const [target, setTarget] = useState<MergeCandidate | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<MergeResult | null>(null);
+  const [simulatedPair, setSimulatedPair] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const pairKey = source && target ? `${source.id}>${target.id}` : null;
+  const canMerge = !!pairKey && simulatedPair === pairKey && !preview?.erro;
+  const targetIsOlder =
+    !!source?.lastAccessAt &&
+    (!target?.lastAccessAt || new Date(target.lastAccessAt) < new Date(source.lastAccessAt));
 
   const doSearch = async () => {
     if (term.trim().length < 2) return toast.error("Digite ao menos 2 caracteres.");
@@ -55,12 +131,17 @@ export function MergeAccountsPanel() {
     try {
       const res = await mergeFn({ data: { sourceProfileId: source.id, targetProfileId: target.id, dryRun } });
       setPreview(res.result);
-      toast.success(dryRun ? "Simulação concluída — confira o resumo." : "Cadastros mesclados com sucesso!");
-      if (!dryRun) {
-        setSource(null);
-        setTarget(null);
-        setResults([]);
+      if (dryRun) {
+        setSimulatedPair(pairKey);
+        if (res.result.erro) toast.error("A simulação encontrou um problema — veja o resumo.");
+        else toast.success("Simulação concluída — confira o resumo.");
+        return;
       }
+      toast.success("Cadastros mesclados com sucesso!");
+      setSource(null);
+      setTarget(null);
+      setResults([]);
+      setSimulatedPair(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao mesclar cadastros.");
     } finally {
@@ -75,9 +156,11 @@ export function MergeAccountsPanel() {
           <AlertTriangle className="h-4 w-4" /> Use com cuidado
         </p>
         <p className="mt-1">
-          Todo o histórico (pedidos, carteira, indicações, desafios) do cadastro de <b>origem</b> é
-          transferido para o de <b>destino</b>. A origem fica marcada como mesclada e perde o acesso.
-          Rode a simulação antes de confirmar.
+          Todo o histórico (pedidos, comissões, saques, alunos, equipe, empresa parceira, desafios) do
+          cadastro de <b>origem</b> é transferido para o de <b>destino</b>. Login pela Apple ou Google da
+          origem passa a abrir o destino; o login por e-mail da origem é bloqueado. A mensalidade da
+          origem é cancelada se o destino já tiver a dele. Escolha como destino o cadastro que a pessoa
+          usa — o de acesso mais recente. Simule antes de confirmar.
         </p>
       </div>
 
@@ -118,6 +201,7 @@ export function MergeAccountsPanel() {
                   {c.email || "sem e-mail"} · {c.role || "—"} · {c.status || "—"}
                   {badges(c).length ? ` · ${badges(c).join(", ")}` : ""}
                 </p>
+                <p className="text-[11px] text-white/40">{formatAccess(c.lastAccessAt)}</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -149,6 +233,13 @@ export function MergeAccountsPanel() {
           </span>
         </div>
 
+        {source && target && targetIsOlder && (
+          <p className="mt-3 text-xs text-amber-200">
+            O destino escolhido foi acessado antes da origem. Confira se não está invertido: o destino
+            deve ser o cadastro que a pessoa usa hoje.
+          </p>
+        )}
+
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => run(true)}
@@ -159,18 +250,15 @@ export function MergeAccountsPanel() {
           </button>
           <button
             onClick={() => run(false)}
-            disabled={busy || !source || !target}
+            disabled={busy || !canMerge}
+            title={canMerge ? undefined : "Simule esta combinação antes, sem erro, para liberar"}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
             Mesclar definitivamente
           </button>
         </div>
 
-        {preview && (
-          <pre className="mt-4 max-h-64 overflow-auto rounded-lg bg-black/40 p-3 text-[11px] text-white/70">
-            {preview}
-          </pre>
-        )}
+        {preview && <MergeSummary result={preview} />}
       </div>
     </div>
   );

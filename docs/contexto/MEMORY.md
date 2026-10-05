@@ -60,6 +60,9 @@ volta a ficar preso numa máquina.
   Point Smart: o que o SmartApp exige do Mercado Pago, e os dois atritos do motor de venda
 - [Fechamento da rede](fitmind-fechamento-da-rede.md) — a regra de subir para o upline que
   bateu meta, e o que já foi fechado
+- [Unificação de cadastros](fitmind-unificacao-de-cadastros.md) — duas contas da mesma pessoa
+  viram uma: o destino é o de acesso mais recente, o furo que deixava qualquer um unificar,
+  e por que o recálculo de carteira espera
 - [Pedido de parceria](fitmind-pedido-de-parceria.md) — o que o pedido cria sozinho (espelho,
   mensalidade, unidade), por que não há "recusar", e o furo que deixa se autoaprovar
 

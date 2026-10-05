@@ -152,7 +152,15 @@ guardado antes e o valor recalculado sobre o líquido novo.
 função com a versão anterior — zerando o bônus de novo — e ficou assim até
 25/09, quando foi restaurada. Nenhum pedido com bônus foi reprocessado nesse
 intervalo. Lição: depois de qualquer push da Lovable que toque em
-`supabase/migrations`, confira o md5 das funções financeiras. **Ao mexer no
+`supabase/migrations`, confira o md5 das funções financeiras.
+
+**Só admin desde 30/09/2026.** A função era SECURITY DEFINER com EXECUTE para
+`authenticated` e sem conferir quem chamava: qualquer usuário logado apagava e
+recriava as comissões de qualquer pedido pelo PostgREST. Agora o EXECUTE é só de
+`service_role`, e a trava interna barra chamada direta de quem não é admin mas
+deixa passar a de dentro de gatilho (`pg_trigger_depth() > 0`) — o acerto do
+meio de pagamento (`sync_source_payment_method_from_mp`, gatilho em
+`mercadopago_payments`) roda às vezes durante a ação de um usuário comum. **Ao mexer no
 reprocessamento, confira também se cada beneficiário continuou recebendo** —
 conferir só a taxa e a data não pega esse tipo de perda.
 
@@ -214,3 +222,77 @@ crie `withdrawal_request` para isso.**
 ela pagou R$ 1.425,41, e `net_received_amount` é R$ 1.216,26 = valor − taxa do MP. É esse
 líquido que as fatias dividem. Fatia de rede sem upline naquele nível volta para quem
 vendeu como "Comissão Direta (sem upline N3)" — é regra desde 29/07, não sobra.
+
+## Carteira do sistema: o saldo sai do extrato (01/10/2026)
+
+`admin_system_wallet` era somada e subtraída à mão em sete funções e em dois
+pontos do app, e o extrato (`admin_system_wallet_entries`) gravado à parte. Em
+01/10 o saldo estava **R$ 239,12 acima** do que o extrato sustenta:
+
+- atribuir a parte de uma venda a nutricionista ou professor
+  (`nutritionist.functions.ts`, `professor.functions.ts`) lançava o débito e
+  não tirava do saldo — R$ 94,00 do Helton;
+- apagar venda (recriar conta de teste, `admin_purge_user_dependents`) apaga o
+  lançamento em cascata (`transaction_id … ON DELETE CASCADE`) e deixava o
+  dinheiro no saldo — ≈ R$ 145;
+- o estorno de pedido de parceiro debitava também a taxa do Mercado Pago, que
+  entra no extrato só como linha informativa (R$ 1,60 a menos).
+
+**Agora o saldo é derivado**, como as carteiras das pessoas.
+`conciliar_carteira_do_sistema(_corrigir)` soma o extrato e, com `true`,
+reescreve o saldo; o gatilho `trg_carteira_do_sistema_derivada` (constraint
+trigger, **adiado para o fim da transação**) chama isso sempre que o extrato
+muda. As funções antigas que ainda somam no saldo à mão podem continuar: a
+reescrita vem depois delas. **Código do app não deve mais tocar no saldo** — numa
+requisição separada, depois do gatilho, debitaria em dobro.
+
+**O que conta** (a regra está no cabeçalho da migração 20261001120000):
+
+| No extrato | Conta? |
+|---|---|
+| `credit` de venda que ainda existe | receita |
+| `subscription` de fatura que existe (inclui a baixa manual "isenta") | receita |
+| `credit` 'Rede nao liberada …' do fechamento | receita |
+| `credit` 'Taxa de Pagamento - …' / 'Imposto - …' (pedido de parceiro) | **não**: informativo |
+| `payment_fee` / `tax` negativos (mensalidade) | **não**: o `subscription` já é líquido |
+| `debit` | sai do saldo; sem origem conta como retirada |
+| `credit` de venda apagada | **não**: aparece em `sem_origem_ignorado` |
+
+**Somar o extrato inteiro dá número errado**: as linhas informativas entram como
+`credit` (pedido de parceiro) e a taxa e o imposto da mensalidade são
+descontados duas vezes. Para conferir, use a função, não `sum(amount)`.
+
+**Para testar o gatilho** numa transação desfeita: ele só roda no commit, então
+force com `SET CONSTRAINTS public.trg_carteira_do_sistema_derivada IMMEDIATE`
+antes de ler o saldo — e só uma vez por transação (ele marca a transação para
+não refazer a soma a cada linha).
+
+Backup do antes em `backup.conciliacao_sistema_20261001`.
+
+## Venda manual paga por link do Mercado Pago (05/10/2026)
+
+Quando a venda é cobrada fora do carrinho (link de pagamento), ela entra no
+sistema pelo mesmo caminho da loja: **um pedido por produto**, criado com
+`create_partner_product_order(produto, 'card', NULL, NULL)` com o JWT da
+própria cliente (a coach dela vira a vendedora sozinha), e depois marcado pago.
+
+**A armadilha:** `process_partner_product_order_paid` trata `paid_at` já
+preenchido como "já processado" e **sai antes de criar as comissões**. Para
+gravar a data real do pagamento, preencha `paid_at` e chame
+`admin_reprocess_partner_order` — ele zera a data, processa e devolve a data
+original, com comissões datadas e liberando em `paid_at + 7 dias`.
+
+**Em lote:** cada pedido recalcula várias carteiras (a do Nathan é pesada), e
+32 pedidos não cabem no tempo do MCP. Ligue `fitmind.recalculo_adiado = 'on'`
+na transação, processe de 6 a 9 por chamada e rode `recalc_wallets_for_owner`
+uma vez no fim para cada pessoa envolvida.
+
+O número da operação do Mercado Pago fica em `metadata.venda_manual_mp` e na
+nota de cada pedido — a operação não existe em `mercadopago_payments`, porque o
+link não passou pelo sistema. Primeiro caso: Andressa Januário (coach Aline
+Cardoso Miranda), 32 exames da 33doctor, R$ 516,39.
+
+**Tabela da 33doctor:** os preços foram calculados com a maquininha a 4,98%
+(`price_input_mode = 'receive'`, importação de 03/09). Com 2,99% desde 09/09,
+o Dr. Augustus recebe cerca de 2,1% **acima** do valor da tabela dele — nada no
+banco recalcula o preço quando a taxa muda.

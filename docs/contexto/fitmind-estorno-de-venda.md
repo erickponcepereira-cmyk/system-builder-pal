@@ -21,8 +21,10 @@ subtrair saldo na mão** — é desfazer o fato na origem e mandar recalcular:
   monta a partir de `paid_orders`;
 - nutricionista e professor têm tabela própria (`*_blocked_entries`) e função
   de cancelar (`cancel_nutritionist_blocked_entry`, `cancel_professor_blocked_entry`);
-- a parte do sistema está em `admin_system_wallet_entries` e é a única que exige
-  lançamento manual de débito.
+- a parte do sistema sai com um lançamento de débito em
+  `admin_system_wallet_entries` — só a taxa do sistema, nunca a linha
+  informativa da taxa do Mercado Pago. O saldo não se mexe à mão: desde
+  01/10/2026 ele é reescrito a partir do extrato (ver [[fitmind-financeiro]]).
 
 **Quem já sacou fica devendo, e o sistema já sabia disso.** `wallet_statement`
 calcula `available = liberado − sacado − gasto − adiantamento` e expõe o que
@@ -137,3 +139,24 @@ Três camadas agora:
 - gatilho `trg_estornado_nao_volta_a_pago` em `partner_product_orders`,
   `store_orders` e `transactions`: nada tira um pedido de `refunded`, nem SQL
   direto nem `admin_reprocess_partner_order`.
+
+## Reembolso lançado como saque (desfeito em 30/09/2026)
+
+Antes de existir o fluxo de estorno, quatro reembolsos do desafio (Rayssa e
+Willians, da Gabi; Adriana e Marcus Ferraz, da Suellyn) foram registrados como
+**saques pagos** de R$ 200 na carteira das duas coaches, com a observação
+"Estorno ...". Saque pago conta como `sacado`: a coach perdia os R$ 200 brutos
+inteiros, e a rede e o sistema ficavam com a parte deles de uma venda que não
+existia mais.
+
+O certo — e o que foi refeito — é o estorno: comissão da coach e da rede
+`cancelled`, débito na carteira do sistema, ticket revogado, venda
+`refunded`; e o lançamento de saque vira `rejected` com a explicação na nota.
+Cada coach ganhou de volta R$ 200 menos a comissão das duas vendas. O mesmo erro
+apareceu na Ana Flávia (Elisangela Miranda, Ticket Desafio 85, baixa de R$ 85 em
+03/09) e foi corrigido do mesmo jeito. Depois disso não sobrou nenhum saque pago
+com observação de estorno ou reembolso. Backup em
+`backup.reembolso_desafio_20260930`.
+
+**Ao ver um saque com observação de estorno ou reembolso, desconfie:** é o mesmo
+erro. Saque é só dinheiro que saiu para a pessoa.

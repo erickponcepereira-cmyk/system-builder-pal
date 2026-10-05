@@ -92,44 +92,47 @@ async function cancelarComissoes(
   return { quantidade: linhas.length, perfis };
 }
 
-/** A parte do sistema sai da carteira do admin, com lançamento no extrato. */
+/** Linhas que o extrato mostra só para informar: nunca entraram no saldo do sistema. */
+const LINHA_INFORMATIVA = /^(Taxa de Pagamento|Imposto) - /;
+
+type EntradaDoSistema = { amount: number | string; kind: string | null; slot_label: string | null };
+
+/** O que a venda ainda deixa no sistema: a taxa dele, menos o que já foi debitado. */
+function parteDoSistema(entradas: EntradaDoSistema[]): number {
+  const total = entradas.reduce((soma, e) => {
+    if (e.kind === "debit") return soma - Number(e.amount || 0);
+    if (e.kind !== "credit" || LINHA_INFORMATIVA.test(e.slot_label || "")) return soma;
+    return soma + Number(e.amount || 0);
+  }, 0);
+  return Math.round(total * 100) / 100;
+}
+
+/**
+ * A parte do sistema sai com um lançamento de débito no extrato.
+ *
+ * O saldo não é tocado aqui: ele é reescrito a partir do extrato no fim de toda
+ * transação que o altera (`trg_carteira_do_sistema_derivada`). Ler e gravar o
+ * saldo daqui, em outra requisição, debitaria em dobro. Debitar a taxa do
+ * Mercado Pago junto, como antes, tirava do saldo o que nunca entrou nele.
+ */
 async function debitarSistema(txIds: string[], partnerOrderId: string | null, motivo: string): Promise<number> {
-  const consulta = supabaseAdmin.from("admin_system_wallet_entries").select("amount, kind");
+  const consulta = supabaseAdmin.from("admin_system_wallet_entries").select("amount, kind, slot_label");
   const { data } = partnerOrderId
     ? await consulta.eq("partner_order_id", partnerOrderId)
     : await consulta.in("transaction_id", txIds);
 
-  const entradas = ((data as Array<{ amount: number | string; kind: string | null }>) || [])
-    .filter((e) => e.kind !== "debit");
-  const total = entradas.reduce((s, e) => s + Number(e.amount || 0), 0);
-  if (total <= 0) return 0;
+  const aDebitar = parteDoSistema((data as EntradaDoSistema[]) || []);
+  if (aDebitar <= 0) return 0;
 
   await supabaseAdmin.from("admin_system_wallet_entries").insert({
     transaction_id: partnerOrderId ? null : (txIds[0] ?? null),
     partner_order_id: partnerOrderId,
     slot_label: SLOT_ESTORNO,
-    amount: total,
+    amount: aDebitar,
     kind: "debit",
     notes: motivo,
   } as never);
-
-  const { data: carteira } = await supabaseAdmin
-    .from("admin_system_wallet")
-    .select("available_balance, total_earned")
-    .eq("id", true)
-    .maybeSingle();
-  const atual = carteira as { available_balance: number | string; total_earned: number | string } | null;
-  if (atual) {
-    await supabaseAdmin
-      .from("admin_system_wallet")
-      .update({
-        available_balance: Number(atual.available_balance || 0) - total,
-        total_earned: Number(atual.total_earned || 0) - total,
-        updated_at: new Date().toISOString(),
-      } as never)
-      .eq("id", true);
-  }
-  return total;
+  return aDebitar;
 }
 
 /** Nutricionista e professor guardam a parte deles em tabela própria. */
