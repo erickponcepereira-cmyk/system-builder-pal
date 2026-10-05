@@ -268,3 +268,29 @@ antes de ler o saldo — e só uma vez por transação (ele marca a transação 
 não refazer a soma a cada linha).
 
 Backup do antes em `backup.conciliacao_sistema_20261001`.
+
+## Venda manual paga por link do Mercado Pago (05/10/2026)
+
+Quando a venda é cobrada fora do carrinho (link de pagamento), ela entra no
+sistema pelo mesmo caminho da loja: **um pedido por produto**, criado com
+ com o JWT da
+própria cliente (a coach dela vira a vendedora sozinha), e depois marcado pago.
+
+**A armadilha:**  trata  já
+preenchido como "já processado" e **sai antes de criar as comissões**. Para
+gravar a data real do pagamento, preencha  e chame
+ — ele zera a data, processa e devolve a data
+original, com comissões datadas e liberando em .
+
+**Em lote:** cada pedido recalcula várias carteiras (a do Nathan é pesada), e
+32 pedidos não cabem no tempo do MCP. Ligue na transação, processe de 6 a 9 por chamada e rode uma vez no fim para cada pessoa envolvida.
+
+O número da operação do Mercado Pago fica em  e na
+nota de cada pedido — a operação não existe em , porque o
+link não passou pelo sistema. Primeiro caso: Andressa Januário (coach Aline
+Cardoso Miranda), 32 exames da 33doctor, R$ 516,39.
+
+**Tabela da 33doctor:** os preços foram calculados com a maquininha a 4,98%
+(, importação de 03/09). Com 2,99% desde 09/09,
+o Dr. Augustus recebe cerca de 2,1% **acima** do valor da tabela dele — nada no
+banco recalcula o preço quando a taxa muda.
