@@ -273,24 +273,26 @@ Backup do antes em `backup.conciliacao_sistema_20261001`.
 
 Quando a venda é cobrada fora do carrinho (link de pagamento), ela entra no
 sistema pelo mesmo caminho da loja: **um pedido por produto**, criado com
- com o JWT da
+`create_partner_product_order(produto, 'card', NULL, NULL)` com o JWT da
 própria cliente (a coach dela vira a vendedora sozinha), e depois marcado pago.
 
-**A armadilha:**  trata  já
+**A armadilha:** `process_partner_product_order_paid` trata `paid_at` já
 preenchido como "já processado" e **sai antes de criar as comissões**. Para
-gravar a data real do pagamento, preencha  e chame
- — ele zera a data, processa e devolve a data
-original, com comissões datadas e liberando em .
+gravar a data real do pagamento, preencha `paid_at` e chame
+`admin_reprocess_partner_order` — ele zera a data, processa e devolve a data
+original, com comissões datadas e liberando em `paid_at + 7 dias`.
 
 **Em lote:** cada pedido recalcula várias carteiras (a do Nathan é pesada), e
-32 pedidos não cabem no tempo do MCP. Ligue na transação, processe de 6 a 9 por chamada e rode uma vez no fim para cada pessoa envolvida.
+32 pedidos não cabem no tempo do MCP. Ligue `fitmind.recalculo_adiado = 'on'`
+na transação, processe de 6 a 9 por chamada e rode `recalc_wallets_for_owner`
+uma vez no fim para cada pessoa envolvida.
 
-O número da operação do Mercado Pago fica em  e na
-nota de cada pedido — a operação não existe em , porque o
+O número da operação do Mercado Pago fica em `metadata.venda_manual_mp` e na
+nota de cada pedido — a operação não existe em `mercadopago_payments`, porque o
 link não passou pelo sistema. Primeiro caso: Andressa Januário (coach Aline
 Cardoso Miranda), 32 exames da 33doctor, R$ 516,39.
 
 **Tabela da 33doctor:** os preços foram calculados com a maquininha a 4,98%
-(, importação de 03/09). Com 2,99% desde 09/09,
+(`price_input_mode = 'receive'`, importação de 03/09). Com 2,99% desde 09/09,
 o Dr. Augustus recebe cerca de 2,1% **acima** do valor da tabela dele — nada no
 banco recalcula o preço quando a taxa muda.
