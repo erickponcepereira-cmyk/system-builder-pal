@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice";
+export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice" | "checkout_group";
 
 export type SourceRecurrence = {
   productKind: string;

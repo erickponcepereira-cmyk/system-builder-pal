@@ -271,6 +271,12 @@ Backup do antes em `backup.conciliacao_sistema_20261001`.
 
 ## Venda manual paga por link do Mercado Pago (05/10/2026)
 
+**Desde 06/10/2026 o carrinho cobra vários produtos num pagamento só (cobrança
+agrupada, ver `docs/ESTADO-LOJA-E-CURSOS.md`) — venda manual deve ficar para
+quando o pagamento de fato aconteceu fora do sistema.** Segunda venda da
+Andressa, no Pix (R$ 516,38, um centavo retido pelo banco e descontado da
+Homocisteína): `metadata.venda_manual_pix`.
+
 Quando a venda é cobrada fora do carrinho (link de pagamento), ela entra no
 sistema pelo mesmo caminho da loja: **um pedido por produto**, criado com
 `create_partner_product_order(produto, 'card', NULL, NULL)` com o JWT da

@@ -6,7 +6,7 @@ import { loadMercadoPagoSDK, getMP, loadDeviceFingerprint, getDeviceId } from "@
 import { createPixCheckout, createCardCheckout, getPaymentStatus, getSourceRecurrence } from "@/lib/mercadopago.functions";
 
 
-type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice"; id: string };
+type Source = { kind: "store_order" | "transaction" | "partner_product_order" | "subscription_invoice" | "checkout_group"; id: string };
 type Payer = { email: string; name?: string; doc?: string };
 
 interface Props {

@@ -152,7 +152,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
   const [shippingAcceptCorrect, setShippingAcceptCorrect] = useState(false);
   const attachShippingFn = useServerFn(attachShippingToOrder);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" | "checkout_group"; paidItemIds: string[] } | null>(null);
   /** Pop-up "compra aprovada" com benefícios e WhatsApp do dono do produto. */
   const [purchased, setPurchased] = useState<{ items: PurchasedItem[]; buyerName: string | null } | null>(null);
   /** Converte itens do carrinho pagos no formato do pop-up de compra aprovada. */
@@ -691,125 +691,158 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
     setCart((current) => current.map((item) => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item).filter((item) => item.quantity > 0));
   };
 
+  type CreatedOrder = { kind: "store_order" | "partner_product_order"; id: string; total: number; number: string };
+
+  /**
+   * Cria o pedido de um item de parceiro/profissional. Cada produto vira um
+   * pedido próprio, com a sua cadeia de comissão. `clientStudentId` presente =
+   * venda do coach para um aluno.
+   */
+  const createPartnerOrder = async (item: CartItem, clientStudentId: string | null): Promise<CreatedOrder> => {
+    const refStudent = !clientStudentId && pendingReferrerStudentId && pendingReferrerStudentId !== ownStudentId ? pendingReferrerStudentId : null;
+    let rpc: string;
+    let args: Record<string, unknown>;
+    if (item.kind === "partner_company") {
+      const studentId = clientStudentId || ownStudentId;
+      if (!studentId) throw new Error("Conta de aluno não encontrada.");
+      rpc = "create_partner_company_order";
+      // _referred_by_student_id explícito: evita ambiguidade de assinatura no Postgres.
+      args = { _partner_product_id: item.sourceId, _student_id: studentId, _payment_method: partnerRpcPaymentMethod(), _referred_by_student_id: refStudent };
+    } else if (item.isSchedulable) {
+      if (!item.scheduledSlot) throw new Error("Selecione um horário para este atendimento.");
+      rpc = "create_scheduled_professional_order";
+      args = clientStudentId
+        ? { _professional_product_id: item.sourceId, _starts_at: item.scheduledSlot, _payment_method: partnerRpcPaymentMethod(), _student_id: clientStudentId }
+        : { _professional_product_id: item.sourceId, _starts_at: item.scheduledSlot, _payment_method: partnerRpcPaymentMethod(), _referred_by_student_id: refStudent };
+    } else {
+      rpc = "create_partner_product_order";
+      args = clientStudentId
+        ? { _professional_product_id: item.sourceId, _payment_method: partnerRpcPaymentMethod(), _buyer_student_id: clientStudentId }
+        : { _professional_product_id: item.sourceId, _payment_method: partnerRpcPaymentMethod(), _referred_by_student_id: refStudent };
+    }
+    const { data, error } = await supabase.rpc(rpc as never, args as never);
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Pedido não retornado");
+    const { data: orderData } = await supabase
+      .from("partner_product_orders" as never)
+      .select("id,order_number,gross_amount" as never)
+      .eq("id" as never, String(data) as never)
+      .maybeSingle();
+    const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+    const number = await ensureOrderNumber("partner_product_order", String(data), od?.order_number);
+    return { kind: "partner_product_order", id: od?.id || String(data), total: Number(od?.gross_amount || item.price), number: number || "" };
+  };
+
+  /** Os itens FitMind do aluno entram num pedido só, com a entrega anexada. */
+  const createStudentStoreOrder = async (fitmindItems: CartItem[], needsShipping: boolean): Promise<CreatedOrder> => {
+    const payload = fitmindItems.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
+    const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
+    if (error) throw new Error(error.message);
+    if (!orderId) throw new Error("Pedido não retornado");
+    const { data: orderData } = await supabase
+      .from("store_orders" as never)
+      .select("id,order_number,total_amount" as never)
+      .eq("id" as never, orderId as never)
+      .maybeSingle();
+    const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
+    if (needsShipping && od?.id) {
+      try {
+        // Determinar prazo médio máximo dos produtos físicos no carrinho
+        const productIds = fitmindItems.map((i) => i.sourceId).filter(Boolean);
+        let maxDeliveryDays: number | null = null;
+        if (productIds.length) {
+          const { data: prods } = await supabase.from("products").select("id,delivery_days").in("id", productIds as never);
+          const days = ((prods as any[]) || []).map((p) => Number(p.delivery_days || 0)).filter((n) => n > 0);
+          maxDeliveryDays = days.length ? Math.max(...days) : null;
+        }
+        await attachShippingFn({
+          data: {
+            kind: "store_order",
+            order_id: od.id,
+            save_to_profile: true,
+            delivery_days: maxDeliveryDays,
+            shipping_zip: shipping.zip,
+            shipping_address: `${shipping.address}${shipping.city ? `, ${shipping.city}` : ""}${shipping.state ? ` - ${shipping.state}` : ""}`,
+            shipping_number: shipping.number,
+            shipping_reference: shipping.reference,
+            shipping_location_url: shipping.location_url || undefined,
+          },
+        });
+      } catch (e) { console.warn("attach fitmind shipping", e); }
+    }
+    const number = await ensureOrderNumber("store_order", String(orderId), od?.order_number);
+    return { kind: "store_order", id: od?.id || String(orderId), total: Number(od?.total_amount || fitmindItems.reduce((soma, item) => soma + item.price * item.quantity, 0)), number: number || "" };
+  };
+
+  /** Os itens FitMind da venda do coach entram num pedido só. */
+  const createCoachStoreOrder = async (fitmindItems: CartItem[], clientStudentId: string): Promise<CreatedOrder> => {
+    const items = fitmindItems.map((c) => ({
+      productId: c.sourceId,
+      kind: c.kind,
+      title: c.title,
+      unitPrice: c.price,
+      quantity: c.quantity,
+      itemKind: c.kind === "item" ? (c.stock === null || c.stock === undefined ? "digital" : "physical") : undefined,
+    }));
+    const { data: res, error } = await supabase.rpc("create_coach_sale" as never, {
+      _client_id: clientStudentId,
+      _items: items,
+      _payment_method: paymentMethod,
+      _notes: null,
+    } as never);
+    if (error) throw new Error(error.message);
+    const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
+    const orderId = row?.order_id || row?.orderId;
+    if (!orderId) throw new Error("Pedido não retornado pelo servidor");
+    const number = await ensureOrderNumber("store_order", String(orderId), row?.order_number || row?.orderNumber);
+    return { kind: "store_order", id: String(orderId), total: Number(row?.total ?? row?.total_amount ?? fitmindItems.reduce((soma, item) => soma + item.price * item.quantity, 0)), number: number || "" };
+  };
+
+  /**
+   * Abre o pagamento do carrinho. Um pedido paga sozinho; mais de um vira uma
+   * cobrança agrupada — um pagamento só, e cada pedido é aprovado com ele.
+   */
+  const openPayment = async (pedidos: CreatedOrder[], payer: { email: string; name: string }, paidItemIds: string[]) => {
+    if (pedidos.length === 1) {
+      const [pedido] = pedidos;
+      setPayOrder({ id: pedido.id, total: pedido.total, number: pedido.number, ...payer, sourceKind: pedido.kind, paidItemIds });
+      return;
+    }
+    const { data, error } = await supabase.rpc("create_checkout_group" as never, {
+      _refs: pedidos.map((pedido) => ({ kind: pedido.kind, id: pedido.id })),
+    } as never);
+    if (error) throw new Error(error.message);
+    const grupo = data as unknown as { id: string; number: string; total: number };
+    setPayOrder({ id: grupo.id, total: Number(grupo.total), number: grupo.number, ...payer, sourceKind: "checkout_group", paidItemIds });
+  };
+
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
     const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
     const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
     const needsShipping = fitmindItems.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
+    // Entrega é conferida antes de criar qualquer pedido: antes, os pedidos de
+    // parceiro eram criados e só depois a tela reclamava do endereço.
+    if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.number || !shipping.reference)) {
+      toast.error("Preencha todos os dados de entrega.");
+      return;
+    }
+    if (needsShipping && (!shippingAcceptTerm || !shippingAcceptCorrect)) {
+      toast.error("Aceite os termos de entrega antes de finalizar.");
+      return;
+    }
     setCheckingOut(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
-
-      // Pague um produto de parceiro/profissional por vez (RPC do backend cria 1 pedido)
-      if (partnerItems.length > 0) {
-        const pp = partnerItems[0];
-        let ppId: string | null = null;
-        const refStudent = pendingReferrerStudentId && pendingReferrerStudentId !== ownStudentId ? pendingReferrerStudentId : null;
-        if (pp.kind === "partner_company") {
-          if (!ownStudentId) throw new Error("Conta de aluno não encontrada.");
-          const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
-            _partner_product_id: pp.sourceId,
-            _student_id: ownStudentId,
-            _payment_method: partnerRpcPaymentMethod(),
-            _referred_by_student_id: refStudent,
-          } as never);
-          if (error) throw new Error(error.message);
-          ppId = data as unknown as string;
-        } else if (pp.isSchedulable && pp.scheduledSlot) {
-          const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
-            _professional_product_id: pp.sourceId,
-            _starts_at: pp.scheduledSlot,
-            _payment_method: partnerRpcPaymentMethod(),
-            _referred_by_student_id: refStudent,
-          } as never);
-          if (error) throw new Error(error.message);
-          ppId = data as unknown as string;
-        } else if (pp.isSchedulable && !pp.scheduledSlot) {
-          throw new Error("Selecione um horário para este atendimento.");
-        } else {
-          const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
-            _professional_product_id: pp.sourceId,
-            _payment_method: partnerRpcPaymentMethod(),
-            _referred_by_student_id: refStudent,
-          } as never);
-          if (ppErr) throw new Error(ppErr.message);
-          ppId = data as unknown as string;
-        }
-        if (!ppId) throw new Error("Pedido não retornado");
-        const { data: orderData } = await supabase
-          .from("partner_product_orders" as never)
-          .select("id,order_number,gross_amount" as never)
-          .eq("id" as never, ppId as never)
-          .maybeSingle();
-        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
-        setCartOpen(false);
-        setPayOrder({
-          id: od?.id || String(ppId),
-          total: Number(od?.gross_amount || pp.price),
-          number: ppNumber || "",
-          email: userData.user?.email || "",
-          name: userData.user?.user_metadata?.name || "",
-          sourceKind: "partner_product_order",
-          paidItemIds: [pp.id],
-        });
-        await load();
-        return;
-      }
-
-      if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.number || !shipping.reference)) {
-        toast.error("Preencha todos os dados de entrega.");
-        return;
-      }
-      if (needsShipping && (!shippingAcceptTerm || !shippingAcceptCorrect)) {
-        toast.error("Aceite os termos de entrega antes de finalizar.");
-        return;
-      }
-
-      const payload = fitmindItems.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
-      if (error) throw new Error(error.message);
-      if (!orderId) throw new Error("Pedido não retornado");
-      const { data: orderData } = await supabase
-        .from("store_orders" as never)
-        .select("id,order_number,total_amount" as never)
-        .eq("id" as never, orderId as never)
-        .maybeSingle();
-      const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
-      if (needsShipping && od?.id) {
-        try {
-          // Determinar prazo médio máximo dos produtos físicos no carrinho
-          const productIds = fitmindItems.map((i) => i.sourceId).filter(Boolean);
-          let maxDeliveryDays: number | null = null;
-          if (productIds.length) {
-            const { data: prods } = await supabase.from("products").select("id,delivery_days").in("id", productIds as never);
-            const days = ((prods as any[]) || []).map((p) => Number(p.delivery_days || 0)).filter((n) => n > 0);
-            maxDeliveryDays = days.length ? Math.max(...days) : null;
-          }
-          await attachShippingFn({
-            data: {
-              kind: "store_order",
-              order_id: od.id,
-              save_to_profile: true,
-              delivery_days: maxDeliveryDays,
-              shipping_zip: shipping.zip,
-              shipping_address: `${shipping.address}${shipping.city ? `, ${shipping.city}` : ""}${shipping.state ? ` - ${shipping.state}` : ""}`,
-              shipping_number: shipping.number,
-              shipping_reference: shipping.reference,
-              shipping_location_url: shipping.location_url || undefined,
-            },
-          });
-        } catch (e) { console.warn("attach fitmind shipping", e); }
-      }
-      const storeNumber = await ensureOrderNumber("store_order", String(orderId), od?.order_number);
+      const pedidos: CreatedOrder[] = [];
+      for (const item of partnerItems) pedidos.push(await createPartnerOrder(item, null));
+      if (fitmindItems.length > 0) pedidos.push(await createStudentStoreOrder(fitmindItems, needsShipping));
       setCartOpen(false);
-      setPayOrder({
-        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: storeNumber || "",
-        email: userData.user?.email || "",
-        name: userData.user?.user_metadata?.name || "",
-        sourceKind: "store_order",
-        paidItemIds: fitmindItems.map((i) => i.id),
-      });
+      await openPayment(
+        pedidos,
+        { email: userData.user?.email || "", name: userData.user?.user_metadata?.name || "" },
+        cart.map((item) => item.id),
+      );
       await load();
     } catch (e: any) {
       toast.error(cleanCheckoutCreationError(e));
@@ -826,89 +859,11 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
     const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
     setCheckingOut(true);
     try {
-      // Pague um produto de parceiro/profissional por vez
-      if (partnerItems.length > 0) {
-        const pp = partnerItems[0];
-        let ppId: string | null = null;
-        if (pp.kind === "partner_company") {
-          const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
-            _partner_product_id: pp.sourceId,
-            _student_id: selectedClient.id,
-            _payment_method: partnerRpcPaymentMethod(),
-            // Explícito: evita ambiguidade de assinatura no Postgres.
-            _referred_by_student_id: null,
-          } as never);
-          if (error) throw new Error(error.message);
-          ppId = data as unknown as string;
-        } else if (pp.isSchedulable && pp.scheduledSlot) {
-          const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
-            _professional_product_id: pp.sourceId,
-            _starts_at: pp.scheduledSlot,
-            _payment_method: partnerRpcPaymentMethod(),
-            _student_id: selectedClient.id,
-          } as never);
-          if (error) throw new Error(error.message);
-          ppId = data as unknown as string;
-        } else if (pp.isSchedulable && !pp.scheduledSlot) {
-          throw new Error("Selecione um horário para este atendimento.");
-        } else {
-          const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
-            _professional_product_id: pp.sourceId,
-            _payment_method: partnerRpcPaymentMethod(),
-            _buyer_student_id: selectedClient.id,
-          } as never);
-          if (ppErr) throw new Error(ppErr.message);
-          ppId = data as unknown as string;
-        }
-        if (!ppId) throw new Error("Pedido não retornado");
-        const { data: orderData } = await supabase
-          .from("partner_product_orders" as never)
-          .select("id,order_number,gross_amount" as never)
-          .eq("id" as never, ppId as never)
-          .maybeSingle();
-        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        const ppNumber = await ensureOrderNumber("partner_product_order", String(ppId), od?.order_number);
-        setCartOpen(false);
-        setPayOrder({
-          id: od?.id || String(ppId),
-          total: Number(od?.gross_amount || pp.price),
-          number: ppNumber || "",
-          email: selectedClient.email || "",
-          name: selectedClient.name,
-          sourceKind: "partner_product_order",
-          paidItemIds: [pp.id],
-        });
-        toast.success("Venda criada. Finalize o pagamento.");
-        loadCoachData();
-        return;
-      }
-
-      const items = fitmindItems.map((c) => ({
-        productId: c.sourceId,
-        kind: c.kind,
-        title: c.title,
-        unitPrice: c.price,
-        quantity: c.quantity,
-        itemKind: c.kind === "item" ? (c.stock === null || c.stock === undefined ? "digital" : "physical") : undefined,
-      }));
-      const { data: res, error: rpcErr } = await supabase.rpc("create_coach_sale" as never, {
-        _client_id: selectedClient.id,
-        _items: items,
-        _payment_method: paymentMethod,
-        _notes: null,
-      } as never);
-      if (rpcErr) throw new Error(rpcErr.message);
-      const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
-      const orderId = row?.order_id || row?.orderId;
-      if (!orderId) throw new Error("Pedido não retornado pelo servidor");
-      const orderNumber = (await ensureOrderNumber("store_order", String(orderId), row?.order_number || row?.orderNumber)) || "";
+      const pedidos: CreatedOrder[] = [];
+      for (const item of partnerItems) pedidos.push(await createPartnerOrder(item, selectedClient.id));
+      if (fitmindItems.length > 0) pedidos.push(await createCoachStoreOrder(fitmindItems, selectedClient.id));
       setCartOpen(false);
-      setPayOrder({
-        id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
-        email: selectedClient.email || "", name: selectedClient.name,
-        sourceKind: "store_order",
-        paidItemIds: fitmindItems.map((i) => i.id),
-      });
+      await openPayment(pedidos, { email: selectedClient.email || "", name: selectedClient.name }, cart.map((item) => item.id));
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
@@ -920,8 +875,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
 
   const checkout = coachMode ? checkoutAsCoach : checkoutAsStudent;
 
-  // Quantos pedidos este carrinho gera. Enquanto a cobrança for uma por
-  // pedido, a tela paga um de cada vez — e precisa avisar antes, não depois.
+  // Quantos pedidos este carrinho gera. Cada vendedor recebe o pedido dele, mas
+  // o pagamento é um só: os pedidos entram numa cobrança agrupada.
   const orderSteps = planOrderSteps(cart);
   const multiOrder = orderSteps.length > 1;
 
@@ -931,7 +886,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
         Este carrinho vira {orderSteps.length} pedidos
       </p>
       <p className="mt-1 text-[10px] leading-relaxed text-amber-500/80">
-        Cada vendedor recebe o pedido dele. Você paga um de cada vez — ao concluir um, o próximo abre em seguida.
+        Cada vendedor recebe o pedido dele, e você paga tudo de uma vez.
       </p>
       <ul className="mt-2 space-y-0.5">
         {orderSteps.map((step, index) => (
@@ -954,7 +909,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
     : coachMode && !selectedClient
       ? "Selecionar Aluno →"
       : multiOrder
-        ? `Pagar 1 de ${orderSteps.length}`
+        ? `Pagar ${orderSteps.length} pedidos`
         : "Finalizar";
 
 
@@ -1174,8 +1129,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 <WalletPayButton
                   orderId={payOrder.id}
                   amount={payOrder.total}
-                  kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
-                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                  kind={payOrder.sourceKind === "store_order" ? "store" : payOrder.sourceKind === "checkout_group" ? "group" : "partner"}
+                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind !== "partner_product_order") setShipping(initialShipping); setPayOrder(null); load(); }}
                 />
               </div>
               <MercadoPagoCheckout
@@ -1184,7 +1139,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
                 description={`Pedido ${payOrder.number}`}
                 defaultPayer={{ email: payOrder.email, name: payOrder.name }}
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-                onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind !== "partner_product_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
               {coachMode && !payOrder.number && (
                 <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">
@@ -1692,8 +1647,8 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               <WalletPayButton
                 orderId={payOrder.id}
                 amount={payOrder.total}
-                kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
-                onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+                kind={payOrder.sourceKind === "store_order" ? "store" : payOrder.sourceKind === "checkout_group" ? "group" : "partner"}
+                onPaid={() => { const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind !== "partner_product_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
               />
             </div>
             <MercadoPagoCheckout
@@ -1703,7 +1658,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience, requ
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setPurchased({ items: buildPurchasedItems(ids), buyerName: (coachMode ? selectedClient?.name : payOrder?.name) || null }); setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind !== "partner_product_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && !payOrder.number && (
               <p className="mt-4 rounded-xl bg-muted p-3 text-[11px] text-muted-foreground">

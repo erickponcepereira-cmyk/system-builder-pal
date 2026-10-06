@@ -1,6 +1,72 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+const JSON_HEADERS = { "content-type": "application/json" };
+
+type GroupChild = { source_kind: "store_order" | "partner_product_order"; source_id: string; amount: number };
+
+/** O que a página de pagamento mostra de cada pedido de uma cobrança agrupada. */
+async function describeGroupChild(child: GroupChild) {
+  if (child.source_kind === "store_order") {
+    const { data: items } = await supabaseAdmin
+      .from("store_order_items")
+      .select("title, quantity, unit_price, total_price")
+      .eq("order_id", child.source_id);
+    return {
+      items: (items || []).map((i: any) => ({ title: i.title, quantity: i.quantity, unitPrice: Number(i.unit_price), totalPrice: Number(i.total_price) })),
+      product: null,
+    };
+  }
+  const { data } = await supabaseAdmin
+    .from("partner_product_orders" as never)
+    .select("professional_product_id, partner_product_id, professional_product:professional_product_id(name), partner_product:partner_product_id(name)" as never)
+    .eq("id" as never, child.source_id as never)
+    .maybeSingle();
+  const po = data as unknown as { professional_product_id: string | null; partner_product_id: string | null; professional_product?: { name: string | null } | null; partner_product?: { name: string | null } | null } | null;
+  const title = po?.professional_product?.name || po?.partner_product?.name || "Produto";
+  const productId = po?.partner_product_id || po?.professional_product_id || null;
+  const kind: "partner" | "professional" = po?.partner_product_id ? "partner" : "professional";
+  const price = Number(child.amount);
+  return {
+    items: [{ title, quantity: 1, unitPrice: price, totalPrice: price }],
+    product: productId ? { productId, kind, productName: title, price, sellerName: null, whatsapp: null } : null,
+  };
+}
+
+/** Link de pagamento de uma cobrança agrupada (número CG-…): um pagamento, vários pedidos. */
+async function checkoutGroupResponse(groupNumber: string): Promise<Response> {
+  const { data } = await supabaseAdmin
+    .from("checkout_groups" as never)
+    .select("id, group_number, status, payment_method, total_amount, created_at, student_id" as never)
+    .eq("group_number" as never, groupNumber as never)
+    .maybeSingle();
+  const group = data as unknown as { id: string; group_number: string; status: string; payment_method: string; total_amount: number; created_at: string; student_id: string } | null;
+  if (!group) return new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: JSON_HEADERS });
+
+  const [{ data: children }, { data: student }] = await Promise.all([
+    supabaseAdmin.from("checkout_group_items" as never).select("source_kind, source_id, amount" as never).eq("group_id" as never, group.id as never),
+    supabaseAdmin.from("students").select("profiles:profile_id(name,email)").eq("id", group.student_id).maybeSingle(),
+  ]);
+  const described = await Promise.all(((children as unknown as GroupChild[]) || []).map(describeGroupChild));
+
+  return new Response(JSON.stringify({
+    order: {
+      id: group.id,
+      sourceKind: "checkout_group",
+      number: group.group_number,
+      status: group.status,
+      paymentMethod: group.payment_method,
+      total: Number(group.total_amount),
+      createdAt: group.created_at,
+      clientName: (student as any)?.profiles?.name || "Cliente",
+      clientEmail: (student as any)?.profiles?.email || null,
+    },
+    items: described.flatMap((d) => d.items),
+    products: described.map((d) => d.product).filter(Boolean),
+  }), { headers: JSON_HEADERS });
+}
+
+
 export const Route = createFileRoute("/api/public/pay/$orderNumber")({
   server: {
     handlers: {
@@ -9,6 +75,8 @@ export const Route = createFileRoute("/api/public/pay/$orderNumber")({
         if (!/^(PP-[A-Z0-9]+|[A-Z]+-[A-Z0-9]+)$/.test(orderNumber)) {
           return new Response(JSON.stringify({ error: "invalid_order_number" }), { status: 400, headers: { "content-type": "application/json" } });
         }
+        if (orderNumber.startsWith("CG-")) return checkoutGroupResponse(orderNumber);
+
         const { data: order } = await supabaseAdmin
           .from("store_orders")
           .select("id, order_number, status, payment_method, total_amount, created_at, student_id, notes")

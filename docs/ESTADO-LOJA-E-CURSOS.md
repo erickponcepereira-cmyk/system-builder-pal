@@ -144,14 +144,22 @@ Cada uma custou investigação. Não redescubra.
   perde nada (o público fica onde está), mas também não aproveita.
 - **`StorePage.tsx` tem ~1854 linhas** e ainda opera com as duas abas
   (`storeTab: "fitmind" | "market"`).
-- **Bug do carrinho multi-vendedor (produção):** `StorePage.tsx:678` pega
-  `partnerItems[0]` e dá `return` **antes** de processar os itens FitMind.
-  Carrinho com Protocolo + shake cobra só o shake. Já existe `planOrderSteps()`
-  que calcula em quantos pedidos o carrinho vira, e a UI já avisa.
-- **Causa estrutural:** cada RPC de parceiro cria **um pedido por produto**
-  (cada um carrega a própria cadeia de comissão) e `MercadoPagoCheckout` recebe
-  `source: { kind, id }` — **uma cobrança por pedido**. Não existe "juntar num
-  pedido só" sem refazer o rateio.
+- **Carrinho multi-vendedor — resolvido em 06/10/2026 com a cobrança agrupada.**
+  Cada RPC de parceiro continua criando **um pedido por produto** (cada um
+  carrega a própria cadeia de comissão), e isso não mudou. O que mudou é a
+  cobrança: `checkout_groups`/`checkout_group_items` juntam os pedidos do
+  carrinho e o Mercado Pago recebe uma origem só, `checkout_group:<id>`. A
+  aprovação aprova cada pedido como se tivesse sido pago sozinho
+  (`approveCheckoutGroup` em `mercadopago-impl.server.ts`). Antes, o checkout
+  pagava um pedido por vez — 32 exames eram 32 pagamentos, e a venda da Andressa
+  (05/10) teve de ir por link fora do sistema.
+  - `create_checkout_group(_refs)` confere dono, status `pending`, mesmo aluno,
+    mesmo meio de pagamento e que o pedido não está em outra cobrança aberta.
+  - Link do coach: `/pay/CG-XXXXXXXX` (`api.public.pay.$orderNumber.ts`).
+  - Carteira: `payCheckoutGroupWithWallet` confere o saldo contra o total antes.
+  - Estorno continua **por pedido**; a cobrança fica `paid`.
+  - **Só o `StorePage` (loja em produção) foi ligado.** A loja nova
+    (`store-checkout.ts`, atrás do gate) ainda paga um pedido por vez.
 - **`.limit(1000)` silencioso:** o catálogo descartava 572 dos 1572 produtos de
   profissional. Corrigido para 5000.
 - **PostgREST corta resposta de função em 1000 linhas** e `Range` não fura esse
@@ -328,8 +336,8 @@ não tocar no que está vendendo. Unificar depois, quando a nova provar-se.
 ## 7. Decisões do dono, para não reabrir
 
 - Gate das superfícies de teste por `profiles.is_master_admin` (Erick e Nathan).
-- Carrinho multi-vendedor: **um pedido por vendedor por ora**; unificar numa
-  cobrança só depois, com calma.
+- Carrinho multi-vendedor: um pedido por vendedor, **pago numa cobrança só**
+  (cobrança agrupada, 06/10/2026). A decisão anterior era cobrar um por vez.
 - Loja nova: **copiar** carrinho e checkout agora, unificar depois.
 - Cursos aparecem na loja junto com o resto, **sem aba separada** — aba própria
   divide tráfego e mata venda cruzada.

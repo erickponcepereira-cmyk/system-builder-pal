@@ -13,6 +13,7 @@ const ALLOWED_KINDS = new Set<SourceKind>([
   "transaction",
   "partner_product_order",
   "subscription_invoice",
+  "checkout_group",
 ]);
 
 export const MP_SWEEP_SETTING_KEY = "mp_sweep_last_run";

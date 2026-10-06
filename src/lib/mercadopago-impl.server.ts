@@ -11,7 +11,19 @@ export function siteUrl() {
   }
 }
 
-export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice";
+export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice" | "checkout_group";
+
+/** Pedido que pode entrar numa cobrança agrupada. */
+type GroupItemKind = "store_order" | "partner_product_order";
+type GroupItem = { source_kind: GroupItemKind; source_id: string; amount: number | string };
+
+async function loadGroupItems(groupId: string): Promise<GroupItem[]> {
+  const { data } = await supabaseAdmin
+    .from("checkout_group_items" as never)
+    .select("source_kind, source_id, amount" as never)
+    .eq("group_id" as never, groupId as never);
+  return (data as unknown as GroupItem[]) || [];
+}
 
 const ANNUAL_ACTIVATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
 
@@ -34,6 +46,23 @@ async function applyAnnualActivationFallback(orderId: string) {
 }
 
 export async function loadSource(kind: SourceKind, id: string) {
+  if (kind === "checkout_group") {
+    const { data } = await supabaseAdmin
+      .from("checkout_groups" as never)
+      .select("id, group_number, total_amount, student_id, status, mp_payment_id" as never)
+      .eq("id" as never, id as never)
+      .maybeSingle();
+    const group = data as unknown as { group_number: string; total_amount: number; student_id: string; status: string; mp_payment_id: string | null } | null;
+    if (!group) throw new Error("Cobrança não encontrada");
+    const itens = await loadGroupItems(id);
+    return {
+      amount: Number(group.total_amount),
+      description: `Compra de ${itens.length} itens (${group.group_number})`,
+      studentId: group.student_id,
+      alreadyPaid: group.status === "paid",
+      existingPaymentId: group.mp_payment_id,
+    };
+  }
   if (kind === "store_order") {
     const { data, error } = await supabaseAdmin
       .from("store_orders")
@@ -121,6 +150,14 @@ export async function buildRiskContext(
 ) {
   let items: Array<{ id: string; title: string; quantity: number; unitPrice: number; categoryId?: string }> = [];
   try {
+    if (kind === "checkout_group") {
+      items = (await loadGroupItems(id)).map((item) => ({
+        id: item.source_id,
+        title: `Pedido ${item.source_id.slice(0, 8)}`,
+        quantity: 1,
+        unitPrice: Number(item.amount || 0),
+      }));
+    }
     if (kind === "store_order") {
       const { data } = await supabaseAdmin
         .from("store_order_items")
@@ -180,7 +217,12 @@ export async function attachPaymentToSource(
   id: string,
   mpRowId: string
 ) {
-  if (kind === "store_order") {
+  if (kind === "checkout_group") {
+    await supabaseAdmin
+      .from("checkout_groups" as never)
+      .update({ mp_payment_id: mpRowId } as never)
+      .eq("id" as never, id as never);
+  } else if (kind === "store_order") {
     await supabaseAdmin.from("store_orders").update({ mp_payment_id: mpRowId }).eq("id", id);
   } else if (kind === "partner_product_order") {
     await supabaseAdmin
@@ -198,6 +240,7 @@ export async function attachPaymentToSource(
 }
 
 const TABELA_DA_ORIGEM: Record<SourceKind, string> = {
+  checkout_group: "checkout_groups",
   store_order: "store_orders",
   partner_product_order: "partner_product_orders",
   subscription_invoice: "subscription_invoices",
@@ -225,9 +268,41 @@ async function foiEstornada(kind: SourceKind, id: string): Promise<boolean> {
   return status === "refunded" || status === "chargeback";
 }
 
+/**
+ * Cobrança agrupada: o pagamento é um só, e cada pedido dela é aprovado como se
+ * tivesse sido pago sozinho — o rateio de cada um não muda. Aprovar de novo é
+ * seguro: pedido já pago não é reprocessado. Se algum falhar, a cobrança fica
+ * aberta e o erro sobe, para o webhook, a varredura ou o alerta tentarem de novo.
+ */
+async function approveCheckoutGroup(groupId: string) {
+  const itens = await loadGroupItems(groupId);
+  if (!itens.length) throw new Error("Cobrança agrupada sem pedidos");
+  const falhas: string[] = [];
+  for (const item of itens) {
+    try {
+      await applyApproval(item.source_kind, item.source_id);
+    } catch (e) {
+      falhas.push(`${item.source_kind} ${item.source_id}: ${(e as Error)?.message || e}`);
+    }
+  }
+  if (falhas.length) {
+    throw new Error(`Cobrança agrupada: ${falhas.length} de ${itens.length} pedidos não processaram — ${falhas.join("; ")}`);
+  }
+  const agora = new Date().toISOString();
+  await supabaseAdmin
+    .from("checkout_groups" as never)
+    .update({ status: "paid", paid_at: agora, updated_at: agora } as never)
+    .eq("id" as never, groupId as never)
+    .eq("status" as never, "pending" as never);
+}
+
 export async function applyApproval(kind: SourceKind, id: string) {
   if (await foiEstornada(kind, id)) {
     console.warn(`[mp] aprovação ignorada: ${kind} ${id} foi estornado`);
+    return;
+  }
+  if (kind === "checkout_group") {
+    await approveCheckoutGroup(id);
     return;
   }
   if (kind === "store_order") {
@@ -337,7 +412,9 @@ const ACTIVE_PAYMENT_STATUSES = new Set(["pending", "in_process", "approved"]);
 async function clearRejectedSourcePointer(kind: SourceKind, id: string, mpRowId: string, status: string) {
   if (ACTIVE_PAYMENT_STATUSES.has(status)) return;
   const patch = { mp_payment_id: null } as never;
-  if (kind === "store_order") {
+  if (kind === "checkout_group") {
+    await supabaseAdmin.from("checkout_groups" as never).update(patch).eq("id" as never, id as never).eq("mp_payment_id" as never, mpRowId as never);
+  } else if (kind === "store_order") {
     await supabaseAdmin.from("store_orders").update(patch).eq("id", id).eq("mp_payment_id", mpRowId as never);
   } else if (kind === "partner_product_order") {
     await supabaseAdmin.from("partner_product_orders" as never).update(patch).eq("id" as never, id as never).eq("mp_payment_id" as never, mpRowId as never);
@@ -803,7 +880,8 @@ export async function handleGetStatus(paymentRowId: string) {
           (row.source_kind === "store_order" ||
             row.source_kind === "transaction" ||
             row.source_kind === "partner_product_order" ||
-            row.source_kind === "subscription_invoice")
+            row.source_kind === "subscription_invoice" ||
+            row.source_kind === "checkout_group")
         ) {
           try {
             await applyApproval(row.source_kind as SourceKind, row.source_id as string);
@@ -822,6 +900,16 @@ export async function handleGetStatus(paymentRowId: string) {
       await applyApproval("store_order", row.source_id as string);
     } catch (e) {
       console.error("[mp poll] approved store order reapply failed:", e);
+    }
+  }
+  // Cobrança agrupada aprovada com algum pedido que não processou: tenta de novo
+  // enquanto o cliente espera na tela. Pedido já pago não é reprocessado.
+  if (row.status === "approved" && row.source_kind === "checkout_group") {
+    try {
+      const src = await loadSource("checkout_group", row.source_id as string);
+      if (!src.alreadyPaid) await applyApproval("checkout_group", row.source_id as string);
+    } catch (e) {
+      console.error("[mp poll] approved checkout group reapply failed:", e);
     }
   }
   return row;
