@@ -1,3 +1,38 @@
+## 20261005120000_avaliacao_importada_duas_vezes.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de cadastro duplicado |
+| **Data** | 05/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 05/10/2026**, conferida por consulta |
+
+Apaga **6.370 copias exatas** de avaliacao fisica em 3.105 fichas, sobra de duas
+importacoes que rodaram duas vezes: a reimportacao da Ana Flavia em 28/05/2026
+(1.753 linhas) e a do Nathan em 06/07/2026, que gravou tudo em dobro no mesmo
+dia (4.614 linhas). De 22.575 avaliacoes para 16.205.
+
+Copia exata = linha identica campo a campo a outra, ignorando `id`,
+`created_at` e `updated_at`. Fica uma de cada, preferindo a que tem link
+publico; linha com link nunca e apagada.
+
+**Nao toca** em duas coisas que tambem apareciam agrupadas: 782 pares com a
+mesma data e medida diferente (sao duas pesagens de verdade) e as 9.336 linhas
+do Lucinei criadas em 28/05/2026, em que o importador carimbou a data da
+importacao em todas — e data perdida, nao copia.
+
+Depois: zero copia exata na base, nenhuma ficha sem avaliacao, nenhum
+`/resultado/` quebrado. Os 8 links publicos orfaos que existem sao anteriores,
+todos de avaliacao que o proprio coach apagou — o fluxo de exclusao do coach
+nao limpa `assessment_shares`. Detalhes em
+`docs/contexto/fitmind-avaliacoes-importadas.md`.
+
+Retrato do antes em `backup.avaliacoes_duplicadas_20261005` (6.370 linhas, a
+linha inteira em `to_jsonb`).
+
+---
+
 ## 20261003130000_emmily_ventura_as_avaliacoes_dela.sql
 
 | | |

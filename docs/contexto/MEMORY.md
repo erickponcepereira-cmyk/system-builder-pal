@@ -61,6 +61,8 @@ volta a ficar preso numa máquina.
 - [Fechamento da rede](fitmind-fechamento-da-rede.md) — a regra de subir para o upline que
   bateu meta, e o que já foi fechado
 - [Unificação de cadastros](fitmind-unificacao-de-cadastros.md) — duas contas da mesma pessoa
+- [Avaliações importadas](fitmind-avaliacoes-importadas.md) — a cópia exata que rodou
+  duas vezes, as datas que o importador carimbou errado, e o link que fica órfão
   viram uma: o destino é o de acesso mais recente, o furo que deixava qualquer um unificar,
   e por que o recálculo de carteira espera
 - [Pedido de parceria](fitmind-pedido-de-parceria.md) — o que o pedido cria sozinho (espelho,

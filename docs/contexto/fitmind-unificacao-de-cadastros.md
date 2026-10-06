@@ -132,12 +132,10 @@ where table_schema = 'public' and data_type = 'uuid' and t.table_type = 'BASE TA
 `tableforest` precisa ser **false** (o `true` devolve varios `<row>` sem raiz e o
 `xpath` nao parseia quando ha mais de uma linha).
 
-**Achado a resolver: a importacao de avaliacoes rodou duas vezes.** Em
-28/05/2026 as fichas importadas em 18/05 foram reimportadas iguais:
-**3.683 clientes de 4 coaches** tem avaliacao em dobro, 9.669 linhas sobrando,
-6.347 pares identicos campo a campo (e ha ficha inteira em duplicata, como
-"WALQUIRIA JOSEFA BOAVENTURA" na lista da Ana Flavia). So as tres da Emmily
-foram limpas.
+**A importacao de avaliacoes tinha rodado duas vezes** — 6.370 copias exatas em
+3.105 fichas, achadas por aqui e limpas em 05/10/2026. O que era copia, o que
+era pesagem de verdade na mesma data e o que era data perdida esta em
+[[fitmind-avaliacoes-importadas]].
 
 Migrations do caso: `20261003120000_emmily_ventura_um_cadastro_so.sql` e
 `20261003130000_emmily_ventura_as_avaliacoes_dela.sql`. Retratos do antes em
