@@ -1529,19 +1529,30 @@ export const listBlockedCreatorOrders = createServerFn({ method: "POST" })
   });
 
 
-/** Libera antecipadamente o valor de criador dos pedidos escolhidos. */
+/**
+ * Libera antecipadamente o valor de criador dos pedidos escolhidos.
+ *
+ * Em lotes, como as comissões: cada lote é uma transação própria e recalcula a
+ * carteira no fim. Se um lote falhar, os anteriores já ficaram liberados — o
+ * erro diz quanto.
+ */
 export const advanceCreatorRelease = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((data: { profileId: string; orderIds: string[]; reason?: string }) => data)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
     if (!data.orderIds?.length) throw new Error("Selecione ao menos um pedido");
-    const { data: total, error } = await supabaseAdmin.rpc("admin_advance_creator_release" as never, {
-      _profile_id: data.profileId,
-      _order_ids: data.orderIds,
-      _admin_user_id: context.userId,
-      _reason: data.reason || null,
-    } as never);
-    if (error) throw new Error(error.message);
-    return { ok: true, total: n(total as unknown as number) };
+
+    let total = 0;
+    for (let i = 0; i < data.orderIds.length; i += LOTE_ANTECIPACAO) {
+      const { data: parcial, error } = await supabaseAdmin.rpc("admin_advance_creator_release" as never, {
+        _profile_id: data.profileId,
+        _order_ids: data.orderIds.slice(i, i + LOTE_ANTECIPACAO),
+        _admin_user_id: context.userId,
+        _reason: data.reason || null,
+      } as never);
+      if (error) throw new Error(`Liberado ${total.toFixed(2)} antes da falha: ${error.message}`);
+      total += n(parcial as unknown as number);
+    }
+    return { ok: true, total: n(total) };
   });

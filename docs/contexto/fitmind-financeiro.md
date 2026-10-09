@@ -271,6 +271,12 @@ Backup do antes em `backup.conciliacao_sistema_20261001`.
 
 ## Venda manual paga por link do Mercado Pago (05/10/2026)
 
+**Desde 06/10/2026 o carrinho cobra vários produtos num pagamento só (cobrança
+agrupada, ver `docs/ESTADO-LOJA-E-CURSOS.md`) — venda manual deve ficar para
+quando o pagamento de fato aconteceu fora do sistema.** Segunda venda da
+Andressa, no Pix (R$ 516,38, um centavo retido pelo banco e descontado da
+Homocisteína): `metadata.venda_manual_pix`.
+
 Quando a venda é cobrada fora do carrinho (link de pagamento), ela entra no
 sistema pelo mesmo caminho da loja: **um pedido por produto**, criado com
 `create_partner_product_order(produto, 'card', NULL, NULL)` com o JWT da
@@ -296,3 +302,23 @@ Cardoso Miranda), 32 exames da 33doctor, R$ 516,39.
 (`price_input_mode = 'receive'`, importação de 03/09). Com 2,99% desde 09/09,
 o Dr. Augustus recebe cerca de 2,1% **acima** do valor da tabela dele — nada no
 banco recalcula o preço quando a taxa muda.
+
+## Antecipar vendas de produto estourava o tempo (06/10/2026)
+
+O pagamento à 33doctor pedia liberar as 64 vendas do Dr. Augustus (R$ 775,91)
+pela "Antecipar liberação" do painel de pagamentos, e o banco respondeu
+`statement timeout`. `admin_advance_creator_release` marcava os pedidos num
+UPDATE só, e **cada linha** disparava dois gatilhos de recálculo de carteira —
+64 recálculos da mesma carteira dentro do limite de 8s do PostgREST. O comando
+inteiro foi cancelado: nada ficou liberado pela metade.
+
+- O UPDATE agora roda com `fitmind.recalculo_adiado = 'on'` e a função
+  recalcula cada carteira envolvida uma vez, no fim.
+- O servidor manda os pedidos em lotes de 25 (`advanceCreatorRelease`), como
+  já fazia com as comissões.
+- A tela ganhou "Selecionar todas" com "N de M marcadas" e o total da lista: a
+  caixa mostra 7 linhas por vez, e marcar 64 à mão deixou R$ 26,51 de fora
+  (R$ 749,40 contra R$ 775,91 no extrato).
+- As cinco funções da tela confiam no `_admin_user_id` que recebem. Estavam
+  abertas a `authenticated` — qualquer pessoa logada podia passar o id de um
+  admin e antecipar a própria comissão. Ficaram só para `service_role`.

@@ -15,6 +15,7 @@ const KIND_LABEL: Record<string, string> = {
   partner_product_order: "Pedido parceiro/profissional",
   subscription_invoice: "Mensalidade",
   transaction: "Transação",
+  checkout_group: "Cobrança agrupada",
 };
 
 /**

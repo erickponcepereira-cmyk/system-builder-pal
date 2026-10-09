@@ -124,7 +124,8 @@ export const reconcileMpPayment = createServerFn({ method: "POST" })
       (kind === "store_order" ||
         kind === "transaction" ||
         kind === "partner_product_order" ||
-        kind === "subscription_invoice")
+        kind === "subscription_invoice" ||
+        kind === "checkout_group")
     ) {
       try {
         await applyApproval(kind as any, sourceId);

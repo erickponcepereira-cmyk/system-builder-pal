@@ -20,7 +20,7 @@ export const Route = createFileRoute("/pay/$orderNumber")({
 type OrderData = {
   order: {
     id: string;
-    sourceKind?: "store_order" | "partner_product_order";
+    sourceKind?: "store_order" | "partner_product_order" | "checkout_group";
     number: string;
     status: string;
     paymentMethod: string;

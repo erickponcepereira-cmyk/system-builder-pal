@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Loader2, Wallet } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyWalletTotals, payStoreOrderWithWallet, payPartnerOrderWithWallet } from "@/lib/wallet-checkout.functions";
+import { getMyWalletTotals, payStoreOrderWithWallet, payPartnerOrderWithWallet, payCheckoutGroupWithWallet } from "@/lib/wallet-checkout.functions";
 import { toast } from "sonner";
 
 type Props = {
   orderId: string;
   amount: number;
-  kind: "store" | "partner";
+  kind: "store" | "partner" | "group";
   onPaid?: () => void;
 };
 
@@ -17,6 +17,7 @@ export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
   const fetchTotals = useServerFn(getMyWalletTotals);
   const payStore = useServerFn(payStoreOrderWithWallet);
   const payPartner = useServerFn(payPartnerOrderWithWallet);
+  const payGroup = useServerFn(payCheckoutGroupWithWallet);
   const [totals, setTotals] = useState<{ coach: number; partner: number; professional: number; total: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -28,8 +29,9 @@ export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
     if (!enough) return;
     setLoading(true);
     try {
-      const fn = kind === "store" ? payStore : payPartner;
-      const res = await fn({ data: { order_id: orderId } });
+      const res = kind === "group"
+        ? await payGroup({ data: { group_id: orderId } })
+        : await (kind === "store" ? payStore : payPartner)({ data: { order_id: orderId } });
       const br = res.breakdown || {};
       const parts = ["coach", "partner", "professional"]
         .filter((k) => br[k])

@@ -20,6 +20,7 @@ const ALLOWED_KINDS = new Set<SourceKind>([
   "transaction",
   "partner_product_order",
   "subscription_invoice",
+  "checkout_group",
 ]);
 
 async function persistValidationError(

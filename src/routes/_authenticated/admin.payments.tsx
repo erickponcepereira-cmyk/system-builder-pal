@@ -943,6 +943,25 @@ function NutritionistPanel() {
 }
 
 /**
+ * Marca ou desmarca a lista inteira e mostra quanto dela está marcado. Com 64
+ * vendas numa caixa que mostra 7, marcar uma a uma deixava itens para trás.
+ */
+function SelectAllRow({ selected, count, listTotal, onToggle }: {
+  selected: number;
+  count: number;
+  listTotal: number;
+  onToggle: (all: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer">
+      <input type="checkbox" checked={selected === count} onChange={(e) => onToggle(e.target.checked)} />
+      <span className="flex-1 font-bold text-white/80">Selecionar todas · {selected} de {count} marcadas</span>
+      <span className="text-white/50">total da lista <span className="font-bold text-white">{fmt(listTotal)}</span></span>
+    </label>
+  );
+}
+
+/**
  * Exceção do admin: antecipa a liberação de comissões que ainda estão em
  * carência (7 dias) ou travadas pela missão da rede. Fica registrado em
  * auditoria e a carteira é recalculada na hora.
@@ -978,6 +997,8 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
     (orders || []).filter((o) => selOrders[o.id]).reduce((s, o) => s + o.amount, 0);
 
   const selectedNetworkPending = (rows || []).filter((r) => sel[r.id] && r.isNetwork && !r.goalMet);
+
+  const markAll = (ids: string[], all: boolean) => (all ? Object.fromEntries(ids.map((id) => [id, true])) : {});
 
   const submit = async () => {
     if (!selectedIds.length && !selectedOrderIds.length) return toast.error("Selecione ao menos um item");
@@ -1032,6 +1053,13 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
           ) : rows.length === 0 ? (
             <p className="text-xs text-white/50">Nenhuma comissão bloqueada para esta pessoa.</p>
           ) : (
+            <>
+            <SelectAllRow
+              selected={rows.filter((r) => sel[r.id]).length}
+              count={rows.length}
+              listTotal={rows.reduce((s, r) => s + r.amount, 0)}
+              onToggle={(all) => setSel(markAll(rows.map((r) => r.id), all))}
+            />
             <div className="max-h-56 overflow-auto rounded-lg border border-white/5 divide-y divide-white/5">
               {rows.map((r) => (
                 <label key={r.id} className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
@@ -1059,6 +1087,7 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
                 </label>
               ))}
             </div>
+            </>
           )}
 
           <div>
@@ -1070,6 +1099,13 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
             ) : orders.length === 0 ? (
               <p className="text-xs text-white/50">Nenhuma venda em carência.</p>
             ) : (
+              <>
+              <SelectAllRow
+                selected={orders.filter((o) => selOrders[o.id]).length}
+                count={orders.length}
+                listTotal={orders.reduce((s, o) => s + o.amount, 0)}
+                onToggle={(all) => setSelOrders(markAll(orders.map((o) => o.id), all))}
+              />
               <div className="max-h-56 overflow-auto rounded-lg border border-white/5 divide-y divide-white/5">
                 {orders.map((o) => (
                   <label key={o.id} className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
@@ -1092,6 +1128,7 @@ function AdvanceReleaseBox({ profileId, onChanged }: { profileId: string; onChan
                   </label>
                 ))}
               </div>
+              </>
             )}
           </div>
 

@@ -23,6 +23,7 @@ const SOURCE_TABLE: Record<string, { table: string }> = {
   partner_product_order: { table: "partner_product_orders" },
   subscription_invoice: { table: "subscription_invoices" },
   transaction: { table: "transactions" },
+  checkout_group: { table: "checkout_groups" },
 };
 
 /**
@@ -39,6 +40,7 @@ const AGUARDANDO_PAGAMENTO: Record<string, string[]> = {
   partner_product_order: ["pending"],
   subscription_invoice: ["pending", "overdue", "blocked"],
   transaction: ["pending", "failed"],
+  checkout_group: ["pending"],
 };
 
 function aindaEsperaPagamento(kind: string, status: string | undefined): boolean {
