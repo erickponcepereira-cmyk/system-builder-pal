@@ -1,3 +1,39 @@
+## 20261009120000_carteirinha_de_parceiro_exige_estar_em_dia.sql
+
+| | |
+|---|---|
+| **Autor** | Chat da carteirinha ativa sem pagamento |
+| **Data** | 09/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | **Sim, indiretamente** — tira o beneficio gratuito de 16 inadimplentes |
+| **Aplicada em producao?** | **Sim — 09/10/2026**, `md5(prosrc)` das 5 funcoes conferido |
+
+A carteirinha da Claudia Vilma Bugs estava ativa sem compra nenhuma e com a
+mensalidade bloqueada em setembro e outubro. O `card_valid_until` dela e nulo:
+quem segurava a carteirinha era `student_has_partner_benefits`, que so olhava
+"existe unidade aprovada com produto ativo em students.partner_id" e **nao
+olhava pagamento**. Como `partner_id` tambem aponta para a propria unidade de
+quem e dono dela, todo parceiro virou portador vitalicio.
+
+Alem disso, **o resgate nao era verificado no servidor**: `requireCard()` so
+existe na tela, e as tres funcoes de resgate (cupom de parceiro, cupom de
+profissional, brinde FitMind) nunca perguntaram pela carteirinha.
+
+Cria `student_card_ativa(aluno)` com a regra num lugar so (dia comprado **ou**
+beneficio de parceiro em dia) e chama ela nas tres. `student_has_partner_benefits`
+passa a exigir `NOT is_user_blocked_by_subscription(user_id)` e a ignorar
+produto com `deleted_at`.
+
+Efeito medido: de 26 que viviam so do beneficio, **16 perderam a carteirinha**
+(os bloqueados) e **10 continuaram** (os que pagam). Voltam sozinhos ao pagar.
+
+**Fica em aberto:** 88 cupons `active` de gente sem carteirinha hoje continuam
+resgataveis - `partner_redeem_coupon` valida parceiro, token, status e horario,
+nunca a carteirinha. E se o beneficio deve valer para o dono da unidade ou so
+para colaborador e decisao de negocio: hoje vale para os dois, em dia.
+
+---
+
 ## 20261005120000_avaliacao_importada_duas_vezes.sql
 
 | | |

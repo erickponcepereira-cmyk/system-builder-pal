@@ -70,3 +70,48 @@ Entrega física é uma fila de custo, não um fluxo com status: as fatias
 `product_order_pool` viram `product_order_pool_entries` (o "Painel de Pedidos"),
 e o prazo vem de `store_orders.delivery_days` / `delivery_started_at` /
 `available_at`.
+
+## A carteirinha de parceiro valia sem pagamento (09/10/2026)
+
+**Caso da Claudia Vilma Bugs:** carteirinha ativa, resgatando benefício
+gratuito, sem nunca ter comprado nada e com a mensalidade **bloqueada** em
+setembro e outubro. O `card_valid_until` dela é **nulo** — quem segurava a
+carteirinha de pé era o benefício de parceiro:
+
+```
+student_has_partner_benefits(aluno) = existe unidade aprovada,
+  com produto aprovado e ativo, ligada a students.partner_id
+```
+
+e essa pergunta **não olhava pagamento nenhum**. A tela dizia isso com todas as
+letras: *"get the carteirinha always active, regardless of
+subscription/card_valid_until"* (`student.card.tsx`). O benefício foi desenhado
+para **colaborador** de parceiro, mas `students.partner_id` também aponta para
+a própria unidade de quem é dono dela — então todo parceiro virou portador de
+carteirinha vitalícia, pagando ou não. Dos 26 que viviam só do benefício,
+**25 eram donos da unidade**, não colaboradores.
+
+**O resgate não era verificado no servidor.** `requireCard()` existe só na
+tela; `student_generate_partner_coupon`, `student_generate_professional_coupon`
+e `redeem_freebie` nunca perguntaram pela carteirinha. Quem chamasse a RPC
+direto resgatava sem carteirinha nenhuma — a trava era só visual.
+
+**Como ficou:** a regra mora em `student_card_ativa(aluno)` = dia comprado em
+`card_valid_until`, **ou** benefício de unidade parceira com a mensalidade em
+dia. As três funções de resgate consultam ela. `student_has_partner_benefits`
+passou a exigir `NOT is_user_blocked_by_subscription(user_id)` — a mesma régua
+de inadimplência do resto do sistema, que olha fatura `blocked` — e a ignorar
+produto apagado (`deleted_at`), que antes ainda valia.
+
+Efeito medido: **16 perderam a carteirinha** (os bloqueados) e **10
+continuaram** com ela (os que pagam). Voltam sozinhos quando pagarem.
+
+**O que ficou de fora, de propósito:**
+
+- **Cupom já emitido continua valendo.** Há 88 cupons `active` de gente que
+  hoje não tem carteirinha ativa, e o resgate no balcão do parceiro não
+  consulta a carteirinha — só o cupom. Honrar ou cancelar cupom emitido sob a
+  regra antiga é decisão de negócio.
+- **Se o benefício deve valer para o dono da unidade ou só para colaborador.**
+  Hoje vale para os dois, desde que em dia. Restringir a colaborador tiraria a
+  carteirinha de 10 parceiros que pagam.
