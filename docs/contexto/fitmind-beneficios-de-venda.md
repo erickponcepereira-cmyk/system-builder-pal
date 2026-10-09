@@ -106,12 +106,27 @@ produto apagado (`deleted_at`), que antes ainda valia.
 Efeito medido: **16 perderam a carteirinha** (os bloqueados) e **10
 continuaram** com ela (os que pagam). Voltam sozinhos quando pagarem.
 
-**O que ficou de fora, de propósito:**
+**O cupom também passou a exigir carteirinha ativa (09/10/2026).** Decisão do
+Erick no mesmo dia: cancelar os cupons de quem está bloqueado e travar o uso.
+Foram **23 cupons cancelados** (21 de parceiro, 2 de profissional) de 12
+pessoas, e a trava virou o gatilho `guard_resgate_exige_carteirinha` nas duas
+tabelas — não dentro de `partner_redeem_coupon` — porque **o cupom de
+profissional não tem função de balcão**: é marcado como usado por UPDATE
+direto, pela policy "Professional updates own coupons". No gatilho a regra vale
+em qualquer caminho. Admin passa, para correção manual.
 
-- **Cupom já emitido continua valendo.** Há 88 cupons `active` de gente que
-  hoje não tem carteirinha ativa, e o resgate no balcão do parceiro não
-  consulta a carteirinha — só o cupom. Honrar ou cancelar cupom emitido sob a
-  regra antiga é decisão de negócio.
+Sobraram 128 cupons `active`, 73 deles de quem hoje não tem carteirinha ativa —
+esses não podem ser usados, e voltam a valer sozinhos se a carteirinha voltar.
+
+**A pergunta que ficou:** 6 dos 23 cancelados eram da Arlete e da Gabi Litran,
+que estão atrasadas na mensalidade mas **têm carteirinha paga por compra**
+(até 11/10 e 27/11). Como a geração de cupom só consulta `student_card_ativa`,
+elas regeram o cupom num toque. Para o bloqueio valer de verdade nesse caso, a
+mensalidade atrasada teria que derrubar também o dia comprado — uma linha em
+`student_card_ativa`. Não foi feito: dia comprado foi pago.
+
+**O que continua sendo decisão de negócio:**
 - **Se o benefício deve valer para o dono da unidade ou só para colaborador.**
   Hoje vale para os dois, desde que em dia. Restringir a colaborador tiraria a
-  carteirinha de 10 parceiros que pagam.
+  carteirinha de 10 parceiros que pagam. **Confirmado pelo Erick em 09/10:
+  vale para os dois, desde que em dia.**

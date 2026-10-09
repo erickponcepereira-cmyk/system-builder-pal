@@ -1,3 +1,37 @@
+## 20261009140000_cupom_so_vale_com_carteirinha_ativa.sql
+
+| | |
+|---|---|
+| **Autor** | Chat da carteirinha ativa sem pagamento |
+| **Data** | 09/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | **Sim, indiretamente** — cancela 23 cupons de beneficio gratuito |
+| **Aplicada em producao?** | **Sim — 09/10/2026**, conferida por consulta |
+
+Continuacao da 20261009120000, por decisao do Erick: cancelar os cupons de quem
+esta bloqueado por mensalidade e exigir carteirinha ativa tambem na hora de
+usar. Regra confirmada: em dia vale para dono da unidade e colaborador;
+bloqueado cai para os dois.
+
+Cancelou **23 cupons** `active` (21 de parceiro, 2 de profissional) de 12
+pessoas. Sobraram 128 ativos, 73 de quem hoje nao tem carteirinha - esses
+ficam travados e voltam a valer se a carteirinha voltar. Retrato do antes em
+`backup.cupons_cancelados_20261009`.
+
+A trava e o gatilho `guard_resgate_exige_carteirinha`, em `partner_coupons` e
+`professional_coupons`, e **nao** dentro de `partner_redeem_coupon`: o cupom de
+profissional nao tem funcao de balcao, e marcado como usado por UPDATE direto
+pela policy "Professional updates own coupons". No gatilho a regra vale em
+qualquer caminho. Admin passa.
+
+**Fica em aberto:** 6 dos 23 cancelados eram da Arlete e da Gabi Litran, que
+estao atrasadas na mensalidade mas tem carteirinha **paga por compra** (ate
+11/10 e 27/11) - e a geracao de cupom so consulta `student_card_ativa`, entao
+elas regeram num toque. Para o bloqueio valer ali, a mensalidade atrasada
+teria que derrubar tambem o dia comprado.
+
+---
+
 ## 20261009120000_carteirinha_de_parceiro_exige_estar_em_dia.sql
 
 | | |
