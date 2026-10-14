@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Loader2, Wallet } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyWalletTotals, payStoreOrderWithWallet, payPartnerOrderWithWallet, payCheckoutGroupWithWallet } from "@/lib/wallet-checkout.functions";
+import { payStoreOrderWithWallet, payPartnerOrderWithWallet, payCheckoutGroupWithWallet } from "@/lib/wallet-checkout.functions";
+import { getMyBalance } from "@/lib/my-balance.functions";
 import { toast } from "sonner";
 
 type Props = {
@@ -14,16 +15,16 @@ type Props = {
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
-  const fetchTotals = useServerFn(getMyWalletTotals);
+  const fetchBalance = useServerFn(getMyBalance);
   const payStore = useServerFn(payStoreOrderWithWallet);
   const payPartner = useServerFn(payPartnerOrderWithWallet);
   const payGroup = useServerFn(payCheckoutGroupWithWallet);
-  const [totals, setTotals] = useState<{ coach: number; partner: number; professional: number; total: number } | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { fetchTotals().then(setTotals).catch(() => setTotals({ coach: 0, partner: 0, professional: 0, total: 0 })); }, []);
+  useEffect(() => { fetchBalance().then((b) => setBalance(b.disponivel)).catch(() => setBalance(0)); }, []);
 
-  const enough = totals && totals.total + 0.001 >= amount;
+  const enough = balance !== null && balance + 0.001 >= amount;
 
   const handlePay = async () => {
     if (!enough) return;
@@ -43,21 +44,13 @@ export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
     } finally { setLoading(false); }
   };
 
-  if (!totals) return null;
+  if (balance === null) return null;
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
       <div className="mb-2 flex items-center gap-2 text-xs text-white/70">
         <Wallet className="h-4 w-4 text-primary" />
-        <span>Saldo interno: <span className="font-semibold text-white">{brl(totals.total)}</span></span>
-      </div>
-      {/* Origem do que foi ganho — não são caixas separadas. O saldo é um só, e
-          saque e gasto saem dele sem pertencer a nenhuma origem. */}
-      <div className="mb-1 text-[10px] uppercase tracking-wide text-white/30">Veio de</div>
-      <div className="mb-3 grid grid-cols-3 gap-1 text-[10px] text-white/50">
-        <span>Coach: {brl(totals.coach)}</span>
-        <span>Parceiro: {brl(totals.partner)}</span>
-        <span>Prof.: {brl(totals.professional)}</span>
+        <span>Saldo disponível: <span className="font-semibold text-white">{brl(balance)}</span></span>
       </div>
       <button
         type="button"
@@ -66,9 +59,8 @@ export function WalletPayButton({ orderId, amount, kind, onPaid }: Props) {
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
-        {enough ? `Pagar ${brl(amount)} com carteira` : `Saldo insuficiente (faltam ${brl(amount - totals.total)})`}
+        {enough ? `Pagar ${brl(amount)} com carteira` : `Saldo insuficiente (faltam ${brl(amount - balance)})`}
       </button>
-      <p className="mt-1 text-[10px] text-white/40">Débito em cascata: coach → parceiro → profissional.</p>
     </div>
   );
 }

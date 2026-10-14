@@ -8,6 +8,7 @@ import { getClientCutoffIso } from "@/lib/test-mode";
 import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal } from "@/lib/withdrawals.functions";
 import { listMyPartnerSales } from "@/lib/partner-sales.functions";
+import { getMyBalance } from "@/lib/my-balance.functions";
 
 
 function statusStyle(status: string) {
@@ -73,6 +74,7 @@ export function PartnerWalletTab() {
   const sendWithdrawal = useServerFn(requestSellerWithdrawal);
   const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
   const fetchMySales = useServerFn(listMyPartnerSales);
+  const fetchBalance = useServerFn(getMyBalance);
 
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -118,23 +120,21 @@ export function PartnerWalletTab() {
       .limit(20);
     if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
 
-    const [walletRes, salesRes, withdrawsRes] = await Promise.all([
-      supabase
-        .from("partner_wallets" as never)
-        .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
-        .in("partner_id" as never, partnerIds as never),
+    const [balance, salesRes, withdrawsRes] = await Promise.all([
+      fetchBalance().catch(() => null),
       fetchMySales({ data: { limit: 100, fromIso: cutoff || null } }).catch(() => ({ sales: [] as any[] })),
       withdrawsQ,
     ]);
 
-    // Soma as filiais numa carteira só, que é como o dono pensa no próprio saldo.
-    const linhas = (walletRes.data as unknown as WalletRow[] | null) || [];
-    let walletRow = linhas.reduce<WalletRow>((soma, linha) => ({
-      available_balance: soma.available_balance + Number(linha.available_balance || 0),
-      pending_balance:   soma.pending_balance   + Number(linha.pending_balance   || 0),
-      total_earned:      soma.total_earned      + Number(linha.total_earned      || 0),
-      total_withdrawn:   soma.total_withdrawn   + Number(linha.total_withdrawn   || 0),
-    }), { available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0 });
+    // O saldo é um só — vendas, coach e rede — e é o mesmo que o admin vê. A
+    // tabela `partner_wallets` guardava só a fatia das vendas e envelhecia
+    // quando uma venda vencia a carência. Daqui, só o ganho é do parceiro.
+    let walletRow: WalletRow = {
+      available_balance: balance?.disponivel ?? 0,
+      pending_balance: balance?.aLiberar ?? 0,
+      total_earned: balance?.ganhoParceiro ?? 0,
+      total_withdrawn: balance?.sacado ?? 0,
+    };
     const baseOrders = ((salesRes as any)?.sales as OrderRow[]) || [];
     const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
 
@@ -228,12 +228,12 @@ export function PartnerWalletTab() {
           </Button>
         </div>
         <p className="mb-4 text-xs text-white/40">
-          Mostra apenas o líquido das vendas dos seus produtos. Não inclui ganhos de coach/rede.
+          Seu saldo é um só: vendas dos seus produtos, comissões de coach e rede entram nele, e saque e pagamento com carteira saem dele.
         </p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card label="Disponível" value={brl(w.available_balance)} highlight />
-          <Card label="Pendente" value={brl(w.pending_balance)} />
-          <Card label="Total recebido" value={brl(w.total_earned)} />
+          <Card label="A liberar" value={brl(w.pending_balance)} />
+          <Card label="Ganho com seus produtos" value={brl(w.total_earned)} />
           <Card label="Sacado" value={brl(w.total_withdrawn)} />
         </div>
         {orders.some((o) => o.status === "paid" && Number(o.coprod_amount || 0) > 0) && (

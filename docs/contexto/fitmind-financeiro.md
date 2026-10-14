@@ -322,3 +322,39 @@ inteiro foi cancelado: nada ficou liberado pela metade.
 - As cinco funções da tela confiam no `_admin_user_id` que recebem. Estavam
   abertas a `authenticated` — qualquer pessoa logada podia passar o id de um
   admin e antecipar a própria comissão. Ficaram só para `service_role`.
+
+## O saldo é um número só, em toda tela (14/10/2026)
+
+A Marilene Araújo entrou bloqueada pela mensalidade: a tela dizia "Descontar da
+carteira (R$ 920,60)", o pagamento recusava, e o admin mostrava R$ 26,15. Os
+R$ 920,60 eram `ganho_coach` — tudo o que ela já ganhou como coach. Quando
+`getMySubscription` passou a ler `carteira_atual`, as chaves `coach`,
+`partner` e `professional` viraram **ganho por origem**, mas a tela da fatura
+continuou lendo a chave da "carteira de origem" como se fosse saldo. Valia para
+todo mundo que paga mensalidade.
+
+**A regra:** o que a pessoa tem é `carteira_atual.disponivel`, e toda tela lê
+por `getMyBalance`/`loadBalance` (`src/lib/my-balance.functions.ts`). As
+tabelas `wallets`/`partner_wallets`/`professional_wallets` guardam o saldo
+**repartido por origem** e envelhecem quando um valor vence a carência — ler a
+fatia de uma origem dá um número que não é o da pessoa (a Natália tinha
+R$ 409,20; a aba de parceiro mostrava R$ 385,65, a de coach R$ 23,55).
+
+- Mensalidade, botão de pagar com carteira, abas de parceiro e profissional,
+  resumo do coach, "minha rede" e a ferramenta `get_my_wallet` do MCP leem o
+  saldo único. As abas de parceiro e profissional mostram o ganho **da origem**
+  só no card "Ganho com seus produtos".
+- O seletor "Carteira para débito" da página de assinatura saiu: ele não
+  escolhia nada — a cascata decide de qual tabela debitar. `wallet_source` da
+  fatura virou só rótulo (a origem com mais ganho).
+- Saque (`request_seller_withdrawal_atomic`) e baixa manual do admin
+  (`registerManualPayout`) conferem o mesmo `disponivel`. A baixa manual
+  somava as tabelas e teria recusado o Jean Reis (tabela R$ 0,06, saldo
+  R$ 1.030,90).
+- As tabelas continuam existindo para a cascata de débito e os painéis
+  agregados do admin. O cron `carteiras-acompanham-o-extrato` alinha de hora
+  em hora quem divergir; o das 03:00 só cobria comissão liberada.
+- `carteira_atual` estava aberta a `anon` sem conferir quem pergunta: com a
+  chave pública dava para listar o saldo de todos. Agora só a própria, admin
+  ou servidor. **Ao criar função financeira, revogue de `anon` pelo nome** —
+  `REVOKE ... FROM PUBLIC` não tira o `anon` no Supabase.

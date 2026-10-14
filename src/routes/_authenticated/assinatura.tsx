@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Calendar, CheckCircle2, CreditCard, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, CreditCard, Loader2, XCircle, TestTube2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
@@ -32,7 +32,6 @@ function AssinaturaPage() {
   const initialTab: TabKey = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "annual" ? "annual" : "monthly";
   const [tab, setTab] = useState<TabKey>(initialTab);
   const [walletSource, setWalletSource] = useState<Role>("coach");
-  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [annual, setAnnual] = useState<any>(null);
@@ -49,22 +48,8 @@ function AssinaturaPage() {
     (async () => {
       try {
         const r = await fnGet();
-        const wallets = r?.wallets ?? {};
-        const roles: Role[] = [];
-        // Mostra apenas papéis com saldo > 0 (ou pelo menos coach se nada existir)
-        (["coach", "professional", "partner"] as Role[]).forEach((k) => {
-          if ((wallets as any)[k] !== undefined && (wallets as any)[k] !== null) roles.push(k);
-        });
-        const effective = roles.length ? roles : (["coach"] as Role[]);
-        setAvailableRoles(effective);
-        // padrão: papel com maior saldo
-        let best: Role = effective[0];
-        let bestVal = -1;
-        effective.forEach((k) => {
-          const v = Number((wallets as any)[k] || 0);
-          if (v > bestVal) { bestVal = v; best = k; }
-        });
-        setWalletSource(best);
+        // Só rotula a fatura: o débito sai do saldo único, venha ele de onde vier.
+        if (r?.mainOrigin) setWalletSource(r.mainOrigin);
       } finally {
         setLoading(false);
       }
@@ -115,27 +100,6 @@ function AssinaturaPage() {
       <main className="mx-auto max-w-3xl px-4 py-6">
         {tab === "monthly" && (
           <>
-            {availableRoles.length > 1 && (
-              <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-2 flex items-center gap-2 text-xs uppercase text-white/60">
-                  <WalletIcon className="h-3 w-3" /> Carteira para débito
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableRoles.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setWalletSource(r)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize ${walletSource === r ? "bg-primary text-black" : "bg-white/10 text-white/70"}`}
-                    >
-                      {r === "coach" ? "Coach" : r === "professional" ? "Profissional" : "Parceiro"}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-white/40">
-                  Sua mensalidade é única e vale para todas as plataformas. Escolha de qual carteira descontar.
-                </p>
-              </div>
-            )}
             {loading ? (
               <div className="flex items-center gap-2 p-6 text-white/60">
                 <Loader2 className="h-4 w-4 animate-spin" /> Carregando…

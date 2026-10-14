@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PendingInfo } from "@/components/PendingInfo";
 import { COMMISSION_HOLD_DAYS } from "@/lib/financial-dedupe";
 import { requestSellerWithdrawal } from "@/lib/withdrawals.functions";
+import { getMyBalance } from "@/lib/my-balance.functions";
 
 const MIN_WITHDRAWAL = 50;
 
@@ -38,6 +39,7 @@ export function MyNetworkPanel() {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showNetwork, setShowNetwork] = useState(false);
+  const fetchBalance = useServerFn(getMyBalance);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,12 +63,9 @@ export function MyNetworkPanel() {
         setCoachId(coach?.id ?? null);
         setPartnerId((partner as { id?: string } | null)?.id ?? null);
 
-        const [walletRes, directsRes, partnerDirectsRes, commRes] = await Promise.all([
-          supabase
-            .from("wallets")
-            .select("available_balance,pending_balance,total_earned")
-            .eq("profile_id", profile.id)
-            .maybeSingle(),
+        const [balance, directsRes, partnerDirectsRes, commRes] = await Promise.all([
+          // Saldo único (coach, vendas e rede), o mesmo do painel admin — não a fatia de coach.
+          fetchBalance().catch(() => null),
           coach?.id
             ? supabase.from("students").select("id", { count: "exact", head: true }).eq("coach_id", coach.id)
             : Promise.resolve({ count: 0 } as { count: number }),
@@ -83,13 +82,12 @@ export function MyNetworkPanel() {
 
         if (cancelled) return;
 
-        const w = (walletRes.data as { available_balance?: number; pending_balance?: number; total_earned?: number } | null) || {};
         const directsCount = ((directsRes as { count: number }).count ?? 0) + ((partnerDirectsRes as { count: number }).count ?? 0);
 
         setStats({
-          available: Number(w.available_balance ?? 0),
-          pending: Number(w.pending_balance ?? 0),
-          total: Number(w.total_earned ?? 0),
+          available: balance?.disponivel ?? 0,
+          pending: balance?.aLiberar ?? 0,
+          total: balance?.ganho ?? 0,
           directs: directsCount,
           network: directsCount,
           recent: ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string }>) || []).map((r) => ({
