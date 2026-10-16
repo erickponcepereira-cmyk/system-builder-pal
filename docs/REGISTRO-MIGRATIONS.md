@@ -1,3 +1,32 @@
+## 20261016120000_leitura_de_qr_no_balcao.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do QR no balcão — `database-architect` escreveu, a conversa principal aplicou |
+| **Data** | 16/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 16/10/2026**, `md5(prosrc)` das 6 funcoes conferido |
+
+As duas abas de leitura do painel do parceiro voltam a funcionar.
+
+- `partner_freebie_do_dia`: `r.status::text`. A coluna e enum e o `RETURNS TABLE`
+  declara `text`; dava 42804 toda vez que a aba Scanner abria.
+- `partner_preview_student`, `partner_scan_student`, `partner_preview_coupon` e
+  `partner_redeem_coupon` passam a aceitar colaborador com `scanner.usar`, pela
+  mesma regra de `redeem_partner_freebie` (que ja tinha sido corrigida e a aba QR
+  nao). As duas de aluno ganham `_partner_id uuid DEFAULT NULL` - com `DROP` da
+  assinatura `(uuid)` antes, para o PostgREST nao achar duas candidatas.
+- Nova `partner_unidade_do_balcao(uuid)`: escolhe e autoriza a unidade da leitura
+  de carteirinha, num lugar so.
+- Grants explicitos nas seis: `authenticated` e `service_role`, sem `anon`.
+
+Testado com rollback, simulando login: dono e colaborador 6/6 OK, estranho 6/6
+barrado. O gatilho de 09/10 (cupom so vira `used` com carteirinha ativa) segue
+valendo, agora tambem para colaborador.
+
+---
+
 ## 20261009140000_cupom_so_vale_com_carteirinha_ativa.sql
 
 | | |

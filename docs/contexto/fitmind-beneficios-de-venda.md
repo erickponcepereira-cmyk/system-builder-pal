@@ -130,3 +130,57 @@ mensalidade atrasada teria que derrubar também o dia comprado — uma linha em
   Hoje vale para os dois, desde que em dia. Restringir a colaborador tiraria a
   carteirinha de 10 parceiros que pagam. **Confirmado pelo Erick em 09/10:
   vale para os dois, desde que em dia.**
+
+## Leitura de QR no balcão do parceiro (16/10/2026)
+
+**O painel profissional não tem aba de leitura** — quem atende no balcão usa o
+painel de parceiro (`partner.tsx`), que tem duas: **"Scanner"**
+(`PartnerFreebieScanner`, a agenda do dia) e **"QR"** (`QrCodePanel`). As duas
+estavam quebradas, e a medida era clara: 0 visitas por leitura e 0 reservas
+usadas em 30 dias (a última leitura de carteirinha foi em 28/08).
+
+**O aluno mostra três QRs diferentes**, e os formatos não se confundem:
+
+| QR | Conteúdo | Onde nasce |
+|---|---|---|
+| Carteirinha | `<origem>/checkin/<uuid do aluno>` | `student.card.tsx`, `student.freebies.tsx` |
+| Cupom | `COUPON:` + 24 hex **maiúsculo** | `components/student/CouponModal.tsx` |
+| Reserva | 32 hex **minúsculo**, cru | `components/student/StudentFreebieReservations.tsx` |
+
+Antes cada aba entendia um pedaço — a "Scanner" só reserva, a "QR" só
+carteirinha e cupom — e o parceiro não tinha como saber qual usar. Agora as duas
+montam o mesmo `components/partner/LeitorQrDoAluno.tsx`, que classifica o QR com
+`lib/qr-do-aluno.ts` e chama a função certa. **Não volte a ter leitor por aba.**
+
+Os três defeitos, para não repetir:
+
+1. **`RETURNS TABLE(... status text ...)` com coluna enum quebra em tempo de
+   execução, não na criação.** `partner_freebie_do_dia` devolvia
+   `r.status` (enum `reserved|used|cancelled|expired`) e dava `42804 structure of
+   query does not match function result type` toda vez que a aba abria. O
+   `CREATE FUNCTION` passa; só o primeiro `SELECT` acusa. Cast explícito sempre.
+2. **Regra de acesso copiada é regra que diverge.** `redeem_partner_freebie` já
+   aceitava colaborador via `partner_pode(unidade, 'scanner.usar')` desde
+   19/08 — as quatro funções da aba "QR" continuaram procurando
+   `partners.profile_id = usuário`, e o colaborador do balcão levava "Apenas
+   empresas parceiras podem validar QR". A escolha e a autorização da unidade
+   agora moram em `partner_unidade_do_balcao`. Sem `_partner_id` (app antigo em
+   cache) ela só decide quando a pessoa tem **uma** unidade aprovada; com mais de
+   uma, pede para escolher — o `LIMIT 1` sem `ORDER` de antes gravava a visita
+   numa unidade qualquer.
+3. **`@yudiel/react-qr-scanner` 2.x baixa o decodificador de CDN** quando o
+   navegador não tem `BarcodeDetector` nativo (iPhone/Safari): `barcode-detector`
+   → `zxing-wasm` → `fastly.jsdelivr.net/.../zxing_reader.wasm`. Sem esse
+   download a câmera abre e **nada é lido, sem erro na tela** (o `onError` só
+   fazia `console.warn`). A aba "QR" passou para `QRScannerModal`
+   (html5-qrcode, sem rede), a mesma câmera da outra aba. O pacote continua no
+   `package.json`, sem uso.
+
+`QRScannerModal` também tinha corrida entre o `start()` assíncrono e a limpeza
+do efeito — desmontar antes do `start` resolver deixava a câmera presa. Agora a
+limpeza espera o start. E os botões **Confirmar**/**Validar** do leitor têm
+trava contra toque duplo: o mesmo defeito do "um clique salva três produtos".
+
+Testado em produção com rollback, simulando o login: dono e colaborador 6 de 6
+OK; quem não é da unidade, 6 de 6 barrado com a mensagem certa. Migration
+`20261016120000_leitura_de_qr_no_balcao.sql`.

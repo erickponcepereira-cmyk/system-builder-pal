@@ -45,6 +45,7 @@ import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
 import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
+import { LeitorQrDoAluno } from "@/components/partner/LeitorQrDoAluno";
 import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 import { PartnerMembersPanel } from "@/components/partner/PartnerMembersPanel";
 import { NovaUnidadeDialog } from "@/components/partner/NovaUnidadeDialog";
@@ -1714,97 +1715,7 @@ function QrCodePanel({ partner }: { partner: Partner }) {
   );
 }
 
-interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
-interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
-interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; benefit_start_time: string | null; benefit_end_time: string | null; token: string; }
-
-
 function StudentQrScanner({ partner }: { partner: Partner }) {
-  const [scanning, setScanning] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [preview, setPreview] = useState<ScanPreview | null>(null);
-  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
-  const [result, setResult] = useState<ScanResult | null>(null);
-  const [lastValue, setLastValue] = useState<string>("");
-
-  const extractStudentId = (raw: string): string | null => {
-    const trimmed = raw.trim();
-    const m = trimmed.match(/checkin\/([0-9a-f-]{36})/i);
-    if (m) return m[1];
-    if (/^[0-9a-f-]{36}$/i.test(trimmed)) return trimmed;
-    return null;
-  };
-
-  const extractCouponToken = (raw: string): string | null => {
-    const trimmed = raw.trim().toUpperCase();
-    const m = trimmed.match(/^COUPON:([A-F0-9]{24})$/);
-    return m ? m[1] : null;
-  };
-
-  const onDetected = async (value: string) => {
-    if (processing || preview || couponPreview || result || value === lastValue) return;
-    setLastValue(value);
-
-    const couponToken = extractCouponToken(value);
-    if (couponToken) {
-      setProcessing(true);
-      setScanning(false);
-      const { data, error } = await supabase.rpc("partner_preview_coupon" as never, { p_token: couponToken } as never);
-      setProcessing(false);
-      if (error) { setResult({ ok: false, error: error.message }); return; }
-      const rows = data as unknown as Omit<CouponPreview, "token">[];
-      if (!rows || rows.length === 0) {
-        setResult({ ok: false, error: "Cupom não encontrado ou não pertence à sua empresa." });
-        return;
-      }
-      setCouponPreview({ ...rows[0], token: couponToken });
-      return;
-    }
-
-    const studentId = extractStudentId(value);
-    if (!studentId) {
-      toast.error("QR inválido. Use o QR da carteirinha do aluno ou de um cupom.");
-      setTimeout(() => setLastValue(""), 1500);
-      return;
-    }
-    setProcessing(true);
-    setScanning(false);
-    const { data, error } = await supabase.rpc("partner_preview_student" as never, { _student_id: studentId } as never);
-    setProcessing(false);
-    if (error) {
-      setResult({ ok: false, error: error.message });
-      return;
-    }
-    setPreview(data as unknown as ScanPreview);
-  };
-
-  const confirmVisit = async () => {
-    if (!preview) return;
-    setProcessing(true);
-    const { data, error } = await supabase.rpc("partner_scan_student" as never, { _student_id: preview.student_id } as never);
-    setProcessing(false);
-    setPreview(null);
-    if (error) { setResult({ ok: false, error: error.message }); return; }
-    const r = data as unknown as ScanResult;
-    setResult({ ...r, ok: true });
-    toast.success(`Check-in: ${r.student_name}`);
-  };
-
-  const confirmCoupon = async () => {
-    if (!couponPreview) return;
-    setProcessing(true);
-    const { error } = await supabase.rpc("partner_redeem_coupon" as never, { p_token: couponPreview.token } as never);
-    setProcessing(false);
-    const cp = couponPreview;
-    setCouponPreview(null);
-    if (error) { setResult({ ok: false, error: error.message }); return; }
-    setResult({ ok: true, student_name: cp.student_name, student_avatar: cp.student_photo, visited_at: new Date().toISOString() });
-    toast.success(`Cupom validado: ${cp.product_name}`);
-  };
-
-  const reset = () => { setResult(null); setPreview(null); setCouponPreview(null); setLastValue(""); setScanning(true); };
-
-
   if (partner.status !== "approved") {
     return (
       <div className="rounded-xl p-6 text-center" style={{ backgroundColor: "#1A1A1A" }}>
@@ -1813,127 +1724,7 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
       </div>
     );
   }
-
-  return (
-    <div className="space-y-3">
-      <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR da carteirinha do aluno <span className="text-primary">ou de um cupom de desconto</span></p>
-        {scanning && !preview && !couponPreview && !result && <QrScannerView onDetected={onDetected} />}
-
-        {processing && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
-        {preview && !processing && (
-          <div className="text-center py-4">
-            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-bold mb-2">Confirme o aluno</p>
-            {preview.student_avatar ? (
-              <img src={preview.student_avatar} className="mx-auto h-28 w-28 rounded-full object-cover border-4 border-primary/30" alt={preview.student_name} />
-            ) : (
-              <div className="mx-auto h-28 w-28 rounded-full bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary">
-                {preview.student_name.charAt(0)}
-              </div>
-            )}
-            <p className="mt-3 text-xl font-bold text-white">{preview.student_name}</p>
-            {preview.student_email && <p className="text-xs text-white/50">{preview.student_email}</p>}
-            {(preview.student_city || preview.student_state) && (
-              <p className="text-[11px] text-white/40">{[preview.student_city, preview.student_state].filter(Boolean).join(" / ")}</p>
-            )}
-            <p className="mt-3 text-xs text-white/60">É esta pessoa? Confirme para registrar a visita.</p>
-            <div className="mt-4 flex gap-2 max-w-xs mx-auto">
-              <button onClick={reset} className="flex-1 rounded bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20">
-                <X className="inline h-4 w-4 mr-1" /> Cancelar
-              </button>
-              <button onClick={confirmVisit} className="flex-1 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90">
-                <Check className="inline h-4 w-4 mr-1" /> Confirmar
-              </button>
-            </div>
-          </div>
-        )}
-        {couponPreview && !processing && (
-          <div className="text-center py-4">
-            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-bold mb-2">Cupom de desconto</p>
-            {couponPreview.student_photo ? (
-              <img src={couponPreview.student_photo} className="mx-auto h-24 w-24 rounded-full object-cover border-4 border-primary/30" alt={couponPreview.student_name} />
-            ) : (
-              <div className="mx-auto h-24 w-24 rounded-full bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary">
-                {couponPreview.student_name.charAt(0)}
-              </div>
-            )}
-            <p className="mt-3 text-lg font-bold text-white">{couponPreview.student_name}</p>
-            <p className="text-sm text-primary mt-1">{couponPreview.product_name}</p>
-            {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time) && (
-              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
-                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time)}
-              </p>
-            )}
-            <p className="text-[10px] text-white/40 mt-1">Gerado em {new Date(couponPreview.created_at).toLocaleString("pt-BR")}</p>
-            {couponPreview.status !== "active" ? (
-              <>
-                <p className="mt-3 text-sm text-red-400 font-bold">Cupom já {couponPreview.status === "used" ? "utilizado" : "cancelado"}</p>
-                {couponPreview.redeemed_at && <p className="text-[10px] text-white/40">em {new Date(couponPreview.redeemed_at).toLocaleString("pt-BR")}</p>}
-                <button onClick={reset} className="mt-4 rounded bg-white/10 px-4 py-2 text-sm text-white">OK</button>
-              </>
-            ) : (
-              <>
-                <p className="mt-3 text-xs text-white/60">Confirme para aplicar o desconto. O cupom será marcado como usado.</p>
-                <div className="mt-4 flex gap-2 max-w-xs mx-auto">
-                  <button onClick={reset} className="flex-1 rounded bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20"><X className="inline h-4 w-4 mr-1" /> Cancelar</button>
-                  <button onClick={confirmCoupon} className="flex-1 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"><Check className="inline h-4 w-4 mr-1" /> Validar</button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {result?.ok && (
-          <div className="text-center py-6">
-            {result.student_avatar ? (
-              <img src={result.student_avatar} className="mx-auto h-20 w-20 rounded-full object-cover" alt={result.student_name} />
-            ) : (
-              <div className="mx-auto h-20 w-20 rounded-full bg-green-500/15 flex items-center justify-center">
-                <Check className="h-10 w-10 text-green-400" />
-              </div>
-            )}
-            <p className="mt-3 text-lg font-bold text-white">{result.student_name}</p>
-            <p className="text-xs text-green-400 mt-1">Visita registrada com sucesso</p>
-            <p className="text-[10px] text-white/40 mt-1">{result.visited_at ? new Date(result.visited_at).toLocaleString("pt-BR") : ""}</p>
-            <button onClick={reset} className="mt-4 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Ler outro QR</button>
-          </div>
-        )}
-        {result && !result.ok && (
-          <div className="text-center py-6">
-            <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
-            <p className="mt-2 text-sm text-red-300">{result.error}</p>
-            <button onClick={reset} className="mt-4 rounded bg-white/10 px-4 py-2 text-sm text-white">Tentar novamente</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-function QrScannerView({ onDetected }: { onDetected: (v: string) => void }) {
-  // Lazy import to avoid SSR issues
-  const [Comp, setComp] = useState<React.ComponentType<{ onScan: (codes: { rawValue: string }[]) => void; onError?: (e: unknown) => void; constraints?: MediaTrackConstraints; styles?: { container?: React.CSSProperties }; components?: { finder?: boolean }; }> | null>(null);
-  useEffect(() => {
-    let active = true;
-    import("@yudiel/react-qr-scanner").then((m) => { if (active) setComp(() => m.Scanner); });
-    return () => { active = false; };
-  }, []);
-  if (!Comp) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
-  return (
-    <div className="overflow-hidden rounded-lg">
-      <Comp
-        onScan={(codes) => { if (codes[0]?.rawValue) onDetected(codes[0].rawValue); }}
-        onError={(e) => console.warn("scanner", e)}
-        constraints={{ facingMode: "environment" }}
-        components={{ finder: true }}
-      />
-    </div>
-  );
+  return <LeitorQrDoAluno partnerId={partner.id} />;
 }
 
 function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () => void }) {

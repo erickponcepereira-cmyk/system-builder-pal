@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  QrCode, ScanLine, Loader2, CheckCircle2, Clock, AlertCircle,
+  QrCode, Loader2, CheckCircle2, Clock, AlertCircle,
   Phone, UserRound, History, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { QRScannerModal } from "@/components/QRScannerModal";
+import { LeitorQrDoAluno } from "@/components/partner/LeitorQrDoAluno";
 
 /**
  * Scanner de presença do parceiro.
@@ -67,12 +67,10 @@ function estadoDaReserva(r: Reserva, agora: number) {
 }
 
 export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
-  const [open, setOpen] = useState(false);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [resumo, setResumo] = useState<ResumoProduto[]>([]);
   const [verHistorico, setVerHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [agora, setAgora] = useState(() => Date.now());
 
   const carregar = async () => {
@@ -92,22 +90,6 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
     const t = setInterval(() => setAgora(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
-
-  const aoLer = async (decoded: string) => {
-    setOpen(false);
-    if (processing) return;
-    setProcessing(true);
-    // Aceita o token cru ou a URL inteira terminando em /freebie/<token>
-    const token = decoded.includes("/freebie/")
-      ? decoded.split("/freebie/").pop()!.split(/[?#]/)[0]
-      : decoded.trim();
-    const { data, error } = await supabase.rpc("redeem_partner_freebie" as never, { _qr_token: token } as never);
-    setProcessing(false);
-    if (error) { toast.error(error.message.replace(/^Error:\s*/i, "")); void carregar(); return; }
-    const r = (data as unknown as Array<{ student_name: string; product_name: string; slot_start: string }>)?.[0];
-    if (r) toast.success(`Check-in: ${r.student_name} — ${r.product_name} ${fmtTime(r.slot_start)}`);
-    void carregar();
-  };
 
   const contagem = {
     reservadas: reservas.filter((r) => r.status !== "cancelled").length,
@@ -137,13 +119,9 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <QrCode className="h-4 w-4 text-primary" /> Scanner de presença
         </h2>
-        <button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
-        >
-          <ScanLine className="h-4 w-4" /> Ler QR
-        </button>
       </div>
+
+      <LeitorQrDoAluno partnerId={partnerId} onConcluido={() => void carregar()} />
 
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
@@ -274,7 +252,6 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
         )}
       </div>
 
-      {open && <QRScannerModal onClose={() => setOpen(false)} onScan={aoLer} title="Ler QR do aluno" />}
     </div>
   );
 }

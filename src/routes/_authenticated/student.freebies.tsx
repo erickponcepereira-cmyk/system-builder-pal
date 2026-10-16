@@ -826,6 +826,7 @@ function StudentFreebies() {
           onClose={() => setShowScanner(false)}
           onScan={handleScan}
           title="Ler QR do parceiro"
+          hint="Aponte para o QR Code do parceiro."
         />
       )}
 
