@@ -127,3 +127,38 @@ Ao limpar, confira antes se a cópia tem reserva (`partner_freebie_reservations`
 ou pedido (`partner_product_orders`): sem isso, apagar é seguro; com isso, some
 histórico. As duas cópias da YA não tinham nenhum dos dois, e o conteúdo das três
 era idêntico — só id e datas diferiam.
+
+## Empresa bloqueada sai da loja sozinha (16/10/2026)
+
+**Bloquear a empresa no painel não escondia nada.** A Segredos da Strella foi
+bloqueada (`partners.status = 'blocked'`) e os 19 produtos dela continuaram à
+venda. A leitura pública de `partner_products`
+(`partner_products_public_select_approved`) só olhava o **produto**, e a loja
+não tem como olhar a empresa: `partners` é fechada para leitura direta, e o
+catálogo (`src/lib/unified-store.ts`) lê só o produto. A compra também passava —
+`create_partner_product_order` confere o produto, não a empresa.
+
+**A regra agora é `parceiro_vende(empresa)`: aprovada e sem `blocked_at`.** Ela
+está na leitura pública de `partner_products` e num gatilho de INSERT em
+`partner_product_orders` (`trg_parceiro_bloqueado_nao_vende`, admin passa).
+Desbloquear devolve tudo sozinho; `is_active_by_partner` não é tocado. Para
+esconder uma empresa inteira, **bloqueie a empresa** — não desative produto por
+produto.
+
+- A função é `SECURITY DEFINER` de propósito. A policy roda com o papel de quem
+  pergunta, e o aluno não lê `partners`: um `EXISTS` direto na policy daria falso
+  para todo mundo e apagaria a vitrine inteira.
+- O bloqueio da Strella tinha `status = 'blocked'` com `blocked_at` **nulo**. A
+  regra exige as duas coisas (aprovada **e** sem `blocked_at`), então pega os
+  dois jeitos de bloquear.
+- Dona e admin continuam vendo os produtos da empresa bloqueada
+  (`current_partner_id()` e `is_admin`). Cupom gratuito já era barrado
+  (`student_generate_partner_coupon` exige empresa aprovada).
+- **Produto sem empresa também saiu da vitrine:** "7x7 como ficar milionário" e
+  "irineu", gratuitos, `partner_id` nulo, de 06/06. Já não funcionavam — o resgate
+  exige empresa —, então o aluno via e não conseguia usar.
+
+Testado com rollback, simulando o login: aluna e visitante sem login veem 0
+produto da Strella e não compram; a dona vê os 19. Antes de aplicar, conferido
+que nenhum pedido existia nos produtos dela — produto escondido some também do
+histórico de quem comprou, porque o histórico lê o nome pela mesma regra.

@@ -1,3 +1,26 @@
+## 20261016160000_empresa_bloqueada_sai_da_loja.sql
+
+| | |
+|---|---|
+| **Autor** | Chat da loja |
+| **Data** | 16/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | Nao — mas barra venda de empresa bloqueada |
+| **Aplicada em producao?** | **Sim — 16/10/2026**, `md5(prosrc)` das 2 funcoes conferido |
+
+Bloquear a empresa parceira passa a tirar os produtos dela da loja e a barrar
+pedido novo. Nova `parceiro_vende(empresa)` (aprovada e sem `blocked_at`, SECURITY
+DEFINER para a policy nao depender de o aluno ler `partners`); a leitura publica
+`partner_products_public_select_approved` passa a exigi-la; gatilho
+`trg_parceiro_bloqueado_nao_vende` em INSERT de `partner_product_orders` (admin
+passa).
+
+Caso: Segredos da Strella, 19 produtos. Saem junto dois gratuitos sem empresa
+(`partner_id` nulo) que ja nao funcionavam. Nenhum pedido existia nos produtos da
+Strella. Testado como aluna, visitante e dona.
+
+---
+
 ## 20261016120000_leitura_de_qr_no_balcao.sql
 
 | | |
