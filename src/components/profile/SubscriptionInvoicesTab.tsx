@@ -79,7 +79,8 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const sub = state.subscription;
   const invoices: any[] = state.invoices;
   const current = invoices.find((i) => i.status !== "paid" && i.status !== "exempted") ?? invoices[0];
-  const walletBalance = state.wallets?.[walletSource] ?? 0;
+  // Saldo único da carteira — o mesmo do painel admin. `walletSource` só rotula a fatura.
+  const walletBalance = Number(state.balance ?? 0);
 
   const updatePrefs = async (patch: any) => {
     setBusy(true);
@@ -169,6 +170,11 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
               </>
             )}
           </div>
+          {!isTest && walletBalance < Number(current.amount) && (
+            <p className="mt-2 text-xs text-white/50">
+              Saldo disponível na carteira: {fmt(walletBalance)} — faltam {fmt(Number(current.amount) - walletBalance)} para pagar com ele.
+            </p>
+          )}
           {mpMethod && (
             <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
               <div className="mb-3 flex items-center justify-between">

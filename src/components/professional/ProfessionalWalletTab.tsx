@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
 import { cancelMyWithdrawalRequest, requestSellerWithdrawal } from "@/lib/withdrawals.functions";
+import { getMyBalance } from "@/lib/my-balance.functions";
 
 function statusStyle(status: string) {
   const s = (status || "").toLowerCase();
@@ -68,6 +69,7 @@ type WithdrawRow = {
 export function ProfessionalWalletTab() {
   const sendWithdrawal = useServerFn(requestSellerWithdrawal);
   const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
+  const fetchBalance = useServerFn(getMyBalance);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletRow | null>(null);
@@ -113,12 +115,8 @@ export function ProfessionalWalletTab() {
       .limit(20);
     if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
 
-    const [walletRes, ordersRes, withdrawsRes] = await Promise.all([
-      supabase
-        .from("professional_wallets" as never)
-        .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
-        .eq("professional_coach_id" as never, coach.id as never)
-        .maybeSingle(),
+    const [balance, ordersRes, withdrawsRes] = await Promise.all([
+      fetchBalance().catch(() => null),
       ordersQ,
       withdrawsQ,
     ]);
@@ -126,8 +124,14 @@ export function ProfessionalWalletTab() {
     const baseOrders = (ordersRes.data as OrderRow[]) || [];
     const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
 
-    let walletRow = (walletRes.data as unknown as WalletRow | null) || {
-      available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
+    // O saldo é um só — serviços, coach e rede — e é o mesmo que o admin vê. A
+    // tabela `professional_wallets` guardava só a fatia dos serviços e
+    // envelhecia quando uma venda vencia a carência. Daqui, só o ganho é dele.
+    let walletRow: WalletRow = {
+      available_balance: balance?.disponivel ?? 0,
+      pending_balance: balance?.aLiberar ?? 0,
+      total_earned: balance?.ganhoProfissional ?? 0,
+      total_withdrawn: balance?.sacado ?? 0,
     };
 
     if (cutoff) {
@@ -261,12 +265,12 @@ export function ProfessionalWalletTab() {
           </Button>
         </div>
         <p className="mb-4 text-xs text-white/40">
-          Mostra apenas o líquido das vendas dos seus produtos/serviços. Não inclui ganhos de coach/rede.
+          Seu saldo é um só: vendas dos seus produtos e serviços, comissões de coach e rede entram nele, e saque e pagamento com carteira saem dele.
         </p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card label="Disponível" value={brl(w.available_balance)} highlight />
-          <Card label="Pendente" value={brl(w.pending_balance)} />
-          <Card label="Total recebido" value={brl(w.total_earned)} />
+          <Card label="A liberar" value={brl(w.pending_balance)} />
+          <Card label="Ganho com seus produtos" value={brl(w.total_earned)} />
           <Card label="Sacado" value={brl(w.total_withdrawn)} />
         </div>
         {orders.some((o) => o.status === "paid" && Number(o.coprod_amount || 0) > 0) && (

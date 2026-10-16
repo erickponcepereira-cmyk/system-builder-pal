@@ -1,6 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { loadBalance, type MyBalance } from "@/lib/my-balance.functions";
+
+type WalletOrigin = "coach" | "partner" | "professional";
+
+/** De onde veio a maior parte do que a pessoa ganhou. Só rotula a fatura paga com carteira. */
+function mainOrigin(balance: MyBalance | null): WalletOrigin {
+  if (!balance) return "coach";
+  const origins: Array<[WalletOrigin, number]> = [
+    ["coach", balance.ganhoCoach],
+    ["partner", balance.ganhoParceiro],
+    ["professional", balance.ganhoProfissional],
+  ];
+  return origins.reduce((best, current) => (current[1] > best[1] ? current : best))[0];
+}
 
 export const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -25,24 +39,20 @@ export const getMySubscription = createServerFn({ method: "GET" })
       .from("profiles").select("id, name, email").eq("user_id", userId).maybeSingle();
 
 
-    // O saldo é um só, derivado do ledger. As chaves por origem dizem de onde o
-    // dinheiro veio; quem paga a fatura é o total, e a cascata decide de qual
-    // carteira sai. Ler as tabelas aqui trazia número velho toda vez que um
-    // prazo de liberação vencia.
-    const wallets: Record<string, number> = { coach: 0, partner: 0, professional: 0, total: 0 };
-    if (profile?.id) {
-      const { data: linhas } = await supabase.rpc("carteira_atual" as never, { _profile_id: profile.id } as never);
-      const c = ((linhas as Array<{
-        disponivel: number; ganho_coach: number; ganho_parceiro: number; ganho_profissional: number;
-      }> | null) ?? [])[0];
-      wallets.coach = Number(c?.ganho_coach || 0);
-      wallets.partner = Number(c?.ganho_parceiro || 0);
-      wallets.professional = Number(c?.ganho_profissional || 0);
-      wallets.total = Number(c?.disponivel || 0);
-    }
+    // A fatura paga com carteira sai do saldo único (`disponivel`), e a cascata
+    // decide de qual tabela debitar. Até 14/10/2026 a tela mostrava o ganho da
+    // origem escolhida como se fosse saldo: R$ 920,60 para quem tinha R$ 26,15.
+    const balance = profile?.id ? await loadBalance(supabase, profile.id) : null;
 
     const amount = Number((sub as any).custom_amount ?? (sub as any).plan?.default_amount ?? 100);
-    return { subscription: sub, invoices: invoices ?? [], wallets, effectiveAmount: amount, payer: profile ? { email: (profile as any).email, name: (profile as any).name } : null };
+    return {
+      subscription: sub,
+      invoices: invoices ?? [],
+      balance: balance?.disponivel ?? 0,
+      mainOrigin: mainOrigin(balance),
+      effectiveAmount: amount,
+      payer: profile ? { email: (profile as any).email, name: (profile as any).name } : null,
+    };
   });
 
 export const updateMySubscriptionPrefs = createServerFn({ method: "POST" })

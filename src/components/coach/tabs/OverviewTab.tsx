@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Users, TrendingUp, Wallet, BarChart3, Copy, Share2, Eye, EyeOff } from "lucide-react";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
@@ -11,6 +12,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { NetworkWhatsappGroups } from "@/components/NetworkWhatsappGroups";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { dedupeCommissions } from "@/lib/financial-dedupe";
+import { getMyBalance } from "@/lib/my-balance.functions";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -28,6 +30,7 @@ export function OverviewTab({
   onOpenStudents?: (sort: "recent" | "no_bioimpedance") => void;
 }) {
   const [data, setData] = useState({ students: 0, salesMonth: 0, commissionsMonth: 0, balance: 0 });
+  const fetchBalance = useServerFn(getMyBalance);
 
   useEffect(() => {
     (async () => {
@@ -52,10 +55,11 @@ export function OverviewTab({
         ? supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", cutoff)
         : null;
 
-      const [studentsRes, commMonthRes, walletRes, commAllRes] = await Promise.all([
+      const [studentsRes, commMonthRes, myBalance, commAllRes] = await Promise.all([
         studentsQ,
         supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", effectiveStart),
-        cutoff ? Promise.resolve({ data: null }) : supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
+        // Saldo único (coach, vendas e rede), o mesmo do painel admin — não a fatia de coach.
+        cutoff ? Promise.resolve(null) : fetchBalance().catch(() => null),
         commAllQ ?? Promise.resolve({ data: null as unknown }),
       ]);
 
@@ -79,7 +83,7 @@ export function OverviewTab({
 
       const balance = cutoff
         ? dedupeCommissions((commAllRes.data as any[]) || []).reduce((s, r) => s + Number(r.amount || 0), 0)
-        : Number((walletRes.data as { available_balance?: number } | null)?.available_balance ?? 0);
+        : myBalance?.disponivel ?? 0;
 
       setData({
         students: (studentsRes as { count: number | null }).count ?? 0,

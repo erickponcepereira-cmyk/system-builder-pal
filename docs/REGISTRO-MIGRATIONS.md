@@ -27,6 +27,39 @@ valendo, agora tambem para colaborador.
 
 ---
 
+## 20261014120000_saldo_e_um_so.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do financeiro (carteiras) |
+| **Data** | 14/10/2026 |
+| **Branch** | `main` (clone C:\dev\fitmind-bugs) |
+| **Toca em dinheiro?** | **Sim** — muda a conferência do saque e acerta as tabelas de carteira |
+| **Aplicada em producao?** | **Sim — 14/10/2026**, `md5(prosrc)` das 2 funções conferido |
+
+A Marilene Araújo entrou bloqueada pela mensalidade e a tela mostrava
+"Descontar da carteira (R$ 920,60)" — o ganho dela como coach, não o saldo. O
+pagamento recusava, e o admin mostrava R$ 26,15. O conserto das telas está no
+código (`src/lib/my-balance.functions.ts`); aqui:
+
+- `carteira_atual` respondia a **qualquer um, sem login**, e com
+  `_profile_id = null` devolvia nome, ganho, saque e saldo de todos.
+  `REVOKE ... FROM PUBLIC` não tirava o `anon` (EXECUTE explícito por
+  privilégio padrão). Agora: sem sessão só o servidor; com sessão, a própria
+  carteira, ou todas se admin. Testado como Marilene, admin e servidor.
+- `auditar_carteiras` deixava passar o `anon`. Ficou só `service_role`.
+- `request_seller_withdrawal_atomic` conferia a soma das tabelas, incluindo
+  `student_wallets` (só FitCoin). Passa a conferir `carteira_atual.disponivel`.
+- Cron `carteiras-acompanham-o-extrato` (job 423, minuto 17 de toda hora):
+  `auditar_carteiras(true)`. O cron das 03:00 só recalcula quem teve
+  comissão liberada; venda de produto vencida ficava velha (Jean Reis: tabela
+  R$ 0,06, saldo R$ 1.030,90). Rodado na hora: Jean e Nathan acertados.
+
+Depois: 40 pessoas, soma das tabelas = `disponivel` em todas, auditoria 0,
+carteira do sistema com diferença 0.
+
+---
+
 ## 20261009140000_cupom_so_vale_com_carteirinha_ativa.sql
 
 | | |

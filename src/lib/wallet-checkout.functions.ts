@@ -1,33 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-export const getMyWalletTotals = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
-    const profileId = prof?.id;
-    if (!profileId) return { coach: 0, partner: 0, professional: 0, total: 0 };
-    // O saldo é UM só e vem de `carteira_atual`, derivada do ledger. As tabelas
-    // de carteira envelheciam sozinhas quando um prazo vencia, e o checkout
-    // passava a recusar pagamento por dinheiro que já estava liberado.
-    //
-    // As três chaves abaixo são a ORIGEM do que a pessoa ganhou, não caixas
-    // separadas: saque e gasto saem do bolso único e não pertencem a nenhuma
-    // delas. Era tentar dividir esse número em três que produzia "R$ 0,01 no
-    // coach e R$ 0,01 no parceiro" para quem tinha R$ 0,02 no total.
-    const { data: linhas } = await supabase.rpc("carteira_atual" as never, { _profile_id: profileId } as never);
-    const c = ((linhas as Array<{
-      disponivel: number; ganho_coach: number; ganho_parceiro: number; ganho_profissional: number;
-    }> | null) ?? [])[0];
-    return {
-      coach: Number(c?.ganho_coach || 0),
-      partner: Number(c?.ganho_parceiro || 0),
-      professional: Number(c?.ganho_profissional || 0),
-      total: Number(c?.disponivel || 0),
-    };
-  });
+import { loadBalance } from "@/lib/my-balance.functions";
 
 export const payStoreOrderWithWallet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -79,8 +53,8 @@ export const payCheckoutGroupWithWallet = createServerFn({ method: "POST" })
     const itens = (itensRaw as unknown as GroupItemRow[]) || [];
 
     const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
-    const { data: linhas } = await supabase.rpc("carteira_atual" as never, { _profile_id: prof?.id } as never);
-    const disponivel = Number(((linhas as Array<{ disponivel: number }> | null) ?? [])[0]?.disponivel || 0);
+    if (!prof?.id) throw new Error("Perfil não encontrado");
+    const { disponivel } = await loadBalance(supabase, prof.id);
     if (disponivel + 0.001 < Number(grupo.total_amount)) throw new Error("Saldo insuficiente para a compra inteira");
 
     const breakdown: Record<string, number> = {};
