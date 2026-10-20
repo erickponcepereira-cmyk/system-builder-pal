@@ -358,3 +358,62 @@ R$ 409,20; a aba de parceiro mostrava R$ 385,65, a de coach R$ 23,55).
   chave pública dava para listar o saldo de todos. Agora só a própria, admin
   ou servidor. **Ao criar função financeira, revogue de `anon` pelo nome** —
   `REVOKE ... FROM PUBLIC` não tira o `anon` no Supabase.
+
+## Venda manual com master coach e produto pendente (20/10/2026)
+
+**PP-882F515A** — "Criação Sistema Bike Indoor Fase 1/2" (produto profissional do
+Erick, R$ 4.000,00) para o **Gilberto Delmondes** (aluno da Julia Victoria, unidade
+Mutação Fit Dr. Fábio), no **Pix recebido fora do sistema**. O Erick operou como
+master coach. Feita pelo caminho normal — `create_partner_product_order` com o JWT
+do Erick e o aluno no 3º parâmetro, depois `process_partner_product_order_paid` — e
+marcada em `metadata.venda_manual_pix` e na nota do pedido.
+
+| Etapa | Valor | Para |
+|---|---|---|
+| Pix 0,60% | 24,00 | maquininha |
+| Sistema 7% | 278,32 | FitMind |
+| Comissão de coach 10% | 369,77 | — |
+| ↳ rede 10/5/3% da comissão | 36,98 / 18,49 / 11,09 | Vimark / valdenici / Nathan |
+| ↳ master coach (10% do líquido da titular) | 30,32 | Erick |
+| ↳ coach titular | 272,89 | Julia |
+| Líquido do produto | 3.327,91 | — |
+| ↳ co-produção 50% | 1.663,96 | HDSoluções (Wallace) |
+| ↳ criador | 1.663,95 | Erick |
+
+**O master coach sai do líquido da titular, depois da rede** — a regra de 15/09
+(seção "Bônus de Master Coach"). O percentual é o `master_coach_commission_pct` da
+**titular** (Julia, 10%), não o do master (Erick, 50%).
+
+**Produto pendente não vende.** `create_partner_product_order` exige `approved` e
+ativo. Para vender sem publicar: dentro de **uma transação**, aprovar e ativar →
+criar o pedido → devolver para `pending` e desativado → processar. Ninguém vê o
+produto na loja, porque o estado intermediário nunca é confirmado.
+
+**Simule antes.** O mesmo bloco dentro de um `DO` que termina em `RAISE` devolve
+pedido, comissões, co-produção e extrato sem gravar nada. Bateu centavo por
+centavo com a conta de `computeFromCharge` antes de gravar de verdade.
+
+## A co-produção mentia sobre o Pix (20/10/2026)
+
+**No dinheiro estava certo; na tela, não.** `apply_coproduction_credits_on_order`
+calcula o percentual sobre o `partner_net_amount` **do pedido**, que já sai
+diferente no Pix e no cartão. O editor (`components/shared/CoproductionEditor.tsx`)
+calculava sobre o líquido de cartão gravado no produto e mostrava o Pix como
+**cartão × 1,0399** (`PIX_UPLIFT_PCT = 3.99`, sobra da época do cartão a 4,98% e do
+Pix a 0,99%). Com cartão a 2,99% e Pix a 0,60%, o número não correspondia a nada.
+
+Agora os dois chamadores calculam o líquido de **cada** meio com `computeFromCharge`
+a partir do preço, que é de onde a venda real parte (o `*_net_amount` gravado
+envelhece quando a taxa muda). Também passam o bruto, que nunca era passado: "% do
+bruto" calculava sobre o líquido. Percentual sai do líquido daquele meio; **valor
+fixo é o mesmo nos dois** — é o que o banco paga, e o criador absorve a diferença.
+
+**Configuração corrigida junto:** a co-produção do Bike Indoor estava como **fixo
+R$ 1.663,00**. O esperado era 1.663,955 para cada no Pix — metade do líquido —, o
+que só existe com **50% do líquido**. Trocada como o app troca (`updateCoproduction`:
+`split_kind`, `percent_of_net`, `fixed_amount_brl = 0`, sem pedir novo aceite).
+Antes em `backup.coproducao_bike_indoor_20261020`.
+
+**Arredondamento:** o banco grava `numeric` com meio centavo para cima; `Math.round`
+erra parte dos meios centavos pelo binário (1,005 → 1,00). O editor usa
+`emCentavos`, que arredonda como o banco.

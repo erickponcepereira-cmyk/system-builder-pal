@@ -89,6 +89,12 @@ interface ProProduct {
   network_l3_pct_override?: number | null;
 }
 
+/** Líquido do profissional numa venda real naquele meio de pagamento: a venda parte do preço. */
+function liquidoDaVenda(p: Partial<ProProduct>, metodo: "pix" | "card"): number {
+  const pct = (p.coach_commission_percentage || 10) as CoachCommissionPct;
+  return computeFromCharge(Number(p.price || 0), pct, metodo, undefined, productSplitOverride(p)).partnerNet;
+}
+
 function productSplitOverride(p: Partial<ProProduct> | null | undefined): PartnerSplitOverride | undefined {
   if (!p?.custom_split) return undefined;
   return {
@@ -945,7 +951,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   productId={editing.id}
                   creatorType="professional"
                   creatorId={coachId}
-                  productNetValueBrl={Number(editing.professional_net_amount || editing.price || 0)}
+                  productGrossValueBrl={Number(editing.price || 0)}
+                  productNetValueBrl={liquidoDaVenda(editing, "card")}
+                  productPixNetValueBrl={liquidoDaVenda(editing, "pix")}
                 />
               </div>
             )}

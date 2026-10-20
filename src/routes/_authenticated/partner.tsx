@@ -763,12 +763,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     if (editing.kind === "paid") {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
-      const split = (editing.system_fee_pct_override != null || editing.system_fee_amount_override != null)
-        ? {
-            systemFeePctOverride: editing.system_fee_pct_override != null ? Number(editing.system_fee_pct_override) : null,
-            systemFeeAmountOverride: editing.system_fee_amount_override != null ? Number(editing.system_fee_amount_override) : null,
-          }
-        : null;
+      const split = splitDoProduto(editing);
 
       const b = mode === "receive"
         ? computeFromReceive(editing.partner_net_amount || 0, pct, "card", DEFAULT_PARTNER_FEES, split)
@@ -1417,7 +1412,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   productId={editing.id}
                   creatorType="partner"
                   creatorId={partner.id}
-                  productNetValueBrl={Number(editing.partner_net_amount || editing.price || 0)}
+                  productGrossValueBrl={Number(editing.price || 0)}
+                  productNetValueBrl={liquidoDaVenda(editing, "card")}
+                  productPixNetValueBrl={liquidoDaVenda(editing, "pix")}
                 />
               </div>
             )}
@@ -1456,6 +1453,22 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   );
 }
 
+/** Ajuste de taxa do sistema gravado no produto, do jeito que a calculadora de preço lê. */
+function splitDoProduto(p: Partial<Product>) {
+  return (p.system_fee_pct_override != null || p.system_fee_amount_override != null)
+    ? {
+        systemFeePctOverride: p.system_fee_pct_override != null ? Number(p.system_fee_pct_override) : null,
+        systemFeeAmountOverride: p.system_fee_amount_override != null ? Number(p.system_fee_amount_override) : null,
+      }
+    : null;
+}
+
+/** Líquido do parceiro numa venda real naquele meio de pagamento: a venda parte do preço. */
+function liquidoDaVenda(p: Partial<Product>, metodo: "pix" | "card"): number {
+  const pct = (p.coach_commission_percentage || 10) as CoachCommissionPct;
+  return computeFromCharge(Number(p.price || 0), pct, metodo, DEFAULT_PARTNER_FEES, splitDoProduto(p)).partnerNet;
+}
+
 function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; onChange: (patch: Partial<Product>) => void }) {
   const mode = (product.price_input_mode || "charge") as PartnerPriceMode;
   const pct = (product.coach_commission_percentage || 10) as CoachCommissionPct;
@@ -1463,12 +1476,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.partner_net_amount) || 0;
-  const split = (product.system_fee_pct_override != null || product.system_fee_amount_override != null)
-    ? {
-        systemFeePctOverride: product.system_fee_pct_override != null ? Number(product.system_fee_pct_override) : null,
-        systemFeeAmountOverride: product.system_fee_amount_override != null ? Number(product.system_fee_amount_override) : null,
-      }
-    : null;
+  const split = splitDoProduto(product);
 
 
   const breakdown = mode === "receive"
