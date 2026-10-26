@@ -68,3 +68,47 @@ existe mais, e as 8 estão em `coach_assessment_deletions` — é o fluxo de
 exclusão do coach que não limpa. Nenhuma delas veio da limpeza de 05/10
 (conferido contra o backup). Quem abrir esses 8 endereços de resultado não
 acha nada.
+
+## Pesagem final que era cópia da inicial (26/10/2026)
+
+**Sintoma:** desafio de setembro (`competitions.ad334f03`, mês 9) sem ganhador
+possível — sete inscritos com pesagem final igual à inicial, resultado zero, e o
+Rodrigo "perdendo" 300 kg.
+
+**Como acontece:** o vínculo de uma avaliação com o desafio é refeito **toda vez
+que o coach salva a edição dela** (`EvaluateTab` → `linkFitmindAssessmentToChallenge`).
+O formulário mostra o vínculo atual e oferece a próxima pesagem da inscrição como
+botão — para quem já tem a inicial, "Pesagem Final". O coach abria a avaliação
+**inicial** para corrigir um número, tocava em "Pesagem Final", e a mesma avaliação
+virava a final: `sync_challenge_assessment` copiava os números dela para `final_*`,
+e a marcação de inicial se perdia. O Rodrigo tinha 426,3 digitado na inicial; a
+correção para 126,3 foi junto com a troca para final.
+
+**A trava agora:** `recusaDaPesagem` (exportada de `fitmind-challenge.functions.ts`,
+com teste) recusa vincular como final a própria avaliação inicial da inscrição, e
+recusa final de dia igual ou anterior ao da inicial (e o espelho para a inicial).
+
+**Como se lê quem é quem** quando sobra uma avaliação só: pela data contra a
+turma (`competition_groups`). Dentro de `initial_start_date..initial_end_date` é a
+inicial; no `final_weigh_in_date` é a final. `final_date` da inscrição é coluna
+gerada — não aceita escrita.
+
+**Corrigido em 26/10/2026** (backup em `backup.desafio_pesagem_duplicada_20261026`):
+
+- Elaine Souza e Silva, Ana Caroline Cabral Santana, Emily Magalhães, Lais Daiane
+  Silva de Arruda e Clovis Camargo Junior (setembro), e Celly Alves Silva
+  (outubro): a única avaliação era da semana da inicial. Voltou a ser a inicial,
+  e a final saiu (`weighed_initial`). Nenhum deles tem pesagem final registrada.
+- Rodrigo De Moura Barros: 18/09 voltou a inicial (126,3 — o 426,3 sumiu) e a
+  avaliação de 14/10, dia da final da turma 3, que nunca tinha sido vinculada,
+  virou a final.
+- Maritza Fonseca: a avaliação de 14/10, também no dia da final, virou a final.
+
+Com isso setembro tem duas pesagens finais válidas: **Maritza** (69,0 → 67,4 kg,
+gordura 37,5 → 36,9%) e **Rodrigo** (126,3 → 124,3 kg, gordura 39,4 → 39,2%).
+
+**Ficou de fora, de propósito:** o desafio de agosto (`8d2d9997`), já encerrado e
+premiado em 28/09, ainda tem duas inscrições com a final copiada da inicial —
+Lorrayne Aparecida (avaliação de 15/08, semana da inicial) e Velaine Jesus
+(avaliação de 22/09, dia da final; a inicial dela se perdeu). As duas tinham
+resultado zero e não entravam na disputa, então não mudam o vencedor.

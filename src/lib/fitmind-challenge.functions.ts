@@ -2,6 +2,41 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+type Pesagem = "initial" | "final";
+type AvaliacaoDaPesagem = { id: string; assessment_date: string };
+
+const diaDe = (iso: string) => iso.slice(0, 10);
+const diaBr = (iso: string) => {
+  const [a, m, d] = diaDe(iso).split("-");
+  return `${d}/${m}/${a}`;
+};
+
+/**
+ * Por que esta avaliação não pode ser a pesagem `tipo` desta inscrição, ou
+ * `null` se pode. `outra` é a avaliação já vinculada como a outra pesagem.
+ *
+ * Em setembro de 2026 o coach abriu a avaliação inicial para corrigir um
+ * número e tocou em "Pesagem Final": a mesma avaliação virou as duas, o
+ * resultado zerou e o desafio ficou sem ganhador. A final precisa ser outra
+ * avaliação, de um dia depois da inicial.
+ */
+export function recusaDaPesagem(tipo: Pesagem, avaliacao: AvaliacaoDaPesagem, outra: AvaliacaoDaPesagem | null): string | null {
+  if (!outra) return null;
+  const nomeOutra = tipo === "final" ? "inicial" : "final";
+  if (outra.id === avaliacao.id) {
+    return `Esta avaliação já é a pesagem ${nomeOutra} deste desafio. A pesagem ${tipo === "final" ? "final" : "inicial"} precisa ser outra avaliação.`;
+  }
+  const foraDeOrdem = tipo === "final"
+    ? diaDe(avaliacao.assessment_date) <= diaDe(outra.assessment_date)
+    : diaDe(avaliacao.assessment_date) >= diaDe(outra.assessment_date);
+  if (foraDeOrdem) {
+    return tipo === "final"
+      ? `A pesagem final precisa ser de um dia depois da inicial (${diaBr(outra.assessment_date)}).`
+      : `A pesagem inicial precisa ser de um dia antes da final (${diaBr(outra.assessment_date)}).`;
+  }
+  return null;
+}
+
 export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { assessmentId: string; enrollmentId: string; challengeType: "initial" | "final" }) =>
@@ -40,7 +75,7 @@ export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" 
 
     const { data: assessmentRow, error: assessmentError } = await supabaseAdmin
       .from("coach_body_assessments" as never)
-      .select("id, client_id, coach_id, student_id, weight, body_fat, muscle_mass, skeletal_muscle" as never)
+      .select("id, client_id, coach_id, student_id, weight, body_fat, muscle_mass, skeletal_muscle, assessment_date" as never)
       .eq("id" as never, data.assessmentId as never)
       .maybeSingle();
     if (assessmentError) throw new Error(assessmentError.message);
@@ -53,6 +88,7 @@ export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" 
       body_fat: number | null;
       muscle_mass: number | null;
       skeletal_muscle: number | null;
+      assessment_date: string;
     } | null;
     if (!assessment) throw new Error("Avaliação não encontrada.");
 
@@ -92,6 +128,18 @@ export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" 
     if (data.challengeType === "final" && enrollment.initial_weight == null) {
       throw new Error("A pesagem final só pode ser vinculada depois da pesagem inicial.");
     }
+
+    const { data: outraRows, error: outraError } = await supabaseAdmin
+      .from("coach_body_assessments" as never)
+      .select("id, assessment_date" as never)
+      .eq("challenge_enrollment_id" as never, enrollment.id as never)
+      .eq("challenge_type" as never, (data.challengeType === "final" ? "initial" : "final") as never)
+      .order("assessment_date" as never, { ascending: false })
+      .limit(1);
+    if (outraError) throw new Error(outraError.message);
+    const outra = ((outraRows as AvaliacaoDaPesagem[] | null) || [])[0] ?? null;
+    const recusa = recusaDaPesagem(data.challengeType, assessment, outra);
+    if (recusa) throw new Error(recusa);
 
     const { data: shareRows, error: shareLookupError } = await supabaseAdmin
       .from("assessment_shares" as never)
