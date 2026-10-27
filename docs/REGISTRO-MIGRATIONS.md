@@ -1,3 +1,27 @@
+## 20261027120000_baixa_manual_sem_minimo.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do financeiro (carteiras) |
+| **Data** | 27/10/2026 |
+| **Branch** | `main` (clone C:devitmind-bugs) |
+| **Toca em dinheiro?** | **Sim** — libera baixa manual do admin abaixo de R$ 50 |
+| **Aplicada em producao?** | **Sim — 27/10/2026**, `md5(prosrc)` conferido |
+
+O gatilho `guard_withdrawal_request` barrava toda linha de saque abaixo de
+R$ 50, inclusive a baixa manual do admin ("Lançar baixa", de um adiantamento
+pago por fora — a Ana Flávia, em 27/10). O mínimo passa a valer só para o
+pedido da pessoa; a baixa do admin é a feita com sessão de admin, ou pelo
+servidor numa linha já `approved`/`paid`. Coach, parceiro, profissional e
+aluno continuam com o mínimo (a função de saque e o código conferem também).
+
+Testado em transação desfeita: pedido de R$ 10 da Ana pela função de saque,
+linha aprovada gravada com a sessão dela e pedido `requested` gravado pelo
+servidor — os três barrados; baixa do admin de R$ 10 passou e o disponível
+caiu de R$ 22,64 para R$ 12,64.
+
+---
+
 ## 20261016160000_empresa_bloqueada_sai_da_loja.sql
 
 | | |

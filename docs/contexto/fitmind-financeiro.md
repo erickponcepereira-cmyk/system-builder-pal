@@ -445,3 +445,14 @@ pagamento, pago em **21/10/2026**; a Vimark operou como master coach. Cartão
 Mercado Pago não foi informado — `metadata.venda_manual_link.operacao_mp` está
 nulo. A primeira tentativa, **PP-598668DD** (20/10, Pix, com a própria Vimark como
 compradora), ficou cancelada.
+
+## Saque mínimo é do pedido, não da baixa do admin (27/10/2026)
+
+O mínimo de R$ 50 morava no gatilho `guard_withdrawal_request` e barrava
+também a baixa manual do admin de um adiantamento pago por fora. Agora o
+gatilho só cobra o mínimo do pedido da pessoa: a baixa do admin é a linha
+gravada com sessão de admin, ou pelo servidor já `approved`/`paid` — pedido
+da pessoa sempre nasce `requested`. A baixa continua presa ao saldo
+disponível (`registerManualPayout` confere `carteira_atual`) e às outras
+travas do gatilho: bloqueio de saque, devolução em aberto, um pedido aberto
+por vez.
