@@ -417,3 +417,31 @@ Antes em `backup.coproducao_bike_indoor_20261020`.
 **Arredondamento:** o banco grava `numeric` com meio centavo para cima; `Math.round`
 erra parte dos meios centavos pelo binário (1,005 → 1,00). O editor usa
 `emCentavos`, que arredonda como o banco.
+
+## Venda manual de produto de empresa parceira (27/10/2026)
+
+**Profissional e parceiro têm funções diferentes, com os parâmetros em ordem
+diferente:**
+
+| Produto | Função | Ordem |
+|---|---|---|
+| profissional (`professional_products`) | `create_partner_product_order` | produto, **forma**, aluno, indicação |
+| empresa parceira (`partner_products`) | `create_partner_company_order` | produto, **aluno**, forma, indicação |
+
+O nome engana: `create_partner_product_order` só procura em
+`professional_products` e responde "Produto indisponível" para um produto de
+parceiro — mesmo aprovado e ativo. As duas tratam master coach do mesmo jeito.
+
+**Data real do pagamento:** criar o pedido, gravar `paid_at` com a data do
+pagamento e chamar `admin_reprocess_partner_order` com JWT de admin. Ele processa
+e devolve a data: comissões nascem nela e liberam 7 dias depois.
+
+**PP-DEE88BD7** — "Plano contratado – Presença" (empresa da Vimark, R$ 916,00)
+para a **Karla Oliveira da Silva** (aluna do Jorge Ramos), cartão 1x por link de
+pagamento, pago em **21/10/2026**; a Vimark operou como master coach. Cartão
+27,39 · sistema 62,20 · comissão de coach 82,64 (Nathan nível 1 8,26; níveis 2 e
+3 sem upline voltaram ao Jorge, 4,13 + 2,48; master 6,77 para a Vimark; Jorge
+61,00) · líquido da empresa 743,77. Libera em 28/10. O número da operação do
+Mercado Pago não foi informado — `metadata.venda_manual_link.operacao_mp` está
+nulo. A primeira tentativa, **PP-598668DD** (20/10, Pix, com a própria Vimark como
+compradora), ficou cancelada.
