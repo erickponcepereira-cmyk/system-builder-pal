@@ -1,3 +1,21 @@
+## 20261027150000_desafio_aceita_mais_de_quatro_turmas.sql
+
+| | |
+|---|---|
+| **Autor** | Chat do financeiro (carteiras) |
+| **Data** | 27/10/2026 |
+| **Branch** | `main` (clone C:devitmind-bugs) |
+| **Toca em dinheiro?** | Nao |
+| **Aplicada em producao?** | **Sim — 27/10/2026**, restrição conferida por consulta |
+
+A Turma 5 do desafio de outubro não salvava: `competition_groups_group_number_check`
+só aceitava 1 a 4. Passa a `group_number >= 1`. Nada no app nem nas funções do
+banco dependia do teto; a numeração única por desafio continua na
+`UNIQUE (competition_id, group_number)`. Testado em transação desfeita: turma
+5 entra; turma 0 e turma 5 repetida continuam barradas.
+
+---
+
 ## 20261027120000_baixa_manual_sem_minimo.sql
 
 | | |
