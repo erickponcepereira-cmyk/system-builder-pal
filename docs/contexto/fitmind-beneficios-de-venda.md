@@ -184,3 +184,23 @@ trava contra toque duplo: o mesmo defeito do "um clique salva três produtos".
 Testado em produção com rollback, simulando o login: dono e colaborador 6 de 6
 OK; quem não é da unidade, 6 de 6 barrado com a mensagem certa. Migration
 `20261016120000_leitura_de_qr_no_balcao.sql`.
+
+## Coach que compra ticket do desafio paga e fica sem ticket (28/10/2026)
+
+`grant_challenge_token_on_paid` **sai sem entregar** quando o comprador tem
+qualquer linha em `coaches` ou `partners` — mesmo coach não aprovado, aguardando
+pagamento. A loja cobra normalmente e ninguém é avisado. Caso: George Guilherme
+Silva Magalhães, que se cadastrou como coach por engano e pagou o Ticket Desafio
+65 (FM-54CB6272): era o único dos 6 compradores do mês sem ticket.
+
+**Para desfazer coach por engano** (sem alunos, rede nem comissão pendurados):
+apagar `coach_patent_achievements` e `entity_share_codes` do coach, apagar a
+linha de `coaches` (o gatilho de promoção da rede não tem o que fazer), trocar
+`profiles.role` para `student` e `status` para `active` com JWT de admin (o
+`guard_profile_admin_changes` grava a troca no log em nome de quem fez),
+cancelar a mensalidade que o cadastro criou e a fatura em aberto, e **entregar o
+ticket barrado** com o mesmo INSERT do gatilho
+(`student_id, source_transaction_id, source_product_id, granted_by = 'purchase'`).
+Backup do caso em `backup.george_coach_por_engano_20261028`.
+
+**Fica em aberto:** a loja não avisa coach nem parceiro antes de vender o ticket.

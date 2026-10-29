@@ -143,3 +143,18 @@ Migrations do caso: `20261003120000_emmily_ventura_um_cadastro_so.sql` e
 `auditoria.emmily_ventura_avaliacoes_20261003` (8 linhas) — foram para
 `auditoria` por engano, antes de ver que a convencao desta frente e o schema
 `backup`; os dois ficam fora do PostgREST e sem acesso de `anon`/`authenticated`.
+
+## Conta criada pela coach, com avaliação dela (28/10/2026)
+
+George Guilherme Silva Magalhães tinha duas contas: a que ele mesmo criou (como
+coach, pelo link do Nathan — desfeita para aluno) e uma criada pela **Natália**
+2 segundos antes da ficha de avaliação dela, com **uma avaliação física** feita
+por ela. Nunca acessada.
+
+**A unificação move as avaliações da ficha da origem para a ficha do destino**,
+mesmo quando as fichas são de **coaches diferentes**, e solta a ficha da origem
+(`student_id` nulo) na lista da coach antiga — vazia. Antes de unificar, olhe de
+quem é a ficha da origem: trocar de ficha é trocar de coach, e é decisão do
+Erick. Aqui ele escolheu o Nathan (o coach da conta que a pessoa usa); a
+avaliação da Natália passou para a ficha dele e a ficha vazia dela foi apagada.
+Backup em `backup.george_contas_unificadas_20261028`.
