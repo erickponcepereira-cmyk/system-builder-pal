@@ -2807,26 +2807,44 @@ function normalizarCadastroPessoa(d: { nome: string; telefone: string; nasciment
   return { nome, telefone, nascimento };
 }
 
+type PessoaParecida = { credencial_id: string; referencia: string; nome: string; mesmo_nome: boolean };
+
 export const cadastrarPessoaAcademia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { partnerId: string; nome: string; telefone: string; nascimento: string }) => d)
+  .inputValidator((d: {
+    partnerId: string; nome: string; telefone: string; nascimento: string;
+    /** A recepção já respondeu que o dono do mesmo telefone é outra pessoa. */
+    outraPessoa?: boolean;
+  }) => d)
   .handler(async ({ data, context }) => {
     const { admin } = await autorizar(context.userId, data.partnerId);
 
     const { nome, telefone, nascimento } = normalizarCadastroPessoa(data);
 
-    // Mesmo telefone na mesma academia é a mesma pessoa. Duplicar aqui
-    // significa duas fichas e duas mensalidades para quem paga uma.
-    const { data: existente } = await admin
-      .from("academia_credenciais")
-      .select("id, referencia, nome_no_equipamento")
-      .eq("partner_id", data.partnerId)
-      .eq("telefone", telefone)
-      .eq("ativo", true)
-      .maybeSingle();
-    if (existente) {
-      const e = existente as { id: string; referencia: string; nome_no_equipamento: string | null };
-      return { credencialId: e.id, referencia: e.referencia, nome: e.nome_no_equipamento ?? nome, jaExistia: true };
+    /*
+     * A mesma pessoa não ganha um segundo identificador.
+     *
+     * Em 03/11 a Cryslaine Kelly virou 700037 e 700038 com três minutos de
+     * diferença: o rosto ficou num número, a mensalidade no outro, e a catraca
+     * dizia "Não cadastrado" para quem estava em dia. A busca de antes comparava
+     * o telefone escrito exatamente igual — um 9 a menos escapava, e o telefone
+     * formatado que vem do leitor, "(65) 9 9289-9725", nunca era igual.
+     *
+     * Mesmo nome com mesmo telefone ou nascimento é a mesma pessoa. Mesmo
+     * telefone com outro nome é pergunta: há telefone dividido por família.
+     */
+    const { data: achada, error: erroAchada } = await admin.rpc(
+      "academia_pessoa_ja_cadastrada" as never,
+      { p_partner_id: data.partnerId, p_nome: nome, p_telefone: telefone, p_nascimento: nascimento } as never,
+    );
+    if (erroAchada) throw new Error(erroAchada.message);
+    const parecida = ((achada ?? []) as unknown as PessoaParecida[])[0];
+
+    if (parecida?.mesmo_nome) {
+      return { credencialId: parecida.credencial_id, referencia: parecida.referencia, nome: parecida.nome, jaExistia: true };
+    }
+    if (parecida && !data.outraPessoa) {
+      return { duvida: { credencialId: parecida.credencial_id, referencia: parecida.referencia, nome: parecida.nome } };
     }
 
     /*

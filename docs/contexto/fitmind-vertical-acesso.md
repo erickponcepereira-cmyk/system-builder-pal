@@ -1012,3 +1012,50 @@ combina com o PC reiniciando e a pasta dela sem início automático.
 
 **Lição da vigia muda:** código que decide "não faço" num PC que ninguém vê tem
 que dizer o motivo para fora. Custou uma versão inteira.
+
+## 09/11/2026 — "Não cadastrado" com a mensalidade em dia: a mesma pessoa em dois números
+
+**Sintoma:** Cryslaine Kelly, Estação Funcional, em dia e barrada na catraca
+com "Não cadastrado". A recepção leu isso como "o rosto não cadastra".
+
+**O que era:** dois cadastros de balcão da mesma pessoa em 03/11, com três
+minutos de diferença: **700037** (telefone 65999333745) e **700038**
+(6599333745, com um 9 a menos). O rosto foi gravado no leitor como 700037; a
+mensalidade foi lançada no 700038. O leitor reconhece o rosto e reporta 700037,
+o agente não acha esse número entre os liberados, e "Não cadastrado" é o texto
+de `nao_encontrado` no agente (`MOTIVO_NA_TELA`). Foram 15 recusas entre 03/11 e
+09/11, todas em `academia_acessos_negados`. **É lá que se olha primeiro**
+quando a catraca recusa alguém em dia: o número que aparece ali é o do rosto.
+
+**Corrigido** (`20261109120000`): a mensalidade passou para o 700037 e o
+700038 foi desligado. Na mesma hora o 700037 aparece em
+`acesso_avaliar_academia` liberado até 03/12, e chega à catraca na próxima
+sincronização do agente.
+
+**Por que o balcão deixou passar:** `cadastrarPessoaAcademia` procurava a
+pessoa pelo telefone **escrito exatamente igual**. Erro de digitação escapa, e
+482 dos 548 cadastros ativos guardam o telefone formatado, como
+"(65) 9 9289-9725". Na prática a busca nunca achava quem veio do leitor.
+Agora ela passa por `academia_pessoa_ja_cadastrada`:
+
+- mesmo nome (sem acento, sem caixa) **e** mesmo telefone ou mesmo
+  nascimento → é a mesma pessoa, segue a renovação dela;
+- mesmo telefone **com outro nome** → a tela pergunta "é a mesma pessoa?".
+  Não dá para juntar sozinho: há telefone dividido por família (3 números em
+  6 pessoas na Estação, ver `salvarCadastroPessoa`).
+
+**Deixado de propósito:** Hellen Cristine Santos de Oliveira foi recadastrada
+em 09/11 como **700040** (com mensalidade de R$ 120 até 09/12), mas já existia
+como **59**, vinda do Next Fit, com o mesmo telefone. Não dá para saber daqui
+em qual número está o rosto dela: o leitor da Estação não informa quem tem
+rosto (`rosto_em` vazio nos 462 do grupo, porque `rostosDoLeitor` devolve nulo
+neste modelo). Se ela for barrada com "Não cadastrado", a recusa em
+`academia_acessos_negados` diz o número do rosto. Aí se move a mensalidade para
+ele, como foi feito com a Cryslaine.
+
+**O aviso "Falta cadastrar o rosto" da lista não fala de rosto.**
+`sem_rosto_no_leitor` (em `listarAlunosAcademia`) é `importado_em` nulo, ou
+seja, "a pessoa ainda não existe como usuário no leitor". Ele some quando o
+agente cria o usuário, com ou sem rosto. Por isso não ajudou aqui: depois da
+sincronização das 21:33 de 09/11, o 700037 e o 700038 apareciam do mesmo jeito,
+e só um tinha rosto.

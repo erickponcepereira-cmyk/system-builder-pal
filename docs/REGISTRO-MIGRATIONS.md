@@ -1,3 +1,29 @@
+## 20261109120000_mesma_pessoa_nao_ganha_segundo_identificador.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 09/11/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | Nao (move uma mensalidade de identificador, sem mudar valor) |
+| **Aplicada em producao?** | **Sim — 09/11/2026**, `md5(prosrc)` conferido (`7e813b75…`) |
+
+A Cryslaine Kelly (Estação Funcional) foi cadastrada duas vezes no balcão em
+03/11: 700037 e 700038, três minutos depois e com um 9 a menos no telefone. O
+rosto ficou no 700037 e a mensalidade no 700038, e a catraca respondia "Nao
+cadastrado" (15 recusas `nao_encontrado`). A mensalidade passa para o 700037
+e o 700038 é desligado. Backup em `backup.credencial_duplicada_20261109`.
+
+Cria `academia_pessoa_ja_cadastrada`, só para `service_role`, que compara o
+telefone por dígitos e também nome com nascimento. Ela substitui a busca por
+telefone exato de `cadastrarPessoaAcademia`, que nunca achava os 482 cadastros
+com telefone formatado. Testada contra os dados reais antes de aplicar: a
+segunda tentativa da Cryslaine, a Hellen de hoje, um nome com acento e espaço
+duplo, uma pessoa nova e um telefone de família (este volta com
+`mesmo_nome = false`, que vira pergunta na tela).
+
+---
+
 ## 20261027150000_desafio_aceita_mais_de_quatro_turmas.sql
 
 | | |

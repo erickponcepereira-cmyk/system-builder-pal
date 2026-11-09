@@ -19,11 +19,13 @@ const mascararTelefone = (v: string) => {
  * na frente não vai preencher ficha; e sem esse cadastro não existia jeito de
  * lançar a mensalidade de um cliente novo.
  */
+type Pessoa = { credencialId: string; nome: string; referencia: string };
+
 export function CadastrarPessoaAcademia({
   partnerId, aoCriar, aoCancelar,
 }: {
   partnerId: string;
-  aoCriar: (p: { credencialId: string; nome: string; referencia: string }) => void;
+  aoCriar: (p: Pessoa) => void;
   aoCancelar: () => void;
 }) {
   const cadastrar = useServerFn(cadastrarPessoaAcademia);
@@ -31,13 +33,21 @@ export function CadastrarPessoaAcademia({
   const [telefone, setTelefone] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [salvando, setSalvando] = useState(false);
+  // Mesmo telefone com outro nome: só quem está com a pessoa na frente sabe se
+  // é ela ou alguém da família. Juntar errado dá a mensalidade a outra pessoa;
+  // separar errado deixa o rosto num número e a mensalidade em outro.
+  const [duvida, setDuvida] = useState<Pessoa | null>(null);
 
-  const confirmar = async () => {
+  const confirmar = async (outraPessoa = false) => {
     setSalvando(true);
     try {
-      const r = await cadastrar({ data: { partnerId, nome, telefone, nascimento } });
+      const r = await cadastrar({ data: { partnerId, nome, telefone, nascimento, outraPessoa } });
+      if (r.duvida) {
+        setDuvida(r.duvida);
+        return;
+      }
       if (r.jaExistia) {
-        toast.info(`Este telefone já é de ${r.nome}. Continuando a renovação dessa pessoa.`);
+        toast.info(`${r.nome} já tem cadastro (id ${r.referencia}). Continuando a renovação dessa pessoa.`);
       } else {
         toast.success(`Cadastrado · identificador ${r.referencia}`);
       }
@@ -51,6 +61,45 @@ export function CadastrarPessoaAcademia({
 
   const podeSalvar =
     nome.trim().length >= 3 && telefone.replace(/\D/g, "").length >= 10 && nascimento.length === 10;
+
+  if (duvida) {
+    return (
+      <div className="space-y-3 rounded-xl border border-aca-atencao bg-aca-alto p-3">
+        <p className="text-sm font-bold text-aca-ink">Este telefone já está cadastrado</p>
+        <p className="text-[11px] text-aca-muted">
+          Ele pertence a <strong className="font-semibold text-aca-ink">{duvida.nome}</strong>{" "}
+          (id <span className="font-mono tabular-nums">{duvida.referencia}</span>). {nome.trim()} é a mesma pessoa?
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => aoCriar(duvida)}
+            disabled={salvando}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-aca-acao px-3 py-2 text-xs font-bold text-aca-acao-ink disabled:opacity-50"
+          >
+            Sim, renovar {duvida.nome}
+          </button>
+          <button
+            type="button"
+            onClick={() => void confirmar(true)}
+            disabled={salvando}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-aca-line px-3 py-2 text-xs text-aca-ink hover:bg-aca-line disabled:opacity-50"
+          >
+            {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Não, é outra pessoa
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setDuvida(null)}
+          disabled={salvando}
+          className="text-[11px] text-aca-muted underline-offset-2 hover:underline"
+        >
+          Voltar e corrigir os dados
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 rounded-xl border border-aca-line bg-aca-alto p-3">
