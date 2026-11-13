@@ -98,7 +98,7 @@ function ProdutoPublicoNotFound() {
   return <ProdutoPublicoIndisponivel />;
 }
 
-function ProdutoPublicoError({ reset }: { error: Error; reset: () => void }) {
+function ProdutoPublicoError({ reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-background p-6 text-center">
