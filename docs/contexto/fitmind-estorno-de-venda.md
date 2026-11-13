@@ -69,9 +69,10 @@ não muda a comissão: a venda deixou de valer, e a comissão sai inteira.
   revogado; o consumido fica, e a tela avisa quantos foram.
 - **Não mexe em fitcoin de indicação já creditado** (`is_referral`), além de
   cancelar a comissão correspondente.
-- **Não cancela a mensalidade de academia** que a compra na loja da academia
-  gerou (`academia_mensalidades.partner_order_id`, via
-  `academia_mensalidade_gerar_pedido`): a catraca continua liberando.
+- ~~Não cancela a mensalidade de academia~~ — **corrigido em 12/11/2026** no
+  ramo de pedido de parceiro, ver a seção abaixo. No ramo de `transactions`
+  (mensalidade com `transaction_id`, via `academia_mensalidade_gerar`) continua
+  sem estornar.
 - **Não devolve a validade de antes da compra.** Os dias saem da validade
   *atual*. Quem não tinha carteirinha fica com ela vencendo na data do
   pagamento, não nula; e quem já tinha validade além de `pago + dias` (a compra
@@ -136,7 +137,43 @@ carreira cada no `coach_points_log`, os 15 dias de carteirinha que cada compra
 registrou em `perks_card_days` e a venda no ranking de setembro do coach. Nenhum
 deles tinha ticket de desafio nem ingresso de corrida.
 
-## O pedido nunca chegava a ser criado (22/09/2026)
+## Mensalidade de academia sai com o estorno (12/11/2026)
+
+`academia_mensalidade_estornar_pedido(order, admin, motivo)` (migration
+`20261112160000`) é o primeiro passo de `desfazerBeneficiosDoPedidoDeParceiro`.
+Se falhar, o estorno para, antes dos dias e do ranking, que não são idempotentes.
+A função em si é idempotente: só age sobre mensalidade `ativa`.
+
+- A mensalidade vira **`estornada`** (status que já existia, o mesmo do
+  cancelamento da recepção). Catraca (`academia_agente_retrato`), tela e
+  relatórios só leem `ativa`: a pessoa volta ao vencimento que tinha sem a
+  compra, e o dinheiro sai do relatório. **A porta só bloqueia na próxima
+  sincronização do agente** (laço de 12 h ou "Sincronizar agora").
+- **Renovação lançada em cima dela recua** (decisão desta sessão; o Erick não
+  teve preferência). A conta é refeita como se a compra não existisse: compra
+  01/11 → 01/12, balcão 25/11 + 30 → 31/12; estornada a compra, o balcão passa
+  a 25/12. Os dias já usados da compra não são cobrados de ninguém. Cada
+  renovação usa a regra que a criou (balcão e `justa`: maior entre teto e dia;
+  `vencimento`: teto; `pagamento`: não encadeia). Importação não muda; data
+  digitada à mão na recepção é tratada como renovação comum. A renovação recuada
+  ganha a explicação em `observacao`.
+- Regerar não acontece: `academia_mensalidade_gerar_pedido` recusa pedido que
+  já tem mensalidade, de qualquer status.
+
+**Em 12/11/2026 nenhuma compra tinha gerado mensalidade:**
+`academia_produtos_mensalidade` está vazia, e a Reino vende "Mensalidade" e
+"Trimestral" na loja (6 pagos) sem vínculo, então a compra nunca liberou ninguém
+sozinha. Das 404 mensalidades lançadas no balcão, 157 foram renovadas com a
+anterior em vigor, e por isso o recuo importa.
+
+**Provado em produção**, em `DO` terminado em `RAISE EXCEPTION`, com o vínculo
+criado dentro da transação e o gerador real: PP-F7D5CE5E (Reino, R$ 220, pelo
+aluno) negado → liberado 30 dias → negado, estorno repetido = 0, regerar = false;
+PP-F1B66CA5 (Estação, pela credencial) bloqueado em 25/09 → libera até 12/12 →
+volta a 25/09; renovação em cima de 50 → 30 dias; cadeia de três de 70 → 40
+(a anterior intacta); compra já vencida não recua nada. Depois de aplicada,
+`md5(prosrc)` bate com o arquivo, `anon` e `authenticated` recebem `42501` e
+`service_role` executa.
 
 `return_requests` tinha **zero linhas** desde julho, e o motivo não era falta de
 tela: `getStudentPurchaseHistory` prefixa o id de cada linha do histórico

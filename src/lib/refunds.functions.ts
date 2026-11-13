@@ -31,9 +31,13 @@ type Linha = { id: string; product_id: string | null; student_id: string | null 
 type Ticket = { id: string; consumed_at: string | null };
 type TabelaDeTicket = "student_challenge_tokens" | "run_challenge_tickets";
 type TicketsRevogados = { revogados: number; jaUsados: number };
-type BeneficiosDesfeitos = { tickets: TicketsRevogados; dias: number };
+type MensalidadeEstornada = { estornadas: number; recuadas: number };
+type BeneficiosDesfeitos = { tickets: TicketsRevogados; dias: number; academia: MensalidadeEstornada };
 
-const NADA_DESFEITO: BeneficiosDesfeitos = { tickets: { revogados: 0, jaUsados: 0 }, dias: 0 };
+const NENHUMA_MENSALIDADE: MensalidadeEstornada = { estornadas: 0, recuadas: 0 };
+const NADA_DESFEITO: BeneficiosDesfeitos = {
+  tickets: { revogados: 0, jaUsados: 0 }, dias: 0, academia: NENHUMA_MENSALIDADE,
+};
 
 type PedidoDeParceiro = {
   status: string;
@@ -53,6 +57,8 @@ export type ResultadoDoEstorno = {
   tickets_ja_usados: number;
   dias_de_carteirinha_retirados: number;
   bloqueios_cancelados: number;
+  mensalidades_estornadas: number;
+  renovacoes_recuadas: number;
 };
 
 async function exigirAdmin(userId: string): Promise<string> {
@@ -257,7 +263,7 @@ async function desfazerBeneficiosDasTransacoes(transacoes: Linha[]): Promise<Ben
   const tickets = await revogarTickets(txIds);
   const dias = await retirarDiasDeCarteirinha(transacoes);
   if (txIds.length) await supabaseAdmin.from("coach_points_log").delete().in("transaction_id", txIds);
-  return { tickets, dias };
+  return { tickets, dias, academia: NENHUMA_MENSALIDADE };
 }
 
 async function lerPedidoDeParceiro(orderId: string): Promise<PedidoDeParceiro | null> {
@@ -286,15 +292,39 @@ async function descontarDoRankingDoMes(pedido: PedidoDeParceiro): Promise<void> 
 }
 
 /**
+ * A mensalidade de academia que a compra liberou vira `estornada`, e quem
+ * renovou em cima dela recua os dias que herdou. A regra mora no banco
+ * (`academia_mensalidade_estornar_pedido`); a catraca só lê mensalidade `ativa`.
+ *
+ * Falha aqui interrompe o estorno: a catraca seguiria liberando quem teve o
+ * dinheiro devolvido, e ninguém ficaria sabendo.
+ */
+async function estornarMensalidadeDaAcademia(
+  orderId: string, adminProfileId: string, motivo: string,
+): Promise<MensalidadeEstornada> {
+  const { data, error } = await supabaseAdmin.rpc("academia_mensalidade_estornar_pedido" as never, {
+    p_order_id: orderId, p_cancelado_por: adminProfileId, p_motivo: motivo,
+  } as never);
+  if (error) throw new Error(`Não consegui estornar a mensalidade da academia: ${error.message}`);
+  const linha = (data as unknown as MensalidadeEstornada[] | null)?.[0];
+  return linha ?? NENHUMA_MENSALIDADE;
+}
+
+/**
  * Pedido de parceiro/profissional não tem `transactions`: os benefícios dele
  * são gravados com o id do pedido por `grant_partner_product_perks` (tickets,
- * pontos, dias em `metadata.perks_card_days`) e `grant_run_challenge_tickets`.
+ * pontos, dias em `metadata.perks_card_days`), `grant_run_challenge_tickets`
+ * e `academia_mensalidade_gerar_pedido`.
  */
-async function desfazerBeneficiosDoPedidoDeParceiro(orderId: string): Promise<BeneficiosDesfeitos> {
+async function desfazerBeneficiosDoPedidoDeParceiro(
+  orderId: string, adminProfileId: string, motivo: string,
+): Promise<BeneficiosDesfeitos> {
   const pedido = await lerPedidoDeParceiro(orderId);
   // Já estornado: dias e ranking não são idempotentes e não podem sair duas vezes.
   if (!pedido || pedido.status === "refunded") return NADA_DESFEITO;
 
+  // Primeiro, porque pode interromper: antes dos dias e do ranking, repetir o estorno é seguro.
+  const academia = await estornarMensalidadeDaAcademia(orderId, adminProfileId, motivo);
   const desafio = await revogarTicketsOnde("student_challenge_tokens", "notes", `partner_order:${orderId}`);
   const corrida = await revogarTicketsOnde("run_challenge_tickets", "source_order_id", orderId);
   await supabaseAdmin.from("coach_points_log").delete().filter("metadata->>partner_order_id", "eq", orderId);
@@ -303,6 +333,7 @@ async function desfazerBeneficiosDoPedidoDeParceiro(orderId: string): Promise<Be
   return {
     tickets: { revogados: desafio.revogados + corrida.revogados, jaUsados: desafio.jaUsados + corrida.jaUsados },
     dias,
+    academia,
   };
 }
 
@@ -422,7 +453,7 @@ export const executarEstorno = createServerFn({ method: "POST" })
     const bloqueios = await cancelarBloqueios(txIds, motivo);
     // Antes de o pedido virar `refunded`: é por esse status que se sabe se já foi desfeito.
     const beneficios = deParceiro
-      ? await desfazerBeneficiosDoPedidoDeParceiro(pedido.order_id)
+      ? await desfazerBeneficiosDoPedidoDeParceiro(pedido.order_id, adminProfileId, motivo)
       : await desfazerBeneficiosDasTransacoes(transacoes);
 
     if (txIds.length) {
@@ -477,5 +508,7 @@ export const executarEstorno = createServerFn({ method: "POST" })
       tickets_ja_usados: beneficios.tickets.jaUsados,
       dias_de_carteirinha_retirados: beneficios.dias,
       bloqueios_cancelados: bloqueios,
+      mensalidades_estornadas: beneficios.academia.estornadas,
+      renovacoes_recuadas: beneficios.academia.recuadas,
     };
   });

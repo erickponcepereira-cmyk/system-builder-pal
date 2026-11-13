@@ -89,6 +89,8 @@ function AdminEstornos() {
         res.tickets_revogados > 0 ? `${res.tickets_revogados} tickets revogados` : null,
         res.dias_de_carteirinha_retirados > 0 ? `${res.dias_de_carteirinha_retirados} dias de carteirinha retirados` : null,
         res.bloqueios_cancelados > 0 ? `${res.bloqueios_cancelados} bloqueios de nutri/professor cancelados` : null,
+        res.mensalidades_estornadas > 0 ? "mensalidade da academia estornada (catraca bloqueia na próxima sincronização)" : null,
+        res.renovacoes_recuadas > 0 ? `${res.renovacoes_recuadas} renovação(ões) da academia recuada(s)` : null,
       ].filter(Boolean);
       toast.success(`Estornado. ${partes.join(" · ")}.`);
       if (res.tickets_ja_usados > 0) {
