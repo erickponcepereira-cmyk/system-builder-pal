@@ -1,3 +1,48 @@
+## 20261112150000_funcoes_da_academia_so_pelo_servidor.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 12/11/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | Nao (só permissão; nenhum corpo de função muda) |
+| **Aplicada em producao?** | **Sim — 12/11/2026**, `md5` dos 30 corpos igual antes e depois (`ce1b3a7d…`) |
+
+Falha de segurança (LGPD). 30 funções `academia_*` SECURITY DEFINER passam a
+ter EXECUTE só para `service_role` (e o dono `postgres`). Antes tinham para
+`PUBLIC`/`anon`/`authenticated` e não conferiam acesso no corpo. Com a chave
+anônima, `/rest/v1/rpc/academia_relatorio_pessoas` devolvia nome e telefone
+dos alunos de qualquer academia (provado como `anon`: 1660 linhas da Estação).
+Três outras famílias saíram na auditoria:
+
+- **Escrita aberta:** `academia_renovar` lançava mensalidade, e com ela
+  destravava catraca, para qualquer um.
+- **Checagem que abre para anon:** `academia_pode_ver` devolve `true` com
+  `auth.uid()` nulo, o que também vale para `anon`. `academia_recepcao_buscar`,
+  `_entrada`, `academia_credencial_vincular`, `_credenciais_sugerir_vinculo` e
+  `academia_padrao_do_aluno` respondiam a `anon`.
+- **Abertas a qualquer logado:** `academia_avisos_pendentes` (nome e telefone),
+  `academia_dayuse_avaliar` (dá para usar como oráculo de CPF) e outras.
+
+Nenhuma das 30 é chamada pelo navegador. A tela usa server function com o
+cliente admin, depois de `perfilComAcessoAcademia`, e as demais são chamadas
+por gatilho, por cron (job de `postgres`) ou de dentro de outra SECURITY
+DEFINER. Testado depois de aplicar: `anon` recebe `42501` no SQL e
+`401/42501` na REST. O dono com o JWT dele também recebe `42501` chamando
+direto, o que é esperado. Pelo `service_role` o relatório abre com os mesmos
+números de antes. Uma chamada vinda de dentro de SECURITY DEFINER continua
+funcionando, que é o caminho do agente da catraca, e o agente real fez
+contato depois da aplicação. A migration traz uma trava que desfaz tudo se
+alguma das 30 ficar aberta.
+
+Fica de fora: `academia_agente_*` e `academia_importar_contratos` (segredo ou
+token no corpo, chamadas com a chave anônima pelo agente) e as funções do
+aluno (filtram por `meu_profile_id()`). **Quem recriar uma destas com DROP
+precisa repetir o REVOKE**, porque o default privileges do Supabase devolve
+EXECUTE para `anon` e `authenticated`.
+
+---
+
 ## 20261112140000_dinheiro_fica_com_quem_recebeu.sql
 
 | | |

@@ -1111,3 +1111,52 @@ alunas criadas antes de 14/09.
 **Atenção a quem mexer em relatório de academia:** qualquer soma nova de
 dinheiro de mensalidade precisa usar `COALESCE(recebido_por, partner_id)`, e
 qualquer conta de pessoa, `partner_id`. Misturar as duas recria o problema.
+
+## 12/11/2026 — funções da academia abertas para a chave anônima
+
+**O furo:** as funções do relatório (`academia_relatorio`, `_extra`,
+`_pessoas`, `_pessoas_extra`, `_turmas`, `_eventos`) eram SECURITY DEFINER,
+tinham EXECUTE para `anon` e não conferiam acesso no corpo. Bastava a chave
+anônima do app (que vai junto em todo navegador) e o `partner_id`, que não é
+segredo, para listar nome e telefone dos alunos de qualquer academia. A
+auditoria achou o mesmo em `academia_renovar`, que lança mensalidade e com
+isso destrava catraca. Ao todo foram 30 funções fechadas para `service_role`
+(migration `20261112150000`).
+
+**Armadilha que continua de pé: `academia_pode_ver` devolve `true` para `anon`.**
+O `WHEN auth.uid() IS NULL THEN true` foi pensado para o `service_role`, mas
+`anon` também não tem uid. Então `IF NOT academia_pode_ver(...)` **não protege
+nada** numa função com EXECUTE para `anon`. Foi provado com
+`academia_recepcao_buscar`, que devolveu 20 pessoas como anon. As policies não
+caem nisso porque são todas `TO authenticated`. A regra prática para funções
+novas:
+
+- **Só o servidor chama** (cliente admin, depois de `autorizar()`): `REVOKE ALL
+  ... FROM PUBLIC, anon, authenticated` e `GRANT EXECUTE ... TO service_role`.
+  É o caso de quase tudo em `academia-*.functions.ts`.
+- **O navegador chama:** precisa de `academia_pode_ver` (ou de
+  `meu_profile_id()`, para funções do aluno) **e** de não ter `anon` nem `PUBLIC`.
+
+**O default do Supabase reabre.** Toda função *nova* nasce com EXECUTE para
+`anon` e `authenticated`. `CREATE OR REPLACE` mantém os grants, mas DROP +
+CREATE (troca de assinatura) volta ao default. Toda migration que cria ou
+recria função `academia_*` precisa do REVOKE explícito, como
+`academia_pessoa_ja_cadastrada` já fazia.
+
+**O agente da catraca não foi afetado.** `academia_agente_*` e
+`academia_importar_contratos` continuam com `anon`, porque se autenticam pelo
+segredo ou token no corpo. Elas chamam `academia_parceiros_do_grupo` (agora
+fechada) de dentro de SECURITY DEFINER, o que roda como `postgres`. Isso foi
+provado com uma função de prova e por um contato real do agente depois da
+aplicação.
+
+**Como provar depois de mexer em permissão:** dentro de um `DO`, use
+`set_config('request.jwt.claims', ...)` e `set_config('role', 'anon' |
+'authenticated' | 'service_role', true)`, capture o `SQLSTATE` de cada chamada
+e termine em `RAISE EXCEPTION` para desfazer. Conte linhas; nunca traga nome ou
+telefone para o chat. Pela REST, a chamada com a chave do `.env` tem que voltar
+`401` com `42501`.
+
+Ficou para depois: endurecer o próprio `academia_pode_ver`, para que `anon`
+receba `false`, e auditar as SECURITY DEFINER de outros prefixos (`acesso_*`,
+por exemplo) com o mesmo critério.
