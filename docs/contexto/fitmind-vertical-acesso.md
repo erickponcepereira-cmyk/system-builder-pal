@@ -1070,11 +1070,44 @@ entradas, 1 barrada e 3 avisos. Antes, um ensaio em transação desfeita deu os
 mesmos números. O leitor é o mesmo, então rosto e catraca não mudam, e o grupo
 continuou com 467 pessoas ativas.
 
-**O dinheiro muda de relatório:** os R$ 425 que as duas pagaram por pix em
-setembro e outubro saem do relatório da Jessica e entram no da Estação. São
-mensalidades `externa`, então não mexem em carteira. Se o passado tiver que
-ficar na Jessica, basta devolver o `partner_id` dessas mensalidades.
+**O dinheiro ficou na Jessica:** os R$ 425 que as duas pagaram por pix em
+setembro e outubro saíram do relatório dela com a transferência e voltaram
+no mesmo dia, por `recebido_por` — ver a subseção abaixo. Devolver o
+`partner_id` das mensalidades **não** era a saída: tiraria a catraca delas.
 
 A Jessica ficou com **11 pessoas ativas**. A Jozilene está em dia até 16/11; a
 Glaucia está bloqueada desde 06/11 e a renovação dela agora é lançada na
 Estação.
+
+### 12/11 — o dinheiro fica com quem recebeu
+
+Logo depois da transferência, o Erick pediu que setembro e outubro
+**continuassem aparecendo para a Jessica**. Devolver as mensalidades não
+servia: `academia_mensalidades.partner_id` decidia três coisas de uma vez — de
+quem a pessoa é aluna, se a catraca libera (`academia_agente_retrato` só aceita
+mensalidade da mesma academia da credencial) e em que relatório o dinheiro
+aparece. Devolver barraria a Jozilene, que pagou até 16/11, e poria as duas
+de volta na lista e nos avisos da Jessica.
+
+**A separação (migration `20261112140000`):** coluna `recebido_por` na
+mensalidade. Nula significa a própria academia — é o caso de quase todas.
+
+- **Dinheiro** soma por `COALESCE(recebido_por, partner_id)`: cartão
+  financeiro, por forma, por plano, renovações, as listas de recebido / forma
+  / plano / renovações e o caixa.
+- **Pessoa** continua em `partner_id`: situação, projeção, sem mensalidade,
+  sem frequência, lista de alunos, avisos e catraca.
+- **Transferir aluno não transfere o caixa:** `academia_transferir_credenciais`
+  grava a academia de origem em `recebido_por` ao mover a mensalidade.
+
+Resultado conferido nos relatórios: Jessica +R$ 425 (setembro R$ 1.060 →
+1.340, outubro R$ 980 → 1.125), Estação −R$ 425, Reino igual.
+
+**Ficou como estava:** a transferência de 14/09 (Estação → Jessica) foi feita
+antes da coluna existir e levou o dinheiro junto. Para devolver esses meses à
+Estação, basta preencher `recebido_por` = Estação nas mensalidades daquelas 12
+alunas criadas antes de 14/09.
+
+**Atenção a quem mexer em relatório de academia:** qualquer soma nova de
+dinheiro de mensalidade precisa usar `COALESCE(recebido_por, partner_id)`, e
+qualquer conta de pessoa, `partner_id`. Misturar as duas recria o problema.

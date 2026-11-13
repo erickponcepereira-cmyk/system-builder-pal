@@ -1,3 +1,33 @@
+## 20261112140000_dinheiro_fica_com_quem_recebeu.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 12/11/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | **Sim** — muda em que relatório e caixa a mensalidade é somada |
+| **Aplicada em producao?** | **Sim — 12/11/2026**, `md5(prosrc)` das 5 funções conferido |
+
+Coluna nova `academia_mensalidades.recebido_por`: a academia que recebeu o
+dinheiro (nulo = `partner_id`). `academia_relatorio`, `academia_relatorio_extra`,
+`academia_relatorio_pessoas_extra` e `academia_caixa_vendas` passam a somar
+dinheiro por `COALESCE(recebido_por, partner_id)`; tudo o que é de pessoa
+(situação, projeção, sem mensalidade, catraca, avisos) continua em
+`partner_id`. `academia_transferir_credenciais` grava a origem em
+`recebido_por` ao mover a mensalidade. As 3 mensalidades pagas da Glaucia e
+da Jozilene ficam com `recebido_por` = Jessica.
+
+Conferido: diferença linha a linha contra as definições antigas (guardadas em
+`backup.funcoes_dinheiro_academia_20261112`) mostra só os filtros de
+dinheiro; foto dos relatórios das 3 academias em 6 períodos antes e depois
+(`backup.relatorio_academias_antes_20261112`) — só mudaram setembro, outubro
+e o acumulado da Jessica (+R$ 425) e da Estação (−R$ 425); Reino, julho,
+agosto e novembro idênticos, e nenhuma métrica de pessoa mudou. Régua da
+catraca igual. Transferência ensaiada em transação desfeita grava a origem.
+Permissões das funções iguais às de antes.
+
+---
+
 ## 20261112120000_glaucia_e_jozilene_passam_para_a_estacao.sql
 
 | | |
