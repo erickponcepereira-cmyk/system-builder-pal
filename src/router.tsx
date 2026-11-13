@@ -6,7 +6,7 @@ function DefaultErrorComponent({
   error,
   reset,
 }: {
-  error: Error;
+  error: unknown;
   reset: () => void;
 }) {
   const router = useRouter();
@@ -36,7 +36,7 @@ function DefaultErrorComponent({
         <p className="mt-2 text-sm text-muted-foreground">
           Ocorreu um erro inesperado. Tente novamente.
         </p>
-        {error?.message && (
+        {error instanceof Error && error.message && (
           <pre className="mt-4 max-h-40 overflow-auto rounded-md bg-muted p-3 text-left font-mono text-xs text-destructive">
             {error.message}
           </pre>
