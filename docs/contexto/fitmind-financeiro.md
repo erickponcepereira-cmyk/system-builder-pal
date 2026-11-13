@@ -485,7 +485,8 @@ dias de carteirinha, e com o coach os pontos**. Os dele estão em
 `student_challenge_tokens.notes = 'partner_order:<id>'`,
 `coach_points_log.metadata->>'partner_order_id'` e
 `partner_product_orders.metadata.perks_card_days` (gravados por
-`grant_partner_product_perks`).
+`grant_partner_product_perks`). **Corrigido em 12/11/2026**, junto com
+ingresso de corrida e ranking do mês — ver [[fitmind-estorno-de-venda]].
 
 **Duas armadilhas do caminho, que custaram uma tentativa:**
 

@@ -69,6 +69,72 @@ não muda a comissão: a venda deixou de valer, e a comissão sai inteira.
   revogado; o consumido fica, e a tela avisa quantos foram.
 - **Não mexe em fitcoin de indicação já creditado** (`is_referral`), além de
   cancelar a comissão correspondente.
+- **Não cancela a mensalidade de academia** que a compra na loja da academia
+  gerou (`academia_mensalidades.partner_order_id`, via
+  `academia_mensalidade_gerar_pedido`): a catraca continua liberando.
+- **Não devolve a validade de antes da compra.** Os dias saem da validade
+  *atual*. Quem não tinha carteirinha fica com ela vencendo na data do
+  pagamento, não nula; e quem já tinha validade além de `pago + dias` (a compra
+  não estendeu nada, por causa do `GREATEST`) perde dias que vieram de outra
+  compra.
+- **No ramo de `transactions` não desconta o ranking do mês**, embora
+  `process_paid_transaction` também chame `upsert_monthly_ranking_on_sale`.
+  Só o ramo de pedido de parceiro desconta (ver abaixo).
+
+## Pedido de parceiro ficava com os benefícios (corrigido em 12/11/2026)
+
+`executarEstorno` procurava tickets, dias de carteirinha e pontos pelas
+`transactions` do pedido — e pedido de produto de parceiro/profissional
+(`partner_product_orders`) **não tem `transactions`**. Estornar um deles
+cancelava comissões e a parte do sistema, mas deixava os tickets e os dias com o
+comprador, os pontos com o coach e a venda no ranking. Achado ao desfazer à mão
+a PP-BC87B13C (ver [[fitmind-financeiro]]).
+
+Os benefícios desse pedido são gravados com o **id do pedido**, e é por ele que
+`desfazerBeneficiosDoPedidoDeParceiro` os acha:
+
+| Benefício | Onde | Quem grava |
+|---|---|---|
+| ticket do desafio | `student_challenge_tokens.notes = 'partner_order:<id>'` | `grant_partner_product_perks` |
+| pontos de carreira | `coach_points_log.metadata->>'partner_order_id'` | idem |
+| dias de carteirinha | `partner_product_orders.metadata->>'perks_card_days'` | idem |
+| ingresso de corrida | `run_challenge_tickets.source_order_id` | `grant_run_challenge_tickets` |
+| ranking do mês | `monthly_rankings` (+1 e o bruto) | `process_partner_product_order_paid` |
+
+- Ticket e ingresso **livres** são apagados; os já usados ficam e entram em
+  `tickets_ja_usados`. Os dois tipos somam nos mesmos campos do retorno, que a
+  tela mostra como "tickets".
+- **Ranking: desconta, sim.** A venda somou `(+1, +bruto)` para o coach que
+  vendeu **e** para o profissional dono do produto, quando é outro. Nenhuma
+  rotina recalcula `monthly_rankings` depois (não há cron; `refresh_monthly_rankings`
+  é manual, só de admin, e usa outra regra: receita de `transactions` e pontos
+  somados de `coach_points_log`), então sem o desconto a venda estornada conta
+  para sempre. O estorno chama `upsert_monthly_ranking_on_sale(coach, -1,
+  -bruto, mês)` para cada um. O mês sai do `paid_at` em **UTC**, igual ao
+  `date_trunc` do banco (fuso UTC, nenhum papel muda isso).
+- **Pedido que já está `refunded` não tem benefício desfeito de novo**: dias e
+  ranking não são idempotentes, e o índice único de `return_requests` só impede
+  dois pedidos de estorno *abertos* — um segundo, depois do primeiro estornado,
+  passaria. Por isso os benefícios saem antes de o pedido virar `refunded`.
+
+**Provado em produção em 12/11/2026**, num `DO` que termina em `RAISE
+EXCEPTION`, com os mesmos passos sobre dois pedidos pagos reais:
+
+- **PP-AFD9FD34** (R$ 580, 10/2026): 1 ticket revogado e 1 já usado; 19 pontos
+  apagados; validade de 06/12 para 07/10 (60 dias, cai exatamente no
+  pagamento); ranking de outubro do coach de 94 pts/R$ 2.890 para 93/R$ 2.310,
+  continua 1º.
+- **PP-0ABAC215** (R$ 50, 09/2026): ingresso de corrida já usado (0 revogados,
+  1 usado); 1 ponto; validade de 14/10 para 29/09 (15 dias); ranking de setembro
+  de 5 pts/R$ 250 para 4/R$ 200, do 14º para o 15º.
+
+Depois do `DO`, os dois pedidos seguiam intactos.
+
+**O que ficou para trás, e não foi corrigido:** os 6 pedidos de parceiro
+estornados antes disto (os ingressos da Rave, 24 e 28/09) ainda têm 1 ponto de
+carreira cada no `coach_points_log`, os 15 dias de carteirinha que cada compra
+registrou em `perks_card_days` e a venda no ranking de setembro do coach. Nenhum
+deles tinha ticket de desafio nem ingresso de corrida.
 
 ## O pedido nunca chegava a ser criado (22/09/2026)
 

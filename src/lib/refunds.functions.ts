@@ -22,10 +22,28 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  */
 
 const SLOT_ESTORNO = "Estorno solicitado pelo cliente";
+const MS_POR_DIA = 86_400_000;
 
 type Origem = "store_order" | "partner_product_order" | "transaction" | "subscription_invoice";
 
 type Linha = { id: string; product_id: string | null; student_id: string | null };
+
+type Ticket = { id: string; consumed_at: string | null };
+type TabelaDeTicket = "student_challenge_tokens" | "run_challenge_tickets";
+type TicketsRevogados = { revogados: number; jaUsados: number };
+type BeneficiosDesfeitos = { tickets: TicketsRevogados; dias: number };
+
+const NADA_DESFEITO: BeneficiosDesfeitos = { tickets: { revogados: 0, jaUsados: 0 }, dias: 0 };
+
+type PedidoDeParceiro = {
+  status: string;
+  student_id: string | null;
+  gross_amount: number | string | null;
+  paid_at: string | null;
+  selling_coach_id: string | null;
+  professional_coach_id: string | null;
+  metadata: { perks_card_days?: number | string } | null;
+};
 
 export type ResultadoDoEstorno = {
   comissoes_canceladas: number;
@@ -158,19 +176,52 @@ async function cancelarBloqueios(txIds: string[], motivo: string): Promise<numbe
   return cancelados;
 }
 
-/** Ticket de desafio ainda não usado volta; o que já virou inscrição, não. */
-async function revogarTickets(txIds: string[]): Promise<{ revogados: number; jaUsados: number }> {
+/** Ticket ainda não usado volta; o que já virou inscrição, não. Conta o que saiu de fato. */
+async function apagarTicketsLivres(tabela: TabelaDeTicket, tickets: Ticket[]): Promise<TicketsRevogados> {
+  const livres = tickets.filter((t) => !t.consumed_at).map((t) => t.id);
+  const jaUsados = tickets.length - livres.length;
+  if (!livres.length) return { revogados: 0, jaUsados };
+  const { data } = await supabaseAdmin
+    .from(tabela as never)
+    .delete()
+    .in("id" as never, livres as never)
+    .select("id" as never);
+  return { revogados: ((data as unknown[] | null) || []).length, jaUsados };
+}
+
+async function revogarTicketsOnde(tabela: TabelaDeTicket, coluna: string, valor: string): Promise<TicketsRevogados> {
+  const { data } = await supabaseAdmin
+    .from(tabela as never)
+    .select("id, consumed_at" as never)
+    .eq(coluna as never, valor as never);
+  return apagarTicketsLivres(tabela, (data as unknown as Ticket[]) || []);
+}
+
+async function revogarTickets(txIds: string[]): Promise<TicketsRevogados> {
   if (!txIds.length) return { revogados: 0, jaUsados: 0 };
   const { data } = await supabaseAdmin
     .from("student_challenge_tokens" as never)
     .select("id, consumed_at" as never)
     .in("source_transaction_id" as never, txIds as never);
-  const tokens = ((data as unknown as Array<{ id: string; consumed_at: string | null }>) || []);
-  const livres = tokens.filter((t) => !t.consumed_at).map((t) => t.id);
-  if (livres.length) {
-    await supabaseAdmin.from("student_challenge_tokens" as never).delete().in("id" as never, livres as never);
-  }
-  return { revogados: livres.length, jaUsados: tokens.length - livres.length };
+  return apagarTicketsLivres("student_challenge_tokens", (data as unknown as Ticket[]) || []);
+}
+
+/** Tira os dias da validade atual da carteirinha. Quem não tem validade não perde nada. */
+async function retirarDiasDoAluno(studentId: string | null, dias: number): Promise<number> {
+  if (!studentId || dias <= 0) return 0;
+  const { data: aluno } = await supabaseAdmin
+    .from("students")
+    .select("card_valid_until")
+    .eq("id", studentId)
+    .maybeSingle();
+  const validade = (aluno as { card_valid_until: string | null } | null)?.card_valid_until;
+  if (!validade) return 0;
+  const nova = new Date(new Date(validade).getTime() - dias * MS_POR_DIA);
+  const { error } = await supabaseAdmin
+    .from("students")
+    .update({ card_valid_until: nova.toISOString() } as never)
+    .eq("id", studentId);
+  return error ? 0 : dias;
 }
 
 /** Os dias de carteirinha que o produto deu saem da validade do aluno. */
@@ -195,22 +246,64 @@ async function retirarDiasDeCarteirinha(
     const dias = linhas
       .filter((t) => t.student_id === studentId && t.product_id)
       .reduce((s, t) => s + (diasPorProduto.get(t.product_id as string) || 0), 0);
-    if (dias <= 0) continue;
-    const { data: aluno } = await supabaseAdmin
-      .from("students")
-      .select("card_valid_until")
-      .eq("id", studentId)
-      .maybeSingle();
-    const validade = (aluno as { card_valid_until: string | null } | null)?.card_valid_until;
-    if (!validade) continue;
-    const nova = new Date(new Date(validade).getTime() - dias * 86400000);
-    await supabaseAdmin
-      .from("students")
-      .update({ card_valid_until: nova.toISOString() } as never)
-      .eq("id", studentId);
-    retirados += dias;
+    retirados += await retirarDiasDoAluno(studentId, dias);
   }
   return retirados;
+}
+
+/** Tickets, dias de carteirinha e pontos de carreira que as transações do pedido deram. */
+async function desfazerBeneficiosDasTransacoes(transacoes: Linha[]): Promise<BeneficiosDesfeitos> {
+  const txIds = transacoes.map((t) => t.id);
+  const tickets = await revogarTickets(txIds);
+  const dias = await retirarDiasDeCarteirinha(transacoes);
+  if (txIds.length) await supabaseAdmin.from("coach_points_log").delete().in("transaction_id", txIds);
+  return { tickets, dias };
+}
+
+async function lerPedidoDeParceiro(orderId: string): Promise<PedidoDeParceiro | null> {
+  const { data } = await supabaseAdmin
+    .from("partner_product_orders" as never)
+    .select("status, student_id, gross_amount, paid_at, selling_coach_id, professional_coach_id, metadata" as never)
+    .eq("id" as never, orderId as never)
+    .maybeSingle();
+  return data as unknown as PedidoDeParceiro | null;
+}
+
+/**
+ * A venda contou +1 e o bruto no ranking do mês de quem vendeu e do profissional
+ * dono do produto (`process_partner_product_order_paid`). O estorno desconta o
+ * mesmo, no mesmo mês — em UTC, como o `date_trunc` do banco.
+ */
+async function descontarDoRankingDoMes(pedido: PedidoDeParceiro): Promise<void> {
+  if (!pedido.paid_at) return;
+  const mes = `${new Date(pedido.paid_at).toISOString().slice(0, 7)}-01`;
+  const coaches = new Set([pedido.selling_coach_id, pedido.professional_coach_id].filter((id): id is string => !!id));
+  for (const coachId of coaches) {
+    await supabaseAdmin.rpc("upsert_monthly_ranking_on_sale" as never, {
+      _coach_id: coachId, _points: -1, _revenue: -Number(pedido.gross_amount || 0), _month: mes,
+    } as never);
+  }
+}
+
+/**
+ * Pedido de parceiro/profissional não tem `transactions`: os benefícios dele
+ * são gravados com o id do pedido por `grant_partner_product_perks` (tickets,
+ * pontos, dias em `metadata.perks_card_days`) e `grant_run_challenge_tickets`.
+ */
+async function desfazerBeneficiosDoPedidoDeParceiro(orderId: string): Promise<BeneficiosDesfeitos> {
+  const pedido = await lerPedidoDeParceiro(orderId);
+  // Já estornado: dias e ranking não são idempotentes e não podem sair duas vezes.
+  if (!pedido || pedido.status === "refunded") return NADA_DESFEITO;
+
+  const desafio = await revogarTicketsOnde("student_challenge_tokens", "notes", `partner_order:${orderId}`);
+  const corrida = await revogarTicketsOnde("run_challenge_tickets", "source_order_id", orderId);
+  await supabaseAdmin.from("coach_points_log").delete().filter("metadata->>partner_order_id", "eq", orderId);
+  const dias = await retirarDiasDoAluno(pedido.student_id, Number(pedido.metadata?.perks_card_days || 0));
+  await descontarDoRankingDoMes(pedido);
+  return {
+    tickets: { revogados: desafio.revogados + corrida.revogados, jaUsados: desafio.jaUsados + corrida.jaUsados },
+    dias,
+  };
 }
 
 /** O dono do produto vendido: é ele quem perde o líquido da criação. */
@@ -327,11 +420,12 @@ export const executarEstorno = createServerFn({ method: "POST" })
     const comissoes = await cancelarComissoes(txIds, deParceiro ? pedido.order_id : null);
     const sistema = await debitarSistema(txIds, deParceiro ? pedido.order_id : null, motivo);
     const bloqueios = await cancelarBloqueios(txIds, motivo);
-    const tickets = await revogarTickets(txIds);
-    const dias = await retirarDiasDeCarteirinha(transacoes);
+    // Antes de o pedido virar `refunded`: é por esse status que se sabe se já foi desfeito.
+    const beneficios = deParceiro
+      ? await desfazerBeneficiosDoPedidoDeParceiro(pedido.order_id)
+      : await desfazerBeneficiosDasTransacoes(transacoes);
 
     if (txIds.length) {
-      await supabaseAdmin.from("coach_points_log").delete().in("transaction_id", txIds);
       await supabaseAdmin.from("transactions").update({ status: "refunded" } as never).in("id", txIds);
     }
 
@@ -379,9 +473,9 @@ export const executarEstorno = createServerFn({ method: "POST" })
       comissoes_canceladas: comissoes.quantidade,
       pessoas_recalculadas: afetados.length,
       sistema_debitado: sistema,
-      tickets_revogados: tickets.revogados,
-      tickets_ja_usados: tickets.jaUsados,
-      dias_de_carteirinha_retirados: dias,
+      tickets_revogados: beneficios.tickets.revogados,
+      tickets_ja_usados: beneficios.tickets.jaUsados,
+      dias_de_carteirinha_retirados: beneficios.dias,
       bloqueios_cancelados: bloqueios,
     };
   });
