@@ -461,9 +461,21 @@ status log; os 2 tickets, os 28 pontos de carreira e os 60 dias de carteirinha
 retirados (o Cassiano não tinha carteirinha antes — voltou a nulo); ranking de
 novembro do Erick com `upsert_monthly_ranking_on_sale(coach, -1, -850, mês)`;
 `recalc_wallets_for_owner` dos quatro. `auditar_carteiras(false)` voltou vazio.
-A Ana Cristina passou para a equipe do Erick (`admin_change_student_coach`). A
-comissão de coach da PP-B1B5293F continua com a Vimark, que era a coach dela
-quando comprou.
+A Ana Cristina passou para a equipe do Erick (`admin_change_student_coach`), e
+a **comissão de coach da PP-B1B5293F foi para o Erick**, que fez a venda: antes
+Vimark 62,89 + 2,30 e valdenici 7,67 (rede da Vimark); agora Erick 62,89 + 2,30,
+Ana Flávia 7,67 e Nathan 3,83. Data, liberação (12/11) e o líquido da Vimark como
+produtora (690,17) não mudaram.
+
+**Como trocar o coach vendedor de um pedido pago:** gravar `selling_coach_id` e
+chamar `admin_reprocess_partner_order` (papel do servidor, JWT de admin). Ele
+refaz as uplines a partir do novo vendedor e preserva `paid_at` e `available_at`.
+Mas o reprocessamento **soma a venda de novo no ranking** do vendedor atual
+(`process_partner_product_order_paid` sempre chama
+`upsert_monthly_ranking_on_sale(+1)`): tire do antigo com
+`upsert_monthly_ranking_on_sale(antigo, -1, -bruto, mês)`. Os pontos de carreira
+em `coach_points_log` não são refeitos — mude o `coach_id` da linha. E ele
+repete a linha "Pagamento aprovado" no status log, o que é só cosmético.
 
 **Defeito achado de passagem:** `executarEstorno` (`src/lib/refunds.functions.ts`)
 procura tickets, dias de carteirinha e pontos pela `transactions` do pedido — e
