@@ -446,6 +446,45 @@ Mercado Pago não foi informado — `metadata.venda_manual_link.operacao_mp` est
 nulo. A primeira tentativa, **PP-598668DD** (20/10, Pix, com a própria Vimark como
 compradora), ficou cancelada.
 
+**PP-BC87B13C — lançada em dobro e cancelada no mesmo dia (12/11/2026).** O
+Erick pediu a venda do "GESTÃO ESSENCIAL" (Vimark, R$ 850, cartão, 05/11) para o
+**Cassiano Piovesani**. Ela já existia: era a **PP-B1B5293F**, comprada pela loja
+no mesmo dia pela **Ana Cristina Silva Feldner Martins** — "são a mesma pessoa",
+duas contas. **Antes de lançar venda manual, procure o mesmo produto pago perto da
+data, em qualquer comprador.** Eu achei a PP-B1B5293F e descartei por ser outro
+nome.
+
+Como foi desfeita, já que o pedido não tinha dinheiro de verdade e o estorno da
+tela não serve inteiro (ver abaixo): comissões `cancelled`; débito da parte do
+sistema em `admin_system_wallet_entries`; pedido `cancelled` com nota e linha no
+status log; os 2 tickets, os 28 pontos de carreira e os 60 dias de carteirinha
+retirados (o Cassiano não tinha carteirinha antes — voltou a nulo); ranking de
+novembro do Erick com `upsert_monthly_ranking_on_sale(coach, -1, -850, mês)`;
+`recalc_wallets_for_owner` dos quatro. `auditar_carteiras(false)` voltou vazio.
+A Ana Cristina passou para a equipe do Erick (`admin_change_student_coach`). A
+comissão de coach da PP-B1B5293F continua com a Vimark, que era a coach dela
+quando comprou.
+
+**Defeito achado de passagem:** `executarEstorno` (`src/lib/refunds.functions.ts`)
+procura tickets, dias de carteirinha e pontos pela `transactions` do pedido — e
+pedido de produto de parceiro/profissional não tem `transactions`. Estornar um
+deles cancela comissões e sistema, mas **deixa com o comprador os tickets e os
+dias de carteirinha, e com o coach os pontos**. Os dele estão em
+`student_challenge_tokens.notes = 'partner_order:<id>'`,
+`coach_points_log.metadata->>'partner_order_id'` e
+`partner_product_orders.metadata.perks_card_days` (gravados por
+`grant_partner_product_perks`).
+
+**Duas armadilhas do caminho, que custaram uma tentativa:**
+
+- `admin_reprocess_partner_order` não tem `EXECUTE` para `authenticated`. Chame
+  com o papel do servidor e o JWT do admin em `request.jwt.claims` — a função
+  confere admin pelo `auth.uid()`, que vem do JWT, não do papel.
+- O reprocessamento só recalcula a carteira de quem **já** tinha comissão no
+  pedido. Num pedido novo, ninguém tinha: rode `recalc_wallet_for_profile` para
+  cada beneficiário e para o dono da empresa logo depois (é derivado do
+  extrato, pode repetir).
+
 ## Saque mínimo é do pedido, não da baixa do admin (27/10/2026)
 
 O mínimo de R$ 50 morava no gatilho `guard_withdrawal_request` e barrava
