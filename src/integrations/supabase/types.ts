@@ -1132,6 +1132,7 @@ export type Database = {
           partner_id: string
           partner_order_id: string | null
           plano: string
+          recebido_por: string | null
           registrado_por: string | null
           status: string
           student_id: string | null
@@ -1158,6 +1159,7 @@ export type Database = {
           partner_id: string
           partner_order_id?: string | null
           plano: string
+          recebido_por?: string | null
           registrado_por?: string | null
           status?: string
           student_id?: string | null
@@ -1184,6 +1186,7 @@ export type Database = {
           partner_id?: string
           partner_order_id?: string | null
           plano?: string
+          recebido_por?: string | null
           registrado_por?: string | null
           status?: string
           student_id?: string | null
@@ -1222,6 +1225,13 @@ export type Database = {
             columns: ["partner_order_id"]
             isOneToOne: false
             referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academia_mensalidades_recebido_por_fkey"
+            columns: ["recebido_por"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
           {
@@ -3732,6 +3742,92 @@ export type Database = {
           },
           {
             foreignKeyName: "challenge_winners_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkout_group_items: {
+        Row: {
+          amount: number
+          group_id: string
+          source_id: string
+          source_kind: string
+        }
+        Insert: {
+          amount: number
+          group_id: string
+          source_id: string
+          source_kind: string
+        }
+        Update: {
+          amount?: number
+          group_id?: string
+          source_id?: string
+          source_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_group_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkout_groups: {
+        Row: {
+          created_at: string
+          created_by_profile_id: string | null
+          group_number: string
+          id: string
+          mp_payment_id: string | null
+          paid_at: string | null
+          payment_method: string
+          status: string
+          student_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          group_number?: string
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          payment_method: string
+          status?: string
+          student_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          group_number?: string
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          status?: string
+          student_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_groups_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_groups_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -16542,6 +16638,20 @@ export type Database = {
           partner_id: string
         }[]
       }
+      academia_pessoa_ja_cadastrada: {
+        Args: {
+          p_nascimento: string
+          p_nome: string
+          p_partner_id: string
+          p_telefone: string
+        }
+        Returns: {
+          credencial_id: string
+          mesmo_nome: boolean
+          nome: string
+          referencia: string
+        }[]
+      }
       academia_plano_do_texto: {
         Args: { p_partner_id: string; p_texto: string }
         Returns: {
@@ -17316,6 +17426,10 @@ export type Database = {
         Args: { _partner_order_id: string; _transaction_id: string }
         Returns: string
       }
+      compra_para_si_mesmo: {
+        Args: { _coach_id: string; _student_id: string }
+        Returns: boolean
+      }
       compute_partner_product_benefits: {
         Args: { _price: number }
         Returns: {
@@ -17327,7 +17441,12 @@ export type Database = {
         Args: { _system_fee: number }
         Returns: number
       }
+      conciliar_carteira_do_sistema: {
+        Args: { _corrigir?: boolean }
+        Returns: Json
+      }
       count_active_admins: { Args: never; Returns: number }
+      create_checkout_group: { Args: { _refs: Json }; Returns: Json }
       create_coach_sale: {
         Args: {
           _client_id: string
@@ -17441,12 +17560,7 @@ export type Database = {
         Args: { _amount: number; _note: string; _profile_id: string }
         Returns: Json
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       dias_semana_rotulo: { Args: { p_dias: number[] }; Returns: string }
-      email_queue_dispatch: { Args: never; Returns: undefined }
       emitir_certificado: {
         Args: { _digital_product_id: string }
         Returns: {
@@ -17455,10 +17569,6 @@ export type Database = {
         }[]
       }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       enroll_student_in_competition: {
         Args: { _gender?: string; _student_id: string }
         Returns: string
@@ -17648,6 +17758,46 @@ export type Database = {
         Args: { _order_id: string }
         Returns: undefined
       }
+      hall_da_fama_campeoes: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          coach_id: string
+          coach_name: string
+          competition_id: string
+          gender: string
+          id: string
+          month: number
+          photo_url: string
+          prize_amount: number
+          result_kg: number
+          result_pct: number
+          student_id: string
+          student_name: string
+          year: number
+        }[]
+      }
+      hall_da_fama_ranking: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          coach_id: string
+          coach_name: string
+          competition_id: string
+          final_share_url: string
+          gender: string
+          id: string
+          initial_share_url: string
+          month: number
+          photo_url: string
+          result_fat_pct_lost: number
+          result_kg_lost: number
+          result_muscle_gain_pct: number
+          student_id: string
+          student_name: string
+          year: number
+        }[]
+      }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_coach_badge: {
         Args: {
@@ -17783,15 +17933,6 @@ export type Database = {
         Returns: undefined
       }
       moeda_br: { Args: { v: number }; Returns: string }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       my_freebie_usage: {
         Args: never
         Returns: {
@@ -17854,6 +17995,7 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      parceiro_vende: { Args: { _partner_id: string }; Returns: boolean }
       parceiros_publicos: {
         Args: { _ids: string[] }
         Returns: {
@@ -17931,7 +18073,10 @@ export type Database = {
           student_photo: string
         }[]
       }
-      partner_preview_student: { Args: { _student_id: string }; Returns: Json }
+      partner_preview_student: {
+        Args: { _partner_id?: string; _student_id: string }
+        Returns: Json
+      }
       partner_product_used_slots: {
         Args: { _product_id: string }
         Returns: number
@@ -17946,7 +18091,14 @@ export type Database = {
         }[]
       }
       partner_redeem_coupon: { Args: { p_token: string }; Returns: string }
-      partner_scan_student: { Args: { _student_id: string }; Returns: Json }
+      partner_scan_student: {
+        Args: { _partner_id?: string; _student_id: string }
+        Returns: Json
+      }
+      partner_unidade_do_balcao: {
+        Args: { _partner_id: string }
+        Returns: string
+      }
       pay_coach_available: {
         Args: { _kind?: string; _notes?: string; _profile_id: string }
         Returns: number
@@ -18119,14 +18271,6 @@ export type Database = {
           prompt: string
           question_id: string
           sort_order: number
-        }[]
-      }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
         }[]
       }
       recalc_nutritionist_wallets: { Args: never; Returns: undefined }
@@ -18492,6 +18636,7 @@ export type Database = {
         }[]
       }
       store_visibility_context: { Args: never; Returns: Json }
+      student_card_ativa: { Args: { _student_id: string }; Returns: boolean }
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
         Returns: string
