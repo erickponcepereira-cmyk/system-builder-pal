@@ -20,7 +20,9 @@ function fmtDate(d: string | null) {
 
 async function uploadFile(file: File, prefix: string): Promise<string> {
   const ext = file.name.split(".").pop() || "bin";
-  const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Sessão expirada. Entre novamente.");
+  const path = `${auth.user.id}/${prefix}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("herbalife-boletos").upload(path, file, {
     upsert: false,
     contentType: file.type,

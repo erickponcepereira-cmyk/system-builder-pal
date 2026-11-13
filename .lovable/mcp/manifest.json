@@ -35,7 +35,7 @@
       {
         "name": "get_my_wallet",
         "title": "Get my wallet balance",
-        "description": "Return the signed-in user's wallet balances (available, pending, total).",
+        "description": "Return the signed-in user's wallet balance: available, pending release, total earned and withdrawn. It is a single balance, the same one the admin sees.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,

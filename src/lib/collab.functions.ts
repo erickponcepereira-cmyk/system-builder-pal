@@ -27,8 +27,10 @@ export const getMyShareCode = createServerFn({ method: "POST" })
     return { code: (created as unknown as { code: string }).code };
   });
 
-async function resolveByCode(supabase: any, code: string) {
-  const { data } = await supabase
+async function resolveByCode(_supabase: any, code: string) {
+  // Leitura por código exato via admin: a tabela não é mais legível por todos.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await (supabaseAdmin as any)
     .from("entity_share_codes")
     .select("owner_type,owner_id")
     .eq("code", code.trim().toUpperCase())
