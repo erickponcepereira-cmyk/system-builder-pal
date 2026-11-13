@@ -1059,3 +1059,22 @@ seja, "a pessoa ainda não existe como usuário no leitor". Ele some quando o
 agente cria o usuário, com ou sem rosto. Por isso não ajudou aqui: depois da
 sincronização das 21:33 de 09/11, o 700037 e o 700038 apareciam do mesmo jeito,
 e só um tinha rosto.
+
+## 12/11/2026 — Glaucia e Jozilene voltam para a Estação
+
+A pedido do Erick, **Glaucia Cristina Simi (29)** e **Jozilene Lima Marinho
+(271)** saíram da Jessica e voltaram para a Estação Funcional (migration
+`20261112120000`). Foi o caminho inverso de 14/09, pela mesma
+`academia_transferir_credenciais` e com o histórico junto: 5 mensalidades, 37
+entradas, 1 barrada e 3 avisos. Antes, um ensaio em transação desfeita deu os
+mesmos números. O leitor é o mesmo, então rosto e catraca não mudam, e o grupo
+continuou com 467 pessoas ativas.
+
+**O dinheiro muda de relatório:** os R$ 425 que as duas pagaram por pix em
+setembro e outubro saem do relatório da Jessica e entram no da Estação. São
+mensalidades `externa`, então não mexem em carteira. Se o passado tiver que
+ficar na Jessica, basta devolver o `partner_id` dessas mensalidades.
+
+A Jessica ficou com **11 pessoas ativas**. A Jozilene está em dia até 16/11; a
+Glaucia está bloqueada desde 06/11 e a renovação dela agora é lançada na
+Estação.

@@ -1,3 +1,22 @@
+## 20261112120000_glaucia_e_jozilene_passam_para_a_estacao.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 12/11/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | Nao (R$ 425 em mensalidades externas mudam de relatorio, sem carteira) |
+| **Aplicada em producao?** | **Sim — 12/11/2026**, resultado igual ao ensaio |
+
+Glaucia Cristina Simi (29) e Jozilene Lima Marinho (271) passam da Jessica
+para a Estação Funcional por `academia_transferir_credenciais`, com o
+histórico: 2 credenciais, 5 mensalidades, 37 frequências, 1 barrada, 3
+avisos. Ensaiada em transação desfeita antes. Conferido depois: nenhuma linha
+delas ficou na Jessica, e a régua da Estação dá Jozilene liberada até 16/11 e
+Glaucia bloqueada (venceu em 06/11), como antes.
+
+---
+
 ## 20261109120000_mesma_pessoa_nao_ganha_segundo_identificador.sql
 
 | | |
