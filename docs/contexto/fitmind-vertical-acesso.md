@@ -1157,6 +1157,33 @@ e termine em `RAISE EXCEPTION` para desfazer. Conte linhas; nunca traga nome ou
 telefone para o chat. Pela REST, a chamada com a chave do `.env` tem que voltar
 `401` com `42501`.
 
-Ficou para depois: endurecer o próprio `academia_pode_ver`, para que `anon`
-receba `false`, e auditar as SECURITY DEFINER de outros prefixos (`acesso_*`,
-por exemplo) com o mesmo critério.
+**Fechado no mesmo dia (migration `20261112170000`):** `academia_pode_ver`
+passou a devolver `false` para `anon`. Sem uid, só passa quem chega sem JWT de
+usuário: o `service_role` e o banco (cron, gatilho, MCP). A conta olha
+`auth.role()` e o papel da sessão, e `anon` perdeu o EXECUTE. A auditoria das
+SECURITY DEFINER dos outros prefixos fechou 76 para `service_role` e pôs
+checagem no corpo de 6 que o navegador chama. A lista e as provas estão em
+`docs/REGISTRO-MIGRATIONS.md`.
+
+**Três padrões que abriram buraco, para não repetir em função nova:**
+
+- `IF auth.uid() IS NOT NULL AND NOT is_admin(auth.uid())` numa função com
+  EXECUTE para `anon` deixa `anon` passar. "Sem uid" só pode significar
+  "servidor" se `anon` não tiver EXECUTE.
+- `is_admin(_admin_user_id)` com o id vindo do parâmetro não é checagem:
+  qualquer um passa o id de um admin. Use `COALESCE(auth.uid(), _param)`.
+- Checagem por uid em função chamada também por gatilho quebra o gatilho,
+  porque o uid é de quem disparou, não do dono do dado. Use
+  `pg_trigger_depth() = 0`, como em `ensure_user_subscription`.
+
+**Como provar o caminho do agente antes de mexer em função compartilhada:**
+monte o grafo no próprio banco, com função → função (nome seguido de `(` no
+`prosrc`) e tabela escrita → gatilho (`INSERT INTO`/`UPDATE`/`DELETE FROM` +
+`pg_trigger`). Depois faça um CTE recursivo saindo de `academia_agente_*`.
+Foi assim que se provou que nenhuma cadeia do agente chega em
+`academia_pode_ver`.
+
+**Ficou de fora, risco baixo:** `run_stats(uuid)` e `carteirinha_situacao`
+continuam legíveis para qualquer logado. `generate_monthly_invoices` e
+`mark_overdue_invoices` continuam chamáveis por qualquer logado, mas são o
+mesmo tique diário e idempotente do cron.

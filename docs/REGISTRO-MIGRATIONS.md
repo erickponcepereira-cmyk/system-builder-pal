@@ -1,3 +1,75 @@
+## 20261112170000_definer_fora_da_academia_so_pelo_servidor.sql
+
+| | |
+|---|---|
+| **Autor** | Chat de acesso/academias |
+| **Data** | 12/11/2026 |
+| **Branch** | `main` (clone `C:\dev\fitmind-bugs`) |
+| **Toca em dinheiro?** | Sim, na permissão: fecha quem podia pagar, adiar ou desfazer fatura, debitar carteira e marcar pedido como pago. Nenhuma regra de cálculo muda |
+| **Aplicada em producao?** | **Sim — 12/11/2026**. Os 7 corpos alterados têm `md5(prosrc)` igual ao do arquivo; os 79 que só mudam de permissão, `md5` do conjunto igual antes e depois (`03bcdf0d…`) |
+
+Continuação da `20261112150000`. Duas frentes:
+
+**1. `academia_pode_ver` deixa de devolver `true` para `anon`.** Sem uid, só
+passa quem não traz JWT de usuário: o `service_role` e o próprio banco (cron,
+gatilho, MCP). A conta confere o papel do JWT (`auth.role()`) e o papel da
+sessão (`current_setting('role')`, o `SET ROLE` do PostgREST). `anon` e
+`PUBLIC` perdem o EXECUTE; as 23 policies que usam a função são `TO
+authenticated`. Antes de mexer foi provado que nenhum dos 42 chamadores
+transitivos dela (função → função e tabela escrita → gatilho) tem EXECUTE para
+`anon` nem é gatilho, e que nenhum caminho saindo de `academia_agente_*` ou
+`academia_importar_contratos` chega nela.
+
+**2. Auditoria das SECURITY DEFINER fora de `academia_`.** Eram 271 (fora
+gatilhos) com EXECUTE para `anon` ou `authenticated`. Ficaram como estão as que
+dependem de quem chama (`auth.uid()`, direto ou por helper), as públicas de
+propósito (catálogo, vitrine, vendedor, código de indicação, certificado) e os
+helpers usados em policy.
+
+- **76 só o servidor chama → EXECUTE só para `service_role`.** Todo `.rpc`
+  delas em `src/` é `supabaseAdmin` (ou o `db` do robô, que é o `supabaseAdmin`
+  do webhook `api.bot.eventos`). O único cron que chama uma delas roda como
+  `postgres`. Nenhuma policy, view, default ou check as usa. As piores:
+  `debit_user_wallets_cascade` (debitava qualquer carteira),
+  `process_partner_product_order_paid` (marcava pedido como pago),
+  `extend_*_card_access` (estendia carteirinha), `grant_partner_product_perks`,
+  e quatro que "checavam" `is_admin(_admin_user_id)` com o id vindo do próprio
+  chamador: `admin_mark_withdrawal_paid`, `admin_mark_student_withdrawal_paid`,
+  `admin_advance_commission_release` e `fechar_rede_do_mes` (esta com `anon`).
+  `admin_sincronizar_carteiras`, `recalcular_precos_modo_receive` e
+  `refresh_coach_medals` tinham o mesmo defeito do `academia_pode_ver`
+  (`IF auth.uid() IS NOT NULL AND NOT is_admin`) com EXECUTE para `anon`.
+- **6 que o navegador chama → checagem no corpo e sem `anon`.**
+  `process_subscription_invoice_payment` deixava qualquer logado marcar a
+  própria fatura como paga por pix e destravar o acesso; agora admin paga
+  qualquer uma, o dono só a própria e só com carteira, e o webhook do Mercado
+  Pago entra sem uid. `postpone_subscription_invoice` e
+  `revert_subscription_invoice_payment` (abertas a `anon`) passam a ser só de
+  admin, e `reset_subscription_invoice_due_date` herda pela primeira.
+  `carteirinha_definir_excecao`/`_revogar_excecao` usam o admin do JWT; o
+  parâmetro só vale sem uid. `ensure_user_subscription` só cria a assinatura do
+  próprio usuário, salvo admin ou gatilho (`pg_trigger_depth() > 0`).
+  `carteirinha_situacao` e `is_user_blocked_by_subscription` só perdem `anon`.
+
+Testado depois de aplicar, num `DO` que termina em `RAISE EXCEPTION` com
+`set_config('role', ...)` e `request.jwt.claims`: 46 casos, todos com o
+resultado esperado. `anon` recebe `permission denied`. Logado sem permissão
+recebe `42501 Acesso negado`. Admin e `service_role` passam e param no erro de
+negócio. O dono paga a própria fatura com carteira, e com pix não. As funções do
+agente continuam executando para `anon` (param no segredo). A impressão digital
+de `academia_pode_ver` para 360 pares logado × academia ficou igual à de antes
+(`3bf1100a…`). Pela REST, com a chave do `.env`, as 11 funções testadas voltam
+`401/42501`, e `catalogo_publico` continua `200`. Antes de aplicar houve um
+ensaio com diff linha a linha dos 7 corpos contra produção. Depois da
+aplicação, o agente da catraca sincronizou e registrou frequências.
+
+Efeito colateral aceito: `update_coach_withdrawal_status` (INVOKER, sem
+chamador no app) chama `admin_mark_withdrawal_paid` e passa a receber `42501`
+no caminho "pago". O app paga saque por `admin-payouts.functions.ts`, com
+`supabaseAdmin`.
+
+---
+
 ## 20261112150000_funcoes_da_academia_so_pelo_servidor.sql
 
 | | |
